@@ -200,7 +200,9 @@ describe("RelationDeclarationsSection", () => {
         relation("order_for_patient_by_id_card", { importance: "secondary" }),
         relation("order_for_patient", { cardinality: "many_to_one" }),
         relation("order_for_patient_by_phone", { importance: "secondary" }),
-        relation("order_for_patient_legacy", undefined, { deprecated: true }),
+        relation("order_for_patient_legacy", undefined, {
+          definitionDeclarations: { lifecycle: { reason: "旧路径", status: "deprecated" } },
+        }),
       ],
       totalCount: 4,
     });

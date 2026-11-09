@@ -199,31 +199,30 @@ export type BackendConceptGroup = {
   updater_name?: string;
 };
 
-export type BackendRelationType = import("./declarations").BackendRelationDeclarationFields & {
-  color?: string;
-  comment?: string;
-  id: string;
-  /** BKN spec 3.0; absent for an active relation type. */
-  lifecycle?: { reason?: string; replaced_by?: string; status?: string } | null;
-  mapping_mode?: "direct" | "indirect";
-  mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
-  name: string;
-  operations?: string[];
-  source_object_type?: {
-    id?: string;
-    name?: string;
+export type BackendRelationType = import("./declarations").BackendRelationDeclarationFields &
+  import("./declarations").BackendDefinitionDeclarationFields & {
+    color?: string;
+    comment?: string;
+    id: string;
+    mapping_mode?: "direct" | "indirect";
+    mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
+    name: string;
+    operations?: string[];
+    source_object_type?: {
+      id?: string;
+      name?: string;
+    };
+    source_object_type_id?: string;
+    tags?: string[];
+    target_object_type?: {
+      id?: string;
+      name?: string;
+    };
+    target_object_type_id?: string;
+    type?: "direct" | "indirect";
+    update_time?: number;
+    updater?: BackendAccountInfo;
   };
-  source_object_type_id?: string;
-  tags?: string[];
-  target_object_type?: {
-    id?: string;
-    name?: string;
-  };
-  target_object_type_id?: string;
-  type?: "direct" | "indirect";
-  update_time?: number;
-  updater?: BackendAccountInfo;
-};
 
 export type BackendActionType = import("./declarations").BackendDefinitionDeclarationFields & {
   action_source?: {

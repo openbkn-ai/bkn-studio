@@ -66,6 +66,21 @@ export function isDefinitionLevelRefusal(refusal: { details?: string; property?:
   return !refusal.property && DEFINITION_LEVEL_DETAILS.test(refusal.details ?? "");
 }
 
+// What a refusal of a relation's own declarations names; the relation form edits them on its
+// mapping step, apart from the aliases and lifecycle.
+const RELATION_DECLARATION_DETAILS =
+  /\b(?:cardinality|characteristics|fallback_for|importance|required|reverse_name|verification)\b/;
+
+/**
+ * Whether a refusal of a relation type save concerns only its aliases or lifecycle, which the
+ * relation form holds in its basic info.
+ */
+export function isRelationBasicInfoRefusal(refusal: { details?: string; property?: string }) {
+  return (
+    isDefinitionLevelRefusal(refusal) && !RELATION_DECLARATION_DETAILS.test(refusal.details ?? "")
+  );
+}
+
 const STILL_REFERENCED_CODE = /^BknBackend\.(ActionType|ObjectType|RelationType)\.StillReferenced$/;
 
 /** A delete refused because other definitions still point at the one deleted. */

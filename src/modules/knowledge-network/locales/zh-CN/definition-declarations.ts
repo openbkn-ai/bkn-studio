@@ -47,7 +47,7 @@ export const definitionDeclarationsPart = {
     reasonPlaceholder: "说明为什么不再使用，以及该怎么做",
     reasonRequired: "请填写弃用原因",
     refusalOpen: "查看{{kind}} {{id}}",
-    refusalTitle: "后端没有接受别名或状态：{{description}}",
+    refusalTitle: "后端没有接受这些声明：{{description}}",
     replacedBy: "替代定义",
     replacedByHint: "可选。只能选同类中仍在使用的定义。",
     replacedByMissing: "{{id}}（不存在或无权查看）",

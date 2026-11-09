@@ -38,10 +38,8 @@ import {
   removeMockRelationTypeMappings,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
-import {
-  readStillReferencedRefusal,
-  RelationTypeStillReferencedError,
-} from "@/modules/knowledge-network/services/shared/declaration-errors";
+import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
 import {
   formatTimestamp,
   rethrowImportConflict,
@@ -54,11 +52,15 @@ import { normalizeRelationDeclarations } from "@/modules/knowledge-network/utils
 function withMockDeclarations(
   item: KnowledgeNetworkRelationTypeRecord | undefined,
   input: KnowledgeNetworkRelationTypeMutationPayload,
-): Pick<KnowledgeNetworkRelationTypeRecord, "declarations"> {
+): Pick<KnowledgeNetworkRelationTypeRecord, "declarations" | "definitionDeclarations"> {
   const declarations = input.declarationEdit
     ? normalizeRelationDeclarations(input.declarationEdit.current)
     : item?.declarations;
-  return { declarations };
+  const definitionDeclarations = withMockDefinitionDeclarations(
+    item?.definitionDeclarations,
+    input.definitionDeclarationEdit,
+  ).declarations;
+  return { declarations, definitionDeclarations };
 }
 
 function resolveRelationTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
@@ -420,9 +422,9 @@ export async function deleteKnowledgeNetworkRelationType(
       { skipErrorToast: true },
     );
   } catch (error) {
-    const refusal = readStillReferencedRefusal(error);
     // The callers show the definitions that refer to it, or say why else the delete failed.
-    throw refusal ? new RelationTypeStillReferencedError(relationTypeId, refusal) : error;
+    throwIfStillReferenced(error, { id: relationTypeId, kind: "relation_type" });
+    throw error;
   }
 }
 

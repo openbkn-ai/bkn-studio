@@ -30,6 +30,12 @@ export const relationDeclarationsPart = {
       ends: "The source and target are no longer the same object type, so the characteristics were cleared.",
       symmetric: "A symmetric relation has no direction, so these were cleared: {{names}}.",
     },
+    clearedOnSave: {
+      content:
+        "The source and target are no longer the same object type, so saving also clears this relation's characteristics (symmetric, transitive).",
+      ok: "Clear and save",
+      title: "Saving clears the characteristics",
+    },
     clearedName: {
       cardinality: "the one-to-many or many-to-one cardinality",
       characteristics: "the characteristics",
@@ -42,10 +48,6 @@ export const relationDeclarationsPart = {
       exactlyOne: "each {{from}} has exactly one {{to}}",
       oneOrMore: "each {{from}} has at least one {{to}}, possibly more",
       several: "a {{from}} can have more than one {{to}}",
-    },
-    deleteRefused: {
-      references: "Definitions that refer to it",
-      title: "“{{name}}” cannot be deleted",
     },
     fallbackFor: "Fallback for",
     fallbackForHint:
@@ -84,8 +86,6 @@ export const relationDeclarationsPart = {
     },
     notDeclared: "Not declared",
     note: "BKN 3.0 · all optional",
-    refusalOpen: "View {{name}}",
-    refusalTitle: "The backend did not accept the relation declarations: {{description}}",
     relationProperties_one: "{{count}} relation property",
     relationProperties_other: "{{count}} relation properties",
     relationPropertiesHint:

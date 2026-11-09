@@ -48,7 +48,7 @@ export const definitionDeclarationsPart = {
     reasonPlaceholder: "Why it is no longer used, and what to do instead",
     reasonRequired: "Enter the reason",
     refusalOpen: "Open {{kind}} {{id}}",
-    refusalTitle: "The backend did not accept the aliases or status: {{description}}",
+    refusalTitle: "The backend did not accept the declarations: {{description}}",
     replacedBy: "Replaced by",
     replacedByHint: "Optional. Only definitions of the same kind still in use.",
     replacedByMissing: "{{id}} (missing or not visible to you)",

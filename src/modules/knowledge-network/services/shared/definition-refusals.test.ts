@@ -11,6 +11,7 @@ import {
   DefinitionStillReferencedError,
   definitionsInDetails,
   isDefinitionLevelRefusal,
+  isRelationBasicInfoRefusal,
   throwIfStillReferenced,
 } from "@/modules/knowledge-network/services/shared/definition-refusals";
 
@@ -93,5 +94,34 @@ describe("throwIfStillReferenced", () => {
         kind: "object_type",
       }),
     ).not.toThrow();
+  });
+});
+
+describe("isRelationBasicInfoRefusal", () => {
+  it("takes an alias or lifecycle refusal for the basic info", () => {
+    expect(
+      isRelationBasicInfoRefusal({
+        details: 'relation type "treats" alias "主治" is the name of object type "doctor"',
+      }),
+    ).toBe(true);
+    expect(
+      isRelationBasicInfoRefusal({
+        details: 'relation type "treats" lifecycle replaced_by "x": no relation type has this id',
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves to the mapping step a refusal that names the relation's own declarations", () => {
+    expect(
+      isRelationBasicInfoRefusal({
+        details:
+          'relation type "by_phone" fallback_for "order_for_patient": that relation type is deprecated',
+      }),
+    ).toBe(false);
+    expect(
+      isRelationBasicInfoRefusal({
+        details: "a symmetric relation reads the same both ways, so it has no reverse_name",
+      }),
+    ).toBe(false);
   });
 });

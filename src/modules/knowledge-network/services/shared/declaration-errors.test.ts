@@ -11,8 +11,6 @@ import {
   parseClearedDeclarations,
   parseNetworkCheckResult,
   readDeclarationRefusal,
-  readStillReferencedRefusal,
-  relationTypesInDetails,
 } from "@/modules/knowledge-network/services/shared/declaration-errors";
 
 describe("parseClearedDeclarations", () => {
@@ -138,56 +136,5 @@ describe("readDeclarationRefusal", () => {
     ["nothing", undefined],
   ])("reads %s as no declaration refusal", (_, error) => {
     expect(readDeclarationRefusal(error)).toBeUndefined();
-  });
-});
-
-describe("relationTypesInDetails", () => {
-  it("finds each relation type a refusal of the fallback rules names, once", () => {
-    expect(
-      relationTypesInDetails(
-        'relation type "order_for_patient_by_id_card" fallback_for "order_for_patient": the relation it stands in for is secondary; a fallback path stands in for a primary relation; relation type "order_for_patient_by_id_card" fallback_for "order_for_patient": relation type "by_phone" is already its fallback path; a primary relation has one',
-      ),
-    ).toEqual(["order_for_patient_by_id_card", "order_for_patient", "by_phone"]);
-  });
-
-  it("finds none in details that name no relation type", () => {
-    expect(
-      relationTypesInDetails(
-        "a symmetric relation reads the same both ways, so it has no reverse_name",
-      ),
-    ).toEqual([]);
-    expect(relationTypesInDetails(undefined)).toEqual([]);
-  });
-});
-
-describe("readStillReferencedRefusal", () => {
-  const conflict = (data: Record<string, unknown>) => ({ response: { data, status: 409 } });
-
-  it("reads the references and the relation types that make them", () => {
-    expect(
-      readStillReferencedRefusal(
-        conflict({
-          description: "Still referenced",
-          error_code: "BknBackend.RelationType.StillReferenced",
-          error_details: {
-            references: [
-              'relation type "order_for_patient" is the fallback_for of relation type "order_for_patient_by_id_card"',
-            ],
-          },
-        }),
-      ),
-    ).toEqual({
-      description: "Still referenced",
-      referringRelationTypeIds: ["order_for_patient_by_id_card"],
-      references: [
-        'relation type "order_for_patient" is the fallback_for of relation type "order_for_patient_by_id_card"',
-      ],
-    });
-  });
-
-  it("reads any other error as no such refusal", () => {
-    expect(
-      readStillReferencedRefusal(conflict({ error_code: "BknBackend.RelationType.NotFound" })),
-    ).toBeUndefined();
   });
 });

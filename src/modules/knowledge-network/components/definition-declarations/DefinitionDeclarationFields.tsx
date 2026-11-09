@@ -39,6 +39,8 @@ type DefinitionDeclarationFieldsProps = {
    * are read when the aliases are checked, so a name just typed counts.
    */
   ownNameFields: readonly string[];
+  /** Its own names held outside the form, such as a relation's reverse name. */
+  otherOwnNames?: readonly string[];
   /** Reads one definition of the same kind, for the name of the stored replacement. */
   resolveReplacement: (id: string) => Promise<ReplacementOption | undefined>;
   /** Searches definitions of the same kind by name. */
@@ -46,12 +48,13 @@ type DefinitionDeclarationFieldsProps = {
 };
 
 /**
- * The aliases and lifecycle in the basic info of an object type or an action type form, as
+ * The aliases and lifecycle in the basic info of a definition form, as
  * `aliases`, `lifecycleStatus`, `lifecycleReason` and `replacedBy` of the enclosing form.
  * The reason and replacement appear when the status is deprecated.
  */
 export function DefinitionDeclarationFields({
   definitionId,
+  otherOwnNames = [],
   ownNameFields,
   resolveReplacement,
   searchReplacements,
@@ -74,9 +77,10 @@ export function DefinitionDeclarationFields({
         rules={[
           {
             validator: (_, value: string[] | undefined) => {
-              const ownNames = ownNameFields.map((field) =>
-                String(form.getFieldValue(field) ?? ""),
-              );
+              const ownNames = [
+                ...ownNameFields.map((field) => String(form.getFieldValue(field) ?? "")),
+                ...otherOwnNames,
+              ];
               const problem = definitionAliasProblem(value, ownNames);
               return problem
                 ? Promise.reject(
@@ -138,7 +142,10 @@ export function DefinitionDeclarationFields({
   );
 }
 
-type ReplacementSelectProps = Omit<DefinitionDeclarationFieldsProps, "ownNameFields"> & {
+type ReplacementSelectProps = Omit<
+  DefinitionDeclarationFieldsProps,
+  "otherOwnNames" | "ownNameFields"
+> & {
   onChange?: (value: string | undefined) => void;
   value?: string;
 };

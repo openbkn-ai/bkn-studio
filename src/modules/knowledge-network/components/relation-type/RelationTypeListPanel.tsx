@@ -58,6 +58,7 @@ import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/s
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
+import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
@@ -423,7 +424,9 @@ export function RelationTypeListPanel({
             <ApartmentOutlined />
           </span>
           <RelationDeclarationName declarations={record.declarations} relationTypes={items}>
-            <span className={styles.objectName}>{value}</span>
+            <DeprecatedName declarations={record.definitionDeclarations}>
+              <span className={styles.objectName}>{value}</span>
+            </DeprecatedName>
           </RelationDeclarationName>
         </div>
       ),

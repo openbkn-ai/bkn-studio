@@ -28,6 +28,7 @@ import {
   type RelationEnds,
   SYMMETRIC_CARDINALITIES,
 } from "@/modules/knowledge-network/utils/relation-declarations";
+import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 
 import styles from "./RelationDeclarationsSection.module.css";
 import { useRelationSentence } from "./use-relation-sentence";
@@ -127,7 +128,7 @@ export function RelationDeclarationsSection({
               (item) =>
                 item.id !== relationTypeId &&
                 item.declarations?.importance !== "secondary" &&
-                !item.deprecated,
+                !isDeprecated({ declarations: item.definitionDeclarations }),
             ),
           );
         }
