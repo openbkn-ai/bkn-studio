@@ -42,12 +42,14 @@ export function SSODirectorySyncModal({
   const [form] = Form.useForm<DirectorySyncInput>();
   const [view, setView] = useState<DirectorySyncView>();
   const [error, setError] = useState("");
+  const [operationError, setOperationError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!provider) return;
     let active = true;
     setView(undefined);
     setError("");
+    setOperationError("");
     form.resetFields();
     const load = async (initial: boolean) => {
       try {
@@ -76,25 +78,27 @@ export function SSODirectorySyncModal({
   }, [provider, form]);
   const save = async (input: DirectorySyncInput) => {
     if (!provider) return;
+    setOperationError("");
     setBusy(true);
     try {
       setView(await saveDirectorySync(provider.id, input));
       form.setFieldValue("webhook_secret", undefined);
       void message.success(label("saved"));
     } catch (e) {
-      setError(extractRequestErrorMessage(e));
+      setOperationError(extractRequestErrorMessage(e));
     } finally {
       setBusy(false);
     }
   };
   const run = async () => {
     if (!provider) return;
+    setOperationError("");
     setBusy(true);
     try {
       await runDirectorySync(provider.id);
       void message.success(label("queued"));
     } catch (e) {
-      setError(extractRequestErrorMessage(e));
+      setOperationError(extractRequestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -137,6 +141,7 @@ export function SSODirectorySyncModal({
       <Space direction="vertical" style={{ width: "100%" }}>
         <Alert type="info" showIcon message={label("scopeHint")} />
         {error && <Alert type="error" message={error} />}
+        {operationError && <Alert type="error" message={operationError} />}
         {view && (
           <>
             <Form
@@ -207,7 +212,11 @@ export function SSODirectorySyncModal({
                 {
                   key: "error",
                   label: label("lastError"),
-                  children: view.config.last_error_code ? label(view.config.last_error_code) : "—",
+                  children: view.config.last_error_code
+                    ? t(`systemAdmin.sso.sync.${view.config.last_error_code}`, {
+                        defaultValue: label("unknownError"),
+                      })
+                    : "—",
                 },
                 { key: "users", label: label("users"), children: view.config.users },
                 {

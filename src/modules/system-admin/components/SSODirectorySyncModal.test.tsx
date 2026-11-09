@@ -4,7 +4,8 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { clearInterval as clearNodeInterval, setInterval as setNodeInterval } from "node:timers";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DirectorySyncView, SSOProvider } from "../services/sso-provider.service";
 const api = vi.hoisted(() => ({
@@ -16,7 +17,9 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("react-i18next", async (original) => ({
   ...(await original<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+  }),
 }));
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: { success: api.success, error: api.error } }),
@@ -105,5 +108,34 @@ describe("SSO directory synchronization", () => {
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
     await screen.findByLabelText("systemAdmin.sso.sync.organization");
     expect(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" })).toBeDisabled();
+  });
+  it("keeps an operation error after a successful status poll", async () => {
+    let poll: (() => void) | undefined;
+    const timerHandle = setNodeInterval(() => undefined, 60_000);
+    clearNodeInterval(timerHandle);
+    const timer = vi.spyOn(window, "setInterval").mockImplementation((handler, delay) => {
+      if (delay === 5000) poll = handler;
+      return timerHandle;
+    });
+    api.run.mockRejectedValueOnce(new Error("sync failed"));
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" }));
+    await screen.findByText("sync failed");
+    await act(async () => {
+      poll?.();
+      await Promise.resolve();
+    });
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("sync failed")).toBeInTheDocument();
+    timer.mockRestore();
+  });
+  it("uses a fallback for an unknown synchronization error", async () => {
+    api.get.mockResolvedValue({
+      ...view,
+      config: { ...view.config, last_error_code: "NEW_ERROR" },
+    });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    expect(await screen.findByText("systemAdmin.sso.sync.unknownError")).toBeInTheDocument();
   });
 });

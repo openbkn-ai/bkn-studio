@@ -34,6 +34,7 @@ export const systemAdminEnUS = {
         idle: "Waiting",
         lastSuccess: "Last successful sync",
         lastError: "Last error",
+        unknownError: "Synchronization failed. Check the service logs.",
         users: "Users scanned",
         departments: "Departments scanned (including organization root)",
         disabledUsers: "Disabled or externally blocked users in this run",

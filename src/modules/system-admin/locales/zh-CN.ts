@@ -33,6 +33,7 @@ export const systemAdminZhCN = {
         idle: "等待调度",
         lastSuccess: "最近成功时间",
         lastError: "最近错误",
+        unknownError: "同步失败，请查看服务日志。",
         users: "扫描用户数",
         departments: "扫描部门数（含组织根节点）",
         disabledUsers: "本轮停用或上游禁用用户数",
