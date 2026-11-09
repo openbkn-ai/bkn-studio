@@ -1458,9 +1458,10 @@ it("shows cancellation as a Run state instead of a business quality conclusion",
   expect(within(row!).queryByText("无法判定", { exact: true })).toBeNull();
 });
 it("identifies recent Runs by test suite and time without displaying identifiers", async () => {
+  const runId = "01a187dd-c7bc-748a-b09a-823a5a10a59a";
   vi.mocked(listM0Runs).mockResolvedValue([
     {
-      id: "01a187dd-c7bc-748a-b09a-823a5a10a59a",
+      id: runId,
       suite_name: "标准交期",
       scope: { kind: "suite", suite_id: "supply-m0-leadtime", version: 1 },
       created_at: "2026-10-29T10:00:00Z",
@@ -1488,10 +1489,8 @@ it("identifies recent Runs by test suite and time without displaying identifiers
   expect(within(table!).getByText(/2026\/10\/29/)).toBeTruthy();
   expect(runButton.getAttribute("title")).toBeNull();
   expect(within(table!).queryByText(/#5a10a59a/)).toBeNull();
-  expect(within(table!).queryByText("01a187dd-c7bc-748a-b09a-823a5a10a59a")).toBeNull();
-  const row = table!.querySelector<HTMLTableRowElement>(
-    'tr[data-row-key="01a187dd-c7bc-748a-b09a-823a5a10a59a"]',
-  );
+  expect(within(table!).queryByText(runId)).toBeNull();
+  const row = table!.querySelector<HTMLTableRowElement>(`tr[data-row-key="${runId}"]`);
   expect(row).not.toBeNull();
   expect(within(row!).queryByText("无法判定")).toBeNull();
 });

@@ -1074,20 +1074,26 @@ it("keeps custom business criteria when the user cancels a purpose switch", asyn
     />,
   );
   await screen.findByDisplayValue("自定义搜索数量");
-  await waitFor(() => expect(screen.getByRole("radio", { name: "自定义结果判定" })).toBeChecked());
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("自定义结果判定", { selector: 'input[type="radio"]' }),
+    ).toBeChecked(),
+  );
   expect(screen.getByDisplayValue("2")).toBeTruthy();
   const confirmSpy = vi
     .spyOn(Modal, "confirm")
     .mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
-  fireEvent.click(screen.getByRole("radio", { name: "仅记录输出" }));
+  fireEvent.click(screen.getByLabelText("仅记录输出", { selector: 'input[type="radio"]' }));
   await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
   expect(confirmSpy.mock.calls[0][0]).toMatchObject({
     title: "切换检查目的？",
     cancelText: "保留当前标准",
   });
   confirmSpy.mock.calls[0][0].onCancel?.();
-  expect(screen.getByRole("radio", { name: "自定义结果判定" })).toBeChecked();
-  fireEvent.click(screen.getByRole("button", { name: "确定" }));
+  expect(
+    screen.getByLabelText("自定义结果判定", { selector: 'input[type="radio"]' }),
+  ).toBeChecked();
+  fireEvent.click(screen.getByLabelText("确定", { selector: "button" }));
   await waitFor(() => expect(replaceEvalCase).toHaveBeenCalledOnce());
   expect(vi.mocked(replaceEvalCase).mock.calls[0][1].definition.assertions).toContainEqual(
     expect.objectContaining({ type: "equals", path: "$.result.count" }),

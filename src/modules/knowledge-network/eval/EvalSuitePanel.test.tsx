@@ -199,7 +199,9 @@ it("switches historical versions inside details without a separate version-recor
   expect(await within(drawer).findByText("当前库存校验")).toBeTruthy();
   expect(within(drawer).queryByText("通过")).toBeNull();
   await waitFor(() => expect(listEvalSuiteVersions).toHaveBeenCalledWith("kn-1", "suite-1"));
-  fireEvent.mouseDown(within(drawer).getByRole("combobox", { name: "测试集版本" }));
+  fireEvent.mouseDown(
+    within(drawer).getByLabelText("测试集版本", { selector: '[role="combobox"]' }),
+  );
   fireEvent.click(await screen.findByText("v1", { selector: ".ant-select-item-option-content" }));
   expect(await within(drawer).findByText("历史交期校验")).toBeTruthy();
   expect(within(drawer).getByText("历史说明")).toBeTruthy();
@@ -213,7 +215,7 @@ it("switches historical versions inside details without a separate version-recor
     page: 1,
     limit: 1,
   });
-  fireEvent.click(within(drawer).getByRole("button", { name: "历史交期校验" }));
+  fireEvent.click(within(drawer).getByText("历史交期校验").closest("button")!);
   await waitFor(() =>
     expect(getEvalSuiteCaseDetail).toHaveBeenCalledWith("kn-1", "suite-1", 1, "case-old"),
   );
@@ -353,7 +355,7 @@ it("opens the current referenced case on demand and returns to the unchanged tes
   expect(caseDrawer).toBe(suiteDrawer);
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
   expect(within(caseDrawer).queryByRole("button", { name: "确定" })).toBeNull();
-  fireEvent.click(within(caseDrawer).getByRole("button", { name: "返回测试集" }));
+  fireEvent.click(within(caseDrawer).getByLabelText("返回测试集", { selector: "button" }));
   await waitFor(() => expect(screen.queryByText("用例详情")).toBeNull());
   expect(within(suiteDrawer).getByText("库存校验")).toBeTruthy();
   expect(createM1Run).not.toHaveBeenCalled();
@@ -382,13 +384,17 @@ it("keeps the suite open when member details fail and supports retry", async () 
     gold_visible: false,
     definition: { ...(await successful(...args)).definition, expected_spec: null },
   }));
-  fireEvent.click(within(caseDrawer).getByRole("button", { name: /重\s*试/ }));
+  fireEvent.click(
+    within(caseDrawer)
+      .getByText(/重\s*试/, { selector: "button > span" })
+      .closest("button")!,
+  );
   expect(
     await within(caseDrawer).findByText("预期结果受权限保护，需用例管理权限才能查看。"),
   ).toBeTruthy();
   expect(within(caseDrawer).queryByText(/"days": 14/)).toBeNull();
   expect(within(suiteDrawer).queryByRole("combobox", { name: "测试集版本" })).toBeNull();
-  fireEvent.click(within(caseDrawer).getByRole("button", { name: "返回测试集" }));
+  fireEvent.click(within(caseDrawer).getByLabelText("返回测试集", { selector: "button" }));
   expect(within(suiteDrawer).getByText("库存校验")).toBeTruthy();
   expect(within(suiteDrawer).getByRole("combobox", { name: "测试集版本" })).toBeTruthy();
 });
@@ -441,7 +447,7 @@ it("paginates large member lists and preserves their immutable version when insp
   const caseDrawer = (await screen.findByText("用例详情")).closest<HTMLElement>('[role="dialog"]')!;
   await within(caseDrawer).findByText("物料A的标准交期是多少？");
   expect(getEvalSuiteCaseDetail).toHaveBeenCalledWith("kn-1", "suite-1", 1, "case-11");
-  fireEvent.click(within(caseDrawer).getByRole("button", { name: "返回测试集" }));
+  fireEvent.click(within(caseDrawer).getByLabelText("返回测试集", { selector: "button" }));
   await waitFor(() => expect(screen.queryByText("用例详情")).toBeNull());
   expect(within(suiteDrawer).getByText("分页用例 11")).toBeTruthy();
   expect(within(suiteDrawer).queryByText("分页用例 1")).toBeNull();
@@ -494,7 +500,9 @@ it("retains the selected version when a previous detail request finishes late", 
   fireEvent.click(await screen.findByRole("menuitem", { name: /^详情$/ }));
   const drawer = await screen.findByRole("dialog", { name: "测试集详情" });
   await waitFor(() => expect(getEvalSuite).toHaveBeenCalledWith("kn-1", "suite-1", 2));
-  fireEvent.mouseDown(within(drawer).getByRole("combobox", { name: "测试集版本" }));
+  fireEvent.mouseDown(
+    within(drawer).getByLabelText("测试集版本", { selector: '[role="combobox"]' }),
+  );
   fireEvent.click(await screen.findByText("v1", { selector: ".ant-select-item-option-content" }));
   expect(await within(drawer).findByText("历史成员")).toBeTruthy();
   await act(() =>
@@ -562,7 +570,7 @@ async function openMemberDetails() {
   fireEvent.click(await screen.findByText("详情"));
   const drawer = await screen.findByRole("dialog", { name: "测试集详情" });
   const header = within(drawer.querySelector<HTMLElement>(".ant-drawer-header")!);
-  expect(within(drawer).queryByRole("button", { name: "确定" })).toBeNull();
+  expect(within(drawer).queryByText("确定", { selector: "button span" })).toBeNull();
   fireEvent.click(await within(drawer).findByText("交期校验"));
   await within(drawer).findByText("交期用例当前定义");
   return { drawer, header };
@@ -584,11 +592,11 @@ it("navigates members back and forth within one drawer", async () => {
 
 it("closes the complete member detail flow and reopens at the test suite", async () => {
   const { header } = await openMemberDetails();
-  fireEvent.click(header.getByRole("button", { name: "Close" }));
+  fireEvent.click(header.getByLabelText("Close", { selector: "button" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   fireEvent.click(screen.getByLabelText("测试集操作：供应链核心回归集", { selector: "button" }));
   fireEvent.click(await screen.findByText("详情"));
   const reopened = await screen.findByRole("dialog", { name: "测试集详情" });
-  expect(await within(reopened).findByRole("button", { name: "交期校验" })).toBeTruthy();
-  expect(within(reopened).queryByRole("button", { name: "返回测试集" })).toBeNull();
+  expect(await within(reopened).findByText("交期校验", { selector: "button span" })).toBeTruthy();
+  expect(within(reopened).queryByLabelText("返回测试集", { selector: "button" })).toBeNull();
 });

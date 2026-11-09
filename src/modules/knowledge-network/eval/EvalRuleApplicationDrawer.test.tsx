@@ -351,7 +351,9 @@ it("keeps large identifiers and exact expected amounts when applying sample inpu
   expect(
     screen.getByLabelText<HTMLTextAreaElement>(label("arguments"), { selector: "textarea" }).value,
   ).toContain("9007199254740993");
-  fireEvent.click(screen.getByRole("button", { name: label("applyConfiguration") }));
+  fireEvent.click(
+    screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
+  );
   fireEvent.click(footer().getByRole("button", { name: label("save") }));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   const sample = vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0];
@@ -364,7 +366,9 @@ it("removes sample limits when changing to a supported full-data check", async (
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
   fireEvent.mouseDown(screen.getByLabelText(label("scope"), { selector: '[role="combobox"]' }));
   fireEvent.click(await screen.findByText(label("allData")));
-  fireEvent.click(screen.getByRole("button", { name: label("applyConfiguration") }));
+  fireEvent.click(
+    screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
+  );
   fireEvent.click(footer().getByRole("button", { name: label("save") }));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   expect(vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0].scope).toEqual({
@@ -410,7 +414,9 @@ it("reuses structured source parameters and fixed network arguments when applyin
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
   expect(screen.queryByRole("textbox", { name: label("arguments") })).toBeNull();
   expect(screen.getByRole("spinbutton", { name: "count" })).toHaveValue("0");
-  fireEvent.click(screen.getByRole("button", { name: label("applyConfiguration") }));
+  fireEvent.click(
+    screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
+  );
   fireEvent.click(footer().getByRole("button", { name: label("save") }));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   expect(vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0].arguments).toEqual({
@@ -451,7 +457,9 @@ it("saves a complete definition-only sample without claiming applicability or ex
   ]);
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
   await screen.findByRole("textbox", { name: "knowledgeNetwork.eval.definitionOnly.steps" });
-  fireEvent.click(screen.getByRole("button", { name: label("applyConfiguration") }));
+  fireEvent.click(
+    screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
+  );
   fireEvent.click(footer().getByRole("button", { name: label("save") }));
   await waitFor(() => expect(saveRuleApplication).toHaveBeenCalledOnce());
   const sample = vi.mocked(saveRuleApplication).mock.calls[0][1].samples![0];
@@ -533,8 +541,10 @@ it("saves a resource sample after server preparation replaces its initial incomp
   fireEvent.click(footer().getByRole("button", { name: label("next") }));
   await footer().findByRole("button", { name: label("save") });
   fireEvent.click(document.querySelector("button.ant-table-row-expand-icon")!);
-  fireEvent.click(screen.getByRole("button", { name: "完成来源参数与独立预期校验" }));
-  fireEvent.click(screen.getByRole("button", { name: label("applyConfiguration") }));
+  fireEvent.click(screen.getByText("完成来源参数与独立预期校验", { selector: "button" }));
+  fireEvent.click(
+    screen.getByText(label("applyConfiguration"), { selector: "button > span" }).closest("button")!,
+  );
   const save = footer().getByRole("button", { name: label("save") });
   expect(save).toBeEnabled();
   fireEvent.click(save);
