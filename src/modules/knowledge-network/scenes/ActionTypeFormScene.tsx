@@ -329,6 +329,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       setExecutionSourceError(
         validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );
+      setOpenRulePanels((open) => (open.includes("execution") ? open : [...open, "execution"]));
       void message.error(validationError);
       return;
     }
@@ -481,7 +482,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
               items={[
                 {
                   // Rendered while collapsed too: a field only reaches the saved values once it
-                  // is mounted, so a save without opening the panel would drop it.
+                  // is mounted, so a save without opening the panel would drop it. The same
+                  // holds for the other two panels.
                   forceRender: true,
                   key: "trigger",
                   label: (
@@ -551,6 +553,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   ),
                 },
                 {
+                  // Mounted while collapsed as well, so it reports whether the tool takes
+                  // parameters before a save checks them.
+                  forceRender: true,
                   key: "execution",
                   label: (
                     <span className={styles.ruleHeader}>
