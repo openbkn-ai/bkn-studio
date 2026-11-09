@@ -1263,8 +1263,13 @@ it("explains which required Function parameter is missing instead of reporting a
     />,
   );
   await screen.findByLabelText("material_code", { exact: true, selector: "input,textarea" });
-  fireEvent.click(screen.getByRole("button", { name: "确定" }));
-  expect(await screen.findByText("请填写参数 material_code")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("用例名称", { selector: "input,textarea", exact: true }), {
+    target: { value: "标准交期缺少物料编码" },
+  });
+  const confirm = screen.getByLabelText("确定", { selector: "button" });
+  await waitFor(() => expect(confirm).toBeEnabled());
+  fireEvent.click(confirm);
+  expect(await screen.findByText("请填写参数 material_code", {}, { timeout: 3000 })).toBeTruthy();
   expect(createEvalCase).not.toHaveBeenCalled();
 });
 

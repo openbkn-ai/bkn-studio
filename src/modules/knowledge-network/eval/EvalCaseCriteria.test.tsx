@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { ConfigProvider } from "antd";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { augmentCaseOutputSchema } from "./case-form-model";
@@ -71,12 +72,16 @@ it("infers a numeric expectation from the selected output schema and clears obso
 });
 it("does not offer string predicates for a numeric result", async () => {
   render(
-    <Editor
-      initial={[{ ...criterion, path: "$.count", valueType: "number" }]}
-      schema={{ properties: { count: { type: "integer" } } }}
-    />,
+    <ConfigProvider virtual={false} theme={{ token: { motion: false } }}>
+      <Editor
+        initial={[{ ...criterion, path: "$.count", valueType: "number" }]}
+        schema={{ properties: { count: { type: "integer" } } }}
+      />
+    </ConfigProvider>,
   );
-  fireEvent.mouseDown(screen.getByRole("combobox", { name: "predicate 1" }));
+  const predicate = screen.getByLabelText("predicate 1", { selector: '[role="combobox"]' });
+  fireEvent.mouseDown(predicate);
+  await waitFor(() => expect(predicate).toHaveAttribute("aria-expanded", "true"));
   expect(
     screen.queryByText("contains", { selector: ".ant-select-item-option-content" }),
   ).not.toBeInTheDocument();
