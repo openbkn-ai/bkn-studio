@@ -9,7 +9,10 @@ import { describe, expect, it } from "vitest";
 
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { availableRelationTypesFrom } from "./object-metric-relation-path";
+import {
+  availableRelationTypesFrom,
+  normalizeObjectMetricRelationStepsV1,
+} from "./object-metric-relation-path";
 
 describe("availableRelationTypesFrom", () => {
   const orderChannel = {
@@ -42,7 +45,7 @@ describe("availableRelationTypesFrom", () => {
     ).toEqual(["order_channel"]);
   });
 
-  it("supports an incoming relation as the first path step", () => {
+  it("supports a backward relation as the first path step", () => {
     expect(
       availableRelationTypesFrom([orderChannel, channelStore], "store").map((item) => item.id),
     ).toEqual(["channel_store"]);
@@ -78,5 +81,23 @@ describe("availableRelationTypesFrom", () => {
         "order_channel",
       ).map((item) => item.id),
     ).toEqual(["order_channel_fallback", "channel_store"]);
+  });
+});
+
+describe("normalizeObjectMetricRelationStepsV1", () => {
+  it("keeps canonical directions and upgrades persisted legacy aliases", () => {
+    expect(
+      normalizeObjectMetricRelationStepsV1([
+        { direction: "forward", relation_type_id: "r1", target_object_type_id: "b" },
+        { direction: "incoming", relation_type_id: "r2", target_object_type_id: "c" },
+        { direction: "outgoing", relation_type_id: "r3", target_object_type_id: "d" },
+        { direction: "backward", relation_type_id: "r4", target_object_type_id: "e" },
+      ]),
+    ).toEqual([
+      { direction: "forward", relation_type_id: "r1", target_object_type_id: "b" },
+      { direction: "backward", relation_type_id: "r2", target_object_type_id: "c" },
+      { direction: "forward", relation_type_id: "r3", target_object_type_id: "d" },
+      { direction: "backward", relation_type_id: "r4", target_object_type_id: "e" },
+    ]);
   });
 });
