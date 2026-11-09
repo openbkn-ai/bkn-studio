@@ -39,6 +39,8 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
+import { DefinitionDeclarationFields } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
@@ -49,8 +51,10 @@ import {
 } from "@/modules/knowledge-network/lib/resource-constraints";
 import {
   createKnowledgeNetworkObjectType,
+  getKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkConceptGroups,
+  listKnowledgeNetworkObjectTypePage,
   listKnowledgeNetworkValueTypes,
   updateKnowledgeNetworkObjectType,
   validateKnowledgeNetworkObjectType,
@@ -59,9 +63,16 @@ import {
   readDeclarationRefusal,
   type DeclarationRefusal,
 } from "@/modules/knowledge-network/services/shared/declaration-errors";
+import { isDefinitionLevelRefusal } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import {
+  type DefinitionDeclarationFormValues,
+  fromDefinitionDeclarationForm,
+  toDefinitionDeclarationForm,
+} from "@/modules/knowledge-network/utils/definition-declarations";
 import type {
   ConceptGroupRecord,
   DataPropertyDeclarationBaseline,
+  DefinitionDeclarations,
   KnowledgeNetworkObjectTypeMutationPayload,
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
@@ -76,7 +87,7 @@ const LOGIC_PROPERTY_ERROR_PATTERNS = [
   /logic property\[([^\]]+)\]/i,
 ];
 
-type BasicFormValues = {
+type BasicFormValues = DefinitionDeclarationFormValues & {
   color: string;
   conceptGroupIds: string[];
   description: string;
@@ -118,6 +129,10 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   const [valueTypes, setValueTypes] = useState<ValueType[]>([]);
   const [valueTypesFailed, setValueTypesFailed] = useState(false);
   const [declarationRefusal, setDeclarationRefusal] = useState<DeclarationRefusal | null>(null);
+  // A refusal of the aliases or lifecycle, shown in the basic info.
+  const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
+  const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
+  const watchedName = Form.useWatch("name", basicForm);
   // What the declarations were when the object type was read; a save sends only what changed.
   const declarationBaseline = useRef<DataPropertyDeclarationBaseline>(new Map());
   const [pageTitle, setPageTitle] = useState(
@@ -183,7 +198,11 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             id: detail.id,
             name: detail.name,
             tags: detail.tags,
+            ...toDefinitionDeclarationForm(detail.declarations),
           };
+          definitionBaseline.current = detail.declarations
+            ? structuredClone(detail.declarations)
+            : undefined;
           setBasicValue(nextBasic);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
@@ -403,6 +422,10 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             id: storedBasicValue.id ?? basicValue.id,
             name: storedBasicValue.name ?? basicValue.name,
             tags: storedBasicValue.tags ?? basicValue.tags,
+            aliases: storedBasicValue.aliases ?? basicValue.aliases,
+            lifecycleReason: storedBasicValue.lifecycleReason ?? basicValue.lifecycleReason,
+            lifecycleStatus: storedBasicValue.lifecycleStatus ?? basicValue.lifecycleStatus,
+            replacedBy: storedBasicValue.replacedBy ?? basicValue.replacedBy,
           }
         : null;
       if (normalizedBasicValue) {
@@ -443,6 +466,10 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       dataProperties: normalizedDataProperties,
       dataSource: normalizedDataSource,
       declarationBaseline: declarationBaseline.current,
+      definitionDeclarationEdit: {
+        baseline: definitionBaseline.current,
+        current: fromDefinitionDeclarationForm(normalizedBasicValue),
+      },
       description: normalizedBasicValue.description,
       icon: normalizedBasicValue.icon,
       id: normalizedBasicValue.id,
@@ -454,6 +481,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     setSubmitting(true);
     setLogicValidationError(null);
     setDeclarationRefusal(null);
+    setDefinitionRefusal(null);
     try {
       await validateKnowledgeNetworkObjectType(
         networkId,
@@ -470,6 +498,12 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       void navigate(returnPath);
     } catch (error) {
       const refusal = readDeclarationRefusal(error);
+      if (refusal && isDefinitionLevelRefusal(refusal)) {
+        // Shown in the basic info, where the aliases and lifecycle are.
+        setDefinitionRefusal(refusal);
+        setCurrentStep(0);
+        return;
+      }
       if (refusal) {
         // Shown above the data properties, at the property it names.
         setDeclarationRefusal(refusal);
@@ -527,18 +561,45 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
     })();
   };
 
+  const searchReplacements = useCallback(
+    async (keyword: string) =>
+      (
+        await listKnowledgeNetworkObjectTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          namePattern: keyword || undefined,
+          offset: 0,
+          sort: "name",
+        })
+      ).entries,
+    [networkId],
+  );
+  const resolveReplacement = useCallback(
+    async (id: string) => (await getKnowledgeNetworkObjectType(networkId, id)) ?? undefined,
+    [networkId],
+  );
+
   const renderStepContent = () => {
     if (currentStep === 0) {
       return (
         <div className={styles.basicForm}>
+          {definitionRefusal ? (
+            <DefinitionRefusal
+              networkId={networkId}
+              refusal={definitionRefusal}
+              saved={{ id: mode === "edit" ? objectTypeId : basicValue?.id, kind: "object_type" }}
+            />
+          ) : null}
           <Form
             colon={false}
             form={basicForm}
             initialValues={{
               color: DEFAULT_RESOURCE_COLOR,
+              aliases: [],
               conceptGroupIds: [],
               description: "",
               icon: DEFAULT_RESOURCE_ICON,
+              lifecycleStatus: "active",
               tags: [],
             }}
             labelAlign="left"
@@ -603,6 +664,12 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
               <Input.TextArea autoSize={{ minRows: 6, maxRows: 10 }} maxLength={1000} showCount />
             </Form.Item>
+            <DefinitionDeclarationFields
+              definitionId={mode === "edit" ? objectTypeId : undefined}
+              ownNames={[watchedName ?? ""]}
+              resolveReplacement={resolveReplacement}
+              searchReplacements={searchReplacements}
+            />
           </Form>
         </div>
       );

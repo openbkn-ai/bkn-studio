@@ -28,6 +28,7 @@ import {
   detachKnowledgeNetworkCapabilities,
 } from "@/modules/knowledge-network/services/capability-binding.service";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
+import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
 
 type WorkspaceData = ReturnType<typeof useWorkspaceData>;
 
@@ -55,6 +56,15 @@ type WorkspaceResourceSectionProps = {
   section: KnowledgeNetworkWorkspaceSection;
 };
 
+/**
+ * Deletes each record, all of them even when one fails, so the list can refresh to what is left.
+ * Returns the first failure, or undefined when every delete succeeded.
+ */
+async function deleteEach<T>(records: readonly T[], remove: (record: T) => Promise<unknown>) {
+  const results = await Promise.allSettled(records.map(remove));
+  return results.find((result) => result.status === "rejected");
+}
+
 export function WorkspaceResourceSection({
   canDelete,
   canModify,
@@ -65,6 +75,7 @@ export function WorkspaceResourceSection({
 }: WorkspaceResourceSectionProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const showDeleteError = useDefinitionDeleteRefusal();
 
   switch (section) {
     case "concept-groups":
@@ -98,9 +109,13 @@ export function WorkspaceResourceSection({
           networkId={networkId}
           networkName={networkName}
           onDelete={async (records) => {
-            await Promise.all(
-              records.map((record) => deleteKnowledgeNetworkObjectType(networkId, record.id)),
+            const failed = await deleteEach(records, (record) =>
+              deleteKnowledgeNetworkObjectType(networkId, record.id),
             );
+            if (failed) {
+              showDeleteError(failed.reason, records);
+              return;
+            }
             void message.success(t("common.success"));
           }}
         />
@@ -128,9 +143,13 @@ export function WorkspaceResourceSection({
           networkId={networkId}
           networkName={networkName}
           onDelete={async (records) => {
-            await Promise.all(
-              records.map((record) => deleteKnowledgeNetworkActionType(networkId, record.id)),
+            const failed = await deleteEach(records, (record) =>
+              deleteKnowledgeNetworkActionType(networkId, record.id),
             );
+            if (failed) {
+              showDeleteError(failed.reason, records);
+              return;
+            }
             void message.success(t("common.success"));
           }}
         />

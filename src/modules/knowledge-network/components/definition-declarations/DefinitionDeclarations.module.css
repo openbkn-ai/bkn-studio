@@ -1,0 +1,61 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.refusal {
+  margin-bottom: 16px;
+}
+
+.refusalDetails {
+  margin: 0 0 8px;
+  word-break: break-word;
+}
+
+.refusalLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.banner {
+  margin-bottom: 16px;
+}
+
+.bannerReplacement {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.deleteRefusal p {
+  margin: 0 0 8px;
+}
+
+.deleteRefusal ul {
+  margin: 0;
+  padding-left: 20px;
+  word-break: break-word;
+}
+
+.deleteRefusalHeading {
+  color: var(--color-text-secondary);
+}
+
+.nameWithTag {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.nameWithTag > :first-child {
+  min-width: 0;
+}
+
+.nameWithTag :global(.ant-tag) {
+  flex: none;
+  margin-inline-end: 0;
+}

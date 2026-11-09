@@ -58,6 +58,7 @@ import type {
 import { listKnowledgeNetworkActionTypePage } from "@/modules/knowledge-network/services/action-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
+import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
@@ -400,7 +401,9 @@ export function ActionTypeListPanel({
           >
             <ThunderboltOutlined />
           </span>
-          <span className={styles.objectName}>{value}</span>
+          <DeprecatedName declarations={record.declarations}>
+            <span className={styles.objectName}>{value}</span>
+          </DeprecatedName>
         </div>
       ),
     },

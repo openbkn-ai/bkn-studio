@@ -7,6 +7,8 @@
 
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
+import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
@@ -376,6 +378,7 @@ export async function createKnowledgeNetworkActionType(
       objectTypeId: input.objectTypeId,
       objectTypeName: relatedObject?.name ?? input.objectTypeId,
       tags: input.tags,
+      ...withMockDefinitionDeclarations(undefined, input.definitionDeclarationEdit),
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Local Admin",
     };
@@ -400,6 +403,8 @@ export async function createKnowledgeNetworkActionType(
     {
       entries: [toBackendActionTypeCreateEntry(input)],
     },
+    // The form shows the refusal itself, with the definitions it names.
+    { skipErrorToast: true },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -431,6 +436,7 @@ export async function updateKnowledgeNetworkActionType(
             objectTypeId: input.objectTypeId,
             objectTypeName: relatedObject?.name ?? input.objectTypeId,
             tags: input.tags,
+            ...withMockDefinitionDeclarations(item.declarations, input.definitionDeclarationEdit),
             updateTime: formatTimestamp(Date.now()),
             updaterName: "Local Admin",
           }
@@ -451,6 +457,7 @@ export async function updateKnowledgeNetworkActionType(
   const response = await http.put<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
     toBackendActionTypeUpdatePayload(input),
+    { skipErrorToast: true },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -472,7 +479,16 @@ export async function deleteKnowledgeNetworkActionType(networkId: string, action
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`);
+  try {
+    await http.delete(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+      // The caller shows the refusal, with the definitions that still name this one.
+      { skipErrorToast: true },
+    );
+  } catch (error) {
+    throwIfStillReferenced(error, { id: actionTypeId, kind: "action_type" });
+    throw error;
+  }
 }
 
 export async function importKnowledgeNetworkActionTypes(

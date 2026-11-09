@@ -56,7 +56,7 @@ export type BackendActionParameter = {
   value_from?: "property" | "input" | "const";
 };
 
-export type BackendActionTypeCreateEntry = {
+export type BackendActionTypeCreateEntry = BackendDefinitionDeclarationFields & {
   action_source?: BackendActionSource;
   action_type: "add" | "modify" | "delete" | "notify";
   affect?: BackendActionAffect;
@@ -74,6 +74,11 @@ export type BackendActionTypeCreateEntry = {
 export type BackendActionTypeUpdatePayload = BackendActionTypeCreateEntry;
 
 import type { BackendActionType } from "./backend-types";
+import {
+  type BackendDefinitionDeclarationFields,
+  definitionDeclarationPatch,
+  mapDefinitionDeclarations,
+} from "./declarations";
 
 export function toBackendActionTypeEnum(
   actionKind: KnowledgeNetworkActionTypeKind,
@@ -290,7 +295,9 @@ export function mapActionTypeExecutionConfigFromBackend(
 }
 
 export function mapActionTypeDetail(item: BackendActionType): ActionTypeDetail {
+  const declarations = mapDefinitionDeclarations(item);
   return {
+    ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,
     description: item.comment ?? "",
@@ -346,6 +353,12 @@ export function toBackendActionTypeCreateEntry(
     object_type_id: input.objectTypeId,
     parameters: toBackendActionParameters(executionConfig?.parameters),
     tags: input.tags,
+    ...(input.definitionDeclarationEdit
+      ? definitionDeclarationPatch(
+          input.definitionDeclarationEdit.current,
+          input.definitionDeclarationEdit.baseline,
+        )
+      : {}),
   };
 }
 

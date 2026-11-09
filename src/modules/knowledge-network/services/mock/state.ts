@@ -287,6 +287,7 @@ export const mockObjectTypes: Record<string, KnowledgeNetworkObjectTypeRecord[]>
     {
       id: "ot-risk-order",
       name: "风险订单",
+      declarations: { aliases: ["可疑订单", "风控订单"] },
       description: "触发风控策略流程的订单实体。",
       color: "#1677ff",
       icon: "database",
@@ -823,6 +824,7 @@ export const mockActionTypes: Record<string, KnowledgeNetworkActionTypeRecord[]>
     {
       id: "at-risk-block",
       name: "Block Order",
+      declarations: { aliases: ["Hold Order"] },
       description: "Trigger a blocking workflow for a risky order.",
       color: "#16a34a",
       actionKind: "notify",

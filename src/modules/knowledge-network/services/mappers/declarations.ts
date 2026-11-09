@@ -7,6 +7,8 @@
 
 import type {
   DeclarationPassthroughValue,
+  DefinitionDeclarations,
+  DefinitionLifecycle,
   PropertyConstraints,
   PropertyDeclarations,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -18,6 +20,7 @@ import {
   normalizeConstraints,
   normalizeDeclarations,
 } from "@/modules/knowledge-network/utils/property-declarations";
+import { normalizeDefinitionDeclarations } from "@/modules/knowledge-network/utils/definition-declarations";
 
 const KNOWN_CONSTRAINT_KEYS = new Set([
   "crs",
@@ -207,5 +210,75 @@ export function propertyDeclarationPatch(
       field === "constraints"
         ? ["constraints", toBackendPropertyConstraints(value as PropertyConstraints)]
         : [field, value],
+  );
+}
+
+/** A lifecycle as the backend sends it; it never sends status active, and null means active. */
+export type BackendLifecycle = {
+  reason?: string;
+  replaced_by?: string;
+  status?: string;
+};
+
+/** The declarations of an object type or an action type itself, as the backend sends them. */
+export type BackendDefinitionDeclarationFields = {
+  aliases?: string[] | null;
+  lifecycle?: BackendLifecycle | null;
+};
+
+function mapLifecycle(value: BackendLifecycle | null | undefined): DefinitionLifecycle | undefined {
+  if (value?.status !== "deprecated") {
+    return undefined;
+  }
+  return {
+    reason: typeof value.reason === "string" ? value.reason : "",
+    ...(typeof value.replaced_by === "string" && value.replaced_by
+      ? { replacedBy: value.replaced_by }
+      : {}),
+    status: "deprecated",
+  };
+}
+
+/** Reads the aliases and lifecycle of a definition; undefined when it declares neither. */
+export function mapDefinitionDeclarations(
+  item: BackendDefinitionDeclarationFields,
+): DefinitionDeclarations | undefined {
+  return normalizeDefinitionDeclarations({
+    aliases: Array.isArray(item.aliases)
+      ? item.aliases.filter((alias): alias is string => typeof alias === "string")
+      : undefined,
+    lifecycle: mapLifecycle(item.lifecycle),
+  });
+}
+
+const DEFINITION_DECLARATION_FIELDS = ["aliases", "lifecycle"] as const;
+
+/**
+ * The declaration fields a save of an object type or an action type sends: only what changed, each
+ * whole, and null for what the user cleared. Setting a definition back to active clears its
+ * lifecycle, reason and replacement with it.
+ */
+export function definitionDeclarationPatch(
+  current: DefinitionDeclarations | undefined,
+  baseline: DefinitionDeclarations | undefined,
+): BackendDefinitionDeclarationFields {
+  return declarationPatch(
+    normalizeDefinitionDeclarations(current),
+    normalizeDefinitionDeclarations(baseline),
+    DEFINITION_DECLARATION_FIELDS,
+    (field, value) => {
+      if (field === "lifecycle") {
+        const lifecycle = value as DefinitionLifecycle;
+        return [
+          "lifecycle",
+          {
+            reason: lifecycle.reason,
+            ...(lifecycle.replacedBy ? { replaced_by: lifecycle.replacedBy } : {}),
+            status: lifecycle.status,
+          },
+        ];
+      }
+      return [field, value];
+    },
   );
 }

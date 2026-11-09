@@ -28,6 +28,9 @@ import {
   type ObjectTypeProxyReadFailure,
 } from "@/modules/knowledge-network/utils/object-type-proxy-read-error";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { DefinitionAliases } from "@/modules/knowledge-network/components/definition-declarations/DefinitionAliases";
+import { DeprecatedBanner } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedBanner";
+import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
@@ -230,6 +233,7 @@ export function ObjectTypeDetailScene() {
       ? "relations"
       : requestedRelatedSection;
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
+  const showDeleteError = useDefinitionDeleteRefusal();
   const [knowledgeNetworkName, setKnowledgeNetworkName] = useState(networkId);
   const [permissionRequestOpen, setPermissionRequestOpen] = useState(false);
   const [policyScopeRequestable, setPolicyScopeRequestable] = useState(false);
@@ -301,7 +305,12 @@ export function ObjectTypeDetailScene() {
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        await deleteKnowledgeNetworkObjectType(networkId, objectTypeId);
+        try {
+          await deleteKnowledgeNetworkObjectType(networkId, objectTypeId);
+        } catch (deleteError) {
+          showDeleteError(deleteError, [detail]);
+          return;
+        }
         void message.success(t("common.success"));
         void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
@@ -1168,6 +1177,16 @@ export function ObjectTypeDetailScene() {
                   ) : (
                     <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
                   )}
+                </dd>
+              </div>
+              <div className={`${styles.overviewMetaItem} ${styles.overviewMetaItemWide}`}>
+                <dt>{t("knowledgeNetwork.definitionDeclarations.aliases")}</dt>
+                <dd>
+                  <DefinitionAliases
+                    aliases={detail.declarations?.aliases}
+                    emptyClassName={styles.placeholder}
+                    rowClassName={styles.tagRow}
+                  />
                 </dd>
               </div>
             </dl>
@@ -2142,6 +2161,11 @@ export function ObjectTypeDetailScene() {
         title={detail.name}
       >
         <div className={styles.page}>
+          <DeprecatedBanner
+            declarations={detail.declarations}
+            kind="object_type"
+            networkId={networkId}
+          />
           <section className={styles.tabCard}>
             <Tabs
               activeKey={activeTab}

@@ -107,3 +107,31 @@ export type PropertyDeclarations = {
   required?: boolean;
   semantic?: PropertySemantic;
 };
+
+/**
+ * A definition that is no longer in use (spec §4.3): why, and optionally the definition of the
+ * same kind to use instead. An active definition has no lifecycle.
+ */
+export type DefinitionLifecycle = {
+  reason: string;
+  replacedBy?: string;
+  status: "deprecated";
+};
+
+/**
+ * The BKN spec 3.0 declarations of an object type or an action type itself, as opposed to those of
+ * its properties. A declaration it does not make is left out.
+ */
+export type DefinitionDeclarations = {
+  aliases?: string[];
+  lifecycle?: DefinitionLifecycle;
+};
+
+/**
+ * The declarations a form edits, against what they were when it read the definition; a save sends
+ * only what changed. A save without it, such as a mask rule save, sends no declaration.
+ */
+export type DefinitionDeclarationEdit = {
+  baseline?: DefinitionDeclarations;
+  current?: DefinitionDeclarations;
+};

@@ -41,7 +41,12 @@ import type {
   BackendSmallModel,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
-import { mapPropertyDeclarations, propertyDeclarationPatch } from "./declarations";
+import {
+  definitionDeclarationPatch,
+  mapDefinitionDeclarations,
+  mapPropertyDeclarations,
+  propertyDeclarationPatch,
+} from "./declarations";
 import { mapRelationTypeMappingsFromBackend } from "./relation-type.mapper";
 
 export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNetworkRecord {
@@ -92,8 +97,10 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
   const indexStatus = item.index_status?.state
     ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
     : { state: item.data_source ? ("unknown" as const) : ("not_applicable" as const) };
+  const declarations = mapDefinitionDeclarations(item);
 
   return {
+    ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,
     operations: item.operations,
@@ -359,6 +366,12 @@ export function buildBackendObjectTypePayload(
     name: input.name,
     primary_keys: dataProperties.filter((item) => item.primaryKey).map((item) => item.name),
     tags: input.tags,
+    ...(input.definitionDeclarationEdit
+      ? definitionDeclarationPatch(
+          input.definitionDeclarationEdit.current,
+          input.definitionDeclarationEdit.baseline,
+        )
+      : {}),
   };
 }
 
@@ -522,7 +535,9 @@ export function mapActionKind(
 }
 
 export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTypeRecord {
+  const declarations = mapDefinitionDeclarations(item);
   return {
+    ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,
     operations: item.operations,
