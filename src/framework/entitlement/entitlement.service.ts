@@ -52,13 +52,20 @@ function mockEntitlement(edition: Edition): Entitlement {
       };
     case "professional":
       return {
-        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "object_metrics"],
+        capabilities: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "object_metrics",
+          "workshop",
+        ],
         edition: "professional",
         extensions: [
           "rbac_basic",
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
         ],
         features: [
@@ -66,6 +73,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
           "source_sync",
         ],
@@ -80,6 +88,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
         ],
         edition: "enterprise",
@@ -88,6 +97,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
         ],
         features: [
@@ -95,6 +105,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
           "source_sync",
         ],
@@ -109,6 +120,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
         ],
         edition: "industry",
@@ -117,6 +129,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
         ],
         features: [
@@ -124,6 +137,7 @@ function mockEntitlement(edition: Edition): Entitlement {
           "perm_fine_grained",
           "graph_explorer",
           "object_metrics",
+          "workshop",
           "perm_object_level",
           "source_sync",
         ],

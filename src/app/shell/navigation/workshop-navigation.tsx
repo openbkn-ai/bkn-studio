@@ -13,17 +13,15 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 /**
  * Workshop builds business apps on knowledge networks. Its pages are in the enterprise image
  * (openbkn-ee studio/ registers /workshop), so extensionPage keeps the entry out of a community
- * build whatever the entitlement snapshot says.
- *
- * Workshop has no capability key of its own yet: it borrows the graph explorer's, which starts
- * at the same edition (professional). Change it here once the key is registered.
+ * build whatever the entitlement snapshot says. Its capability is the one the enterprise build
+ * registers those pages under; a licence without it keeps the entry locked as professional.
  *
  * It sits right below project management, by its place in console-navigation's list.
  */
 export const workshopNavigation: ConsoleNavContribution = {
   items: [
     {
-      capability: CAPABILITIES.GRAPH_EXPLORER,
+      capability: CAPABILITIES.WORKSHOP,
       extensionPage: true,
       key: "workshop",
       labelKey: "shell.items.workshop",

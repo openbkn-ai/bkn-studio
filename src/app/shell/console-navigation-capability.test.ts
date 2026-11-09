@@ -138,9 +138,25 @@ describe("filterNavByCapability", () => {
 
     expect(keys(filterNavByInstalledPages(consoleNavigation))).not.toContain("workshop");
     expect(keys(filterNavByInstalledPages(consoleNavigation, () => true))).toContain("workshop");
+    // Even a licence that grants Workshop does not bring the entry back into a build without it.
+    const licensed = snapshot({
+      capabilities: [CAPABILITIES.WORKSHOP],
+      edition: "professional",
+      extensions: [CAPABILITIES.WORKSHOP],
+      licensed: true,
+      state: "valid",
+    });
     expect(
-      keys(filterNavByCapability(filterNavByInstalledPages(consoleNavigation), null)),
+      keys(filterNavByCapability(filterNavByInstalledPages(consoleNavigation), licensed)),
     ).not.toContain("workshop");
+    expect(
+      keys(
+        filterNavByCapability(
+          filterNavByInstalledPages(consoleNavigation, () => true),
+          licensed,
+        ),
+      ),
+    ).toContain("workshop");
   });
 
   // Installed but not licensed: the entry stays and names the edition that unlocks it.
@@ -148,11 +164,25 @@ describe("filterNavByCapability", () => {
     const workshop = consoleNavigation.filter((item) => item.key === "workshop");
     const result = filterNavByCapability(
       workshop,
-      snapshot({ extensions: [CAPABILITIES.GRAPH_EXPLORER], licensed: true, state: "valid" }),
+      snapshot({ extensions: [CAPABILITIES.WORKSHOP], licensed: true, state: "valid" }),
     );
 
     expect(result.map((item) => item.key)).toEqual(["workshop"]);
     expect(result[0]?.locked).toBe(true);
     expect(result[0]?.lockedEdition).toBe("professional");
+  });
+
+  // Workshop answers to its own key, the one bkn-safe-ee checks, not the graph explorer's.
+  it("Workshop 入口:按 workshop 能力判,不看图探索", () => {
+    const workshop = consoleNavigation.filter((item) => item.key === "workshop");
+    const installed = [CAPABILITIES.GRAPH_EXPLORER, CAPABILITIES.WORKSHOP];
+    const view = (capabilities: string[]) =>
+      filterNavByCapability(
+        workshop,
+        snapshot({ capabilities, extensions: installed, licensed: true, state: "valid" }),
+      );
+
+    expect(view([CAPABILITIES.GRAPH_EXPLORER])[0]?.locked).toBe(true);
+    expect(view([CAPABILITIES.WORKSHOP])[0]?.locked).toBeUndefined();
   });
 });

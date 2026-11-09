@@ -74,6 +74,16 @@ export const subscriptionEnUS = {
           "Define, validate, publish and query atomic, derived and composite metrics by object type.",
         name: "Object Metrics",
       },
+      workshop: {
+        bullets: {
+          b1: "Build pages from components with AI help, and import or export apps",
+          b2: "Handle events from rule hits or user reports as tasks: analysis, then handling",
+          b3: "Simulate scenarios and try models, then run actions per object once confirmed",
+        },
+        description:
+          "Build business apps on knowledge networks: pages and components, events and tasks, scenarios.",
+        name: "Workshop",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "View, query, modify, delete and execute granted separately",

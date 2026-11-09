@@ -109,6 +109,14 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.1",
   },
   {
+    // 页面在企业版前端镜像,服务是 openbkn-ee 的 workshop;bkn-safe-ee 登记进装配表,端点报得出。
+    category: "semantic",
+    key: CAPABILITIES.WORKSHOP,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+    sinceVersion: "0.2.2",
+  },
+  {
     // 上游 e8fdf2f 把它降到社区档:技术 Trace 免费,对外能力对比里 CLI/SDK 的 trace
     // 查询本来就列在社区行。留在表里是为了让对比矩阵显示「三档都有」,不是付费项。
     category: "observability",
