@@ -72,13 +72,23 @@ const RELATION_DECLARATION_DETAILS =
   /\b(?:cardinality|characteristics|fallback_for|importance|required|reverse_name|verification)\b/;
 
 /**
- * Whether a refusal of a relation type save concerns only its aliases or lifecycle, which the
- * relation form holds in its basic info.
+ * Whether a refusal of a relation type save concerns its aliases or lifecycle, which the relation
+ * form holds in its basic info. A save that changed only one of the two kinds of declarations is
+ * refused for that kind; otherwise the details tell, read without the quoted names and ids, which
+ * may be anything.
  */
-export function isRelationBasicInfoRefusal(refusal: { details?: string; property?: string }) {
-  return (
-    isDefinitionLevelRefusal(refusal) && !RELATION_DECLARATION_DETAILS.test(refusal.details ?? "")
-  );
+export function isRelationBasicInfoRefusal(
+  refusal: { details?: string; property?: string },
+  changed?: { definition: boolean; relation: boolean },
+) {
+  if (!isDefinitionLevelRefusal(refusal)) {
+    return false;
+  }
+  if (changed && changed.definition !== changed.relation) {
+    return changed.definition;
+  }
+  const unquoted = (refusal.details ?? "").replace(/"[^"]*"/g, '""');
+  return !RELATION_DECLARATION_DETAILS.test(unquoted);
 }
 
 const STILL_REFERENCED_CODE = /^BknBackend\.(ActionType|ObjectType|RelationType)\.StillReferenced$/;

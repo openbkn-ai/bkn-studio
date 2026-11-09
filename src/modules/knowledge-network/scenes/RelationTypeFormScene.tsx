@@ -47,6 +47,10 @@ import {
   updateKnowledgeNetworkRelationType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
+  definitionDeclarationPatch,
+  relationDeclarationPatch,
+} from "@/modules/knowledge-network/services/mappers/declarations";
+import {
   type DeclarationRefusal,
   readDeclarationRefusal,
 } from "@/modules/knowledge-network/services/shared/declaration-errors";
@@ -110,6 +114,8 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   const declarationBaseline = useRef<RelationDeclarations | undefined>(undefined);
   const [relationProperties, setRelationProperties] = useState<StoredRelationProperty[]>([]);
   const [refusal, setRefusal] = useState<DeclarationRefusal | null>(null);
+  // Whether the refusal concerns the aliases or lifecycle, shown in the basic info.
+  const [refusalOnBasicInfo, setRefusalOnBasicInfo] = useState(false);
   // What the aliases and lifecycle were when read; a save sends what changed.
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
   const confirmRelationPropertyChange = useRelationPropertyGuard();
@@ -344,6 +350,18 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       },
     };
 
+    const changed = {
+      definition:
+        Object.keys(
+          definitionDeclarationPatch(
+            payload.definitionDeclarationEdit?.current,
+            payload.definitionDeclarationEdit?.baseline,
+          ),
+        ).length > 0,
+      relation:
+        Object.keys(relationDeclarationPatch(declarations, declarationBaseline.current)).length > 0,
+    };
+
     setSubmitting(true);
     setRefusal(null);
     try {
@@ -360,8 +378,10 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       if (declarationRefusal) {
         // Shown with the declarations it concerns, not as a toast: the aliases and lifecycle are
         // in the basic info, the relation's own declarations on the mapping step.
+        const onBasicInfo = isRelationBasicInfoRefusal(declarationRefusal, changed);
         setRefusal(declarationRefusal);
-        if (isRelationBasicInfoRefusal(declarationRefusal)) {
+        setRefusalOnBasicInfo(onBasicInfo);
+        if (onBasicInfo) {
           if (currentStep !== 0) {
             basicForm.setFieldsValue(resolvedBasic);
           }
@@ -467,7 +487,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
     if (currentStep === 0) {
       return (
         <div className={styles.basicForm}>
-          {refusal && isRelationBasicInfoRefusal(refusal) ? refusalBanner : null}
+          {refusalOnBasicInfo ? refusalBanner : null}
           <Form
             colon={false}
             form={basicForm}
@@ -562,7 +582,7 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
               value={mappingValue}
             />
           </Suspense>
-          {refusal && !isRelationBasicInfoRefusal(refusal) ? refusalBanner : null}
+          {refusalOnBasicInfo ? null : refusalBanner}
           <RelationDeclarationsSection
             ends={mappingValue.mappingRules}
             networkId={networkId}

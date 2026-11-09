@@ -124,4 +124,30 @@ describe("isRelationBasicInfoRefusal", () => {
       }),
     ).toBe(false);
   });
+
+  it("does not read a quoted alias or id as a declaration field", () => {
+    expect(
+      isRelationBasicInfoRefusal({
+        details: 'relation type "required" alias "importance" appears twice',
+      }),
+    ).toBe(true);
+  });
+
+  it("goes by the kind of declarations the save changed, when it changed only one", () => {
+    // Deprecating a relation another one falls back for names fallback_for, yet the user changed
+    // only the lifecycle.
+    const fallbackRefused = {
+      details:
+        'relation type "by_phone" fallback_for "order_for_patient": the relation it stands in for is deprecated; a fallback path stands in for an active relation',
+    };
+    expect(isRelationBasicInfoRefusal(fallbackRefused, { definition: true, relation: false })).toBe(
+      true,
+    );
+    expect(isRelationBasicInfoRefusal(fallbackRefused, { definition: false, relation: true })).toBe(
+      false,
+    );
+    expect(isRelationBasicInfoRefusal(fallbackRefused, { definition: true, relation: true })).toBe(
+      false,
+    );
+  });
 });
