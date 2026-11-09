@@ -58,6 +58,13 @@ export const CAPABILITIES = {
    * 不另设 key(bkn-foundry#2522):同为专业档,扩展本就依赖知识库。三态见 `bkn-project-kb-mode.ts`。
    */
   KNOWLEDGE_BASE: "knowledge_base",
+  /**
+   * 应用工坊(Workshop):在知识网络上搭建业务应用。专业档起。
+   *
+   * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
+   * bkn-safe-ee 登记装配表,`/api/safe/v1/capabilities` 报得出它,入口按 `capabilityState()` 判。
+   */
+  WORKSHOP: "workshop",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

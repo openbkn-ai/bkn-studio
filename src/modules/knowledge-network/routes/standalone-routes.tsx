@@ -8,6 +8,8 @@
 import type { RouteObject } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import type { WorkspaceNavEntry, WorkspaceNavPage } from "@/framework/extension/registry";
+
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import {
@@ -30,6 +32,7 @@ import {
   RelationTypeDetailPage,
   RelationTypeEditPage,
   RelationTypeMappingPage,
+  workspaceExtensionPage,
   workspaceSectionPage,
 } from "@/modules/knowledge-network/routes/lazy-pages";
 import {
@@ -66,6 +69,17 @@ function childModifyRoute(
     >
       {element}
     </KnowledgeNetworkChildModifyRouteGate>
+  );
+}
+
+/** The route of another build's sidebar entry that opens inside the workspace. */
+export function workspaceExtensionPageRoute(
+  entry: WorkspaceNavEntry & { key: string; page: WorkspaceNavPage },
+): RouteObject {
+  return createKnowledgeNetworkRoute(
+    entry.page.route,
+    { descriptionKey: entry.page.descriptionKey ?? entry.labelKey, titleKey: entry.labelKey },
+    workspaceExtensionPage(entry.key),
   );
 }
 

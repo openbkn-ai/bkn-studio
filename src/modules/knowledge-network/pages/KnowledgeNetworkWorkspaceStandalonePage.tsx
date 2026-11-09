@@ -10,10 +10,12 @@ import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-netwo
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 type KnowledgeNetworkWorkspaceStandalonePageProps = {
+  extensionKey?: string;
   section: KnowledgeNetworkWorkspaceSection;
 };
 
 export function KnowledgeNetworkWorkspaceStandalonePage({
+  extensionKey,
   section,
 }: KnowledgeNetworkWorkspaceStandalonePageProps) {
   return (
@@ -22,7 +24,7 @@ export function KnowledgeNetworkWorkspaceStandalonePage({
       <TopBar />
       <main className="knowledge-workspace-main">
         <div className="knowledge-workspace-scene-host">
-          <KnowledgeNetworkWorkspaceScene section={section} />
+          <KnowledgeNetworkWorkspaceScene extensionKey={extensionKey} section={section} />
         </div>
       </main>
     </div>

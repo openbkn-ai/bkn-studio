@@ -36,6 +36,7 @@ import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import type { CapabilityState } from "@/framework/entitlement/types";
 import { useCapability } from "@/framework/entitlement/use-entitlement";
+import { extensionWorkspacePage } from "@/framework/extension/registry";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
@@ -81,6 +82,7 @@ function formatNavCount(count?: number) {
 }
 
 export function KnowledgeNetworkWorkspaceScene({
+  extensionKey,
   networkId,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
@@ -246,6 +248,7 @@ export function KnowledgeNetworkWorkspaceScene({
   );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
+  const activeExtensionKey = section === "extension" ? extensionKey : undefined;
   const analysisEntries = visibleWorkspaceExtensionEntries(hiddenNavigation, "analysis");
   // A group whose entries are all hidden loses its divider and title too.
   const hasAbilityVerification =
@@ -331,6 +334,17 @@ export function KnowledgeNetworkWorkspaceScene({
       );
     }
 
+    if (section === "extension") {
+      const ExtensionPage = extensionKey
+        ? extensionWorkspacePage(extensionKey)?.page.component
+        : undefined;
+      return ExtensionPage ? (
+        <Suspense fallback={null}>
+          <ExtensionPage />
+        </Suspense>
+      ) : null;
+    }
+
     if (section === "experience-cypher") {
       return detail ? (
         <Suspense fallback={null}>
@@ -372,6 +386,7 @@ export function KnowledgeNetworkWorkspaceScene({
                 )}
                 {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
                 <WorkspaceExtensionNavItems
+                  activeKey={activeExtensionKey}
                   collapsed={sideCollapsed}
                   hiddenKeys={hiddenNavigation}
                   networkId={activeNetworkId}
@@ -386,6 +401,7 @@ export function KnowledgeNetworkWorkspaceScene({
                   <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAnalysis")}</div>
                 )}
                 <WorkspaceExtensionNavItems
+                  activeKey={activeExtensionKey}
                   collapsed={sideCollapsed}
                   hiddenKeys={hiddenNavigation}
                   networkId={activeNetworkId}
@@ -453,6 +469,7 @@ export function KnowledgeNetworkWorkspaceScene({
               className={
                 section === "experience-agent" ||
                 section === "experience-cypher" ||
+                section === "extension" ||
                 section === "metrics" ||
                 section === "object-types" ||
                 section === "relation-types" ||

@@ -27,11 +27,14 @@ import styles from "../KnowledgeNetworkWorkspaceScene.module.css";
  * follow them; the analysis group lists only what was registered there.
  */
 export function WorkspaceExtensionNavItems({
+  activeKey,
   collapsed,
   hiddenKeys,
   networkId,
   section = "verification",
 }: {
+  /** The entry whose page the workspace shows. */
+  activeKey?: string;
   collapsed: boolean;
   hiddenKeys?: readonly string[];
   networkId: string;
@@ -41,7 +44,13 @@ export function WorkspaceExtensionNavItems({
   return (
     <>
       {items.map((item) => (
-        <ExtensionNavItem collapsed={collapsed} item={item} key={item.key} networkId={networkId} />
+        <ExtensionNavItem
+          active={item.key === activeKey}
+          collapsed={collapsed}
+          item={item}
+          key={item.key}
+          networkId={networkId}
+        />
       ))}
       {upgrades.map((entry) => (
         <UpgradeNavItem collapsed={collapsed} entry={entry} key={entry.capability} />
@@ -92,10 +101,12 @@ function UpgradeNavItem({
 }
 
 function ExtensionNavItem({
+  active,
   collapsed,
   item,
   networkId,
 }: {
+  active: boolean;
   collapsed: boolean;
   item: WorkspaceNavEntry;
   networkId: string;
@@ -107,10 +118,17 @@ function ExtensionNavItem({
 
   return (
     <button
-      className={styles.sideItem}
+      aria-current={active ? "page" : undefined}
+      className={active ? styles.sideItemActive : styles.sideItem}
       data-testid={`workspace-nav-${item.id}`}
-      // In place, naming this page as the way back: the page has no workspace sidebar of its own.
-      onClick={() => void navigate(item.path(networkId), { state: buildReturnToState(location) })}
+      // A page shown in the workspace keeps this sidebar. A standalone page has none, so the way
+      // back to this page goes with it.
+      onClick={() =>
+        void navigate(
+          item.path(networkId),
+          item.page ? undefined : { state: buildReturnToState(location) },
+        )
+      }
       title={label}
       type="button"
     >

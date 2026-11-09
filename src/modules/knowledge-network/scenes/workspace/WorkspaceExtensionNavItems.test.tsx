@@ -165,6 +165,65 @@ describe("WorkspaceExtensionNavItems", () => {
     );
   });
 
+  it("opens an entry whose page the workspace shows without a way back, and marks it as current", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "analysis-canvas",
+      workspaceNavItems: [
+        {
+          id: "analyses",
+          labelKey: "analyses",
+          page: {
+            component: () => null,
+            route: "/knowledge-network/workspace/:networkId/analyses",
+          },
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/analyses`,
+          section: "analysis",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter
+        basename="/studio"
+        initialEntries={["/studio/knowledge-network/workspace/network-1/overview"]}
+      >
+        <Routes>
+          <Route
+            element={
+              <WorkspaceExtensionNavItems
+                activeKey="analysis-canvas:other"
+                collapsed={false}
+                networkId="network-1"
+                section="analysis"
+              />
+            }
+            path="/knowledge-network/workspace/:networkId/overview"
+          />
+          <Route
+            element={
+              <>
+                <WorkspaceExtensionNavItems
+                  activeKey="analysis-canvas:analyses"
+                  collapsed={false}
+                  networkId="network-1"
+                  section="analysis"
+                />
+                <ReturnToProbe />
+              </>
+            }
+            path="/knowledge-network/workspace/:networkId/analyses"
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("workspace-nav-analyses").getAttribute("aria-current")).toBeNull();
+    fireEvent.click(screen.getByTestId("workspace-nav-analyses"));
+
+    expect(screen.getByTestId("return-to").textContent).toBe("");
+    expect(screen.getByTestId("workspace-nav-analyses").getAttribute("aria-current")).toBe("page");
+  });
+
   it("leaves the upgrade entry out when the build has the page", () => {
     registerGraphExplorer();
     renderItems();

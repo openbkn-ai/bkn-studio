@@ -24,9 +24,13 @@ export type KnowledgeNetworkWorkspaceSection =
   | "apis"
   | "mcp"
   | "skills"
-  | "knowledge-bases";
+  | "knowledge-bases"
+  /** A page another build registered with its sidebar entry (WorkspaceNavEntry.page). */
+  | "extension";
 
 export type KnowledgeNetworkWorkspaceSceneProps = {
   networkId?: string;
   section: KnowledgeNetworkWorkspaceSection;
+  /** With section "extension": the sidebar entry whose page is shown, by key. */
+  extensionKey?: string;
 };
