@@ -50,6 +50,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual([
       "home",
       "bkn-project",
+      "workshop",
       "domain-knowledge-network",
       "execution-factory",
       "general-business-knowledge-network",
@@ -123,6 +124,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(filtered)).toEqual([
       "home",
       "bkn-project",
+      "workshop",
       "domain-knowledge-network",
       "execution-factory",
       "general-business-knowledge-network",

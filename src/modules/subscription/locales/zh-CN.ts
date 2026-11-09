@@ -74,6 +74,15 @@ export const subscriptionZhCN = {
         description: "按对象类定义、验证、发布并查询原子、衍生和复合对象指标",
         name: "对象指标",
       },
+      workshop: {
+        bullets: {
+          b1: "用组件搭建页面，AI 辅助配置，应用可导入导出",
+          b2: "规则命中或人工登记的事件，按任务完成分析与处理",
+          b3: "方案推演与模型试算，确认后逐个对象执行行动",
+        },
+        description: "在知识网络上搭建业务应用：页面与组件、事件与任务、方案推演",
+        name: "应用工坊",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "查看、查询、修改、删除、执行分别授权",

@@ -6,6 +6,7 @@
  */
 
 import { baseConsoleNavigation } from "@/app/shell/navigation/base-navigation";
+import { workshopNavigation } from "@/app/shell/navigation/workshop-navigation";
 import type { ConsoleNavContribution, ConsoleNavItem } from "@/app/shell/navigation/types";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
@@ -25,6 +26,8 @@ import { modelResourcesNavigation } from "@/modules/model-resources/navigation";
 const navigationContributions: ConsoleNavContribution[] = [
   homeNavigation,
   bknProjectNavigation,
+  // Right below project management: both are top-level entries, listed in this order.
+  workshopNavigation,
   knowledgeNetworkNavigation,
   dataConnectNavigation,
   dataCatalogNavigation,

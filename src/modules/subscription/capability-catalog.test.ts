@@ -42,7 +42,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(6);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(7);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
@@ -67,6 +67,7 @@ describe("capability catalog", () => {
       "perm_fine_grained",
       "perm_object_level",
       "rbac_basic",
+      "workshop",
     ]);
   });
 
