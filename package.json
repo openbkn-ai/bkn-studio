@@ -16,7 +16,7 @@
     "format:check": "prettier --check --ignore-unknown .",
     "test": "vitest",
     "i18n:scan-hardcoded-zh": "node scripts/scan-hardcoded-zh.mjs",
-    "i18n:check": "node scripts/scan-hardcoded-zh.mjs --fail-on-found && pnpm exec vitest --run src/app/locales/locale-parity.test.ts src/framework/i18n/locale.test.ts src/framework/i18n/format.test.ts src/framework/runtime/config.test.ts",
+    "i18n:check": "node scripts/scan-hardcoded-zh.mjs --fail-on-found && pnpm exec vitest --run src/app/locales/locale-parity.test.ts src/framework/i18n/locale.test.ts src/framework/i18n/format.test.ts src/framework/runtime/config.test.ts src/app/locales/pluralization.test.ts src/app/locales/sentence-case.test.ts",
     "theme:check": "node scripts/check-semantic-text-colors.mjs --fail-on-found",
     "theme:scan-surfaces": "node scripts/scan-theme-surface-coverage.mjs",
     "test:execution-factory": "vitest run src/modules/execution-factory",
