@@ -13,20 +13,22 @@ export const contextLoaderPanelPart = {
         description: "Knowledge network list and current network details",
       },
       lifecycle: {
-        label: "Interaction lifecycle",
-        description: "Managed sessions, interactions, and operation status",
+        label: "Session management",
+        description: "Manage conversation context and start or finish each turn.",
       },
       discovery: {
-        label: "Networks and schema",
-        description: "Knowledge network lists, structure, schema discovery, and type details",
+        label: "Knowledge network concept search",
+        description:
+          "Find knowledge networks and inspect their structure, object types, relation types, and properties.",
       },
       model: {
         label: "Knowledge model search",
         description: "Semantic search, object types, relation types, action types, and metrics",
       },
       query: {
-        label: "Object instances and subgraphs",
-        description: "Object instance queries and relation subgraph queries",
+        label: "Knowledge network data queries",
+        description:
+          "Query business instances, relationships, metrics, and logical property calculation results.",
       },
       data: {
         label: "Data resources and SQL",
@@ -41,17 +43,26 @@ export const contextLoaderPanelPart = {
         description: "Data resource inspection, skill recall, and execution",
       },
       action: {
-        label: "Actions",
-        description: "Action tool recall, execution, and execution history",
+        label: "Action execution",
+        description:
+          "Inspect action types, execute business actions, and view results and history.",
       },
       execution: {
-        label: "Code execution",
-        description:
-          "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
+        label: "Code and command execution",
+        description: "Run code and commands to process data and call tools.",
       },
       skill: {
-        label: "Skills and dynamic tools",
-        description: "Skill retrieval and online dynamic tools",
+        label: "Skills",
+        description: "Find available skills and read their instructions, usage, and related files.",
+      },
+      tool: {
+        label: "Tools",
+        description: "Find available capabilities and call functions, APIs, MCP tools, and more.",
+      },
+      evaluation: {
+        label: "Quality evaluation",
+        description:
+          "Find test suites, start evaluations, claim cases, submit results, and track progress.",
       },
       other: { label: "Other capabilities", description: "Uncategorized MCP capabilities" },
     },
@@ -94,6 +105,11 @@ export const contextLoaderPanelPart = {
       bkn_retry_operation: "Retry operation",
       bkn_get_receipt: "View call receipt",
       execute_skill: "Execute skill",
+      bkn_eval_list_suites: "List evaluation suites",
+      bkn_eval_start_run: "Start evaluation run",
+      bkn_eval_next_case: "Get next evaluation case",
+      bkn_eval_submit_result: "Submit case result",
+      bkn_eval_get_progress: "View evaluation progress",
       fallbackLifecycle: "Interaction lifecycle tool",
       fallbackModel: "Knowledge model tool",
       fallbackData: "Data resource tool",
