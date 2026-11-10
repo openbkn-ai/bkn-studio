@@ -210,6 +210,34 @@
   display: flex;
 }
 
+.parameterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.parameterTitle {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: help;
+}
+
+.parameterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.parameterField :global(.ant-input) {
+  width: 160px;
+}
+
+.parameterName {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+}
+
 .agentHint {
   margin-right: auto;
   color: var(--color-warning-text);

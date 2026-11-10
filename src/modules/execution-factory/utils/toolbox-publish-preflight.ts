@@ -18,6 +18,8 @@ export type PreflightTool = {
   description?: string;
   metadataType?: ToolMetadataType;
   name?: string;
+  /** A function's script type; a Cypher function's code is a statement, which has no entry point. */
+  scriptType?: string;
   status?: "enabled" | "disabled";
 };
 
@@ -52,6 +54,7 @@ export function collectToolboxPublishIssues(tools: PreflightTool[]): ToolboxPubl
 
     if (
       tool.metadataType === "function" &&
+      tool.scriptType !== "cypher" &&
       tool.code !== undefined &&
       !ENTRYPOINT_PATTERNS.some((pattern) => pattern.test(tool.code ?? ""))
     ) {

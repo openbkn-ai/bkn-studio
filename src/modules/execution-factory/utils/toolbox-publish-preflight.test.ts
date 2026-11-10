@@ -59,6 +59,14 @@ describe("collectToolboxPublishIssues", () => {
     expect(collectToolboxPublishIssues([{ ...healthy, code: undefined }])).toEqual([]);
   });
 
+  it("does not look for a handler in a Cypher function's statement", () => {
+    expect(
+      collectToolboxPublishIssues([
+        { ...healthy, code: "MATCH (s:supplier) RETURN count(s)", scriptType: "cypher" },
+      ]),
+    ).toEqual([]);
+  });
+
   it("does not run the handler check on openapi tools", () => {
     expect(
       collectToolboxPublishIssues([{ ...healthy, code: "x = 1\n", metadataType: "openapi" }]),

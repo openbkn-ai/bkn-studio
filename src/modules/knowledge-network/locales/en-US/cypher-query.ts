@@ -40,6 +40,26 @@ export const cypherQueryPart = {
       shortcut: "⌘/Ctrl + Enter",
       clear: "Clear",
     },
+    parameters: {
+      title: "Parameters",
+      hint: "The statement's $name parameters take these values when it runs. Write them as in Cypher: quote strings ('S1'); write numbers, true/false and lists [1, 2] as they are. Unquoted text is taken as a string.",
+      placeholder: "Value, e.g. 'S1'",
+      make: "Make parameter",
+      makeHint: "Replace the selected value with a $parameter, keeping the value to run with",
+      selectValue: "Select a value in the statement first, such as 'S1' or 100.",
+      notValue:
+        "The selection is not a value. Only a string, number, boolean or a list of them can become a parameter.",
+    },
+    publish: {
+      open: "Publish as function",
+      hint: "Make this statement a Cypher function in a function toolbox, for Agents to call or as a logic property's value",
+      title: "Publish as Cypher function",
+      description:
+        "Choose a function toolbox to create this statement's Cypher function in. Name, describe and save it there.",
+      toolbox: "Function toolbox",
+      noToolbox: "No function toolbox is available. Create one in the execution factory first.",
+      ok: "Continue",
+    },
     frames: {
       explainSchema: "Relevant schema (explain from this; no need to look it up):",
       explain: "Ask AI to explain",

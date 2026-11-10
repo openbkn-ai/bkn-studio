@@ -48,6 +48,8 @@ type BackendToolInfo = {
       code?: string;
       dependencies?: Array<{ name?: string; version?: string }>;
       script_type?: string;
+      kn_id?: string;
+      result_shape?: string;
     };
   };
   metadata_type?: string;

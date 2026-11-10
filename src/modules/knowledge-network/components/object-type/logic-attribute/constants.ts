@@ -17,6 +17,8 @@ export const LOGIC_ATTRIBUTE_TYPE_OPTIONS = [
 ] as const;
 
 export const LOGIC_RESULT_PATH_PLACEHOLDER = "$.result";
+/** A Cypher function returning a single value answers `{value}`. */
+export const CYPHER_VALUE_RESULT_PATH = "$.value";
 
 export const VALUE_FROM_OPTIONS: Array<{
   labelKey: string;
@@ -122,6 +124,26 @@ export function normalizeFunctionParameterSources(
       : undefined,
     source: FUNCTION_PARAMETER_SOURCE,
   }));
+}
+
+/**
+ * A Cypher function's parameters are usually named after the properties the statement compares
+ * (`$supplier_code`), so each unbound one named like a property of the object type takes that
+ * property's value. The rest are left for the user.
+ */
+export function bindCypherParametersToProperties(
+  settings: ObjectTypeLogicParameter[],
+  propertyNames: ReadonlySet<string>,
+): ObjectTypeLogicParameter[] {
+  return settings.map((item) => {
+    if (item.children?.length) {
+      return { ...item, children: bindCypherParametersToProperties(item.children, propertyNames) };
+    }
+    const unbound = (item.valueFrom ?? "input") === "input" && isEmptyExceptZero(item.value);
+    return unbound && propertyNames.has(item.name)
+      ? { ...item, valueFrom: "property", value: item.name }
+      : item;
+  });
 }
 
 export function buildToolLogicParameterSettings(

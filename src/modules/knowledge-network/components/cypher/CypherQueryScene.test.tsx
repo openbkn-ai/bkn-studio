@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   generateCypher: vi.fn(),
   explainCypher: vi.fn(),
   downloadText: vi.fn(),
+  listToolboxes: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -75,30 +76,63 @@ vi.mock("@/modules/knowledge-network/cypher/download", () => ({
   downloadText: mocks.downloadText,
 }));
 
-// Monaco does not run in jsdom: a textarea with the same run and history keys stands in.
-vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", () => ({
-  CypherEditor: ({
-    value,
-    onChange,
-    onRun,
-    onHistory,
-  }: {
-    value: string;
-    onChange: (value: string) => void;
-    onRun: () => void;
-    onHistory: (older: boolean) => void;
-  }) => (
-    <textarea
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (!(event.ctrlKey || event.metaKey)) return;
-        if (event.key === "Enter") onRun();
-        if (event.key === "ArrowUp") onHistory(true);
-        if (event.key === "ArrowDown") onHistory(false);
-      }}
-      value={value}
-    />
-  ),
+// Monaco does not run in jsdom: a textarea with the same run and history keys, insertion and
+// selection stands in.
+vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", async () => {
+  const { forwardRef, useImperativeHandle, useRef } = await import("react");
+  return {
+    CypherEditor: forwardRef(function MockCypherEditor(
+      {
+        value,
+        onChange,
+        onRun,
+        onHistory,
+      }: {
+        value: string;
+        onChange: (value: string) => void;
+        onRun: () => void;
+        onHistory: (older: boolean) => void;
+      },
+      ref,
+    ) {
+      const area = useRef<HTMLTextAreaElement>(null);
+      useImperativeHandle(ref, () => ({
+        focus: () => area.current?.focus(),
+        insert: (text: string) => {
+          const node = area.current;
+          if (!node) return;
+          onChange(
+            node.value.slice(0, node.selectionStart) + text + node.value.slice(node.selectionEnd),
+          );
+        },
+        selection: () => {
+          const node = area.current;
+          if (!node || node.selectionStart === node.selectionEnd) return null;
+          return {
+            text: node.value.slice(node.selectionStart, node.selectionEnd),
+            before: node.value.slice(0, node.selectionStart),
+          };
+        },
+      }));
+      return (
+        <textarea
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (!(event.ctrlKey || event.metaKey)) return;
+            if (event.key === "Enter") onRun();
+            if (event.key === "ArrowUp") onHistory(true);
+            if (event.key === "ArrowDown") onHistory(false);
+          }}
+          ref={area}
+          value={value}
+        />
+      );
+    }),
+  };
+});
+
+vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
+  listToolboxes: mocks.listToolboxes,
 }));
 
 // echarts needs a real canvas; the chart itself is covered by the option builder's tests.
@@ -117,8 +151,9 @@ function team(name: string) {
   };
 }
 
+/** The editor comes before the parameter inputs. */
 function editor(): HTMLTextAreaElement {
-  return screen.getByRole<HTMLTextAreaElement>("textbox");
+  return screen.getAllByRole<HTMLTextAreaElement>("textbox")[0];
 }
 
 const originalMatchMedia = window.matchMedia;
@@ -699,5 +734,93 @@ describe("CypherQueryScene", () => {
     const request = mocks.explainCypher.mock.calls[0][0] as { message: string };
     expect(request.message).toContain("knowledgeNetwork.cypherQuery.frames.explainError");
     expect(request.message).toContain("Cypher.SyntaxError | unexpected token !=");
+  });
+
+  it("sends the values typed for the statement's parameters, and a rerun sends them again", async () => {
+    mocks.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "n" }], entries: [{ n: 3 }] },
+      exchange,
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    const query = "MATCH (t:teams) WHERE t.team_id = $id AND t.rank < $rank RETURN count(t) AS n";
+    fireEvent.change(editor(), { target: { value: query } });
+    fireEvent.change(screen.getByLabelText("id"), { target: { value: "'76904023'" } });
+    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "10" } });
+    fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
+
+    await screen.findByText("3");
+    expect(mocks.runCypherQuery.mock.calls[0][0]).toMatchObject({
+      query,
+      parameters: { id: "76904023", rank: 10 },
+    });
+
+    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "99" } });
+    fireEvent.click(screen.getByTestId("cypher-frame-rerun"));
+    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(2));
+    expect(mocks.runCypherQuery.mock.calls[1][0]).toMatchObject({
+      parameters: { id: "76904023", rank: 10 },
+    });
+  });
+
+  it("turns the selected value into a parameter, keeping it as the value", async () => {
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    const query = "MATCH (t:teams) WHERE t.team_name = 'Brazil' RETURN t";
+    fireEvent.change(editor(), { target: { value: query } });
+    fireEvent.click(screen.getByTestId("cypher-editor-parameterize"));
+    expect(screen.getByText("knowledgeNetwork.cypherQuery.parameters.selectValue")).toBeTruthy();
+
+    const start = query.indexOf("'Brazil'");
+    editor().setSelectionRange(start, start + "'Brazil'".length);
+    fireEvent.click(screen.getByTestId("cypher-editor-parameterize"));
+
+    expect(editor().value).toBe("MATCH (t:teams) WHERE t.team_name = $team_name RETURN t");
+    expect(screen.getByLabelText<HTMLInputElement>("team_name").value).toBe("'Brazil'");
+  });
+
+  it("publishes the statement to a chosen toolbox with inputs typed by their values", async () => {
+    mocks.listToolboxes.mockResolvedValue({
+      items: [{ boxId: "box-1", name: "supply_functions" }],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+    const onPublishFunction = vi.fn();
+    render(
+      <CypherQueryScene knId="worldcup" networkId="kn-1" onPublishFunction={onPublishFunction} />,
+    );
+    await screen.findByTestId("cypher-schema-object-teams");
+
+    fireEvent.change(editor(), {
+      target: { value: "MATCH (t:teams) WHERE t.rank < $rank RETURN count(t)" },
+    });
+    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "10" } });
+    fireEvent.click(screen.getByTestId("cypher-editor-publish"));
+
+    fireEvent.mouseDown(
+      await screen.findByRole("combobox", { name: "knowledgeNetwork.cypherQuery.publish.toolbox" }),
+    );
+    fireEvent.click(await screen.findByText("supply_functions"));
+    fireEvent.click(screen.getByText("knowledgeNetwork.cypherQuery.publish.ok"));
+
+    expect(mocks.listToolboxes).toHaveBeenCalledWith(
+      expect.objectContaining({ metadataType: "function" }),
+    );
+    expect(onPublishFunction).toHaveBeenCalledWith("box-1", {
+      query: "MATCH (t:teams) WHERE t.rank < $rank RETURN count(t)",
+      knId: "kn-1",
+      inputs: [{ name: "rank", type: "number", required: true, description: "", example: 10 }],
+    });
+  });
+
+  it("offers no publishing to a viewer who cannot edit functions", async () => {
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+    await screen.findByTestId("cypher-schema-object-teams");
+    fireEvent.change(editor(), { target: { value: "RETURN 1" } });
+    expect(screen.queryByTestId("cypher-editor-publish")).toBeNull();
   });
 });
