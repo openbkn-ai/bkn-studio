@@ -121,7 +121,11 @@ function sectionCacheKey(networkId: string, section: WorkspaceDataSection) {
   return `${networkId}:${section}`;
 }
 
-export function useWorkspaceData(networkId: string, section: WorkspaceDataSection) {
+/**
+ * `reloadKey` changes when what the workspace reads changes under it, such as the version of a
+ * versioned network on screen; everything is loaded again then.
+ */
+export function useWorkspaceData(networkId: string, section: WorkspaceDataSection, reloadKey = "") {
   const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
@@ -320,11 +324,11 @@ export function useWorkspaceData(networkId: string, section: WorkspaceDataSectio
     clearSectionCache();
     setRecentObjects([]);
     void loadDetail();
-  }, [clearSectionCache, loadDetail, networkId]);
+  }, [clearSectionCache, loadDetail, networkId, reloadKey]);
 
   useEffect(() => {
     void loadSectionData(section);
-  }, [loadSectionData, section]);
+  }, [loadSectionData, reloadKey, section]);
 
   const loadWorkspaceData = useCallback(async () => {
     clearSectionCache();

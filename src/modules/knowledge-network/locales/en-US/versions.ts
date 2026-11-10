@@ -1,0 +1,153 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const versionsPart = {
+  versions: {
+    nav: "Versions",
+    title: "Versions",
+    description: "Publish, compare and switch the versions of this knowledge network.",
+    draft: "Draft",
+    viewing: "Version on screen",
+    basedOn: "Based on {{version}}",
+    notPublished: "Not published yet",
+    hasChanges: "Unpublished changes",
+    noChanges: "No unpublished changes",
+    outdated:
+      "The running version was switched to {{running}}, but the draft is still based on {{base}}. Publishing it brings back what was rolled back.",
+    outdatedTag: "Outdated",
+    readOnlyView: "You are viewing {{version}}. It is read-only; edits go to the draft.",
+    writeBlocked: "This version is read-only. Switch to the draft to make changes.",
+    backToDraft: "Back to draft",
+    history: "Version history",
+    viewChanges: "View changes",
+    discard: "Discard changes",
+    rollback: "Roll back to the previous version",
+    copyToDraft: "Copy to draft",
+    view: "View",
+    compare: "Compare",
+    deprecate: "Deprecate",
+    deprecateTitle: "Deprecate {{version}}?",
+    deprecateBody:
+      "A deprecated version can no longer be switched to. It stays readable and can be restored.",
+    restore: "Restore",
+    restoreTitle: "Restore {{version}}?",
+    restoreBody: "The version becomes a history version again and can be switched to.",
+    purge: "Purge",
+    purgeTitle: "Purge {{version}}?",
+    purgeBody: "The content of the version is deleted for good. Only its record stays.",
+    runningVersion: "Running version",
+    previousVersion: "Previous version",
+    draftStatus: "Draft",
+    tabVersions: "Versions",
+    tabEvents: "Events",
+    close: "Close",
+    done: "Done",
+    reload: "Reload",
+    conflictTitle: "Changed by someone else",
+    conflict: "This was modified by someone else. Reload to see the latest, then try again.",
+    capabilityNote:
+      "Functions and Skills are bound by ID, not by version. After a switch they run with their current code and content.",
+    communityNote:
+      "The Community edition keeps only the running and the previous version. Deprecate, restore and purge need the Professional edition.",
+    metricSaveAndValidate: "Save and validate",
+    metricValidated:
+      "The metric is saved and validated. It goes live when the knowledge network is published.",
+    create: {
+      versioning: "Enable versioning",
+      versioningHint: "Edits go to a draft and take effect only after you publish a version.",
+    },
+    status: {
+      running: "Running",
+      history: "History",
+      deprecated: "Deprecated",
+      purged: "Purged",
+    },
+    columns: {
+      version: "Version",
+      label: "Label",
+      status: "Status",
+      base: "Based on",
+      notes: "Notes",
+      publisher: "Published by",
+      time: "Time",
+      actions: "Actions",
+      event: "Event",
+      operator: "By",
+    },
+    event: {
+      enable: "Versioning enabled",
+      publish: "Published",
+      switch: "Switched",
+      copy: "Copied to draft",
+      discard: "Draft changes discarded",
+      deprecate: "Deprecated",
+      restore: "Restored",
+      purge: "Purged",
+      disable: "Versioning disabled",
+      retention: "Purged by the retention rule",
+    },
+    enable: {
+      title: "Enable versioning",
+      intro:
+        "With versioning, a knowledge network keeps a draft that all edits go to, and numbered versions published from it. One version is running and used by readers and queries.",
+      warning:
+        "After you enable it, edits no longer take effect at once. They go to the draft and take effect when you publish. Enabling cannot be undone from Studio.",
+      action: "Enable versioning",
+    },
+    publish: {
+      title: "Publish a version",
+      action: "Publish",
+      label: "Label",
+      labelHint: "A name for the version, such as v1.2.0. Optional.",
+      notes: "Release notes",
+      notesRequired: "Enter release notes",
+      firstVersion: "This is the first version of the network.",
+      diffAgainstRunning: "Changes compared with the running version ({{version}})",
+      diffAgainstBase: "Your changes compared with the draft's upstream ({{version}})",
+      confirmOutdated: "I understand that publishing brings back changes that were rolled back.",
+      communityPurge:
+        "The Community edition keeps two versions. Publishing purges {{version}} for good.",
+      nothingToPublish: "The draft has no unpublished changes.",
+      validationFailed: "The draft cannot be published yet. Fix these problems first.",
+      doneTitle: "Published {{version}}",
+      doneBody: "{{version}} is now the running version.",
+      purgedNotice: "{{version}} was purged by the Community edition retention rule.",
+      warnings: "Published with warnings",
+    },
+    activate: {
+      title: "Switch to {{version}}?",
+      action: "Switch to this version",
+      body: "{{version}} becomes the running version in place of {{running}}. Readers and queries use it at once. The draft is not changed.",
+      brokenReferences: "This version refers to resources that no longer exist",
+    },
+    reset: {
+      copyTitle: "Copy {{version}} to the draft?",
+      discardTitle: "Discard the draft's changes?",
+      overwriteWarning:
+        "The draft has unpublished changes. They are overwritten and cannot be recovered.",
+      noChanges: "The draft is replaced with this version.",
+    },
+    diff: {
+      title: "Compare versions",
+      base: "From",
+      target: "To",
+      compare: "Compare",
+      created: "{{n}} added",
+      updated: "{{n}} changed",
+      deleted: "{{n}} removed",
+      unchanged: "{{n}} unchanged",
+      noDifferences: "No differences",
+      nothingToCompare: "Nothing to compare until the first version is published.",
+      action: {
+        create: "Added",
+        update: "Changed",
+        delete: "Removed",
+        skip: "Skipped",
+      },
+    },
+  },
+} as const;

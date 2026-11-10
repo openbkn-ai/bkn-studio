@@ -7,6 +7,7 @@
 
 import {
   AppstoreOutlined,
+  BranchesOutlined,
   ExperimentOutlined,
   FileTextOutlined,
   MenuFoldOutlined,
@@ -15,7 +16,7 @@ import {
   NodeIndexOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { Fragment, lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -35,6 +36,9 @@ import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
+import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
+import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { KnowledgeResourceIcon } from "@/modules/knowledge-network/components/shared/KnowledgeResourceIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
@@ -111,7 +115,11 @@ export function KnowledgeNetworkWorkspaceScene({
       : "not-licensed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const kbMode = useBknProjectKbMode();
-  const workspaceData = useWorkspaceData(activeNetworkId, section);
+  const [versionView, setVersionView] = useKnVersionView(activeNetworkId);
+  // Bumped when a publish, switch or reset changed what every page of the workspace reads.
+  const [reloadTick, setReloadTick] = useState(0);
+  const reloadKey = `${versionView}:${reloadTick}`;
+  const workspaceData = useWorkspaceData(activeNetworkId, section, reloadKey);
   const {
     detail,
     detailError,
@@ -128,8 +136,18 @@ export function KnowledgeNetworkWorkspaceScene({
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const childMetricDetailHandlesLoadState =
     section === "metrics" && /\/metrics\/[^/]+\/detail\/?$/.test(location.pathname);
-  const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
-  const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
+  const versioning = detail?.versioning;
+  const mayModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
+  const mayDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
+  // Only the draft of a versioned network can be edited; every other version is read-only.
+  const editable = !versioning || versionView === "draft";
+  const canModify = mayModify && editable;
+  const canDelete = mayDelete && editable;
+  const hasCapabilities =
+    (detail?.statistics.functionsTotal ?? 0) +
+      (detail?.statistics.apisTotal ?? 0) +
+      (detail?.statistics.skillsTotal ?? 0) >
+    0;
   const experienceNetwork = useMemo(
     () => (detail ? { id: detail.id, name: detail.name, slug: detail.identifier } : null),
     [detail],
@@ -146,6 +164,11 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "develop",
         label: t("knowledgeNetwork.appDevelopment.nav"),
         icon: <AppstoreOutlined />,
+      },
+      {
+        key: "versions",
+        label: t("knowledgeNetwork.versions.nav"),
+        icon: <BranchesOutlined />,
       },
       {
         key: "experience-agent",
@@ -253,7 +276,7 @@ export function KnowledgeNetworkWorkspaceScene({
   ]);
 
   const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview" || item.key === "develop",
+    (item) => item.key === "overview" || item.key === "develop" || item.key === "versions",
   );
   const experienceNavItems = navigationItems.filter(
     (item) =>
@@ -355,6 +378,20 @@ export function KnowledgeNetworkWorkspaceScene({
           networkName={detail.name || detail.identifier || detail.id}
         />
       ) : null;
+    }
+
+    if (section === "versions") {
+      return (
+        <KnVersionsPanel
+          canDelete={mayDelete}
+          canModify={mayModify}
+          hasCapabilities={hasCapabilities}
+          networkId={activeNetworkId}
+          onChanged={() => setReloadTick((tick) => tick + 1)}
+          onViewChange={setVersionView}
+          versioning={versioning}
+        />
+      );
     }
 
     if (section === "experience-agent" || section === "experience-mcp") {
@@ -497,6 +534,17 @@ export function KnowledgeNetworkWorkspaceScene({
               : styles.workspaceContent
           }
         >
+          {versioning && section !== "versions" ? (
+            <KnVersionBar
+              canModify={mayModify}
+              hasCapabilities={hasCapabilities}
+              networkId={activeNetworkId}
+              onChanged={() => setReloadTick((tick) => tick + 1)}
+              onViewChange={setVersionView}
+              versioning={versioning}
+              view={versionView}
+            />
+          ) : null}
           {detailError && !childMetricDetailHandlesLoadState ? (
             <Alert className={styles.workspaceAlert} message={detailError} showIcon type="error" />
           ) : null}
@@ -509,9 +557,11 @@ export function KnowledgeNetworkWorkspaceScene({
             />
           ) : null}
           {section === "overview" || (section === "extension" && children !== undefined) ? (
-            renderSectionContent()
+            <Fragment key={reloadKey}>{renderSectionContent()}</Fragment>
           ) : (
             <div
+              // The versions page reloads itself; remounting it would close its open dialogs.
+              key={section === "versions" ? section : reloadKey}
               className={
                 section === "experience-agent" ||
                 section === "experience-cypher" ||

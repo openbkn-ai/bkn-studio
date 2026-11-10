@@ -49,6 +49,7 @@ import {
   mockRelationTypes,
   replaceMockKnowledgeNetworks,
 } from "@/modules/knowledge-network/services/mock/state";
+import { knVersionQuery } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import {
   downloadJsonFile,
   emptyStatistics,
@@ -376,8 +377,13 @@ export async function exportKnowledgeNetwork(
 
   try {
     if (format === "bkn") {
+      // A versioned network exports the version on screen, not always the running one.
+      const exportParams = {
+        ...(options.bknSpec ? { bkn_spec: options.bknSpec } : {}),
+        ...knVersionQuery(networkId),
+      };
       const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
-        ...(options.bknSpec ? { params: { bkn_spec: options.bknSpec } } : {}),
+        ...(Object.keys(exportParams).length > 0 ? { params: exportParams } : {}),
         responseType: "blob",
         skipErrorToast: true,
         timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,
