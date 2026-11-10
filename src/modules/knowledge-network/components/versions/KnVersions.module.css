@@ -10,8 +10,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
-  background: var(--ant-color-bg-container, #fff);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-bg-container);
 }
 
 .barRow {
