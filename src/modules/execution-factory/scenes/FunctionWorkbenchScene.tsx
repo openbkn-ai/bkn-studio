@@ -13,11 +13,13 @@ import {
   CodeOutlined,
   DeleteOutlined,
   DownOutlined,
+  ApiOutlined,
   EllipsisOutlined,
   FileTextOutlined,
   PlayCircleFilled,
   PlusOutlined,
   ProfileOutlined,
+  PythonOutlined,
   ReloadOutlined,
   ThunderboltOutlined,
   UpOutlined,
@@ -33,6 +35,7 @@ import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
@@ -41,6 +44,11 @@ import {
   EntityListTag,
 } from "@/modules/execution-factory/components/EntityListRail";
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
+import {
+  CypherIcon,
+  ScriptTypeBadge,
+} from "@/modules/execution-factory/components/ScriptTypeBadge";
+import { ToolCallGuideDrawer } from "@/modules/execution-factory/components/ToolCallGuideDrawer";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
@@ -58,7 +66,10 @@ import {
 } from "@/modules/execution-factory/services/tool.service";
 import { getToolbox, updateToolbox } from "@/modules/execution-factory/services/toolbox.service";
 import type { FunctionExecuteResult } from "@/modules/execution-factory/types/function";
-import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
+import type {
+  CypherResultShape,
+  FunctionParameterDef,
+} from "@/modules/execution-factory/types/function-input";
 import type { ToolStatus } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import { formatOptionalTimestamp } from "@/modules/execution-factory/utils/detail-display";
@@ -76,10 +87,35 @@ import {
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { useFunctionCodeAccess } from "@/modules/execution-factory/utils/use-function-code-access";
 import { buildJsonSchemaFromParameters } from "@/modules/execution-factory/utils/function-parameter-schema";
+import { undescribedInputs } from "@/modules/execution-factory/utils/function-parameter-descriptions";
 import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import { collectToolboxPublishIssues } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
+import {
+  cypherArguments,
+  cypherFunctionNotices,
+  isSameInputList,
+  shapeCypherResult,
+  syncCypherInputs,
+  type CypherArgumentProblem,
+  type CypherShapeProblem,
+} from "@/modules/execution-factory/utils/cypher-function";
+import { toolCallKind } from "@/modules/execution-factory/utils/tool-call-guide";
+import {
+  applySuggestedParameters,
+  type CypherFunctionSuggestion,
+} from "@/modules/execution-factory/utils/cypher-function-ai";
+import {
+  readCypherFunctionDraft,
+  withoutCypherFunctionDraft,
+  type CypherFunctionDraft,
+} from "@/modules/execution-factory/utils/cypher-function-draft";
+import { CypherEditor } from "@/modules/knowledge-network/components/cypher/CypherEditor";
+import { CypherFunctionAiModal } from "@/modules/execution-factory/scenes/function-workbench/CypherFunctionAiModal";
+import { runCypherQuery } from "@/modules/knowledge-network/cypher/cypher-query.service";
 
+import { CypherFunctionSettings } from "./function-workbench/CypherFunctionSettings";
 import { FunctionDependencyPanel } from "./function-workbench/FunctionDependencyPanel";
+import { useCypherNetwork } from "./function-workbench/use-cypher-network";
 import styles from "./function-workbench.module.css";
 
 /** Function toolboxes are intentionally small; exceeding this limit means split the toolbox rather than add pagination. */
@@ -96,6 +132,9 @@ type WorkbenchFunction = {
   outputs: FunctionParameterDef[];
   /** Backend function_content.script_type. Keep absent values empty; list badges display only known values. */
   scriptType?: string;
+  /** Cypher functions only: the network the statement queries (its id) and what it returns. */
+  knId?: string;
+  resultShape?: CypherResultShape;
   /** Disabled function code remains editable and debuggable, but Agents cannot invoke it because backend execute rejects it. */
   status: ToolStatus;
   /** Missing toolId means the function is not persisted yet. */
@@ -113,6 +152,9 @@ function isSamePersistedContent(a: WorkbenchFunction, b: WorkbenchFunction) {
     a.description === b.description &&
     a.name === b.name &&
     a.useRule === b.useRule &&
+    a.scriptType === b.scriptType &&
+    a.knId === b.knId &&
+    a.resultShape === b.resultShape &&
     JSON.stringify(a.inputs) === JSON.stringify(b.inputs) &&
     JSON.stringify(a.outputs) === JSON.stringify(b.outputs) &&
     JSON.stringify(a.dependencies) === JSON.stringify(b.dependencies)
@@ -165,10 +207,6 @@ function nextLocalKey() {
 }
 
 /** Backend returns lowercase values such as python; change casing only for display, not the value. */
-function formatScriptType(scriptType: string) {
-  return scriptType.charAt(0).toUpperCase() + scriptType.slice(1);
-}
-
 function emptyFunction(code: string): WorkbenchFunction {
   return {
     code,
@@ -184,6 +222,25 @@ function emptyFunction(code: string): WorkbenchFunction {
     status: "enabled",
     useRule: "",
   };
+}
+
+/**
+ * A new Cypher function. Its script type is set from the start, unlike a new Python function's,
+ * because the editor, the trial run and the save all depend on it.
+ */
+function emptyCypherFunction(draft?: CypherFunctionDraft): WorkbenchFunction {
+  const query = draft?.query ?? "";
+  return {
+    ...emptyFunction(query),
+    inputs: syncCypherInputs(draft?.inputs ?? [], query),
+    knId: draft?.knId ?? "",
+    resultShape: "value",
+    scriptType: "cypher",
+  };
+}
+
+function isCypherFunction(item: WorkbenchFunction | null | undefined) {
+  return item?.scriptType === "cypher";
 }
 
 type FunctionWorkbenchSceneProps = {
@@ -228,6 +285,8 @@ export function FunctionWorkbenchScene({
   const [dockTab, setDockTab] = useState<"params" | "deps" | null>(null);
   const [ioTab, setIoTab] = useState<"inputs" | "outputs">("inputs");
   const [aiOpen, setAiOpen] = useState(false);
+  const [cypherAiOpen, setCypherAiOpen] = useState(false);
+  const [callGuideOpen, setCallGuideOpen] = useState(false);
   const [hasDefaultLlm, setHasDefaultLlm] = useState(false);
   const [paramsView, setParamsView] = useState<"form" | "json">("form");
   const [deriving, setDeriving] = useState(false);
@@ -252,6 +311,8 @@ export function FunctionWorkbenchScene({
     () => functions.find((item) => item.key === activeKey) ?? null,
     [activeKey, functions],
   );
+  /** A Cypher function's output follows its result shape, so it has only inputs to declare. */
+  const paramsTab = isCypherFunction(active) ? "inputs" : ioTab;
 
   const patchActive = useCallback(
     (partial: Partial<WorkbenchFunction>) => {
@@ -263,6 +324,52 @@ export function FunctionWorkbenchScene({
     },
     [activeKey],
   );
+
+  const isCypher = isCypherFunction(active);
+  const cypher = useCypherNetwork(isCypher ? active?.knId : undefined);
+  const cypherNotices = useMemo(
+    () =>
+      isCypher && active ? cypherFunctionNotices(active.code, active.resultShape ?? "value") : [],
+    [active, isCypher],
+  );
+
+  /** A statement's `$name` parameters are its inputs, so they follow the statement as it is typed. */
+  const handleCypherCodeChange = (code: string) => {
+    if (!active || !canEditFunction) {
+      return;
+    }
+    const inputs = syncCypherInputs(active.inputs, code);
+    patchActive(isSameInputList(active.inputs, inputs) ? { code } : { code, inputs });
+  };
+
+  /** A generated statement replaces the current one; the Agent's word on each parameter fills blanks. */
+  const applyCypherSuggestion = (suggestion: CypherFunctionSuggestion) => {
+    if (!active || !canEditFunction) {
+      return;
+    }
+    const inputs = applySuggestedParameters(
+      syncCypherInputs(active.inputs, suggestion.query),
+      suggestion.parameters,
+    );
+    patchActive({ code: suggestion.query, inputs });
+    if (inputs.length > 0) setDockTab("params");
+  };
+
+  /**
+   * A statement brought from the data query page opens as a new Cypher function. The draft is
+   * dropped from the history entry once taken, so reloading the page does not add it again.
+   */
+  const cypherDraftRef = useRef(readCypherFunctionDraft(location.state));
+  useEffect(() => {
+    if (cypherDraftRef.current) {
+      void navigate(`${location.pathname}${location.search}`, {
+        replace: true,
+        state: withoutCypherFunctionDraft(location.state),
+      });
+    }
+    // Only the state the page opened with carries a draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // AI generation needs a default LLM; hide the button when absent instead of letting users trigger an error.
   useEffect(() => {
@@ -320,7 +427,11 @@ export function FunctionWorkbenchScene({
           detail
             ? [
                 {
-                  code: detail.functionInput?.code ?? DEFAULT_FUNCTION_TEMPLATE,
+                  code:
+                    detail.functionInput?.code ??
+                    (detail.functionInput?.script_type === "cypher"
+                      ? ""
+                      : DEFAULT_FUNCTION_TEMPLATE),
                   dependencies: detail.functionInput?.dependencies ?? [],
                   description: detail.description ?? "",
                   dirty: false,
@@ -329,6 +440,12 @@ export function FunctionWorkbenchScene({
                   name: detail.name,
                   outputs: detail.functionInput?.outputs ?? [],
                   scriptType: detail.functionInput?.script_type,
+                  ...(detail.functionInput?.script_type === "cypher"
+                    ? {
+                        knId: detail.functionInput.kn_id ?? "",
+                        resultShape: detail.functionInput.result_shape ?? "value",
+                      }
+                    : {}),
                   status: detail.status,
                   toolId: detail.toolId,
                   useRule: detail.useRule ?? "",
@@ -342,18 +459,26 @@ export function FunctionWorkbenchScene({
         setBoxCategory(record.categoryType ?? record.categoryName);
         // A view-only caller must not receive an unsaved local draft merely by opening an empty
         // toolbox. Editors still get the draft that starts the creation flow.
-        setFunctions(
-          loaded.length > 0
-            ? loaded
-            : canEditFunction
-              ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)]
-              : [],
-        );
-        setActiveKey(
-          loaded.some((item) => item.key === targetToolId)
-            ? (targetToolId ?? null)
-            : (loaded[0]?.key ?? null),
-        );
+        const draft = canEditFunction ? cypherDraftRef.current : undefined;
+        cypherDraftRef.current = undefined;
+        if (draft) {
+          const drafted = emptyCypherFunction(draft);
+          setFunctions([...loaded, drafted]);
+          setActiveKey(drafted.key);
+        } else {
+          setFunctions(
+            loaded.length > 0
+              ? loaded
+              : canEditFunction
+                ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)]
+                : [],
+          );
+          setActiveKey(
+            loaded.some((item) => item.key === targetToolId)
+              ? (targetToolId ?? null)
+              : (loaded[0]?.key ?? null),
+          );
+        }
       } catch (error) {
         if (!cancelled) {
           setLoadError(extractRequestErrorMessage(error));
@@ -416,16 +541,29 @@ export function FunctionWorkbenchScene({
       onCreated?: (toolId: string) => void,
       onEnableFailed?: (toolId: string) => void,
     ) => {
-      const functionInput = {
-        code: item.code,
-        description: item.description,
-        inputs: item.inputs,
-        name: item.name,
-        outputs: item.outputs,
-        script_type: "python" as const,
-        // Backend updates the complete metadata only when code is nonempty, so always send the full structure.
-        dependencies: item.dependencies,
-      };
+      const functionInput = isCypherFunction(item)
+        ? {
+            code: item.code,
+            description: item.description,
+            inputs: item.inputs,
+            name: item.name,
+            script_type: "cypher" as const,
+            kn_id: item.knId ?? "",
+            result_shape: item.resultShape ?? "value",
+            // A Cypher function's output is set by its result shape and it has no packages.
+            outputs: [],
+            dependencies: [],
+          }
+        : {
+            code: item.code,
+            description: item.description,
+            inputs: item.inputs,
+            name: item.name,
+            outputs: item.outputs,
+            script_type: "python" as const,
+            // Backend updates the complete metadata only when code is nonempty, so always send the full structure.
+            dependencies: item.dependencies,
+          };
 
       if (item.toolId) {
         await updateTool(boxId, item.toolId, {
@@ -808,6 +946,7 @@ export function FunctionWorkbenchScene({
         description: item.description,
         metadataType: "function",
         name: item.name,
+        scriptType: item.scriptType,
         status: item.status,
       })),
     );
@@ -852,6 +991,23 @@ export function FunctionWorkbenchScene({
     if (!canEditFunction) {
       return;
     }
+    // The execution factory refuses an input without a description with a generic "invalid
+    // request". Name the function and the parameter instead, and open them for editing.
+    for (const item of functions) {
+      const missing = item.dirty ? undescribedInputs(item.inputs) : [];
+      if (missing.length > 0) {
+        setActiveKey(item.key);
+        setIoTab("inputs");
+        setDockTab("params");
+        void message.error(
+          t("executionFactory.workbenchInputDescriptionRequired", {
+            name: item.name || t("executionFactory.workbenchUnnamedFunction"),
+            params: missing.join(", "),
+          }),
+        );
+        return;
+      }
+    }
     if (isPublished) {
       const confirmed = await confirmPublishIssues({
         hint: t("executionFactory.workbenchSavePublishedContent"),
@@ -884,6 +1040,9 @@ export function FunctionWorkbenchScene({
     persist?: boolean;
     silent?: boolean;
   }): Promise<FunctionParameterDef[] | null> => {
+    if (isCypherFunction(active)) {
+      return active?.inputs ?? null;
+    }
     if (!active || !canExecuteAdhocFunction) {
       return null;
     }
@@ -992,9 +1151,122 @@ export function FunctionWorkbenchScene({
 
   /** Re-derive when code has changed since the last derivation, or has never been derived. */
   const needsDerive = (item: WorkbenchFunction) =>
-    Boolean(item.code.trim()) && derivedCodeRef.current[item.key] !== item.code;
+    !isCypherFunction(item) &&
+    Boolean(item.code.trim()) &&
+    derivedCodeRef.current[item.key] !== item.code;
+
+  /**
+   * Runs the statement against its network with the test input, converted and shaped the way the
+   * saved function would be, so the result here is what an Agent calling it gets.
+   */
+  const handleRunCypher = async () => {
+    if (!active) {
+      return;
+    }
+    const runKey = active.key;
+    setRunError(null);
+    setRunResult(null);
+    setConsoleCollapsed(false);
+    if (!cypher.env) {
+      setRunError(t("executionFactory.cypherFunction.noNetworkRun"));
+      setOutTab("stderr");
+      return;
+    }
+    if (!active.code.trim()) {
+      setRunError(t("executionFactory.cypherFunction.noStatementRun"));
+      setOutTab("stderr");
+      return;
+    }
+
+    setRunning(true);
+    try {
+      let payloadText = eventText;
+      const untouchedAuto = payloadText.trim() === autoEventRef.current.trim();
+      if (!payloadText.trim() || payloadText.trim() === "{}" || untouchedAuto) {
+        payloadText = buildSampleEvent(active.inputs);
+        autoEventRef.current = payloadText;
+        setEventText(payloadText);
+      }
+      // Long codes typed without quotes keep their digits.
+      const args = payloadText.trim() ? parsePrecisionSafeJSON(payloadText) : undefined;
+      const converted = cypherArguments(args, active.inputs);
+      if ("problem" in converted) {
+        setRunError(describeCypherArgumentProblem(converted.problem));
+        setOutTab("stderr");
+        return;
+      }
+      const run = await runCypherQuery({
+        env: cypher.env,
+        auth: cypher.tokenProvider,
+        query: active.code,
+        parameters: converted.parameters,
+      });
+      if (runKey !== activeKeyRef.current) {
+        return;
+      }
+      if (!run.ok) {
+        setRunError(run.error.message);
+        setOutTab("stderr");
+        return;
+      }
+      const shaped = shapeCypherResult(run.result, active.resultShape ?? "value");
+      if ("problem" in shaped) {
+        setRunError(describeCypherShapeProblem(shaped.problem));
+        setOutTab("stderr");
+        return;
+      }
+      setRunResult({ output: shaped.output, durationMs: run.exchange.latencyMs });
+      setOutTab("result");
+    } catch (error) {
+      if (runKey !== activeKeyRef.current) {
+        return;
+      }
+      setRunError(extractRequestErrorMessage(error));
+      setOutTab("stderr");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const describeCypherArgumentProblem = (problem: CypherArgumentProblem) => {
+    switch (problem.kind) {
+      case "missing":
+        return t("executionFactory.cypherFunction.problems.missing", {
+          names: problem.names.join(", "),
+        });
+      case "type":
+        return t("executionFactory.cypherFunction.problems.type", {
+          name: problem.name,
+          expected: problem.expected,
+        });
+      case "null-in-list":
+        return t("executionFactory.cypherFunction.problems.nullInList", { name: problem.name });
+      default:
+        return t("executionFactory.cypherFunction.problems.notObject");
+    }
+  };
+
+  const describeCypherShapeProblem = (problem: CypherShapeProblem) => {
+    switch (problem.kind) {
+      case "columns":
+        return t("executionFactory.cypherFunction.problems.columns", { total: problem.count });
+      case "graph":
+        return t("executionFactory.cypherFunction.problems.graph", { column: problem.column });
+      default:
+        return t(
+          problem.more
+            ? "executionFactory.cypherFunction.problems.rowsMore"
+            : "executionFactory.cypherFunction.problems.rows",
+          { total: problem.count },
+        );
+    }
+  };
 
   const handleRun = async () => {
+    if (isCypherFunction(active)) {
+      await handleRunCypher();
+      return;
+    }
     if (!active || !canExecuteAdhocFunction) {
       return;
     }
@@ -1102,10 +1374,10 @@ export function FunctionWorkbenchScene({
   // The JSON view shows the schema received by agents, not the internal parameter structure.
   const paramsJsonPreview = useMemo(() => {
     const schema = buildJsonSchemaFromParameters(
-      ioTab === "inputs" ? active?.inputs : active?.outputs,
+      paramsTab === "inputs" ? active?.inputs : active?.outputs,
     );
     return schema ? JSON.stringify(schema, null, 2) : "{}";
-  }, [active?.inputs, active?.outputs, ioTab]);
+  }, [active?.inputs, active?.outputs, paramsTab]);
 
   const eventSchema = useMemo(
     () => buildJsonSchemaFromParameters(active?.inputs),
@@ -1173,8 +1445,8 @@ export function FunctionWorkbenchScene({
           <h1 className={styles.titleEditable}>{boxName || t("executionFactory.toolboxName")}</h1>
           <div className={styles.titleMeta}>
             {/*
-              不放「函数」「Python」标签：前者与页头 Code 图标、工作台本身重复，
-              后者是写死的 script_type，全平台没有第二种语言。只留真会变的发布状态。
+              不放「函数」「语言」标签：前者与页头 Code 图标、工作台本身重复；
+              一个工具箱里 Python 与 Cypher 函数可以并存，语言标在左侧每个函数上。
             */}
             <Tag color={toolbox?.status === "published" ? "green" : "default"}>
               {t(`executionFactory.toolboxStatuses.${toolbox?.status ?? "unpublish"}`)}
@@ -1261,19 +1533,40 @@ export function FunctionWorkbenchScene({
             emptyText={t("executionFactory.workbenchFunctionListEmptyFiltered")}
             footer={
               <PermissionGate permissions="execution-factory:function:edit">
-                <AppButton
-                  block
-                  className={styles.railAdd}
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    const created = emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
-                    setFunctions((current) => [...current, created]);
-                    setActiveKey(created.key);
-                    setRunResult(null);
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: "python",
+                        icon: <PythonOutlined />,
+                        label: t("executionFactory.cypherFunction.newPython"),
+                      },
+                      {
+                        key: "cypher",
+                        icon: <CypherIcon />,
+                        label: t("executionFactory.cypherFunction.newCypher"),
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      const created =
+                        key === "cypher"
+                          ? emptyCypherFunction()
+                          : emptyFunction(DEFAULT_FUNCTION_TEMPLATE);
+                      setFunctions((current) => [...current, created]);
+                      setActiveKey(created.key);
+                      setRunResult(null);
+                      setRunError(null);
+                      const next = buildSampleEvent(created.inputs);
+                      autoEventRef.current = next;
+                      setEventText(next);
+                    },
                   }}
+                  trigger={["click"]}
                 >
-                  {t("executionFactory.workbenchNewFunction")}
-                </AppButton>
+                  <AppButton block className={styles.railAdd} icon={<PlusOutlined />}>
+                    {t("executionFactory.workbenchNewFunction")}
+                  </AppButton>
+                </Dropdown>
               </PermissionGate>
             }
             icon={<BarsOutlined />}
@@ -1283,9 +1576,7 @@ export function FunctionWorkbenchScene({
                 前端凭空生成的展示值，也和本页页头「不放写死的 Python 标签」自相矛盾；
                 未落库的新函数还没有这个值，那就不画。
               */
-              badge: item.scriptType ? (
-                <span className={styles.langBadge}>{formatScriptType(item.scriptType)}</span>
-              ) : null,
+              badge: item.scriptType ? <ScriptTypeBadge scriptType={item.scriptType} /> : null,
               id: item.key,
               muted: item.status === "disabled",
               name: item.name || t("executionFactory.workbenchUnnamedFunction"),
@@ -1300,9 +1591,11 @@ export function FunctionWorkbenchScene({
                   <EntityListTag>
                     {t("executionFactory.ioInCount", { count: item.inputs.length })}
                   </EntityListTag>
-                  <EntityListTag>
-                    {t("executionFactory.ioOutCount", { count: item.outputs.length })}
-                  </EntityListTag>
+                  {isCypherFunction(item) ? null : (
+                    <EntityListTag>
+                      {t("executionFactory.ioOutCount", { count: item.outputs.length })}
+                    </EntityListTag>
+                  )}
                   {item.dirty ? (
                     <EntityListTag variant="warning">
                       {t("executionFactory.workbenchUnsaved")}
@@ -1355,6 +1648,17 @@ export function FunctionWorkbenchScene({
                     />
                   </span>
                   <span className={styles.fnHeadActions}>
+                    {/* Anyone who can see a saved function can read how to call it. */}
+                    {active.toolId ? (
+                      <AppButton
+                        icon={<ApiOutlined />}
+                        onClick={() => setCallGuideOpen(true)}
+                        size="small"
+                        type="text"
+                      >
+                        {t("executionFactory.callGuide.open")}
+                      </AppButton>
+                    ) : null}
                     <PermissionGate permissions="execution-factory:function:edit">
                       <Tooltip title={t("executionFactory.workbenchStatusHint")}>
                         <span className={styles.fnStatusToggle}>
@@ -1438,41 +1742,64 @@ export function FunctionWorkbenchScene({
                       <ThunderboltOutlined />
                     </span>
                     <span className={styles.editorTitle}>
-                      {t("executionFactory.functionLogic")}
+                      {t(
+                        isCypher
+                          ? "executionFactory.cypherFunction.logic"
+                          : "executionFactory.functionLogic",
+                      )}
                     </span>
                     <div className={styles.editorTools}>
+                      {/* Templates write Python; a Cypher function's AI writes its statement. */}
                       <PermissionGate permissions="execution-factory:function:edit">
-                        <Dropdown
-                          menu={{
-                            items: (["standard", "pydantic"] as FunctionTemplateId[]).map((id) => ({
-                              key: id,
-                              label: (
-                                <span className={styles.templateOption}>
-                                  <span className={styles.templateOptionTitle}>
-                                    {t(`executionFactory.functionTemplates.${id}.title`)}
-                                  </span>
-                                  <span className={styles.templateOptionDesc}>
-                                    {t(`executionFactory.functionTemplates.${id}.desc`)}
-                                  </span>
-                                </span>
-                              ),
-                              onClick: () => applyTemplate(id),
-                            })),
-                          }}
-                        >
-                          <AppButton icon={<FileTextOutlined />}>
-                            {t("executionFactory.functionInsertTemplate")}
-                          </AppButton>
-                        </Dropdown>
-                        {hasDefaultLlm && canGenerateFunction ? (
-                          <AppButton
-                            icon={<ThunderboltOutlined />}
-                            onClick={() => setAiOpen(true)}
-                            type="primary"
-                          >
-                            {t("executionFactory.functionAiGenerate")}
-                          </AppButton>
-                        ) : null}
+                        {isCypher ? (
+                          // The Cypher Agent checks its own permission; the statement lands in
+                          // the draft, so editing is all this page asks for.
+                          canEditFunction ? (
+                            <AppButton
+                              icon={<ThunderboltOutlined />}
+                              onClick={() => setCypherAiOpen(true)}
+                              type="primary"
+                            >
+                              {t("executionFactory.cypherFunction.ai.open")}
+                            </AppButton>
+                          ) : null
+                        ) : (
+                          <>
+                            <Dropdown
+                              menu={{
+                                items: (["standard", "pydantic"] as FunctionTemplateId[]).map(
+                                  (id) => ({
+                                    key: id,
+                                    label: (
+                                      <span className={styles.templateOption}>
+                                        <span className={styles.templateOptionTitle}>
+                                          {t(`executionFactory.functionTemplates.${id}.title`)}
+                                        </span>
+                                        <span className={styles.templateOptionDesc}>
+                                          {t(`executionFactory.functionTemplates.${id}.desc`)}
+                                        </span>
+                                      </span>
+                                    ),
+                                    onClick: () => applyTemplate(id),
+                                  }),
+                                ),
+                              }}
+                            >
+                              <AppButton icon={<FileTextOutlined />}>
+                                {t("executionFactory.functionInsertTemplate")}
+                              </AppButton>
+                            </Dropdown>
+                            {hasDefaultLlm && canGenerateFunction ? (
+                              <AppButton
+                                icon={<ThunderboltOutlined />}
+                                onClick={() => setAiOpen(true)}
+                                type="primary"
+                              >
+                                {t("executionFactory.functionAiGenerate")}
+                              </AppButton>
+                            ) : null}
+                          </>
+                        )}
                       </PermissionGate>
                       <span className={styles.toolsDivider} />
                       <AppButton
@@ -1490,7 +1817,7 @@ export function FunctionWorkbenchScene({
                             active.inputs.length === 0 ? styles.toolCountEmpty : ""
                           }`}
                         >
-                          {active.inputs.length + active.outputs.length}
+                          {active.inputs.length + (isCypher ? 0 : active.outputs.length)}
                         </span>
                       </AppButton>
                       {SHOW_DEPENDENCY_DOCK ? (
@@ -1523,14 +1850,42 @@ export function FunctionWorkbenchScene({
                       </PermissionGate>
                     </div>
                   </div>
-                  <div className={styles.editorSurface}>
-                    <CodeEditor
-                      height="fill"
-                      language="python"
-                      onChange={(code) => patchActive({ code })}
+                  {isCypher ? (
+                    <CypherFunctionSettings
+                      knId={active.knId ?? ""}
+                      network={cypher.network}
+                      onNetworkChange={(network) => {
+                        cypher.setNetwork(network);
+                        patchActive({ knId: network?.id ?? "" });
+                      }}
+                      onResultShapeChange={(resultShape) => patchActive({ resultShape })}
+                      notices={cypherNotices}
                       readOnly={!canEditFunction}
-                      value={active.code}
+                      resultShape={active.resultShape ?? "value"}
                     />
+                  ) : null}
+                  <div className={styles.editorSurface}>
+                    {isCypher ? (
+                      <CypherEditor
+                        ariaLabel={t("executionFactory.cypherFunction.logic")}
+                        key={active.key}
+                        maxHeight={640}
+                        minHeight={240}
+                        onChange={handleCypherCodeChange}
+                        onHistory={() => undefined}
+                        onRun={() => void handleRun()}
+                        schema={cypher.schema}
+                        value={active.code}
+                      />
+                    ) : (
+                      <CodeEditor
+                        height="fill"
+                        language="python"
+                        onChange={(code) => patchActive({ code })}
+                        readOnly={!canEditFunction}
+                        value={active.code}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -1546,10 +1901,15 @@ export function FunctionWorkbenchScene({
                     {t("executionFactory.workbenchConsoleTitle")}
                   </span>
                   <span className={styles.consoleNote}>
-                    {t("executionFactory.workbenchConsoleNote")}
+                    {t(
+                      isCypher
+                        ? "executionFactory.cypherFunction.consoleNote"
+                        : "executionFactory.workbenchConsoleNote",
+                    )}
                   </span>
                   <span className={styles.consoleRun}>
-                    {canExecuteAdhocFunction ? (
+                    {/* A Cypher trial run is a data query as the viewer, not sandbox code. */}
+                    {isCypher || canExecuteAdhocFunction ? (
                       <Tooltip title={t("executionFactory.workbenchRunShortcut")}>
                         <AppButton
                           className={styles.runButton}
@@ -1601,7 +1961,10 @@ export function FunctionWorkbenchScene({
                     </div>
                     <div className={styles.consolePane}>
                       <div className={styles.tabStrip}>
-                        {(["result", "stdout", "stderr", "metrics"] as OutputTab[]).map((tab) => (
+                        {(isCypher
+                          ? (["result", "stderr", "metrics"] as OutputTab[])
+                          : (["result", "stdout", "stderr", "metrics"] as OutputTab[])
+                        ).map((tab) => (
                           <button
                             className={`${styles.tab} ${outTab === tab ? styles.tabActive : ""}`}
                             key={tab}
@@ -1630,7 +1993,7 @@ export function FunctionWorkbenchScene({
 
       <Drawer
         extra={
-          canDeriveParams ? (
+          canDeriveParams && !isCypher ? (
             <AppButton
               icon={<ReloadOutlined />}
               loading={deriving}
@@ -1647,19 +2010,21 @@ export function FunctionWorkbenchScene({
       >
         <div className={styles.segmented}>
           <button
-            className={`${styles.segment} ${ioTab === "inputs" ? styles.segmentActive : ""}`}
+            className={`${styles.segment} ${paramsTab === "inputs" ? styles.segmentActive : ""}`}
             onClick={() => setIoTab("inputs")}
             type="button"
           >
             {t("executionFactory.functionInputs")} · {active?.inputs.length ?? 0}
           </button>
-          <button
-            className={`${styles.segment} ${ioTab === "outputs" ? styles.segmentActive : ""}`}
-            onClick={() => setIoTab("outputs")}
-            type="button"
-          >
-            {t("executionFactory.functionOutputs")} · {active?.outputs.length ?? 0}
-          </button>
+          {isCypher ? null : (
+            <button
+              className={`${styles.segment} ${ioTab === "outputs" ? styles.segmentActive : ""}`}
+              onClick={() => setIoTab("outputs")}
+              type="button"
+            >
+              {t("executionFactory.functionOutputs")} · {active?.outputs.length ?? 0}
+            </button>
+          )}
         </div>
         <div className={styles.paramsViewSwitch}>
           <button
@@ -1680,21 +2045,27 @@ export function FunctionWorkbenchScene({
         {paramsView === "form" ? (
           <FunctionParameterTree
             addLabel={t(
-              ioTab === "inputs"
+              paramsTab === "inputs"
                 ? "executionFactory.addInputParameter"
                 : "executionFactory.addOutputParameter",
             )}
             emptyText={t("executionFactory.workbenchNoParameters")}
             onChange={(next) =>
-              patchActive(ioTab === "inputs" ? { inputs: next } : { outputs: next })
+              patchActive(paramsTab === "inputs" ? { inputs: next } : { outputs: next })
             }
             readOnly={!canEditFunction}
-            value={ioTab === "inputs" ? active?.inputs : active?.outputs}
+            value={paramsTab === "inputs" ? active?.inputs : active?.outputs}
           />
         ) : (
           <CodeEditor height={360} language="json" readOnly value={paramsJsonPreview} />
         )}
-        <div className={styles.dockHint}>{t("executionFactory.workbenchParamsHint")}</div>
+        <div className={styles.dockHint}>
+          {t(
+            isCypher
+              ? "executionFactory.cypherFunction.paramsHint"
+              : "executionFactory.workbenchParamsHint",
+          )}
+        </div>
       </Drawer>
 
       {SHOW_DEPENDENCY_DOCK ? (
@@ -1710,6 +2081,38 @@ export function FunctionWorkbenchScene({
             value={active?.dependencies ?? []}
           />
         </Drawer>
+      ) : null}
+
+      {active?.toolId ? (
+        <ToolCallGuideDrawer
+          boxId={boxId}
+          functionInput={{
+            inputs: active.inputs,
+            outputs: active.outputs,
+            script_type: isCypher ? "cypher" : "python",
+            result_shape: active.resultShape,
+          }}
+          kind={toolCallKind("function", {
+            script_type: isCypher ? "cypher" : "python",
+            result_shape: active.resultShape,
+          })}
+          onClose={() => setCallGuideOpen(false)}
+          open={callGuideOpen}
+          toolId={active.toolId}
+        />
+      ) : null}
+
+      {isCypher && active ? (
+        <CypherFunctionAiModal
+          base={cypher.base}
+          inputs={active.inputs}
+          knId={cypher.env?.knId ?? ""}
+          onApply={applyCypherSuggestion}
+          onClose={() => setCypherAiOpen(false)}
+          open={canEditFunction && cypherAiOpen}
+          shape={active.resultShape ?? "value"}
+          tokenProvider={cypher.tokenProvider}
+        />
       ) : null}
 
       <FunctionAiGenerateModal

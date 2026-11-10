@@ -114,6 +114,7 @@ function LocationProbe() {
   return (
     <>
       <output data-testid="location">{`${location.pathname}${location.search}`}</output>
+      <output data-testid="state">{JSON.stringify(location.state ?? null)}</output>
       <button onClick={() => void navigate(-1)} type="button">
         browser back
       </button>
@@ -243,6 +244,25 @@ describe("tool config back navigation (#386)", () => {
     await clickBack();
     await waitFor(() => expect(currentLocation()).toBe(CAPABILITY_LIST_URL));
     expect(screen.getByText("capability list")).toBeTruthy();
+  });
+
+  it("sends a function to the function workbench, selected, keeping where the visitor came from", async () => {
+    getToolDetail.mockResolvedValue({
+      toolId: "tool-1",
+      name: "po_count",
+      metadataType: "function",
+      status: "enabled",
+      functionInput: { code: "MATCH (o) RETURN count(o)", script_type: "cypher", kn_id: "kn-1" },
+    });
+    const from = buildReturnToState({ pathname: "/knowledge-network/kn-1/evaluation", search: "" });
+    renderAt([CAPABILITY_LIST_URL, { pathname: DETAIL_URL, state: from }]);
+
+    await waitFor(() => expect(currentLocation()).toBe(`${TOOLS_URL}?toolId=tool-1`));
+    expect(JSON.parse(screen.getByTestId("state").textContent ?? "null")).toEqual(from);
+    // Replaced, not pushed: the browser's back skips the detail page.
+    fireEvent.click(screen.getByRole("button", { name: "browser back" }));
+    await waitFor(() => expect(currentLocation()).toBe(CAPABILITY_LIST_URL));
+    expect(updateTool).not.toHaveBeenCalled();
   });
 
   it("sends the tool list back to its own list page instead of whatever the history holds", async () => {

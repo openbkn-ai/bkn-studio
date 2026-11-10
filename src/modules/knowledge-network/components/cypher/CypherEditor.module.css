@@ -1,0 +1,19 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * A `$name` parameter: a color none of Monaco's Cypher tokens use, so it reads as a slot. The
+ * editor scope outranks the token color classes Monaco injects after this sheet.
+ */
+:global(.monaco-editor) .parameter {
+  color: #a21caf;
+  font-weight: 600;
+}
+
+:global(:root[data-theme="dark"] .monaco-editor) .parameter {
+  color: #e879f9;
+}

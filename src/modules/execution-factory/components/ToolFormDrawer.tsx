@@ -6,7 +6,7 @@
  */
 
 import { Alert, Collapse, Drawer, Form, Input, Radio, Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -28,6 +28,10 @@ import type {
   ToolMetadataType,
 } from "@/modules/execution-factory/types/tool";
 import type { ToolboxMetadataType } from "@/modules/execution-factory/types/toolbox";
+import {
+  storedScriptFields,
+  type FunctionScriptFields,
+} from "@/modules/execution-factory/utils/function-script";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
 type ToolFormDrawerProps = {
@@ -78,6 +82,8 @@ export function ToolFormDrawer({
   const watchedMetadataType = Form.useWatch("metadataType", form) as ToolMetadataType | undefined;
   const metadataType = watchedMetadataType ?? defaultMetadataType;
   const lockMetadataType = toolboxMetadataType === "function";
+  /** An edit sends the stored kind back unchanged; this form only creates Python functions. */
+  const scriptFieldsRef = useRef<FunctionScriptFields>({ script_type: "python" });
 
   useEffect(() => {
     if (!open) {
@@ -86,6 +92,7 @@ export function ToolFormDrawer({
 
     void (async () => {
       if (mode === "create") {
+        scriptFieldsRef.current = { script_type: "python" };
         form.resetFields();
         form.setFieldsValue({
           functionInputs: [],
@@ -104,6 +111,7 @@ export function ToolFormDrawer({
 
       try {
         const record = await getToolDetail(boxId, toolId);
+        scriptFieldsRef.current = storedScriptFields(record.functionInput);
         form.setFieldsValue({
           description: record.description,
           functionCode: record.functionInput?.code,
@@ -187,7 +195,7 @@ export function ToolFormDrawer({
                   inputs: values.functionInputs,
                   name: values.name,
                   outputs: values.functionOutputs,
-                  script_type: "python",
+                  ...scriptFieldsRef.current,
                 }
               : undefined,
         };

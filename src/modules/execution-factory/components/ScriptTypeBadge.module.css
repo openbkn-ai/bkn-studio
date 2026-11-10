@@ -1,0 +1,42 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * Drawn like HttpMethodTag (light tint, matching text, thin border, 18px line) so the function
+ * list's first row lines up with the API tool list's. The icon carries the language at a glance.
+ */
+.badge {
+  --lang-color: var(--color-text-secondary);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--lang-color) 30%, transparent);
+  background: color-mix(in srgb, var(--lang-color) 10%, transparent);
+  color: var(--lang-color);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.badge :global(.anticon) {
+  font-size: 13px;
+}
+
+/* python.org's own colors: its yellow with its dark blue, as on that site's buttons. */
+.badge[data-script-type="python"] {
+  border-color: #e9bd18;
+  background: #ffd343;
+  color: #2b5b84;
+}
+
+.badge[data-script-type="cypher"] {
+  --lang-color: var(--color-text-teal);
+}

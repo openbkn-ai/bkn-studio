@@ -19,10 +19,13 @@ import {
 } from "@/modules/knowledge-network/lib/resource-constraints";
 import {
   resolveActionTypeToolInputSchema,
+  resolveFunctionKind,
   type ActionTypeCatalogSelection,
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import {
+  CYPHER_VALUE_RESULT_PATH,
   IDENTIFIER_PATTERN,
+  bindCypherParametersToProperties,
   LOGIC_RESULT_PATH_PLACEHOLDER,
   VALUE_FROM_OPTIONS,
   asOptionalString,
@@ -220,12 +223,23 @@ export function ObjectTypeLogicAttributeEditDrawer({
       toolName: selection.tool.toolName,
       type: "tool" as const,
     };
-    const inputParams = await resolveActionTypeToolInputSchema(source);
-    setSettingList(buildToolLogicParameterSettings(inputParams, [], createParameterId));
+    const [inputParams, kind] = await Promise.all([
+      resolveActionTypeToolInputSchema(source),
+      resolveFunctionKind(selection.boxId, selection.tool.toolId),
+    ]);
+    const settings = buildToolLogicParameterSettings(inputParams, [], createParameterId);
+    const isCypher = kind.scriptType === "cypher";
+    setSettingList(
+      isCypher ? bindCypherParametersToProperties(settings, objectTypePropertyNameSet) : settings,
+    );
     form.setFieldsValue({
       boxId: selection.boxId,
       resourceName: selection.tool.toolName,
       toolId: selection.tool.toolId,
+      // A single-value Cypher function answers `{value}`; a path the user already wrote stays.
+      ...(isCypher && kind.resultShape !== "table" && !getStringFieldValue("resultPath")
+        ? { resultPath: CYPHER_VALUE_RESULT_PATH }
+        : {}),
     });
     setToolSelectorOpen(false);
   };

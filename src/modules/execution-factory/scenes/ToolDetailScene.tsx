@@ -17,11 +17,16 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { FunctionDefinitionFields } from "@/modules/execution-factory/components/FunctionDefinitionFields";
+import { ToolCallGuideDrawer } from "@/modules/execution-factory/components/ToolCallGuideDrawer";
 import { HttpToolLifecyclePanel } from "@/modules/execution-factory/components/HttpToolLifecyclePanel";
 import { OpenApiDefinitionFields } from "@/modules/execution-factory/components/OpenApiDefinitionFields";
 import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
 import { getToolDetail, updateTool } from "@/modules/execution-factory/services/tool.service";
+import {
+  storedScriptFields,
+  type FunctionScriptFields,
+} from "@/modules/execution-factory/utils/function-script";
 import type {
   ToolGlobalParameter,
   ToolIoSpec,
@@ -31,6 +36,7 @@ import type {
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import { toolCallKind } from "@/modules/execution-factory/utils/tool-call-guide";
 import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
 import styles from "./UnitFormScene.module.css";
@@ -60,22 +66,49 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const [ioSpec, setIoSpec] = useState<ToolIoSpec | undefined>();
   const [sessionLogs, setSessionLogs] = useState<ToolRunLogEntry[]>([]);
   const debugSectionRef = useRef<HTMLDivElement | null>(null);
+  /** Sent back unchanged on save: this form edits a function's code, never its kind. */
+  const scriptFieldsRef = useRef<FunctionScriptFields>({ script_type: "python" });
+  const [scriptFields, setScriptFields] = useState<FunctionScriptFields>({
+    script_type: "python",
+  });
+  const [callGuideOpen, setCallGuideOpen] = useState(false);
   const toolName = Form.useWatch<ToolFormValues["name"]>("name", form);
   const openapiSpec = Form.useWatch<ToolFormValues["openapiSpec"]>("openapiSpec", form);
   const functionInputs = Form.useWatch("functionInputs", form);
   const functionOutputs = Form.useWatch("functionOutputs", form);
   const endpoint = useMemo(() => parseOpenApiEndpointDetail(openapiSpec), [openapiSpec]);
+  const callKind = useMemo(
+    () => toolCallKind(metadataType, scriptFields),
+    [metadataType, scriptFields],
+  );
+
+  // Read when the tool has loaded; the load itself should not rerun when history state changes.
+  const arrivalStateRef = useRef<unknown>(location.state);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
       setLoadError(null);
+      let redirected = false;
 
       try {
         const record = await getToolDetail(boxId, toolId);
         const type = record.metadataType ?? "openapi";
+        if (type === "function") {
+          // Functions are edited, run and described in the function workbench; this page is the
+          // API tool's. A typed or bookmarked address lands there with the function selected,
+          // keeping where the visitor came from for the workbench's back.
+          redirected = true;
+          void navigate(
+            `/execution-factory/toolboxes/${boxId}/tools?toolId=${encodeURIComponent(toolId)}`,
+            { replace: true, state: arrivalStateRef.current },
+          );
+          return;
+        }
         setMetadataType(type);
         setIoSpec(record.ioSpec);
+        scriptFieldsRef.current = storedScriptFields(record.functionInput);
+        setScriptFields(scriptFieldsRef.current);
         form.setFieldsValue({
           name: record.name,
           description: record.description,
@@ -97,10 +130,10 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
       } finally {
-        setLoading(false);
+        if (!redirected) setLoading(false);
       }
     })();
-  }, [boxId, form, toolId]);
+  }, [boxId, form, navigate, toolId]);
 
   useEffect(() => {
     if (!loading && !loadError && searchParams.get("focus") === "debug") {
@@ -153,7 +186,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                 inputs: values.functionInputs,
                 name: values.name,
                 outputs: values.functionOutputs,
-                script_type: "python",
+                ...scriptFieldsRef.current,
               }
             : undefined,
       });
@@ -183,6 +216,13 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
 
   return (
     <CrudFormPage
+      actions={
+        !loading && !loadError ? (
+          <AppButton onClick={() => setCallGuideOpen(true)}>
+            {t("executionFactory.callGuide.open")}
+          </AppButton>
+        ) : null
+      }
       description={t("executionFactory.toolDetailDescription")}
       onBack={handleBack}
       title={t("executionFactory.toolDetailTitle")}
@@ -286,6 +326,19 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
           </div>
         </PermissionGate>
       ) : null}
+      <ToolCallGuideDrawer
+        boxId={boxId}
+        functionInput={
+          metadataType === "function"
+            ? { inputs: functionInputs, outputs: functionOutputs, ...scriptFields }
+            : undefined
+        }
+        ioSpec={ioSpec}
+        kind={callKind}
+        onClose={() => setCallGuideOpen(false)}
+        open={callGuideOpen}
+        toolId={toolId}
+      />
     </CrudFormPage>
   );
 }

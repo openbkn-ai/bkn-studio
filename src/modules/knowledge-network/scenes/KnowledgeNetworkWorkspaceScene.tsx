@@ -49,9 +49,9 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
 import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 
 // The query page brings its editor and chart; load them only when it is opened.
-const CypherQueryScene = lazy(async () => ({
-  default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryScene"))
-    .CypherQueryScene,
+const CypherQueryPage = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryPage"))
+    .CypherQueryPage,
 }));
 
 // Keep chat and resource editors off the overview's initial dependency path.
@@ -387,7 +387,7 @@ export function KnowledgeNetworkWorkspaceScene({
     if (section === "experience-cypher") {
       return detail ? (
         <Suspense fallback={null}>
-          <CypherQueryScene
+          <CypherQueryPage
             key={detail.identifier || detail.id}
             knId={detail.identifier || detail.id}
             networkId={activeNetworkId}
