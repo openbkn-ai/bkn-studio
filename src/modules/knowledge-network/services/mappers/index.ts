@@ -134,6 +134,7 @@ export function mapDataProperty(
   item: BackendDataProperty,
   meta: {
     displayKey: string;
+    incrementalKey?: string;
     primaryKeys: string[];
   },
 ): ObjectTypeDataProperty {
@@ -146,7 +147,7 @@ export function mapDataProperty(
     ...(declarations ? { declarations } : {}),
     displayKey: name === meta.displayKey,
     displayName,
-    incrementalKey: false,
+    incrementalKey: Boolean(meta.incrementalKey) && name === meta.incrementalKey,
     indexFeatures: item.index_features?.map((feature) => ({
       available: feature.available ?? null,
       configured: feature.configured ?? false,
@@ -255,7 +256,7 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
   return {
     ...mapObjectType(item),
     dataProperties: (item.data_properties ?? []).map((property) =>
-      mapDataProperty(property, { displayKey, primaryKeys }),
+      mapDataProperty(property, { displayKey, incrementalKey, primaryKeys }),
     ),
     dataSource: item.data_source
       ? {

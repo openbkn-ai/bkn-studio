@@ -208,6 +208,17 @@ it.each(["resource", "result", "permission", "definition"])(
   },
 );
 
+it("leaves the type of the incremental key's property alone", async () => {
+  vi.mocked(getKnowledgeNetworkObjectTypeDetail).mockResolvedValue({
+    ...original,
+    dataProperties: [{ ...original.dataProperties[0], incrementalKey: true }],
+  });
+  const session = await load();
+  expect(() => validateEvalRepairProposal(proposal(), session)).toThrow(
+    "EVAL_REPAIR_UNSUPPORTED_CHANGE",
+  );
+});
+
 it("keeps masked fields and business scenarios outside automatic resource changes", async () => {
   vi.mocked(getKnowledgeNetworkObjectTypeDetail).mockResolvedValue({
     ...original,

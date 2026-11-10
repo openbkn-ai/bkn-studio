@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildBackendObjectTypePayload } from "@/modules/knowledge-network/services/mappers";
+import {
+  buildBackendObjectTypePayload,
+  mapObjectTypeDetail,
+} from "@/modules/knowledge-network/services/mappers";
 import type {
   KnowledgeNetworkObjectTypeMutationPayload,
   ObjectTypeDataProperty,
@@ -62,5 +65,22 @@ describe("the incremental key on an object type save", () => {
         [],
       ),
     ).not.toHaveProperty("incremental_key");
+  });
+
+  // An eval repair reads it to leave the key's property type alone.
+  it("marks the property the key names when it reads an object type", () => {
+    const detail = mapObjectTypeDetail({
+      data_properties: [
+        { name: "id", type: "string" },
+        { name: "updated_at", type: "datetime" },
+      ],
+      id: "lab_order",
+      incremental_key: "updated_at",
+      name: "检验申请",
+    });
+    expect(detail.dataProperties.map((item) => [item.name, item.incrementalKey])).toEqual([
+      ["id", false],
+      ["updated_at", true],
+    ]);
   });
 });
