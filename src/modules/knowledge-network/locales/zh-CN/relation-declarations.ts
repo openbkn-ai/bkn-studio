@@ -96,15 +96,6 @@ export const relationDeclarationsPart = {
     separator: "、",
     title: "关系声明",
     verification: "关联依据",
-    verificationOption: {
-      confirmed: "真实标识",
-      none: "未声明",
-      unconfirmed: "规则推测",
-    },
-    verificationHint: {
-      confirmed: "按外键或业务 ID 关联",
-      unconfirmed: "按规则推测关联，结果标为待确认",
-    },
     verificationShort: {
       confirmed: "真实标识",
       unconfirmed: "规则推测",

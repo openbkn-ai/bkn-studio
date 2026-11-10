@@ -123,11 +123,17 @@ function openSelect(label: string) {
 
 describe("RelationDeclarationsSection", () => {
   it("opens for a relation that declares something, and is folded otherwise", () => {
-    renderSection({ verification: "confirmed" }, otherEnds);
+    renderSection({ cardinality: "one_to_one" }, otherEnds);
     expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
     cleanup();
 
     renderSection(undefined, otherEnds);
+    const header = screen.getByRole("button", { expanded: false });
+    expect(within(header).getByText(`${PREFIX}.notDeclared`)).toBeTruthy();
+  });
+
+  it("reads as not declared when a BKN file declares only the verification", () => {
+    renderSection({ verification: "confirmed" }, otherEnds);
     const header = screen.getByRole("button", { expanded: false });
     expect(within(header).getByText(`${PREFIX}.notDeclared`)).toBeTruthy();
   });
@@ -249,8 +255,21 @@ describe("RelationDeclarationsSection", () => {
     expect(screen.queryByText(`${PREFIX}.fallbackFor`)).toBeNull();
   });
 
+  it("does not edit the verification, and keeps one a BKN file declares", () => {
+    mocks.list.mockResolvedValue({ entries: [], totalCount: 0 });
+    const { changes } = renderSection({ verification: "confirmed" }, otherEnds);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    expect(screen.queryByText(`${PREFIX}.verification`)).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: `${PREFIX}.importanceOption.secondary` }));
+    expect(lastChange(changes)).toMatchObject({
+      importance: "secondary",
+      verification: "confirmed",
+    });
+  });
+
   it("keeps a reverse name to the backend's length", () => {
-    renderSection({ verification: "confirmed" }, otherEnds);
+    renderSection({ cardinality: "one_to_one" }, otherEnds);
     const input = screen.getByRole<HTMLInputElement>("textbox");
     expect(input.maxLength).toBe(40);
   });

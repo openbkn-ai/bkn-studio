@@ -6,7 +6,7 @@
  */
 
 export const relationtypePart = {
-  relationTypeAddPropertyMapping: "Add data property",
+  relationTypeAddPropertyMapping: "Add join field",
   relationTypeBasicInfo: "Basic information",
   relationTypeBatchDeleteDescription:
     "Delete the selected {{count}} relation types? This action cannot be undone.",

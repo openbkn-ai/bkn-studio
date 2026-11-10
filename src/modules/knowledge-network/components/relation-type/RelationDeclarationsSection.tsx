@@ -68,7 +68,8 @@ export function RelationDeclarationsSection({
   value,
 }: RelationDeclarationsSectionProps) {
   const { t } = useTranslation();
-  const declared = Boolean(normalizeRelationDeclarations(value));
+  // The join basis is not edited here, so a relation declaring only that reads as not declared.
+  const declared = Boolean(normalizeRelationDeclarations({ ...value, verification: undefined }));
   const [open, setOpen] = useState(declared);
   const [notice, setNotice] = useState<ClearedNotice>(null);
   const [candidates, setCandidates] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
@@ -313,30 +314,6 @@ export function RelationDeclarationsSection({
           </Form.Item>
         ) : null}
       </div>
-      <Form.Item label={t(`${PREFIX}.verification`)}>
-        <Radio.Group
-          onChange={(event) =>
-            update({
-              verification:
-                event.target.value === "none"
-                  ? undefined
-                  : (event.target.value as RelationDeclarations["verification"]),
-            })
-          }
-          options={(["confirmed", "unconfirmed", "none"] as const).map((verification) => ({
-            label:
-              verification === "none" ? (
-                t(`${PREFIX}.verificationOption.none`)
-              ) : (
-                <Tooltip title={t(`${PREFIX}.verificationHint.${verification}`)}>
-                  <span>{t(`${PREFIX}.verificationOption.${verification}`)}</span>
-                </Tooltip>
-              ),
-            value: verification,
-          }))}
-          value={value?.verification ?? "none"}
-        />
-      </Form.Item>
     </Form>
   );
 

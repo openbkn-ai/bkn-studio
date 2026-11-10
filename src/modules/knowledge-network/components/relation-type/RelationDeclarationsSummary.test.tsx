@@ -98,8 +98,10 @@ describe("RelationDeclarationsSummary", () => {
   it("says not declared where the relation declares nothing, and primary as the default", () => {
     renderSummary(primary.id, { cardinality: "many_to_one" });
 
-    // Reverse name, required ends and verification.
-    expect(screen.getAllByText(`${PREFIX}.notDeclared`)).toHaveLength(3);
+    // Reverse name and required ends. The verification is not edited in Studio, so it shows
+    // only when declared.
+    expect(screen.getAllByText(`${PREFIX}.notDeclared`)).toHaveLength(2);
+    expect(screen.queryByText(`${PREFIX}.verification`)).toBeNull();
     expect(screen.getByText(`${PREFIX}.importanceOption.primary`)).toBeTruthy();
     // Characteristics are for a relation from an object type to itself.
     expect(screen.queryByText(`${PREFIX}.characteristics`)).toBeNull();

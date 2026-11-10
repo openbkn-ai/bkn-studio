@@ -101,15 +101,6 @@ export const relationDeclarationsPart = {
     separator: ", ",
     title: "Relation declarations",
     verification: "Join basis",
-    verificationOption: {
-      confirmed: "Real identifiers",
-      none: "Not declared",
-      unconfirmed: "Inferred rules",
-    },
-    verificationHint: {
-      confirmed: "Joined by a foreign key or business ID",
-      unconfirmed: "Joined by inferred rules; results are marked to be confirmed",
-    },
     verificationShort: {
       confirmed: "Real identifiers",
       unconfirmed: "Inferred rules",

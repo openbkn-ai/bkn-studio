@@ -6,7 +6,7 @@
  */
 
 export const relationtypePart = {
-  relationTypeAddPropertyMapping: "新增数据属性",
+  relationTypeAddPropertyMapping: "新增关联字段",
   relationTypeBasicInfo: "基础信息",
   relationTypeBatchDeleteDescription: "确认删除选中的 {{count}} 个关系类吗？该操作不可撤销。",
   relationTypeBatchDeleteDescription_one: "确认删除选中的 {{count}} 个关系类吗？该操作不可撤销。",

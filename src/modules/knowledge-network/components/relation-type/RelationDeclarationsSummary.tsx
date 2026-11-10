@@ -130,14 +130,13 @@ export function RelationDeclarationsSummary({
             ),
           )
         : null}
-      {item(
-        t(`${PREFIX}.verification`),
-        declarations?.verification ? (
-          <strong>{t(`${PREFIX}.verificationShort.${declarations.verification}`)}</strong>
-        ) : (
-          notDeclared
-        ),
-      )}
+      {/* Not edited in Studio; shown only when a BKN file declares it. */}
+      {declarations?.verification
+        ? item(
+            t(`${PREFIX}.verification`),
+            <strong>{t(`${PREFIX}.verificationShort.${declarations.verification}`)}</strong>,
+          )
+        : null}
       {fallbackPaths.length
         ? item(
             t(`${PREFIX}.fallbackPaths`),
