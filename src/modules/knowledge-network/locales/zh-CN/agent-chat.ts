@@ -54,7 +54,7 @@ export const agentChatPart = {
         failed: "智能问答执行失败，请重试",
         timeout: "智能问答执行超时，请缩小问题范围后重试",
         unavailable: "智能问答依赖的服务暂时不可用，请稍后重试",
-        forbidden: "当前账号没有使用智能问答或该知识网络的权限",
+        forbidden: "当前账号没有该知识网络的权限",
         agentNotReady: "智能问答 Agent 尚未发布，请联系管理员完成配置并发布",
         threadBusy: "上一轮问答仍在执行，请稍后重试",
         network: "与智能问答服务的连接中断，请重试",

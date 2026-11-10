@@ -206,7 +206,7 @@ export const cypherQueryPart = {
       notReadyShort: "The Cypher generation agent is not published",
       notReady:
         "The Cypher generation agent is not published yet. Ask an administrator to configure its model and publish it; handwritten Cypher still works",
-      forbidden: "This account may not use the Cypher generation agent or this knowledge network",
+      forbidden: "This account has no access to this knowledge network",
       busy: "The previous generation is still running; try again shortly",
       timeout: "Generating the query timed out; narrow the question and try again",
       failed: "Failed to generate the query",
