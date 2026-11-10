@@ -674,3 +674,18 @@
     min-height: 420px;
   }
 }
+
+/* A deprecated relation is still in use by queries; it is drawn faint and dashed, as on the overview graph. */
+.deprecatedRelation .relationEdge {
+  opacity: 0.4;
+  stroke-dasharray: 4 4;
+}
+
+.deprecatedRelation .relationNode {
+  opacity: 0.5;
+}
+
+.deprecatedOwner circle,
+.deprecatedOwner text {
+  opacity: 0.45;
+}

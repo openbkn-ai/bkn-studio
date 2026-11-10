@@ -8,6 +8,7 @@
 export const relationDeclarationsPart = {
   relationDeclarations: {
     cardinality: "Cardinality",
+    cardinalityHint: "From source to target, how many counterparts an instance of each end has.",
     cardinalityOption: {
       manyToMany: "Many to many",
       manyToOne: "Many to one",
@@ -22,7 +23,6 @@ export const relationDeclarationsPart = {
       symmetric: "if A has this relation with B, B has it with A",
       transitive: "if A→B and B→C hold, A→C holds",
     },
-    characteristicOption: "{{name}}: {{hint}}",
     characteristics: "Characteristics",
     characteristicsHint:
       "Only for a relation from an object type to itself. The data holds direct edges only; whoever reads the relation expands them.",
@@ -43,11 +43,11 @@ export const relationDeclarationsPart = {
       reverseName: "the reverse name",
     },
     count: {
-      atLeastOne: "each {{from}} has at least one {{to}}",
-      atMostOne: "each {{from}} has at most one {{to}}",
-      exactlyOne: "each {{from}} has exactly one {{to}}",
-      oneOrMore: "each {{from}} has at least one {{to}}, possibly more",
-      several: "a {{from}} can have more than one {{to}}",
+      atLeastOne: "Each <from/> has at least one <to/>",
+      atMostOne: "Each <from/> has at most one <to/>",
+      exactlyOne: "Each <from/> has exactly one <to/>",
+      oneOrMore: "Each <from/> has at least one <to/>, possibly more",
+      several: "A <from/> can have more than one <to/>",
     },
     fallbackFor: "Fallback for",
     fallbackForHint:
@@ -85,12 +85,16 @@ export const relationDeclarationsPart = {
       toDirectTitle: "Make it a direct relation?",
     },
     notDeclared: "Not declared",
-    note: "BKN 3.0 · all optional",
     relationProperties_one: "{{count}} relation property",
     relationProperties_other: "{{count}} relation properties",
     relationPropertiesHint:
       "Relation properties cannot be edited in Studio yet. Saving the relation type keeps them.",
-    requiredBoth: "Both ends have at least one counterpart",
+    requiredBoth: "Both ends",
+    requiredEndOption: {
+      source: "{{name}} (source)",
+      target: "{{name}} (target)",
+    },
+    requiredEndsHint: "Every instance of a checked end has at least one counterpart.",
     requiredEnd: {
       source: "Every {{source}} has at least one {{target}}",
       target: "Every {{target}} has at least one {{source}}",
@@ -98,15 +102,19 @@ export const relationDeclarationsPart = {
     requiredEnds: "Required ends",
     reverseName: "Reverse name",
     reverseNameHint: "The name read from the target to the source. Read forward, it is “{{name}}”.",
-    sentence: "{{first}}; {{second}}.",
-    sentenceOne: "{{first}}.",
+    sentenceEnd: ".",
+    sentenceSeparator: ". ",
     separator: ", ",
     title: "Relation declarations",
     verification: "Join basis",
     verificationOption: {
-      confirmed: "Real identifiers (foreign key or business ID)",
+      confirmed: "Real identifiers",
       none: "Not declared",
-      unconfirmed: "Inferred rules (results marked to be confirmed)",
+      unconfirmed: "Inferred rules",
+    },
+    verificationHint: {
+      confirmed: "Joined by a foreign key or business ID",
+      unconfirmed: "Joined by inferred rules; results are marked to be confirmed",
     },
     verificationShort: {
       confirmed: "Real identifiers",

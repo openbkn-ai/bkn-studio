@@ -56,9 +56,13 @@ import type {
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { getReadableActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
+import { RelationCardinalityBadge } from "@/modules/knowledge-network/components/relation-type/RelationCardinalityBadge";
+import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeResourceGraph.module.css";
+
+const DEPRECATED_TAG = "knowledgeNetwork.definitionDeclarations.deprecatedTag";
 
 type GraphSection = "all" | "relations" | "metrics" | "actions";
 type ResourceScope = "all" | "relations" | "actions";
@@ -1082,6 +1086,7 @@ export function ObjectTypeResourceGraph({
     });
     return [...groups.values()];
   }, [objectType.id, relationItems]);
+  const ownerDeprecated = isDeprecated(objectType);
   const relationNames = useMemo(
     () => new Map(relations.map((relation) => [relation.id, relation.name])),
     [relations],
@@ -2051,8 +2056,15 @@ export function ObjectTypeResourceGraph({
                         if (!geometry) return null;
                         const relationName = truncate(relation.name, 14);
                         const labelWidth = relationLabelWidth(relation.name);
+                        const deprecated = isDeprecated({
+                          declarations: relation.definitionDeclarations,
+                        });
                         return (
-                          <g key={relation.id}>
+                          <g
+                            className={deprecated ? styles.deprecatedRelation : undefined}
+                            data-deprecated={deprecated || undefined}
+                            key={relation.id}
+                          >
                             <path
                               className={styles.relationEdge}
                               d={`M ${geometry.from.x} ${geometry.from.y} Q ${geometry.control.x} ${geometry.control.y} ${geometry.to.x} ${geometry.to.y}`}
@@ -2086,7 +2098,11 @@ export function ObjectTypeResourceGraph({
                               <text dy="4" textAnchor="middle">
                                 {relationName}
                               </text>
-                              <title>{relation.name}</title>
+                              <title>
+                                {deprecated
+                                  ? `${relation.name} · ${t(DEPRECATED_TAG)}`
+                                  : relation.name}
+                              </title>
                             </g>
                           </g>
                         );
@@ -2619,7 +2635,10 @@ export function ObjectTypeResourceGraph({
 
             <g
               aria-label={`${t("knowledgeNetwork.objectTypeGraphCurrentObject")} ${objectType.name}`}
-              className={styles.ownerNode}
+              className={
+                ownerDeprecated ? `${styles.ownerNode} ${styles.deprecatedOwner}` : styles.ownerNode
+              }
+              data-deprecated={ownerDeprecated || undefined}
               data-graph-node="true"
               onClick={() => activate(selectCurrentObject)}
               onKeyDown={(event) => {
@@ -2635,7 +2654,9 @@ export function ObjectTypeResourceGraph({
               <text className={styles.ownerLabel} textAnchor="middle" y="50">
                 {truncate(objectType.name, 18)}
               </text>
-              <title>{objectType.name}</title>
+              <title>
+                {ownerDeprecated ? `${objectType.name} · ${t(DEPRECATED_TAG)}` : objectType.name}
+              </title>
             </g>
           </svg>
         </Spin>
@@ -2892,6 +2913,18 @@ export function ObjectTypeResourceGraph({
                           : "knowledgeNetwork.relationTypeResourceMapping",
                       )}
                     </Descriptions.Item>
+                    {selected.value.declarations?.cardinality ? (
+                      <Descriptions.Item
+                        label={t("knowledgeNetwork.relationDeclarations.cardinality")}
+                      >
+                        <RelationCardinalityBadge
+                          declarations={selected.value.declarations}
+                          showLabel
+                          sourceName={selected.value.sourceObjectTypeName}
+                          targetName={selected.value.targetObjectTypeName}
+                        />
+                      </Descriptions.Item>
+                    ) : null}
                   </>
                 ) : null}
                 {selected.kind === "action" ? (

@@ -10,7 +10,9 @@ import { createPendingRequest } from "@/framework/request/pending-request";
 import type { KnowledgeNetworkOverviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   type BackendLifecycle,
+  type BackendRelationDeclarationFields,
   mapDefinitionDeclarations,
+  mapRelationDeclarations,
 } from "@/modules/knowledge-network/services/mappers/declarations";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
@@ -20,6 +22,10 @@ import {
 
 type BackendOverviewGraph = {
   edges: Array<{
+    /** Left out when it is not declared. */
+    cardinality?: BackendRelationDeclarationFields["cardinality"];
+    /** The required ends and characteristics; left out when it declares none. */
+    constraints?: BackendRelationDeclarationFields["constraints"];
     id: string;
     /** Left out while the relation type is active. */
     lifecycle?: BackendLifecycle | null;
@@ -66,6 +72,15 @@ function withLifecycle(lifecycle: BackendLifecycle | null | undefined) {
   return declarations ? { declarations } : {};
 }
 
+/** The cardinality and constraints the graph carries; nothing for a relation declaring neither. */
+function withRelationDeclarations(edge: BackendRelationDeclarationFields) {
+  const relationDeclarations = mapRelationDeclarations({
+    cardinality: edge.cardinality,
+    constraints: edge.constraints,
+  });
+  return relationDeclarations ? { relationDeclarations } : {};
+}
+
 function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverviewGraph {
   return {
     graph: {
@@ -74,6 +89,7 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
         id: edge.id,
         mappingMode: edge.mapping_mode === "indirect" ? "resource" : "direct",
         name: edge.name,
+        ...withRelationDeclarations(edge),
         sourceId: edge.source_id,
         targetId: edge.target_id,
       })),
@@ -158,6 +174,15 @@ export async function getKnowledgeNetworkOverviewGraph(
           targetId: item.targetObjectTypeId,
           ...(item.definitionDeclarations?.lifecycle
             ? { declarations: { lifecycle: item.definitionDeclarations.lifecycle } }
+            : {}),
+          ...(item.declarations?.cardinality || item.declarations?.requiredEnds
+            ? {
+                relationDeclarations: {
+                  cardinality: item.declarations.cardinality,
+                  characteristics: item.declarations.characteristics,
+                  requiredEnds: item.declarations.requiredEnds,
+                },
+              }
             : {}),
         })),
       },

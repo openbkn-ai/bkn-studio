@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { DefinitionDeclarations } from "./declarations";
+import type { DefinitionDeclarations, RelationDeclarations } from "./declarations";
 import type { ObjectTypeIndexStatus } from "./object-type";
 
 export type KnowledgeNetworkListQuery = {
@@ -102,6 +102,8 @@ export type KnowledgeNetworkPreviewEdge = {
   faded?: boolean;
   id: string;
   mappingMode?: "direct" | "resource";
+  /** Its cardinality and constraints, for the badge beside its name. */
+  relationDeclarations?: RelationDeclarations;
   name: string;
   sourceId: string;
   targetId: string;

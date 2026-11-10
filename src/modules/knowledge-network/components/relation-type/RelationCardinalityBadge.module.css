@@ -1,0 +1,25 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.badge {
+  cursor: help;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  margin-inline-end: 0;
+}
+
+.tip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.withLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

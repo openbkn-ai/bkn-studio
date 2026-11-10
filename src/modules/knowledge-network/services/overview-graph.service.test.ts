@@ -168,4 +168,42 @@ describe("overview-graph.service", () => {
     expect(graph.nodes.map((node) => node.declarations)).toEqual([undefined, deprecated]);
     expect(graph.edges.map((edge) => edge.declarations)).toEqual([undefined, deprecated]);
   });
+
+  it("keeps a relation's cardinality and constraints, and none for a relation declaring neither", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        edges: [
+          {
+            cardinality: "many_to_one",
+            constraints: { required: ["source"] },
+            id: "ordered_by",
+            mapping_mode: "direct",
+            name: "Ordered by",
+            source_id: "a",
+            target_id: "b",
+          },
+          { id: "plain", mapping_mode: "direct", name: "Plain", source_id: "a", target_id: "b" },
+        ],
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+        ],
+        object_type_total: 2,
+        relation_type_total: 2,
+        returned_edges: 2,
+        returned_nodes: 2,
+        snapshot: "snapshot-1",
+        truncated: false,
+      },
+    });
+    const { getKnowledgeNetworkOverviewGraph } =
+      await import("@/modules/knowledge-network/services/overview-graph.service");
+
+    const { graph } = await getKnowledgeNetworkOverviewGraph("network-1");
+
+    expect(graph.edges.map((edge) => edge.relationDeclarations)).toEqual([
+      { cardinality: "many_to_one", requiredEnds: ["source"] },
+      undefined,
+    ]);
+  });
 });

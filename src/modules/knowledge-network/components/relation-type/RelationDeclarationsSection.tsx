@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Collapse, Form, Input, Radio, Select, Tag } from "antd";
+import { Alert, Checkbox, Collapse, Form, Input, Radio, Select, Tag, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -199,8 +199,8 @@ export function RelationDeclarationsSection({
       ) : null}
       {symmetric ? null : (
         <Form.Item
-          extra={t(`${PREFIX}.reverseNameHint`, { name: relationName })}
           label={t(`${PREFIX}.reverseName`)}
+          tooltip={t(`${PREFIX}.reverseNameHint`, { name: relationName })}
         >
           <Input
             maxLength={REVERSE_NAME_MAX_LENGTH}
@@ -211,7 +211,11 @@ export function RelationDeclarationsSection({
         </Form.Item>
       )}
       <div className={styles.row}>
-        <Form.Item label={t(`${PREFIX}.cardinality`)}>
+        <Form.Item
+          label={t(`${PREFIX}.cardinality`)}
+          // What the declared cardinality and required ends mean, or what a cardinality is.
+          tooltip={sentence ?? t(`${PREFIX}.cardinalityHint`)}
+        >
           <Select
             allowClear
             aria-label={t(`${PREFIX}.cardinality`)}
@@ -226,7 +230,7 @@ export function RelationDeclarationsSection({
             value={value?.cardinality}
           />
         </Form.Item>
-        <Form.Item label={t(`${PREFIX}.requiredEnds`)}>
+        <Form.Item label={t(`${PREFIX}.requiredEnds`)} tooltip={t(`${PREFIX}.requiredEndsHint`)}>
           {symmetric ? (
             <Checkbox
               checked={requiredEnds.length === 2}
@@ -241,10 +245,17 @@ export function RelationDeclarationsSection({
               className={styles.stack}
               onChange={(next) => update({ requiredEnds: next })}
               options={(["source", "target"] as const).map((end) => ({
-                label: t(`${PREFIX}.requiredEnd.${end}`, {
-                  source: endName("source"),
-                  target: endName("target"),
-                }),
+                // The end by name; what checking it means is on hover.
+                label: (
+                  <Tooltip
+                    title={t(`${PREFIX}.requiredEnd.${end}`, {
+                      source: endName("source"),
+                      target: endName("target"),
+                    })}
+                  >
+                    <span>{t(`${PREFIX}.requiredEndOption.${end}`, { name: endName(end) })}</span>
+                  </Tooltip>
+                ),
                 value: end,
               }))}
               value={requiredEnds}
@@ -252,19 +263,19 @@ export function RelationDeclarationsSection({
           )}
         </Form.Item>
       </div>
-      {sentence ? <p className={styles.sentence}>{sentence}</p> : null}
       {sameEnds ? (
         <Form.Item
-          extra={t(`${PREFIX}.characteristicsHint`)}
           label={t(`${PREFIX}.characteristics`)}
+          tooltip={t(`${PREFIX}.characteristicsHint`)}
         >
           <Checkbox.Group
             onChange={(next) => handleCharacteristicsChange(next)}
             options={RELATION_CHARACTERISTICS.map((characteristic) => ({
-              label: t(`${PREFIX}.characteristicOption`, {
-                hint: t(`${PREFIX}.characteristicHint.${characteristic}`),
-                name: t(`${PREFIX}.characteristic.${characteristic}`),
-              }),
+              label: (
+                <Tooltip title={t(`${PREFIX}.characteristicHint.${characteristic}`)}>
+                  <span>{t(`${PREFIX}.characteristic.${characteristic}`)}</span>
+                </Tooltip>
+              ),
               value: characteristic,
             }))}
             value={value?.characteristics ?? []}
@@ -272,7 +283,7 @@ export function RelationDeclarationsSection({
         </Form.Item>
       ) : null}
       <div className={styles.row}>
-        <Form.Item extra={t(`${PREFIX}.importanceHint`)} label={t(`${PREFIX}.importance`)}>
+        <Form.Item label={t(`${PREFIX}.importance`)} tooltip={t(`${PREFIX}.importanceHint`)}>
           <Radio.Group
             onChange={(event) =>
               update(
@@ -289,7 +300,7 @@ export function RelationDeclarationsSection({
           />
         </Form.Item>
         {secondary ? (
-          <Form.Item extra={t(`${PREFIX}.fallbackForHint`)} label={t(`${PREFIX}.fallbackFor`)}>
+          <Form.Item label={t(`${PREFIX}.fallbackFor`)} tooltip={t(`${PREFIX}.fallbackForHint`)}>
             <Select
               allowClear
               aria-label={t(`${PREFIX}.fallbackFor`)}
@@ -313,7 +324,14 @@ export function RelationDeclarationsSection({
             })
           }
           options={(["confirmed", "unconfirmed", "none"] as const).map((verification) => ({
-            label: t(`${PREFIX}.verificationOption.${verification}`),
+            label:
+              verification === "none" ? (
+                t(`${PREFIX}.verificationOption.none`)
+              ) : (
+                <Tooltip title={t(`${PREFIX}.verificationHint.${verification}`)}>
+                  <span>{t(`${PREFIX}.verificationOption.${verification}`)}</span>
+                </Tooltip>
+              ),
             value: verification,
           }))}
           value={value?.verification ?? "none"}
@@ -329,7 +347,6 @@ export function RelationDeclarationsSection({
       items={[
         {
           children: body,
-          extra: <span className={styles.note}>{t(`${PREFIX}.note`)}</span>,
           forceRender: true,
           key: PANEL_KEY,
           label: (

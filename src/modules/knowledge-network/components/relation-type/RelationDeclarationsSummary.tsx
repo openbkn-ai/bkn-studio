@@ -13,14 +13,13 @@ import type {
   RelationDeclarations,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
-  CARDINALITY_LABEL_KEYS,
   fallbackPathsFor,
   hasSameEnds,
   normalizeRelationDeclarations,
   type RelationEnds,
 } from "@/modules/knowledge-network/utils/relation-declarations";
 
-import { useRelationSentence } from "./use-relation-sentence";
+import { RelationCardinalityBadge } from "./RelationCardinalityBadge";
 import styles from "./RelationDeclarationsSummary.module.css";
 
 const PREFIX = "knowledgeNetwork.relationDeclarations";
@@ -51,7 +50,6 @@ export function RelationDeclarationsSummary({
 }: RelationDeclarationsSummaryProps) {
   const { t } = useTranslation();
   const declarations = normalizeRelationDeclarations(value);
-  const sentence = useRelationSentence(declarations, { source: sourceName, target: targetName });
   const fallbackPaths = fallbackPathsFor(relationTypeId, sameEndRelationTypes);
   const separator = t(`${PREFIX}.separator`);
 
@@ -77,8 +75,14 @@ export function RelationDeclarationsSummary({
       {item(
         t(`${PREFIX}.cardinality`),
         declarations?.cardinality ? (
+          // What it means is on the badge's hover.
           <strong>
-            {t(`${PREFIX}.cardinalityOption.${CARDINALITY_LABEL_KEYS[declarations.cardinality]}`)}
+            <RelationCardinalityBadge
+              declarations={declarations}
+              showLabel
+              sourceName={sourceName}
+              targetName={targetName}
+            />
           </strong>
         ) : (
           notDeclared
@@ -140,7 +144,6 @@ export function RelationDeclarationsSummary({
             <strong className={styles.links}>{fallbackPaths.map((path) => link(path.id))}</strong>,
           )
         : null}
-      {sentence ? <p className={styles.sentence}>{sentence}</p> : null}
     </div>
   );
 }

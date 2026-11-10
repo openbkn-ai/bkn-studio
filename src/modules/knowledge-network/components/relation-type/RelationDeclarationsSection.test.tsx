@@ -132,15 +132,17 @@ describe("RelationDeclarationsSection", () => {
     expect(within(header).getByText(`${PREFIX}.notDeclared`)).toBeTruthy();
   });
 
-  it("says from source to target what the cardinality and the required ends mean", () => {
+  it("says from source to target what the cardinality and the required ends mean", async () => {
     renderSection({ cardinality: "many_to_one", requiredEnds: ["source"] }, otherEnds);
-    // The sentence starts with a capital, as an English one does.
-    const sentence = screen.getByText((text) => text.includes("relationDeclarations.sentence "));
-    expect(sentence.textContent).toContain(
-      `${PREFIX}.count.exactlyOne {\\"from\\":\\"检验申请\\",\\"to\\":\\"患者\\"}`,
-    );
-    expect(sentence.textContent).toContain(
-      `${PREFIX}.count.several {\\"from\\":\\"患者\\",\\"to\\":\\"检验申请\\"}`,
+    // On the hover of the cardinality's label, not in the form; each end in turn. The badge's own
+    // test reads the words with the names in bold.
+    expect(screen.queryByText((text) => text.includes(`${PREFIX}.count.`))).toBeNull();
+    const label = screen.getByText(`${PREFIX}.cardinality`, { selector: "label" });
+    fireEvent.mouseEnter(label.querySelector(".anticon") as Element);
+    const text = (await screen.findByRole("tooltip")).textContent ?? "";
+    expect(text.indexOf(`${PREFIX}.count.exactlyOne`)).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf(`${PREFIX}.count.several`)).toBeGreaterThan(
+      text.indexOf(`${PREFIX}.count.exactlyOne`),
     );
   });
 

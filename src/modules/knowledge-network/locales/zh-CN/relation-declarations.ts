@@ -8,6 +8,7 @@
 export const relationDeclarationsPart = {
   relationDeclarations: {
     cardinality: "基数",
+    cardinalityHint: "从起点到终点，每端的一个实例对应几个对端。",
     cardinalityOption: {
       manyToMany: "多对多",
       manyToOne: "多对一",
@@ -22,7 +23,6 @@ export const relationDeclarationsPart = {
       symmetric: "A 与 B 有这条关系，则 B 与 A 也有",
       transitive: "A→B、B→C 成立，则 A→C 成立",
     },
-    characteristicOption: "{{name}}：{{hint}}",
     characteristics: "特性",
     characteristicsHint: "只用于起点与终点为同一对象类的关系。数据只存直接的边，使用方按特性展开。",
     cleared: {
@@ -41,11 +41,11 @@ export const relationDeclarationsPart = {
       reverseName: "反向名称",
     },
     count: {
-      atLeastOne: "每个{{from}}至少对应一个{{to}}",
-      atMostOne: "每个{{from}}至多对应一个{{to}}",
-      exactlyOne: "每个{{from}}恰好对应一个{{to}}",
-      oneOrMore: "每个{{from}}对应一个或多个{{to}}",
-      several: "一个{{from}}可以有多个{{to}}",
+      atLeastOne: "一个 <from/> 至少对应一个 <to/>",
+      atMostOne: "一个 <from/> 最多对应一个 <to/>",
+      exactlyOne: "一个 <from/> 对应一个 <to/>",
+      oneOrMore: "一个 <from/> 对应一个或多个 <to/>",
+      several: "一个 <from/> 可对应多个 <to/>",
     },
     fallbackFor: "替代路径",
     fallbackForHint:
@@ -80,11 +80,15 @@ export const relationDeclarationsPart = {
       toDirectTitle: "改为直接关系？",
     },
     notDeclared: "未声明",
-    note: "BKN 3.0 · 都可以不填",
     relationProperties_one: "关系属性：{{count}} 个",
     relationProperties_other: "关系属性：{{count}} 个",
     relationPropertiesHint: "关系属性暂不能在 Studio 中编辑，保存关系类时保持不变。",
-    requiredBoth: "两端都至少有一个对端",
+    requiredBoth: "两端都必有",
+    requiredEndOption: {
+      source: "{{name}}（起点）",
+      target: "{{name}}（终点）",
+    },
+    requiredEndsHint: "勾选的一端，每个实例都至少有一个对端。",
     requiredEnd: {
       source: "每个{{source}}至少有一个{{target}}",
       target: "每个{{target}}至少有一个{{source}}",
@@ -92,15 +96,19 @@ export const relationDeclarationsPart = {
     requiredEnds: "必有端",
     reverseName: "反向名称",
     reverseNameHint: "从终点看向起点时的名称。正向为「{{name}}」。",
-    sentence: "{{first}}；{{second}}。",
-    sentenceOne: "{{first}}。",
+    sentenceEnd: "。",
+    sentenceSeparator: "；",
     separator: "、",
     title: "关系声明",
     verification: "关联依据",
     verificationOption: {
-      confirmed: "真实标识（外键或业务 ID）",
+      confirmed: "真实标识",
       none: "未声明",
-      unconfirmed: "规则推测（结果标为待确认）",
+      unconfirmed: "规则推测",
+    },
+    verificationHint: {
+      confirmed: "按外键或业务 ID 关联",
+      unconfirmed: "按规则推测关联，结果标为待确认",
     },
     verificationShort: {
       confirmed: "真实标识",

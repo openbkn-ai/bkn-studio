@@ -320,6 +320,38 @@ afterEach(() => {
 });
 
 describe("ObjectTypeResourceGraph", () => {
+  it("draws a deprecated relation and a deprecated current object faint, saying so on hover", async () => {
+    const lifecycle = {
+      reason: "并入客户关系",
+      replacedBy: "order-customer",
+      status: "deprecated" as const,
+    };
+    mocks.listRelations.mockResolvedValue({
+      entries: [
+        relation,
+        {
+          ...relation,
+          definitionDeclarations: { lifecycle },
+          id: "order-customer-old",
+          name: "客户关系（旧）",
+        },
+      ],
+      totalCount: 2,
+    });
+    renderGraph(true, { objectType: { ...objectType, declarations: { lifecycle } } });
+
+    const old = await screen.findByRole("button", { name: "关系类 客户关系（旧）" });
+    expect(old.parentElement).toHaveAttribute("data-deprecated", "true");
+    expect(old.querySelector("title")?.textContent).toBe("客户关系（旧） · 已弃用");
+    const current = screen.getByRole("button", { name: "关系类 客户关系" });
+    expect(current.parentElement).not.toHaveAttribute("data-deprecated");
+    expect(current.querySelector("title")?.textContent).toBe("客户关系");
+
+    const owner = screen.getByRole("button", { name: "当前对象类 销售订单" });
+    expect(owner).toHaveAttribute("data-deprecated", "true");
+    expect(owner.querySelector("title")?.textContent).toBe("销售订单 · 已弃用");
+  });
+
   it("keeps the current object and shows lightweight category-specific empty hints", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
@@ -1153,6 +1185,26 @@ describe("ObjectTypeResourceGraph", () => {
 
     const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
     expect(within(drawer).getByText("更新订单")).toBeInTheDocument();
+  });
+
+  it("shows a relation's cardinality in its drawer, and no row for one that declares none", async () => {
+    mocks.listRelations.mockResolvedValue({
+      entries: [
+        { ...relation, declarations: { cardinality: "many_to_one" } },
+        { ...relation, id: "order-customer-plain", name: "客户关系（未声明）" },
+      ],
+      totalCount: 2,
+    });
+    renderGraph();
+
+    fireEvent.click(await screen.findByRole("button", { name: "关系类 客户关系" }));
+    let drawer = screen.getByRole("dialog", { name: "关系类详情" });
+    expect(within(drawer).getByText("N:1")).toBeInTheDocument();
+    expect(within(drawer).getByText("多对一")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "关系类 客户关系（未声明）" }));
+    drawer = screen.getByRole("dialog", { name: "关系类详情" });
+    expect(within(drawer).queryByText("基数")).not.toBeInTheDocument();
   });
 
   it("aligns relation graph operations with the list while keeping edit removed", async () => {

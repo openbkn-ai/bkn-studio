@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import { definitionDetailPath } from "@/modules/knowledge-network/components/definition-declarations/definition-path";
 import { useDefinitionName } from "@/modules/knowledge-network/components/definition-declarations/use-definition-name";
+import { RelationCardinalityBadge } from "@/modules/knowledge-network/components/relation-type/RelationCardinalityBadge";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { DefinitionDeclarations } from "@/modules/knowledge-network/types/declarations";
 import type {
@@ -232,6 +233,11 @@ export function OntologyInspectorPanel({
                     {relation.name}
                   </DeprecatedName>
                 </span>
+                <RelationCardinalityBadge
+                  declarations={relation.declarations}
+                  sourceName={relation.sourceObjectTypeName}
+                  targetName={relation.targetObjectTypeName}
+                />
                 <span className={styles.relArrow}>{out ? "→" : "←"}</span>
                 <span className={styles.relTarget}>
                   <span className={styles.dot} style={{ background: other?.color || "#999" }} />

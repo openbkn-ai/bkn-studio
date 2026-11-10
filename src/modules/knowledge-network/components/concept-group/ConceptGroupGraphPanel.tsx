@@ -178,6 +178,7 @@ export function ConceptGroupGraphPanel({
     const names = new Map(objectTypes.map((item) => [item.id, item.name]));
     return (result?.graph.edges ?? []).map((edge) => ({
       color: DEFAULT_COLOR,
+      declarations: edge.relationDeclarations,
       definitionDeclarations: edge.declarations,
       description: "",
       id: edge.id,
