@@ -46,9 +46,17 @@ export const systemAdminModuleManifest = {
     "authorization/object-grants",
     "license-management/license",
     "oauth/access-origins",
+    "sso/providers",
     "bkn-agent/admin-agents",
   ],
   scenes: [
+    {
+      id: "system-admin.sso",
+      exportName: "SSOManagementScene",
+      description:
+        "Manage external OIDC identity providers, browser sign-in and token exchange. Professional and higher editions.",
+      inputs: [],
+    },
     {
       id: "system-admin.users",
       exportName: "UserManagementScene",
