@@ -26,3 +26,5 @@ export { GrantableRolePicker } from "@/modules/system-admin/components/Grantable
 export type { GrantableRolePickerProps } from "@/modules/system-admin/components/GrantableRolePicker";
 export type * from "@/modules/system-admin/types/admin";
 export type * from "@/modules/system-admin/types/oauth-access-origin";
+
+export { SSOManagementScene } from "@/modules/system-admin/scenes/SSOManagementScene";

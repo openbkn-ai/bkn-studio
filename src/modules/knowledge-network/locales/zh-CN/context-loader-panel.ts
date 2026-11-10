@@ -9,25 +9,36 @@ export const contextLoaderPanelPart = {
   contextLoaderPanel: {
     toolGroups: {
       network: { label: "知识网络信息", description: "知识网络列表、当前网络详情" },
-      lifecycle: { label: "交互生命周期", description: "受管会话、交互和操作状态" },
+      lifecycle: { label: "会话管理", description: "管理对话上下文，开始和结束每轮问题的处理。" },
       discovery: {
-        label: "知识网络与 Schema",
-        description: "知识网络列表、结构、Schema 探索和类型详情",
+        label: "知识网络概念检索",
+        description: "查找知识网络，检索网络结构、对象类、关系类及属性定义。",
       },
       model: {
         label: "知识网络模型检索",
         description: "语义检索、对象类、关系类、行动类、对象指标定义查询",
       },
-      query: { label: "实例与关系子图查询", description: "实例查询、关系子图查询" },
+      query: {
+        label: "知识网络数据查询",
+        description: "查询业务实例、关联关系、指标及逻辑属性计算结果。",
+      },
       data: { label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
       logic: { label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
       resource: { label: "数据资源", description: "数据资源检查、技能召回和执行" },
-      action: { label: "行动", description: "行动工具召回、执行与执行记录" },
-      execution: {
-        label: "代码执行",
-        description: "在沙箱内运行 Python 或 shell 命令，脚本里可直接调用上面这些工具",
+      action: {
+        label: "行动类执行",
+        description: "查看行动类信息，执行业务行动，查询执行结果和历史记录。",
       },
-      skill: { label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
+      execution: {
+        label: "代码与命令执行",
+        description: "运行代码和命令，完成数据处理与工具调用。",
+      },
+      skill: { label: "技能", description: "查找可用技能，读取技能说明、使用方法及相关文件。" },
+      tool: { label: "工具", description: "检索可用能力，调用函数、API、MCP 等工具。" },
+      evaluation: {
+        label: "质量评测",
+        description: "查找测试集、发起评测、领取用例、提交结果及查看进度。",
+      },
       other: { label: "其他能力", description: "暂未归类的 MCP 能力" },
     },
     toolNames: {
@@ -69,6 +80,11 @@ export const contextLoaderPanelPart = {
       bkn_retry_operation: "重试操作",
       bkn_get_receipt: "查看调用回执",
       execute_skill: "执行技能",
+      bkn_eval_list_suites: "查找测试集",
+      bkn_eval_start_run: "发起评测",
+      bkn_eval_next_case: "领取下一条用例",
+      bkn_eval_submit_result: "提交用例结果",
+      bkn_eval_get_progress: "查看评测进度",
       fallbackLifecycle: "交互生命周期工具",
       fallbackModel: "知识模型工具",
       fallbackData: "数据资源工具",
@@ -260,18 +276,29 @@ export const contextLoaderPanelPart = {
       oauthInsecureDescription:
         "仅用于可信的自签名证书。需先完全退出客户端，再关闭证书校验重新启动。",
       launchTipsTrigger: "查看各系统启动方式",
-      launchTipsIntro:
-        "以 WorkBuddy 为例。先完全退出客户端（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntro: "先完全退出 {{client}}（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntroGeneric: "先完全退出客户端（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntroClaude: "先退出正在运行的 Claude Code，再在终端用下面的命令启动：",
       launchTipsMac: "macOS（终端）",
       launchTipsWindows: "Windows（PowerShell）",
       launchTipsLinux: "Linux（终端）",
-      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchTipsUnix: "macOS / Linux（终端）",
+      launchCommandMac: "open -a {{client}} --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandMacGeneric: 'open -a "<客户端应用名>" --env NODE_TLS_REJECT_UNAUTHORIZED=0',
       launchCommandWindows:
-        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<WorkBuddy.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<{{client}}.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandWindowsGeneric:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<客户端 exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+        'APP="<{{client}} 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
+      launchCommandLinuxGeneric:
+        'APP="<客户端启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "把 <> 部分换成 WorkBuddy 实际的路径或启动命令，Windows 需写含盘符的完整路径，如 C:\\Program Files\\WorkBuddy\\WorkBuddy.exe。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+        "把 <> 部分换成 {{client}} 实际的路径或启动命令，Windows 需写完整路径，如 {{examplePath}}。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+      launchTipsNoteGeneric:
+        "把 <> 部分换成客户端实际的名称、路径或启动命令，Windows 需写含盘符的完整路径。命令行客户端直接在启动命令前加上这个变量。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+      launchTipsNoteClaude:
+        "变量只对这一次启动生效，新开的 Claude Code 会话需用同样的方式启动；不建议用 setx 或写进 shell 配置等方式全局设置。",
       selfSignedApiKeyDescription:
         "保持证书校验会让客户端连接失败。可勾选右侧选项跳过校验（仅限可信环境），或为平台配置正式证书。",
       selfSignedTitle: "该地址可能使用自签名证书",

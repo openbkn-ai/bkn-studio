@@ -15,11 +15,39 @@ import { registerExtension, resetExtensionsForTesting } from "@/framework/extens
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 const mocks = vi.hoisted(() => ({
+  evalAccess: vi.fn(),
+  evalAccessStatus: "allowed",
+  evalReportedByEndpoint: false,
   extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
   hiddenNavigation: [] as string[],
   navigate: vi.fn(),
 }));
 
+vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/subscription/capability-catalog")>();
+  return {
+    ...actual,
+    capabilityReportedByEndpoint: (capability: string) =>
+      capability === CAPABILITIES.EVAL
+        ? mocks.evalReportedByEndpoint
+        : actual.capabilityReportedByEndpoint(capability),
+  };
+});
+
+vi.mock("../eval/useEvalAccess", () => ({
+  useEvalAccess: (networkId: string) => {
+    mocks.evalAccess(networkId);
+    return { status: mocks.evalAccessStatus, retry: vi.fn() };
+  },
+}));
+
+beforeEach(() => {
+  mocks.evalAccess.mockClear();
+  mocks.evalAccessStatus = "allowed";
+  mocks.evalReportedByEndpoint = false;
+  mocks.hiddenNavigation = [];
+  mocks.navigate.mockReset();
+});
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
 
@@ -33,6 +61,7 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.workspaceExperienceAgent": "智能问答",
           "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
+          "knowledgeNetwork.eval.title": "质量评测",
           "knowledgeNetwork.workspaceFunctions": "函数",
           "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
@@ -66,7 +95,7 @@ vi.mock("@/modules/knowledge-network/components/network/KnowledgeNetworkFormModa
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/ExperienceScene", () => ({
-  ExperienceScene: () => null,
+  ExperienceScene: () => <div data-testid="experience-content" />,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems", () => ({
@@ -82,7 +111,7 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection",
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection", () => ({
-  WorkspaceResourceSection: () => <div />,
+  WorkspaceResourceSection: () => <div data-testid="resource-content" />,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/useWorkspaceData", () => ({
@@ -179,6 +208,100 @@ describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
   });
 });
 
+describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
+  it.each([
+    { name: "community image", overrides: {} },
+    { name: "unlicensed EE image", overrides: { extensions: [CAPABILITIES.EVAL] } },
+    { name: "expired Professional license", overrides: { edition: "professional" as const } },
+  ])("shows a Professional entry and upgrade dialog in the $name", ({ overrides }) => {
+    mocks.evalAccessStatus = "failed";
+    renderScene(entitlement(overrides));
+
+    const entry = screen.getByRole("button", { name: /质量评测/ });
+    expect(within(entry).getByText("专业版")).toBeTruthy();
+    expect(mocks.evalAccess).not.toHaveBeenCalled();
+
+    fireEvent.click(entry);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("subscription.capabilities.eval.description")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it.each(["professional", "enterprise"] as const)(
+    "opens licensed %s Eval without a badge even when Safe does not report the capability",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+
+      const entry = screen.getByRole("button", { name: /质量评测/ });
+      expect(within(entry).queryByText("专业版")).toBeNull();
+      expect(mocks.evalAccess).not.toHaveBeenCalled();
+
+      fireEvent.click(entry);
+
+      expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+    },
+  );
+
+  it.each([
+    ["professional", "denied"],
+    ["professional", "failed"],
+    ["professional", "loading"],
+    ["enterprise", "denied"],
+    ["enterprise", "failed"],
+    ["enterprise", "loading"],
+  ] as const)("keeps the %s entry visible when admission is %s", (edition, status) => {
+    mocks.evalAccessStatus = status;
+    renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+
+    const entry = screen.getByRole("button", { name: /质量评测/ });
+    expect(within(entry).queryByText("专业版")).toBeNull();
+    expect(mocks.evalAccess).not.toHaveBeenCalled();
+    fireEvent.click(entry);
+    expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+  });
+
+  it("respects deployment-hidden Eval in the community edition", () => {
+    mocks.hiddenNavigation = ["evals"];
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
+  });
+
+  it.each([
+    ["professional", false],
+    ["professional", true],
+    ["enterprise", false],
+    ["enterprise", true],
+  ] as const)(
+    "aligns the %s upgrade action and badge when endpoint-reported Eval availability is %s",
+    (edition, available) => {
+      mocks.evalReportedByEndpoint = true;
+      renderScene(
+        entitlement({
+          edition,
+          licensed: true,
+          state: "valid",
+          extensions: [CAPABILITIES.EVAL],
+          capabilities: available ? [CAPABILITIES.EVAL] : [],
+        }),
+      );
+
+      const entry = screen.getByRole("button", { name: /质量评测/ });
+      expect(Boolean(within(entry).queryByText("专业版"))).toBe(!available);
+      fireEvent.click(entry);
+
+      if (available) {
+        expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+        expect(screen.queryByRole("dialog")).toBeNull();
+      } else {
+        expect(screen.getByRole("dialog")).toBeTruthy();
+        expect(mocks.navigate).not.toHaveBeenCalled();
+      }
+    },
+  );
+});
+
 describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
   beforeEach(() => {
     mocks.navigate.mockReset();
@@ -241,6 +364,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     renderScene(entitlement());
 
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /质量评测/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
   });
 
@@ -263,7 +387,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
   });
 
   it("keeps the ability verification title while an extension entry is still shown", () => {
-    mocks.hiddenNavigation = ["experience-agent", "experience-cypher"];
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "evals"];
     mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };
     renderScene(entitlement());
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
@@ -310,9 +434,44 @@ describe("KnowledgeNetworkWorkspaceScene extension pages", () => {
       </EntitlementContext.Provider>,
     );
 
-    expect(screen.getByText("analysis list")).toBeTruthy();
+    const page = screen.getByText("analysis list");
+    expect(page.parentElement?.className).toMatch(/workspaceSectionPage/);
+    expect(page.parentElement?.className).toMatch(/workspaceSectionFlush/);
     // The workspace's own entries are still there.
     expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
     resetExtensionsForTesting();
   });
+});
+
+it.each(["object-types", "experience-agent"] as const)(
+  "loads the %s section after navigation",
+  async (section) => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+      </EntitlementContext.Provider>,
+    );
+    expect(
+      await screen.findByTestId(
+        section === "object-types" ? "resource-content" : "experience-content",
+      ),
+    ).toBeTruthy();
+  },
+);
+
+it("lets embedded Eval content own its layout while retaining workspace navigation", () => {
+  mocks.hiddenNavigation = [];
+  render(
+    <EntitlementContext.Provider
+      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+    >
+      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension">
+        <div data-testid="embedded-eval">Eval content</div>
+      </KnowledgeNetworkWorkspaceScene>
+    </EntitlementContext.Provider>,
+  );
+  expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
+  expect(screen.getByTitle("质量评测")).toBeTruthy();
 });

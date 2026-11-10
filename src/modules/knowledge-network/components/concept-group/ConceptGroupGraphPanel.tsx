@@ -161,6 +161,7 @@ export function ConceptGroupGraphPanel({
         color: node.color || DEFAULT_COLOR,
         conceptGroupIds: [group.id],
         conceptGroupNames: [group.name],
+        declarations: node.declarations,
         description: "",
         hasIndex: node.indexStatus?.state === "available",
         icon: node.icon,
@@ -177,6 +178,7 @@ export function ConceptGroupGraphPanel({
     const names = new Map(objectTypes.map((item) => [item.id, item.name]));
     return (result?.graph.edges ?? []).map((edge) => ({
       color: DEFAULT_COLOR,
+      definitionDeclarations: edge.declarations,
       description: "",
       id: edge.id,
       mappingMode: edge.mappingMode ?? "direct",
@@ -239,6 +241,7 @@ export function ConceptGroupGraphPanel({
           objectTypes={objectTypes}
           onExpandNode={(id) => onFocusedObjectTypeIdChange?.(id)}
           onSelectedIdChange={onSelectedObjectTypeIdChange}
+          parallelEdges
           relationTypes={relationTypes}
           selectedId={selectedObjectTypeId}
           showInspector={false}

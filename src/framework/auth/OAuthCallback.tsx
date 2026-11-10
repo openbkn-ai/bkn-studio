@@ -21,6 +21,7 @@ import {
 } from "@/framework/auth/oauth";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
+import { relayOAuthPopupCallback } from "./oauth-popup";
 import styles from "./SignInScreen.module.css";
 
 export function OAuthCallback() {
@@ -35,6 +36,13 @@ export function OAuthCallback() {
       return;
     }
     startedRef.current = true;
+
+    try {
+      if (relayOAuthPopupCallback()) return;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      return;
+    }
 
     // hydra rejected the authorize request because the browser's login CSRF
     // cookie belongs to another flow. A fresh /oauth2/auth rewrites the cookie,

@@ -36,6 +36,7 @@ import type {
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
+import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 
 import styles from "./OntologyGraphCard.module.css";
 
@@ -154,6 +155,11 @@ export function OntologyGraphCard({
     };
   }, [fadedIds, objectTypes, parallelEdges, relationTypes]);
 
+  const hasDeprecated = useMemo(
+    () => graph.nodes.some(isDeprecated) || graph.edges.some(isDeprecated),
+    [graph],
+  );
+
   const indexedIds = useMemo(
     () => new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id)),
     [objectTypes],
@@ -247,7 +253,12 @@ export function OntologyGraphCard({
         <h3 className={styles.graphTitle}>{title ?? t("knowledgeNetwork.previewCanvas")}</h3>
         <span className={styles.graphLegend}>
           <DeploymentUnitOutlined />
-          {legend ?? t("knowledgeNetwork.previewGraphLegend")}
+          {legend ??
+            t(
+              hasDeprecated
+                ? "knowledgeNetwork.previewGraphLegendDeprecated"
+                : "knowledgeNetwork.previewGraphLegend",
+            )}
         </span>
       </div>
 

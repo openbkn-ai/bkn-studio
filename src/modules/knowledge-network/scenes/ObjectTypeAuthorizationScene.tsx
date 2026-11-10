@@ -558,6 +558,7 @@ export function ObjectTypeAuthorizationScene() {
       description: detail.description,
       icon: detail.icon,
       id: detail.id,
+      incrementalKey: detail.incrementalKey,
       logicProperties: detail.logicProperties,
       name: detail.name,
       tags: detail.tags,

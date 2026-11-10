@@ -148,7 +148,10 @@ describe("RollbackDialog", () => {
       ),
     );
     await waitFor(() => expect(getRollbackPlanMock).toHaveBeenCalledTimes(2));
-    fireEvent.click(await screen.findByRole("button", { name: /^切\s?换$/ }));
+    const confirm = await screen.findByRole("button", { name: /^切\s?换$/ });
+    // The new plan can render before the confirmation button finishes its loading transition.
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fireEvent.click(confirm);
     await waitFor(() => expect(rollBackMock).toHaveBeenLastCalledWith("p1", "sig-2", 4));
   });
 

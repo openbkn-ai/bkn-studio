@@ -6,3 +6,4 @@
  */
 
 export { subscriptionModuleManifest } from "@/modules/subscription/module.manifest";
+export { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";

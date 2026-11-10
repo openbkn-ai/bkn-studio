@@ -14,6 +14,11 @@ import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { authzPoints, systemAdminPermissions } from "@/modules/system-admin/permissions";
 import { ObjectAuthorizationCreatePage } from "@/modules/system-admin/pages/ObjectAuthorizationCreatePage";
 
+const SSOManagementPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/SSOManagementPage");
+  return { default: module.SSOManagementPage };
+});
+
 const UserManagementPage = lazy(async () => {
   const module = await import("@/modules/system-admin/pages/UserManagementPage");
   return { default: module.UserManagementPage };
@@ -67,6 +72,17 @@ function guarded(permissions: readonly string[], element: ReactNode) {
 }
 
 export const systemAdminRoutes: RouteObject[] = [
+  {
+    path: "system/sso",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.sso.description",
+        menuKey: "sso-management",
+        titleKey: "systemAdmin.sso.title",
+      },
+    },
+    element: guarded(systemAdminPermissions.accessOrigins, <SSOManagementPage />),
+  },
   {
     path: "system/users",
     handle: {

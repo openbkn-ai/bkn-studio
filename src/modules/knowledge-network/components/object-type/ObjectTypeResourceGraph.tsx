@@ -56,9 +56,14 @@ import type {
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { getReadableActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
+import { RelationCardinalityBadge } from "@/modules/knowledge-network/components/relation-type/RelationCardinalityBadge";
+import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeResourceGraph.module.css";
+import { parallelRelationOffsets } from "./relation-graph-geometry";
+
+const DEPRECATED_TAG = "knowledgeNetwork.definitionDeclarations.deprecatedTag";
 
 type GraphSection = "all" | "relations" | "metrics" | "actions";
 type ResourceScope = "all" | "relations" | "actions";
@@ -1082,6 +1087,7 @@ export function ObjectTypeResourceGraph({
     });
     return [...groups.values()];
   }, [objectType.id, relationItems]);
+  const ownerDeprecated = isDeprecated(objectType);
   const relationNames = useMemo(
     () => new Map(relations.map((relation) => [relation.id, relation.name])),
     [relations],
@@ -1292,14 +1298,18 @@ export function ObjectTypeResourceGraph({
   const relationGeometries = new Map(
     relationGroups.flatMap((neighbor) => {
       const neighborPosition = position(`neighbor:${neighbor.id}`);
-      const middleRelationIndex = (neighbor.relations.length - 1) / 2;
       const dx = neighborPosition.x - ownerPosition.x;
       const dy = neighborPosition.y - ownerPosition.y;
       const distance = Math.hypot(dx, dy) || 1;
       const unitX = dx / distance;
       const unitY = dy / distance;
+      const parallelOffsets = parallelRelationOffsets(
+        neighbor.relations.map((relation) => relationLabelWidth(relation.name)),
+        unitX,
+        unitY,
+      );
       return neighbor.relations.map((relation, relationIndex) => {
-        const parallelOffset = 70 * (relationIndex - middleRelationIndex);
+        const parallelOffset = parallelOffsets[relationIndex];
         const baseGeometry = relationGeometry(
           ownerPosition,
           neighborPosition,
@@ -2051,8 +2061,15 @@ export function ObjectTypeResourceGraph({
                         if (!geometry) return null;
                         const relationName = truncate(relation.name, 14);
                         const labelWidth = relationLabelWidth(relation.name);
+                        const deprecated = isDeprecated({
+                          declarations: relation.definitionDeclarations,
+                        });
                         return (
-                          <g key={relation.id}>
+                          <g
+                            className={deprecated ? styles.deprecatedRelation : undefined}
+                            data-deprecated={deprecated || undefined}
+                            key={relation.id}
+                          >
                             <path
                               className={styles.relationEdge}
                               d={`M ${geometry.from.x} ${geometry.from.y} Q ${geometry.control.x} ${geometry.control.y} ${geometry.to.x} ${geometry.to.y}`}
@@ -2086,7 +2103,11 @@ export function ObjectTypeResourceGraph({
                               <text dy="4" textAnchor="middle">
                                 {relationName}
                               </text>
-                              <title>{relation.name}</title>
+                              <title>
+                                {deprecated
+                                  ? `${relation.name} · ${t(DEPRECATED_TAG)}`
+                                  : relation.name}
+                              </title>
                             </g>
                           </g>
                         );
@@ -2619,7 +2640,10 @@ export function ObjectTypeResourceGraph({
 
             <g
               aria-label={`${t("knowledgeNetwork.objectTypeGraphCurrentObject")} ${objectType.name}`}
-              className={styles.ownerNode}
+              className={
+                ownerDeprecated ? `${styles.ownerNode} ${styles.deprecatedOwner}` : styles.ownerNode
+              }
+              data-deprecated={ownerDeprecated || undefined}
               data-graph-node="true"
               onClick={() => activate(selectCurrentObject)}
               onKeyDown={(event) => {
@@ -2635,7 +2659,9 @@ export function ObjectTypeResourceGraph({
               <text className={styles.ownerLabel} textAnchor="middle" y="50">
                 {truncate(objectType.name, 18)}
               </text>
-              <title>{objectType.name}</title>
+              <title>
+                {ownerDeprecated ? `${objectType.name} · ${t(DEPRECATED_TAG)}` : objectType.name}
+              </title>
             </g>
           </svg>
         </Spin>
@@ -2750,7 +2776,7 @@ export function ObjectTypeResourceGraph({
         onClose={() => setSelected(undefined)}
         open={Boolean(selected && selected.kind !== "metric")}
         title={selectedDrawerTitle}
-        width={400}
+        width={440}
       >
         {selected && selected.kind !== "metric" ? (
           <Spin spinning={selected.kind === "action" && selectedActionLoading}>
@@ -2890,6 +2916,22 @@ export function ObjectTypeResourceGraph({
                         selected.value.mappingMode === "direct"
                           ? "knowledgeNetwork.relationTypeDirectMapping"
                           : "knowledgeNetwork.relationTypeResourceMapping",
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item
+                      label={t("knowledgeNetwork.relationDeclarations.cardinality")}
+                    >
+                      {selected.value.declarations?.cardinality ? (
+                        <RelationCardinalityBadge
+                          declarations={selected.value.declarations}
+                          showLabel
+                          sourceName={selected.value.sourceObjectTypeName}
+                          targetName={selected.value.targetObjectTypeName}
+                        />
+                      ) : (
+                        <span className={styles.drawerMuted}>
+                          {t("knowledgeNetwork.relationDeclarations.notDeclared")}
+                        </span>
                       )}
                     </Descriptions.Item>
                   </>

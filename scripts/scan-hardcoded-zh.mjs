@@ -78,6 +78,12 @@ const stableTechnicalText = new Set([
   "token",
 ]);
 
+// Exact, documented protocol literals are not interface copy. Keeping the full
+// source text in the manifest makes edits visible to the scanner again.
+const nonUiLiterals = JSON.parse(
+  fs.readFileSync(new URL("./i18n-non-ui.json", import.meta.url), "utf8"),
+);
+
 const rawFindings = [];
 const findingKeys = new Set();
 
@@ -350,6 +356,13 @@ function addFinding(filePath, lineNumber, text, language, classification) {
 }
 
 function classifyChineseFinding(filePath, text) {
+  const relativePath = path.relative(rootDir, filePath).split(path.sep).join("/");
+  const protocol = nonUiLiterals.find(
+    (entry) => entry.path === relativePath && entry.source === text,
+  );
+  if (protocol) {
+    return { allowed: true, category: "protocol-data", reason: protocol.reason };
+  }
   if (isChineseValidationPattern(text)) {
     return {
       allowed: true,

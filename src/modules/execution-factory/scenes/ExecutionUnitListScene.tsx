@@ -816,12 +816,12 @@ export function ExecutionUnitListScene({
         const { items: tools } = await listTools(item.id, { page: 1, pageSize: 100 });
         const shouldLoadCode =
           item.metadataType === "function" && tools.length <= PUBLISH_PREFLIGHT_DETAIL_LIMIT;
-        const codes = shouldLoadCode
+        const functionContents = shouldLoadCode
           ? await Promise.all(
               tools.map(async (tool) => {
                 try {
                   const detail = await getToolDetail(item.id, tool.toolId);
-                  return detail.functionInput?.code;
+                  return detail.functionInput;
                 } catch {
                   return undefined;
                 }
@@ -831,7 +831,8 @@ export function ExecutionUnitListScene({
 
         return collectToolboxPublishIssues(
           tools.map((tool, index) => ({
-            code: codes[index],
+            code: functionContents[index]?.code,
+            scriptType: functionContents[index]?.script_type,
             description: tool.description,
             metadataType: tool.metadataType,
             name: tool.name,

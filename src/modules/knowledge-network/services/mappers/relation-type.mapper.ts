@@ -10,7 +10,15 @@ import type {
   RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
+  StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
+
+import {
+  type BackendDefinitionDeclarationFields,
+  type BackendRelationDeclarationFields,
+  definitionDeclarationPatch,
+  relationDeclarationPatch,
+} from "./declarations";
 
 export type BackendRelationPropertyMapping = {
   source_property?: {
@@ -34,23 +42,33 @@ export type BackendRelationTypeMappingRules =
         name?: string;
         type?: string;
       };
+      /** BKN spec 3.0 relation properties. Studio counts them and never sends them. */
+      properties?: BackendRelationProperty[] | null;
       source_mapping_rules?: BackendRelationPropertyMapping[];
       target_mapping_rules?: BackendRelationPropertyMapping[];
     };
 
-export type BackendRelationTypeCreateEntry = {
-  branch: "main";
-  color?: string;
-  comment?: string;
-  id?: string;
-  mapping_mode?: "direct" | "indirect";
-  mapping_rules?: BackendRelationTypeMappingRules;
-  name: string;
-  source_object_type_id: string;
-  tags?: string[];
-  target_object_type_id: string;
-  type?: "direct" | "indirect";
+/** A relation property as the backend sends it; Studio reads only what names it. */
+export type BackendRelationProperty = {
+  display_name?: string;
+  mapped_field?: { name?: string } | null;
+  name?: string;
 };
+
+export type BackendRelationTypeCreateEntry = BackendRelationDeclarationFields &
+  BackendDefinitionDeclarationFields & {
+    branch: "main";
+    color?: string;
+    comment?: string;
+    id?: string;
+    mapping_mode?: "direct" | "indirect";
+    mapping_rules?: BackendRelationTypeMappingRules;
+    name: string;
+    source_object_type_id: string;
+    tags?: string[];
+    target_object_type_id: string;
+    type?: "direct" | "indirect";
+  };
 
 export type BackendRelationTypeUpdatePayload = BackendRelationTypeCreateEntry;
 
@@ -166,6 +184,26 @@ export function mapRelationTypeMappingsFromBackend(
   };
 }
 
+/** The relation properties an indirect relation stores, by name; none for a direct one. */
+export function mapStoredRelationProperties(
+  mappingRules?: BackendRelationTypeMappingRules,
+): StoredRelationProperty[] {
+  if (!mappingRules || Array.isArray(mappingRules)) {
+    return [];
+  }
+  return (mappingRules.properties ?? []).flatMap((item) =>
+    item.name
+      ? [
+          {
+            name: item.name,
+            ...(item.display_name ? { displayName: item.display_name } : {}),
+            ...(item.mapped_field?.name ? { mappedField: item.mapped_field.name } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
 function appendMappingRules(
   payload: BackendRelationTypeCreateEntry,
   input: KnowledgeNetworkRelationTypeMutationPayload,
@@ -214,7 +252,17 @@ export function toBackendRelationTypeCreateEntry(
     type: mappingMode,
   };
 
-  return appendMappingRules(payload, input);
+  const declarations = input.declarationEdit
+    ? relationDeclarationPatch(input.declarationEdit.current, input.declarationEdit.baseline)
+    : {};
+  const definitionDeclarations = input.definitionDeclarationEdit
+    ? definitionDeclarationPatch(
+        input.definitionDeclarationEdit.current,
+        input.definitionDeclarationEdit.baseline,
+      )
+    : {};
+
+  return { ...appendMappingRules(payload, input), ...declarations, ...definitionDeclarations };
 }
 
 export function toBackendRelationTypeUpdatePayload(

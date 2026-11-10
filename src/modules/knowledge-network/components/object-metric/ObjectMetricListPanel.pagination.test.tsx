@@ -6,7 +6,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Modal } from "antd";
+import type { ModalFuncProps } from "antd";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   listObjectTypes: vi.fn(),
   listObjectMetrics: vi.fn(),
   messageWarning: vi.fn(),
+  modalWarning: vi.fn<(config: ModalFuncProps) => void>(),
   navigate: vi.fn(),
   queryDrillThrough: vi.fn(),
   queryMetric: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn(), warning: mocks.messageWarning },
+    modal: { confirm: vi.fn(), warning: mocks.modalWarning },
   }),
 }));
 
@@ -990,7 +992,8 @@ describe("ObjectMetricListPanel pagination", () => {
   });
 
   it("shows reference details from the deletion preflight instead of opening confirmation", async () => {
-    const warning = vi.spyOn(Modal, "warning").mockImplementation(() => undefined as never);
+    const warning = mocks.modalWarning;
+    warning.mockClear();
     const draft = metric(1);
     draft.definition.lifecycle.status = "draft";
     mocks.listObjectTypes.mockResolvedValue({
@@ -1028,11 +1031,12 @@ describe("ObjectMetricListPanel pagination", () => {
     expect(screen.getByText(/下游成交额.*v2/)).toBeInTheDocument();
     expect(screen.getByText(/另有 1 个无权查看的引用/)).toBeInTheDocument();
     expect(mocks.deleteVersion).not.toHaveBeenCalled();
-    warning.mockRestore();
+    warning.mockClear();
   });
 
   it("prevents duplicate deletion preflights and explains a status blocker", async () => {
-    const warning = vi.spyOn(Modal, "warning").mockImplementation(() => undefined as never);
+    const warning = mocks.modalWarning;
+    warning.mockClear();
     const draft = metric(1);
     draft.definition.lifecycle.status = "draft";
     mocks.listObjectTypes.mockResolvedValue({
@@ -1088,7 +1092,7 @@ describe("ObjectMetricListPanel pagination", () => {
     await waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
     render(<div>{warning.mock.calls[0]?.[0]?.content}</div>);
     expect(screen.getByText("状态为 published 的对象指标版本不可删除。")).toBeInTheDocument();
-    warning.mockRestore();
+    warning.mockClear();
   });
 
   it("limits count requests to four in flight and distinguishes a pending count from zero", async () => {

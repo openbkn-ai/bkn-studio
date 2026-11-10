@@ -776,6 +776,110 @@ export const executionFactoryZhCN = {
     workbenchFunctionList: "函数列表 - {{count}}",
     workbenchFunctionListEmptyFiltered: "没有匹配的函数",
     workbenchFilterFunctions: "筛选函数…",
+    callGuide: {
+      open: "调用方式",
+      title: "调用方式",
+      httpTitle: "通过 HTTP 调用",
+      httpPrerequisite: "工具箱须已发布，工具须已启用。",
+      httpCypherIdentity:
+        "Cypher 函数以调用者的身份查询知识网络，调用者看不到的对象和属性，函数也取不到。",
+      httpToken:
+        "认证用登录后获得的 OAuth 访问令牌，替换示例中的 $TOKEN；命令行可用 openbkn auth token 打印。此接口不接受 API Key（bak_ 开头）。",
+      httpEnvelopeFunction:
+        "请求体是一个信封：函数的入参全部放在 body 中，示例值取自入参的示例或类型；可加顶层 timeout（秒）限定最长等待时间。",
+      httpEnvelopeOpenapi:
+        "请求体是一个信封：参数按 HTTP 位置分别放进 header、query、path、body，平台再转发给目标接口。",
+      responseTitle: "返回结果",
+      responseEnvelope:
+        "只要工具执行了，HTTP 状态码就是 200；成败看返回中的 status_code，内容在 body 中。",
+      responseCypherValue:
+        "「单个值」：body 为 {value}；没有行时 value 为 null，多于一行时 status_code 为 400。",
+      responseCypherTable:
+        "「表格」：body 为 {columns, entries, limited}；语句没写 LIMIT 且结果超过 1000 行时，只返回前 1000 行，limited 为 true。",
+      responsePython:
+        "body 是沙箱的执行结果：handler 的返回值在 body.result 中，另有 stdout、stderr、exit_code 等。",
+      responseOpenapi: "status_code、headers、body 是目标接口的原始响应。",
+      agentTitle: "让 Agent 调用",
+      agentMount:
+        "把工具箱挂载到知识网络后，Agent 经 Context Loader 用 search_capabilities 找到这个工具，再用 execute_tool 调用。调用要在一次受管交互里进行：先用 bkn_start_interaction 开启交互，再把返回的 conversation_id 和 interaction_id 作为 bkn_context 传给 execute_tool。下面用命令行走同样两步，把 $KN_ID 换成挂载的知识网络 ID，$CONVERSATION_ID、$INTERACTION_ID 换成第一步返回的值。刚挂载时要等几秒，知识网络的代理权限同步完才能调用。",
+      bindTitle: "在知识网络中使用",
+      bindLogicValue:
+        "返回「单个值」的 Cypher 函数适合作逻辑属性：选中后结果路径自动填为 $.value，与对象属性同名的参数自动绑定到该属性。",
+      bindLogic: "在对象类的逻辑属性中选择这个工具，按对象的属性值传参求值。",
+      bindAction: "在行动类中选择这个工具作为执行方式。",
+    },
+    cypherFunction: {
+      newPython: "Python 函数",
+      newCypher: "Cypher 函数",
+      logic: "Cypher 语句",
+      network: "知识网络",
+      networkRequired: "先选择语句查询的知识网络。",
+      shape: "返回",
+      shapeValue: "单个值",
+      shapeTable: "表格",
+      shapeValueHint:
+        "单个值：语句返回一列、至多一行，结果为 {value}；没有行时 value 为 null。可作为逻辑属性的取值。",
+      shapeTableHint: "表格：返回全部行，结果为 {columns, entries, limited}。",
+      notices: {
+        positional: "保存只接受 $名称 形式的参数，请把 $0 这类位置参数改成命名参数。",
+        "row-count-parameter": "LIMIT 和 SKIP 后面只能写整数，不能用 $参数。",
+        "limit-too-large": "LIMIT 不能超过 {{max}}。",
+        "table-default-limit":
+          "没写 LIMIT 时最多返回 {{rows}} 行；超出时结果中的 limited 为 true，调用方据此知道结果不全。",
+        "value-unordered-limit":
+          "LIMIT 1 没配 ORDER BY 时，取到哪一行不确定，每次调用可能不同。请加 ORDER BY，或改用 count()、max() 等聚合。",
+      },
+      consoleNote: "以你的身份查询所选知识网络 · 只读、不落库",
+      paramsHint: "参数跟随语句中的 $名称 自动增删；类型决定调用时的值如何转换，可在这里修改。",
+      noNetworkRun: "先选择要查询的知识网络。",
+      noStatementRun: "先写 Cypher 语句。",
+      ai: {
+        open: "AI 生成",
+        title: "AI 生成 Cypher 语句",
+        description: "这个函数要查什么",
+        placeholder: "例如：按供应商编码统计该供应商的采购单数",
+        needNetwork: "先在上方选择语句查询的知识网络。",
+        shapeValueHint: "当前返回「单个值」：会生成只返回一列、至多一行的语句。",
+        shapeTableHint: "当前返回「表格」：会生成返回所需属性列的语句。",
+        working: "正在生成，Agent 会先试跑语句再交付…",
+        workingTool: "正在生成：{{name}}",
+        noQuery: "Agent 的回答中没有可用的语句，下面是它的原话。",
+        result: "生成的语句（已试跑）",
+        parameters: "参数",
+        example: "示例",
+        generate: "生成",
+        regenerate: "重新生成",
+        apply: "替换当前语句",
+        message: {
+          request: "为一个 Cypher 函数写语句。函数要做的事：{{description}}",
+          contract: "这是供调用的函数，不是一次性查询。以下约定优先于你的通用规则：",
+          parameters:
+            "调用方传入的值写成 $参数名（例如 $supplier_code），不要写死具体值；参数名用小写英文和下划线，按所比较的属性命名。",
+          trial:
+            "用 run_cypher 试跑时，语句保持 $参数名 原样，把示例值放进 parameters 传入；示例值用 search_instance 找真实存在的值。",
+          shapeValue:
+            "函数返回「单个值」：语句只返回一列、至多一行，例如用 count()、sum()、max() 聚合，或 ORDER BY … LIMIT 1；不返回节点或关系，不需要能画成图。",
+          shapeTable:
+            "函数返回「表格」：返回调用方需要的属性列，不返回整个节点或关系，不需要能画成图。不要写 LIMIT，除非描述明确要求前 N 条：不写时平台最多返回 1000 行，超出时用 limited 告诉调用方结果不全；自己写的 LIMIT 截断后调用方无从得知。",
+          answer:
+            '交付时先给 cypher 代码块，再给一个 json 代码块列出每个参数，例如 [{"name": "supplier_code", "type": "string", "description": "供应商编码，如 S001", "example": "S001"}]；type 取 string、number、boolean 或 array，example 用试跑时的值。',
+          existing: "函数已有这些参数，适用时沿用同名参数：",
+        },
+      },
+      problems: {
+        missing: "缺少参数：{{names}}",
+        type: "参数 {{name}} 不能转换为 {{expected}}",
+        nullInList: "参数 {{name}} 的列表中有空值",
+        notObject: "测试入参须是 JSON 对象",
+        columns: "「单个值」只能返回一列，当前语句返回 {{total}} 列。",
+        graph:
+          "「单个值」不能返回节点、关系、映射或列表（列 {{column}}），请返回具体属性或改用「表格」。",
+        rows: "「单个值」至多一行，当前返回 {{total}} 行。",
+        rowsMore: "「单个值」至多一行，当前返回超过 {{total}} 行。",
+      },
+    },
+    workbenchInputDescriptionRequired:
+      "「{{name}}」的输入参数 {{params}} 缺少说明。写清取值要求（不只是类型），Agent 才知道该传什么。",
     workbenchNewFunction: "新建函数",
     workbenchUnnamedFunction: "未命名函数",
     workbenchDeleteFunction: "删除函数",

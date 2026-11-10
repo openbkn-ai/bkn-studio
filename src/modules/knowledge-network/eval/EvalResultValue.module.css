@@ -1,0 +1,108 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.viewer {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-bg-surface);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  background: var(--color-fill-quaternary);
+}
+
+.format {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.actions :global(.ant-btn) {
+  padding-inline: 4px;
+  font-size: 12px;
+}
+
+.content {
+  height: 240px;
+  overflow: auto;
+  padding: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.content:focus-visible,
+.node > summary:focus-visible,
+.textButton:focus-visible {
+  outline: 2px solid var(--color-text-link);
+  outline-offset: -2px;
+}
+
+.node > summary {
+  cursor: pointer;
+}
+
+.children {
+  padding-inline-start: 14px;
+  border-inline-start: 1px solid var(--color-border-secondary);
+  margin-inline-start: 4px;
+}
+
+.line {
+  min-width: 0;
+}
+
+.key {
+  color: var(--color-text-link);
+}
+
+.string {
+  color: var(--color-success-text);
+}
+
+.boolean,
+.number {
+  color: var(--color-warning-text);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+  margin-inline: 4px;
+}
+
+.textButton {
+  border: 0;
+  padding: 0 4px;
+  background: transparent;
+  color: var(--color-text-link);
+  cursor: pointer;
+  font: inherit;
+}
+
+.deepValue {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

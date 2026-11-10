@@ -72,7 +72,7 @@ describe("ClearedDeclarationsDialog", () => {
     // A package names no definition, so the id stands in; a relation has its own declarations only.
     const relation = screen.getByRole("region", { name: "order_for_patient" });
     expect(within(relation).getByText("关系类 · order_for_patient")).toBeInTheDocument();
-    expect(within(relation).getByText("反向名称、基数、替代路径")).toBeInTheDocument();
+    expect(within(relation).getByText("反向名称、关系基数、替代路径")).toBeInTheDocument();
 
     // A declaration this release does not know keeps the backend's name.
     expect(

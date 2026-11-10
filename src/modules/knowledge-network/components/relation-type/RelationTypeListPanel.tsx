@@ -30,6 +30,7 @@ import {
   ObjectTypeResourceGraph,
   type ObjectTypeGraphSelectedResource,
 } from "@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph";
+import { RelationDeclarationName } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationTags";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -57,6 +58,7 @@ import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/s
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
+import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
@@ -421,7 +423,16 @@ export function RelationTypeListPanel({
           <span className={styles.objectIconSquare} style={{ backgroundColor: "#5381DF" }}>
             <ApartmentOutlined />
           </span>
-          <span className={styles.objectName}>{value}</span>
+          <RelationDeclarationName
+            declarations={record.declarations}
+            relationTypes={items}
+            sourceName={record.sourceObjectTypeName}
+            targetName={record.targetObjectTypeName}
+          >
+            <DeprecatedName declarations={record.definitionDeclarations}>
+              <span className={styles.objectName}>{value}</span>
+            </DeprecatedName>
+          </RelationDeclarationName>
         </div>
       ),
     },

@@ -74,6 +74,32 @@ describe("buildOntologyStructure", () => {
     expect(edge("places")?.lineDash).toBeUndefined();
   });
 
+  it("draws a deprecated type faint and a deprecated relation faint and dashed", () => {
+    const declarations = { lifecycle: { reason: "merged", status: "deprecated" as const } };
+    const structure = buildOntologyStructure({
+      graph: {
+        nodes: graph.nodes.map((node) =>
+          node.id === "product" ? { ...node, declarations } : node,
+        ),
+        edges: graph.edges.map((edge) =>
+          edge.id === "contains" ? { ...edge, declarations } : edge,
+        ),
+      },
+      layout,
+      renderMode: "force",
+      tokens,
+      ungroupedLabel: "Ungrouped",
+    });
+    const node = (id: string) => structure.nodes.find((item) => item.id === id)?.style;
+    const edge = (id: string) => structure.edges.find((item) => item.id === id)?.style;
+    expect(node("product")?.opacity).toBeLessThan(1);
+    expect(node("order")?.opacity).toBe(1);
+    expect(edge("contains")?.opacity).toBeLessThan(1);
+    expect(edge("contains")?.lineDash).toEqual([4, 4]);
+    expect(edge("places")?.opacity).toBe(1);
+    expect(edge("places")?.lineDash).toBeUndefined();
+  });
+
   it("places every object type at its arranged position in its own colour", () => {
     const structure = buildOntologyStructure({
       graph,

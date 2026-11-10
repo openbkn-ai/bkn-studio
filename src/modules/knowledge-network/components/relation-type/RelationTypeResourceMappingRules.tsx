@@ -51,6 +51,8 @@ type ResourceTableRow =
     };
 
 type RelationTypeResourceMappingRulesProps = {
+  /** Asked before the backing resource changes; false keeps the current one. */
+  beforeResourceChange?: (resource: ObjectTypeDataSource) => Promise<boolean>;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
@@ -73,6 +75,7 @@ function mapPropertyOptions(
 }
 
 export function RelationTypeResourceMappingRules({
+  beforeResourceChange,
   networkId,
   objectTypes,
   readers,
@@ -414,8 +417,17 @@ export function RelationTypeResourceMappingRules({
         networkId={networkId}
         onCancel={() => setResourceModalOpen(false)}
         onOk={(resource) => {
-          handleResourceChange(resource);
           setResourceModalOpen(false);
+          void (async () => {
+            if (
+              beforeResourceChange &&
+              resource.id !== value.backingDataSourceId &&
+              !(await beforeResourceChange(resource))
+            ) {
+              return;
+            }
+            handleResourceChange(resource);
+          })();
         }}
         open={resourceModalOpen}
         selectedId={value.backingDataSourceId || undefined}

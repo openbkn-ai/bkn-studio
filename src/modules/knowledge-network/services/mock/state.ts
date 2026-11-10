@@ -287,6 +287,7 @@ export const mockObjectTypes: Record<string, KnowledgeNetworkObjectTypeRecord[]>
     {
       id: "ot-risk-order",
       name: "风险订单",
+      declarations: { aliases: ["可疑订单", "风控订单"] },
       description: "触发风控策略流程的订单实体。",
       color: "#1677ff",
       icon: "database",
@@ -688,6 +689,7 @@ export const mockObjectTypeResourceFields: Record<
 export const mockRelationTypes: Record<string, KnowledgeNetworkRelationTypeRecord[]> = {
   "kn-domain-risk": [
     {
+      definitionDeclarations: { aliases: ["风险绑定"] },
       id: "rt-risk-bind",
       name: "Bind Relation",
       description: "Association between a risk account and a device.",
@@ -700,6 +702,32 @@ export const mockRelationTypes: Record<string, KnowledgeNetworkRelationTypeRecor
       tags: ["association"],
       updateTime: "2026-06-04 15:20:00",
       updaterName: "Knowledge Team",
+      declarations: {
+        cardinality: "many_to_one",
+        requiredEnds: ["source"],
+        reverseName: "Bound Orders",
+        verification: "confirmed",
+      },
+    },
+    {
+      id: "rt-risk-bind-by-ip",
+      name: "Bind Relation by IP",
+      description: "Matches an order without a device ID to the device it was placed from, by IP.",
+      color: "#7c3aed",
+      mappingMode: "direct",
+      sourceObjectTypeId: "ot-risk-order",
+      sourceObjectTypeName: "Risk Order",
+      targetObjectTypeId: "ot-risk-device",
+      targetObjectTypeName: "Risk Device",
+      tags: ["association"],
+      updateTime: "2026-06-04 15:30:00",
+      updaterName: "Knowledge Team",
+      declarations: {
+        cardinality: "many_to_one",
+        fallbackFor: "rt-risk-bind",
+        importance: "secondary",
+        verification: "unconfirmed",
+      },
     },
   ],
   "kn-domain-supply": [
@@ -730,6 +758,12 @@ export const mockRelationTypeMappings: Record<
       {
         sourcePropertyName: "order_id",
         targetPropertyName: "device_id",
+      },
+    ],
+    "rt-risk-bind-by-ip": [
+      {
+        sourcePropertyName: "order_ip",
+        targetPropertyName: "device_ip",
       },
     ],
   },
@@ -823,6 +857,7 @@ export const mockActionTypes: Record<string, KnowledgeNetworkActionTypeRecord[]>
     {
       id: "at-risk-block",
       name: "Block Order",
+      declarations: { aliases: ["Hold Order"] },
       description: "Trigger a blocking workflow for a risky order.",
       color: "#16a34a",
       actionKind: "notify",

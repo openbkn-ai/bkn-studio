@@ -23,6 +23,7 @@ vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
   return { ...actual, useMock: false };
 });
 
+import { recordKnVersioning } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import {
   attachKnowledgeNetworkCapabilities,
   detachKnowledgeNetworkCapabilities,
@@ -34,6 +35,8 @@ describe("capability-binding.service", () => {
     deleteMock.mockReset();
     getMock.mockReset();
     postMock.mockReset();
+    // A network without versioning, so that reading its version state costs no request.
+    recordKnVersioning("kn-1", undefined, ["modify"]);
   });
 
   it("reads the owning tool box from box_id, the wire name the backend uses", async () => {

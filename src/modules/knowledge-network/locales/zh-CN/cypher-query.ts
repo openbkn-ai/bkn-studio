@@ -39,6 +39,25 @@ export const cypherQueryPart = {
       shortcut: "⌘/Ctrl + Enter",
       clear: "清空",
     },
+    parameters: {
+      title: "参数",
+      hint: "语句中的 $名称 在运行时取这里的值。按 Cypher 写：字符串加引号（'S1'），数字、true/false、列表 [1, 2] 直接写；不加引号的文字按字符串处理。",
+      placeholder: "取值，如 'S1'",
+      make: "设为参数",
+      makeHint: "把选中的值换成 $参数，原值留作运行时的取值",
+      selectValue: "先在语句中选中一个值，如 'S1' 或 100。",
+      notValue: "选中的不是值：只有字符串、数字、布尔值或它们的列表能设为参数。",
+    },
+    publish: {
+      open: "发布为函数",
+      hint: "在函数工具箱中把这条语句建成 Cypher 函数，供 Agent 调用或作逻辑属性取值",
+      title: "发布为 Cypher 函数",
+      description:
+        "选择函数工具箱，在其中新建这条语句的 Cypher 函数。命名、说明和保存在工具箱中完成。",
+      toolbox: "函数工具箱",
+      noToolbox: "没有可用的函数工具箱，先在执行工厂中新建一个。",
+      ok: "去创建",
+    },
     frames: {
       explainSchema: "相关结构（直接据此解释，无需再查）：",
       explain: "让 AI 解释",
@@ -200,7 +219,7 @@ export const cypherQueryPart = {
     agent: {
       notReadyShort: "Cypher 生成 Agent 尚未发布",
       notReady: "Cypher 生成 Agent 尚未发布，请联系管理员配置模型并发布；手写 Cypher 不受影响",
-      forbidden: "当前账号没有使用 Cypher 生成 Agent 或该知识网络的权限",
+      forbidden: "当前账号没有该知识网络的权限",
       busy: "上一次生成还在进行，请稍后再试",
       timeout: "生成查询超时，请缩小问题范围后重试",
       failed: "生成查询失败",

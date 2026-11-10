@@ -20,6 +20,8 @@
  * 只是"哪个能力"的标识,不参与任何授权判定。
  */
 export const CAPABILITIES = {
+  /** SSO configuration management; Professional and higher. */
+  SSO: "sso",
   /** 自定义角色/部门/权限的写入面。专业档起。 */
   RBAC_BASIC: "rbac_basic",
   /** 对象细粒度授权、显式 allow / deny 与来源级撤销。专业档起。 */
@@ -46,6 +48,8 @@ export const CAPABILITIES = {
    * 报得出它,入口照常按 `capabilityState()` 判。
    */
   GRAPH_EXPLORER: "graph_explorer",
+  /** Eval 质量评测。专业档起；页面由社区 Studio 提供，执行服务由企业版提供。 */
+  EVAL: "eval",
   /** 对象指标的定义、版本、发布、绑定、查询与试算。专业档起。 */
   OBJECT_METRICS: "object_metrics",
   /**

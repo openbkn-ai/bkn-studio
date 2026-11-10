@@ -361,17 +361,26 @@ describe("Function and API edit boundaries", () => {
     expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
   });
 
-  it("keeps Function editing available while hiding execution without Function execute", async () => {
-    mocks.permissions = ["execution-factory:function:edit"];
-    renderTool();
-    expect(await screen.findByRole("button", { name: "common.save" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "debug-run" })).toBeNull();
-
-    cleanup();
-    mocks.permissions = ["execution-factory:function:edit", "execution-factory:function:debug"];
-    renderTool();
-    expect(await screen.findByRole("button", { name: "debug-run" })).toBeTruthy();
-  });
+  // Function editing, running and its grants live in the function workbench; see
+  // FunctionWorkbenchScene.cypher.test.tsx for an API-only editor reading a function there.
+  it.each([
+    ["a Function editor", ["execution-factory:function:edit", "execution-factory:function:debug"]],
+    ["an API-only editor", ["execution-factory:toolbox:edit", "execution-factory:function:view"]],
+  ])(
+    "hands a Function tool to the workbench for %s instead of editing it here",
+    async (_, grants) => {
+      mocks.permissions = grants;
+      renderTool();
+      await waitFor(() =>
+        expect(mocks.navigate).toHaveBeenCalledWith(
+          "/execution-factory/toolboxes/box-1/tools?toolId=tool-1",
+          expect.objectContaining({ replace: true }),
+        ),
+      );
+      expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "debug-run" })).toBeNull();
+    },
+  );
 
   it("denies API tool editing to a Function-only editor", async () => {
     mocks.permissions = ["execution-factory:function:edit", "execution-factory:toolbox:view"];
@@ -385,12 +394,5 @@ describe("Function and API edit boundaries", () => {
     expect(await screen.findByText("common.noPermission")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
     expect(screen.queryByRole("button", { name: "debug-run" })).toBeNull();
-  });
-
-  it("denies Function tool editing to an API-only editor", async () => {
-    mocks.permissions = ["execution-factory:toolbox:edit", "execution-factory:function:view"];
-    renderTool();
-    expect(await screen.findByText("common.noPermission")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
   });
 });
