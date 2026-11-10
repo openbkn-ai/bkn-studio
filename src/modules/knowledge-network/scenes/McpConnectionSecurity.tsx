@@ -20,15 +20,33 @@ import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import type { McpAuthMode } from "@/modules/knowledge-network/hooks/useMcpAuthMode";
 import type { McpConnectionProtocol } from "@/modules/knowledge-network/services/mcp-client-config";
 
+import type { McpClient } from "./McpAuthMode";
+
 import styles from "./ExperienceScene.module.css";
 
 const SECURITY_KEY = "knowledgeNetwork.contextLoaderPanel.mcpSecurity";
 
-const LAUNCH_PLATFORMS = [
+const TLS_OFF = "NODE_TLS_REJECT_UNAUTHORIZED";
+
+/** Claude Code starts from a shell, so its commands carry no localized placeholder. */
+const CLAUDE_LAUNCH_COMMANDS = [
+  { label: "launchTipsUnix", command: `${TLS_OFF}=0 claude` },
+  {
+    label: "launchTipsWindows",
+    command: `$env:${TLS_OFF} = "0"\nclaude\nRemove-Item Env:${TLS_OFF}`,
+  },
+] as const;
+
+const APP_LAUNCH_PLATFORMS = [
   { label: "launchTipsMac", command: "launchCommandMac" },
   { label: "launchTipsWindows", command: "launchCommandWindows" },
   { label: "launchTipsLinux", command: "launchCommandLinux" },
 ] as const;
+
+const APP_NAMES: Partial<Record<McpClient, string>> = {
+  cursor: "Cursor",
+  workbuddy: "WorkBuddy",
+};
 
 const COPY_FEEDBACK_MS = 1500;
 
@@ -64,25 +82,46 @@ function CopyCommandButton({ text }: { text: string }) {
   );
 }
 
-/** Per-OS commands for restarting a sign-in client with certificate checks off. */
-function ClientLaunchTips() {
+/** Per-OS commands for restarting the selected sign-in client with certificate checks off. */
+function ClientLaunchTips({ client }: { client: McpClient }) {
   const { t } = useTranslation();
+  const appName = APP_NAMES[client];
+  let intro: string;
+  let note: string;
+  let commands: { label: string; command: string }[];
+
+  if (client === "claude") {
+    intro = t(`${SECURITY_KEY}.launchTipsIntroClaude`);
+    note = t(`${SECURITY_KEY}.launchTipsNoteClaude`);
+    commands = CLAUDE_LAUNCH_COMMANDS.map(({ label, command }) => ({
+      label: t(`${SECURITY_KEY}.${label}`),
+      command,
+    }));
+  } else {
+    // A client without a known app name gets the same commands with a placeholder name.
+    const suffix = appName ? "" : "Generic";
+    const values = { client: appName };
+    intro = t(`${SECURITY_KEY}.launchTipsIntro${suffix}`, values);
+    note = t(`${SECURITY_KEY}.launchTipsNote${suffix}`, values);
+    commands = APP_LAUNCH_PLATFORMS.map(({ label, command }) => ({
+      label: t(`${SECURITY_KEY}.${label}`),
+      command: t(`${SECURITY_KEY}.${command}${suffix}`, values),
+    }));
+  }
+
   const content = (
     <div className={styles.mcpLaunchTips}>
-      <p>{t(`${SECURITY_KEY}.launchTipsIntro`)}</p>
-      {LAUNCH_PLATFORMS.map(({ label, command }) => {
-        const commandText = t(`${SECURITY_KEY}.${command}`);
-        return (
-          <div key={label} className={styles.mcpLaunchTipsItem}>
-            <div className={styles.mcpLaunchTipsHead}>
-              <strong>{t(`${SECURITY_KEY}.${label}`)}</strong>
-              <CopyCommandButton text={commandText} />
-            </div>
-            <code>{commandText}</code>
+      <p>{intro}</p>
+      {commands.map(({ label, command }) => (
+        <div key={label} className={styles.mcpLaunchTipsItem}>
+          <div className={styles.mcpLaunchTipsHead}>
+            <strong>{label}</strong>
+            <CopyCommandButton text={command} />
           </div>
-        );
-      })}
-      <p className={styles.mcpLaunchTipsNote}>{t(`${SECURITY_KEY}.launchTipsNote`)}</p>
+          <code>{command}</code>
+        </div>
+      ))}
+      <p className={styles.mcpLaunchTipsNote}>{note}</p>
     </div>
   );
 
@@ -130,12 +169,15 @@ function securityCopyKeys(
 export function McpConnectionSecurity({
   protocol,
   authMode = "apiKey",
+  client = "generic",
   likelySelfSigned = false,
   allowInsecureTls,
   onAllowInsecureTlsChange,
 }: {
   protocol: McpConnectionProtocol;
   authMode?: McpAuthMode;
+  /** Client tab selected next to the strip; the launch tip shows that client's commands. */
+  client?: McpClient;
   /** https on an IP literal or `.local` name: probably a self-signed certificate. */
   likelySelfSigned?: boolean;
   allowInsecureTls: boolean;
@@ -162,7 +204,9 @@ export function McpConnectionSecurity({
           <strong>{t(`${SECURITY_KEY}.${titleKey}`)}</strong>
           <span>
             {t(`${SECURITY_KEY}.${descriptionKey}`)}
-            {descriptionKey === "oauthInsecureDescription" ? <ClientLaunchTips /> : null}
+            {descriptionKey === "oauthInsecureDescription" ? (
+              <ClientLaunchTips client={client} />
+            ) : null}
           </span>
         </div>
       </div>

@@ -18,7 +18,9 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string) => key,
+      // Interpolated values are appended so tests can see which client a string was built for.
+      t: (key: string, values?: { client?: string }) =>
+        values?.client ? `${key}|${values.client}` : key,
     }),
   };
 });
@@ -113,19 +115,20 @@ describe("McpConnectionSecurity", () => {
       <McpConnectionSecurity
         protocol="https"
         authMode="oauth"
+        client="workbuddy"
         allowInsecureTls
         onAllowInsecureTlsChange={vi.fn()}
       />,
     );
 
     const key = "knowledgeNetwork.contextLoaderPanel.mcpSecurity";
-    expect(screen.queryByText(`${key}.launchCommandWindows`)).toBeNull();
+    expect(screen.queryByText(`${key}.launchCommandWindows|WorkBuddy`)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: `${key}.launchTipsTrigger` }));
 
-    expect(await screen.findByText(`${key}.launchCommandMac`)).toBeTruthy();
-    expect(screen.getByText(`${key}.launchCommandWindows`)).toBeTruthy();
-    expect(screen.getByText(`${key}.launchCommandLinux`)).toBeTruthy();
+    expect(await screen.findByText(`${key}.launchCommandMac|WorkBuddy`)).toBeTruthy();
+    expect(screen.getByText(`${key}.launchCommandWindows|WorkBuddy`)).toBeTruthy();
+    expect(screen.getByText(`${key}.launchCommandLinux|WorkBuddy`)).toBeTruthy();
   });
 
   it("copies a platform's launch command from the tip", async () => {
@@ -133,6 +136,7 @@ describe("McpConnectionSecurity", () => {
       <McpConnectionSecurity
         protocol="https"
         authMode="oauth"
+        client="workbuddy"
         allowInsecureTls
         onAllowInsecureTlsChange={vi.fn()}
       />,
@@ -147,7 +151,7 @@ describe("McpConnectionSecurity", () => {
 
     fireEvent.click(copyButtons[1]);
 
-    expect(writeTextToClipboard).toHaveBeenCalledWith(`${key}.launchCommandWindows`);
+    expect(writeTextToClipboard).toHaveBeenCalledWith(`${key}.launchCommandWindows|WorkBuddy`);
     await waitFor(() =>
       expect(
         screen.getByRole("button", {
@@ -155,6 +159,51 @@ describe("McpConnectionSecurity", () => {
         }),
       ).toBeTruthy(),
     );
+  });
+
+  it("shows the commands of the selected client, not always WorkBuddy", async () => {
+    const key = "knowledgeNetwork.contextLoaderPanel.mcpSecurity";
+    const props = {
+      protocol: "https",
+      authMode: "oauth",
+      allowInsecureTls: true,
+      onAllowInsecureTlsChange: vi.fn(),
+    } as const;
+
+    const { unmount } = render(<McpConnectionSecurity {...props} client="cursor" />);
+    fireEvent.click(screen.getByRole("button", { name: `${key}.launchTipsTrigger` }));
+    expect(await screen.findByText(`${key}.launchCommandMac|Cursor`)).toBeTruthy();
+    expect(screen.getByText(`${key}.launchTipsIntro|Cursor`)).toBeTruthy();
+    expect(screen.queryByText(/WorkBuddy/)).toBeNull();
+    unmount();
+
+    render(<McpConnectionSecurity {...props} client="claude" />);
+    fireEvent.click(screen.getByRole("button", { name: `${key}.launchTipsTrigger` }));
+    expect(await screen.findByText("NODE_TLS_REJECT_UNAUTHORIZED=0 claude")).toBeTruthy();
+    expect(screen.getByText(`${key}.launchTipsIntroClaude`)).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", {
+        name: /knowledgeNetwork\.contextLoaderPanel\.common\.copy/,
+      }),
+    ).toHaveLength(2);
+  });
+
+  it("uses placeholder commands for a client without a known app name", async () => {
+    render(
+      <McpConnectionSecurity
+        protocol="https"
+        authMode="oauth"
+        client="generic"
+        allowInsecureTls
+        onAllowInsecureTlsChange={vi.fn()}
+      />,
+    );
+
+    const key = "knowledgeNetwork.contextLoaderPanel.mcpSecurity";
+    fireEvent.click(screen.getByRole("button", { name: `${key}.launchTipsTrigger` }));
+
+    expect(await screen.findByText(`${key}.launchCommandMacGeneric`)).toBeTruthy();
+    expect(screen.getByText(`${key}.launchTipsNoteGeneric`)).toBeTruthy();
   });
 
   it("keeps the launch tip out of API Key mode", () => {
