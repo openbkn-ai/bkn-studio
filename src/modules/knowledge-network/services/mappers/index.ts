@@ -338,6 +338,18 @@ export function toBackendLogicProperty(property: ObjectTypeLogicProperty): Backe
   };
 }
 
+// The types the backend accepts for an incremental key.
+const INCREMENTAL_KEY_TYPES = new Set(["datetime", "integer", "timestamp"]);
+
+/**
+ * The stored incremental key, sent back while it still names a data property of a type the backend
+ * accepts for it. Otherwise it is left out and the backend stores none, rather than refusing the save.
+ */
+function keptIncrementalKey(key: string | undefined, dataProperties: ObjectTypeDataProperty[]) {
+  const property = key ? dataProperties.find((item) => item.name === key) : undefined;
+  return property && INCREMENTAL_KEY_TYPES.has(property.type) ? { incremental_key: key } : {};
+}
+
 export function buildBackendObjectTypePayload(
   input: KnowledgeNetworkObjectTypeMutationPayload,
   conceptGroups: Array<{ id: string; name: string }>,
@@ -366,6 +378,7 @@ export function buildBackendObjectTypePayload(
     display_key: dataProperties.find((item) => item.displayKey)?.name ?? "",
     icon: input.icon,
     id: objectTypeId ?? input.id,
+    ...keptIncrementalKey(input.incrementalKey, dataProperties),
     logic_properties: (input.logicProperties ?? []).map(toBackendLogicProperty),
     name: input.name,
     primary_keys: dataProperties.filter((item) => item.primaryKey).map((item) => item.name),

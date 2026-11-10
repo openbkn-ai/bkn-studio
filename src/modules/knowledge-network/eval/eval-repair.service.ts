@@ -233,6 +233,7 @@ function payload(detail: ObjectTypeDetail): KnowledgeNetworkObjectTypeMutationPa
     dataSource: detail.dataSource,
     description: detail.description,
     icon: detail.icon,
+    incrementalKey: detail.incrementalKey,
     logicProperties: detail.logicProperties,
     name: detail.name,
     tags: detail.tags,
