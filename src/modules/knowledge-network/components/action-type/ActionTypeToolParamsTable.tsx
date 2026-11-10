@@ -24,6 +24,10 @@ import {
 } from "@/modules/knowledge-network/utils/tool-params-table-state";
 
 import styles from "./ActionTypeToolParamsTable.module.css";
+import {
+  canBindActionRelationIdentity,
+  type ActionRelationTableContext,
+} from "@/modules/knowledge-network/utils/action-type-operation";
 
 type ActionTypeToolParamsTableProps = {
   hasSource: boolean;
@@ -32,6 +36,7 @@ type ActionTypeToolParamsTableProps = {
   objectTypeId?: string;
   parameters: ActionTypeExecutionParameter[];
   propertyOptions: RelationTypePropertyOption[];
+  relationBinding?: ActionRelationTableContext;
   onChange: (parameters: ActionTypeExecutionParameter[]) => void;
 };
 
@@ -43,6 +48,7 @@ export function ActionTypeToolParamsTable({
   parameters,
   propertyOptions,
   onChange,
+  relationBinding,
 }: ActionTypeToolParamsTableProps) {
   const { t } = useTranslation();
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
@@ -126,22 +132,71 @@ export function ActionTypeToolParamsTable({
         }
 
         const valueFrom = record.valueFrom ?? "input";
+        const identityRole =
+          valueFrom === "source_identity" || valueFrom === "target_identity"
+            ? valueFrom
+            : undefined;
+        const identity =
+          identityRole === "source_identity"
+            ? relationBinding?.sourceIdentity
+            : identityRole === "target_identity"
+              ? relationBinding?.targetIdentity
+              : undefined;
+        const options = relationBinding
+          ? [
+              ...valueFromOptions.filter((option) => option.value !== "property"),
+              ...(["source_identity", "target_identity"] as const).map((endpoint) => {
+                const endpointIdentity =
+                  endpoint === "source_identity"
+                    ? relationBinding.sourceIdentity
+                    : relationBinding.targetIdentity;
+                return {
+                  label: t(
+                    endpoint === "source_identity"
+                      ? "knowledgeNetwork.actionRelationSourceIdentity"
+                      : "knowledgeNetwork.actionRelationTargetIdentity",
+                  ),
+                  value: endpoint,
+                  disabled: !canBindActionRelationIdentity(endpointIdentity, record.type),
+                  title: !canBindActionRelationIdentity(endpointIdentity, record.type)
+                    ? t("knowledgeNetwork.actionRelationIdentityUnavailable")
+                    : undefined,
+                };
+              }),
+            ]
+          : valueFromOptions;
 
         return (
           <div className={styles.valueFrom}>
-            <Select
-              className={styles.valueFromSelect}
+            <Select<NonNullable<ActionTypeExecutionParameter["valueFrom"]>>
+              aria-label={`${record.key} ${t("knowledgeNetwork.actionTypeExecutionParameterValueSource")}`}
+              className={relationBinding ? styles.identitySourceSelect : styles.valueFromSelect}
               disabled={!hasSource}
-              onChange={(nextValueFrom) =>
+              onChange={(nextValueFrom) => {
                 updateRow(record.key, {
                   value: "",
                   valueFrom: nextValueFrom,
-                })
-              }
-              options={valueFromOptions}
+                });
+              }}
+              options={options}
               value={valueFrom}
             />
-            {valueFrom === "const" ? (
+            {identityRole ? (
+              <Input
+                readOnly
+                aria-label={`${record.key} ${t("knowledgeNetwork.actionRelationIdentityProperty")}`}
+                className={styles.valueInput}
+                value={
+                  identity?.properties
+                    .map((property) => `${identity.objectTypeName}.${property.name}`)
+                    .join(" + ") ?? ""
+                }
+                placeholder={t("knowledgeNetwork.actionRelationIdentityNotReady")}
+                title={identity?.properties
+                  .map((property) => `${property.label}（${property.name}）`)
+                  .join(" + ")}
+              />
+            ) : valueFrom === "const" ? (
               <Input
                 className={styles.valueInput}
                 disabled={!hasSource}

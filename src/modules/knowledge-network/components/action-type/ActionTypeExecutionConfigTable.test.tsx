@@ -89,6 +89,27 @@ function createDetail(parameters: ActionTypeDetail["executionConfig"]["parameter
 }
 
 describe("ActionTypeExecutionConfigTable", () => {
+  it("shows identity bindings as endpoint sources instead of dynamic inputs", async () => {
+    resolveActionTypeToolInputSchema.mockResolvedValue([]);
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource
+        networkId="network-1"
+        detail={createDetail([
+          { name: "order_id", valueFrom: "source_identity" },
+          { name: "supplier_id", valueFrom: "target_identity" },
+        ])}
+      />,
+    );
+    expect(
+      await screen.findByText("knowledgeNetwork.actionRelationSourceIdentity"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("knowledgeNetwork.actionRelationTargetIdentity")).toBeInTheDocument();
+    expect(
+      screen.getByText("knowledgeNetwork.actionRelationIdentityFromSource"),
+    ).toBeInTheDocument();
+  });
   it("shows property, dynamic input, and constant parameters in detail view", async () => {
     getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
       dataProperties: [{ name: "order_id", type: "string" }],

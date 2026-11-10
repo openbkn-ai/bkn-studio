@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const postMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock, post: postMock },
+  http: { get: getMock, post: postMock, put: putMock },
 }));
 
 // The version on screen; each ontology-query call must carry it.
@@ -76,6 +77,252 @@ describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
     });
     expect(result.totalCount).toBe(21);
     expect(result.entries[0]).toMatchObject({ actionKind: "update", id: "action-1" });
+  });
+
+  it("filters operation kinds before pagination on the legacy API", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          { action_type: "add", id: "bound", name: "Create order", object_type_id: "order" },
+          { action_type: "add", id: "independent-1", name: "Notify", object_type_id: "" },
+          { action_type: "add", id: "independent-2", name: "Reconcile" },
+        ],
+        total_count: 3,
+      },
+    });
+    const { listKnowledgeNetworkActionTypePage } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const result = await listKnowledgeNetworkActionTypePage("kn-1", {
+      limit: 1,
+      offset: 1,
+      operationKind: "tool",
+    });
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks/kn-1/action-types",
+      expect.objectContaining({
+        params: expect.objectContaining({ limit: -1, offset: 0 }) as unknown,
+      }),
+    );
+    expect(result.totalCount).toBe(2);
+    expect(result.entries.map((entry) => entry.id)).toEqual(["independent-2"]);
+  });
+});
+
+describe("action-type.service - operation configuration compatibility", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockReset();
+    putMock.mockReset();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(["source_identity", "target_identity"] as const)(
+    "blocks unsupported %s bindings even without relationship metadata",
+    async (valueFrom) => {
+      const service = await import("./action-type.service");
+      const input = {
+        actionKind: "update" as const,
+        color: "#1677ff",
+        description: "",
+        name: "Update order",
+        objectTypeId: "orders",
+        tags: [],
+        executionConfig: {
+          sourceType: "tool" as const,
+          sourceName: "Tool",
+          parameters: [{ name: "id", valueFrom }],
+        },
+      };
+      await expect(service.createKnowledgeNetworkActionType("kn-1", input)).rejects.toBeInstanceOf(
+        service.ActionTypeOperationUnsupportedError,
+      );
+      await expect(
+        service.updateKnowledgeNetworkActionType("kn-1", "a-1", input),
+      ).rejects.toBeInstanceOf(service.ActionTypeOperationUnsupportedError);
+      expect(postMock).not.toHaveBeenCalled();
+      expect(putMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["property", "input"] as const)(
+    "blocks nested %s conditions on legacy create and update APIs",
+    async (valueFrom) => {
+      const service = await import("./action-type.service");
+      const input = {
+        actionKind: "update" as const,
+        color: "#1677ff",
+        description: "",
+        name: "Update",
+        objectTypeId: "orders",
+        tags: [],
+        condition: {
+          operation: "and" as const,
+          subConditions: [
+            { field: "amount", operation: ">=" as const, valueFrom, value: "minimum" },
+          ],
+        },
+      };
+      expect(service.canPersistActionTypeCondition(input.condition)).toBe(false);
+      await expect(service.createKnowledgeNetworkActionType("kn-1", input)).rejects.toBeInstanceOf(
+        service.ActionTypeConditionUnsupportedError,
+      );
+      await expect(
+        service.updateKnowledgeNetworkActionType("kn-1", "a-1", input),
+      ).rejects.toBeInstanceOf(service.ActionTypeConditionUnsupportedError);
+      expect(postMock).not.toHaveBeenCalled();
+      expect(putMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("blocks unsupported relationship saves before making any request", async () => {
+    const service = await import("./action-type.service");
+    const input = {
+      actionKind: "create" as const,
+      color: "#1677ff",
+      description: "",
+      name: "Link supplier",
+      objectTypeId: "",
+      tags: [],
+      operationConfig: {
+        type: "relation" as const,
+        relationTypeId: "order_supplier",
+        relationOperation: "create" as const,
+      },
+    };
+    await expect(service.createKnowledgeNetworkActionType("kn-1", input)).rejects.toBeInstanceOf(
+      service.ActionTypeOperationUnsupportedError,
+    );
+    await expect(
+      service.updateKnowledgeNetworkActionType("kn-1", "a-1", input),
+    ).rejects.toBeInstanceOf(service.ActionTypeOperationUnsupportedError);
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  it("does not serialize frontend-only metadata into legacy tool saves", async () => {
+    postMock.mockResolvedValue({ data: { entries: [{ id: "a-1", name: "Notify" }] } });
+    const service = await import("./action-type.service");
+    await service.createKnowledgeNetworkActionType("kn-1", {
+      actionKind: "create",
+      color: "#1677ff",
+      description: "",
+      name: "Notify",
+      objectTypeId: "",
+      tags: [],
+      operationConfig: { type: "tool" },
+    });
+    const payload = postMock.mock.calls[0]?.[1] as { entries: Record<string, unknown>[] };
+    expect(payload.entries[0]).not.toHaveProperty("operation_config");
+    expect(payload.entries[0].object_type_id).toBe("");
+  });
+});
+
+describe("action-type.service - relationship configuration preview", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("retains mixed condition references through mock create, update and reload", async () => {
+    const service = await import("./action-type.service");
+    const condition = {
+      operation: "and" as const,
+      subConditions: [
+        {
+          field: "amount",
+          operation: ">=" as const,
+          valueFrom: "property" as const,
+          value: "minimum",
+        },
+        {
+          field: "amount",
+          operation: ">=" as const,
+          valueFrom: "input" as const,
+          value: "requested",
+        },
+      ],
+    };
+    const input = {
+      id: "condition-preview",
+      actionKind: "update" as const,
+      color: "#1677ff",
+      description: "",
+      name: "Update order",
+      objectTypeId: "orders",
+      tags: [],
+      condition,
+    };
+    expect(service.canPersistActionTypeCondition(condition)).toBe(true);
+    const created = await service.createKnowledgeNetworkActionType("kn-condition-preview", input);
+    expect(
+      (await service.getKnowledgeNetworkActionTypeDetail("kn-condition-preview", created!.id))
+        ?.condition,
+    ).toEqual(condition);
+    await service.updateKnowledgeNetworkActionType("kn-condition-preview", created!.id, {
+      ...input,
+      condition: { ...condition, operation: "or" },
+    });
+    expect(
+      (await service.getKnowledgeNetworkActionTypeDetail("kn-condition-preview", created!.id))
+        ?.condition,
+    ).toEqual({ ...condition, operation: "or" });
+    await service.deleteKnowledgeNetworkActionType("kn-condition-preview", created!.id);
+  });
+
+  it("retains relationship semantics in mock create, detail and list filtering", async () => {
+    const service = await import("./action-type.service");
+    const operationConfig = {
+      type: "relation" as const,
+      relationTypeId: "order_supplier",
+      relationOperation: "delete" as const,
+      anchorRole: "source" as const,
+      otherObjectCondition: {
+        objectTypeId: "suppliers",
+        field: "status",
+        operation: "==" as const,
+        value: "active",
+      },
+    };
+    const created = await service.createKnowledgeNetworkActionType("kn-operation-preview", {
+      id: "remove-supplier",
+      actionKind: "create",
+      color: "#1677ff",
+      description: "",
+      name: "Remove supplier",
+      objectTypeId: "orders",
+      condition: { objectTypeId: "orders", field: "status", operation: "==", value: "open" },
+      tags: [],
+      operationConfig,
+      executionConfig: {
+        sourceType: "tool",
+        sourceName: "Link supplier",
+        parameters: [
+          { name: "order_id", valueFrom: "source_identity" },
+          { name: "supplier_id", valueFrom: "target_identity" },
+        ],
+      },
+    });
+    const detail = await service.getKnowledgeNetworkActionTypeDetail(
+      "kn-operation-preview",
+      created!.id,
+    );
+    expect(detail?.operationConfig).toEqual(operationConfig);
+    expect(detail?.objectTypeId).toBe("orders");
+    expect(detail?.condition).toMatchObject({ objectTypeId: "orders", value: "open" });
+    expect(detail?.executionConfig.parameters.map((parameter) => parameter.valueFrom)).toEqual([
+      "source_identity",
+      "target_identity",
+    ]);
+    const page = await service.listKnowledgeNetworkActionTypePage("kn-operation-preview", {
+      limit: 10,
+      offset: 0,
+      operationKind: "relation",
+    });
+    expect(page.entries.map((entry) => entry.id)).toEqual([created!.id]);
+    await service.deleteKnowledgeNetworkActionType("kn-operation-preview", created!.id);
   });
 });
 

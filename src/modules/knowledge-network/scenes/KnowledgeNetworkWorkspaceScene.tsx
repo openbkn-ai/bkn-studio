@@ -225,25 +225,6 @@ export function KnowledgeNetworkWorkspaceScene({
         paidEdition: "professional",
       },
       {
-        key: "functions",
-        label: t("knowledgeNetwork.workspaceFunctions"),
-        icon: <KnowledgeResourceIcon kind="function" />,
-        count: detail?.statistics.functionsTotal ?? 0,
-      },
-      {
-        key: "apis",
-        label: t("knowledgeNetwork.workspaceApis"),
-        icon: <KnowledgeResourceIcon kind="api" />,
-        count: detail?.statistics.apisTotal ?? 0,
-      },
-      {
-        key: "mcp",
-        label: t("knowledgeNetwork.workspaceMcpTools"),
-        icon: <KnowledgeResourceIcon kind="mcp" />,
-        // Backend counts these on its own: mcp_tool is a capability type of its own, so no split.
-        count: detail?.statistics.mcpToolsTotal ?? 0,
-      },
-      {
         key: "skills",
         label: t("knowledgeNetwork.workspaceSkills"),
         icon: <KnowledgeResourceIcon kind="skill" />,
@@ -289,16 +270,10 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "relation-types" ||
       item.key === "action-types",
   );
-  // Metrics, functions and SKILLs are one group: they are what the network can compute and call,
-  // as opposed to the concept model that describes what it knows.
+  // Metrics and SKILLs remain network-level capabilities. Function, API and MCP tools are chosen
+  // inside an action and their action reference creates the capability binding automatically.
   const dynamicNavItems = navigationItems.filter(
-    (item) =>
-      item.key === "metrics" ||
-      item.key === "functions" ||
-      item.key === "apis" ||
-      item.key === "mcp" ||
-      item.key === "skills" ||
-      item.key === "knowledge-bases",
+    (item) => item.key === "metrics" || item.key === "skills" || item.key === "knowledge-bases",
   );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);

@@ -5,8 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { QuestionCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Col, Collapse, Form, Input, Row, Select, Spin, Tooltip } from "antd";
+import { Alert, Button, Col, Collapse, Form, Input, Radio, Row, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -21,13 +20,36 @@ import {
   validateActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
+import { ActionTypeRelationFields } from "@/modules/knowledge-network/components/action-type/ActionTypeRelationFields";
+import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
+import {
+  canPersistActionTypeOperation,
+  canPersistActionTypeCondition,
+  ActionTypeConditionUnsupportedError,
+  ActionTypeOperationUnsupportedError,
+} from "@/modules/knowledge-network/services/action-type.service";
+import {
+  actionTypeOperationLabelKey,
+  getActionTypeOperationKind,
+  readActionTypeOperationKind,
+  validateActionRelationBindings,
+} from "@/modules/knowledge-network/utils/action-type-operation";
+import type {
+  ActionTypeOperationConfig,
+  ActionTypeOperationKind,
+} from "@/modules/knowledge-network/types/action-type";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
-import { DefinitionDeclarationFields } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import {
+  DefinitionAliasField,
+  DefinitionLifecycleFields,
+} from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
 import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import {
   getActionSourceDisplayName,
+  isActionConditionEmpty,
   normalizeActionTypeCondition,
 } from "@/modules/knowledge-network/utils/action-type-execution";
+import { validateActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import {
@@ -39,7 +61,6 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
-import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   actionTypeCreatedState,
   readActionTypeContext,
@@ -82,7 +103,7 @@ import type {
 import styles from "./ActionTypeFormScene.module.css";
 
 type BasicFormValues = DefinitionDeclarationFormValues & {
-  actionKind: KnowledgeNetworkActionTypeKind;
+  actionKind: KnowledgeNetworkActionTypeKind | "link" | "unlink";
   affectComment?: string;
   affectObjectTypeId?: string;
   color: string;
@@ -91,6 +112,9 @@ type BasicFormValues = DefinitionDeclarationFormValues & {
   id?: string;
   name: string;
   objectTypeId: string;
+  relationTypeId?: string;
+  relationAnchor?: "source" | "target";
+  otherObjectCondition?: ActionTypeCondition | null;
   tags: string[];
 };
 
@@ -98,13 +122,29 @@ type ActionTypeFormSceneProps = {
   mode: "create" | "edit";
 };
 
+const INSTANCE_OPERATIONS = [
+  {
+    kind: "create",
+    titleKey: "knowledgeNetwork.actionTypeInstanceOperationCreate",
+  },
+  {
+    kind: "update",
+    titleKey: "knowledgeNetwork.actionTypeInstanceOperationUpdate",
+  },
+  {
+    kind: "delete",
+    titleKey: "knowledgeNetwork.actionTypeInstanceOperationDelete",
+  },
+  { kind: "link", titleKey: "knowledgeNetwork.actionRelationCreate" },
+  { kind: "unlink", titleKey: "knowledgeNetwork.actionRelationDelete" },
+] as const;
+
 // The rule panel each form field of a collapsed panel sits in.
 const RULE_PANEL_OF_FIELD: Readonly<Record<string, string>> = {
-  actionKind: "trigger",
   affectComment: "impact",
   affectObjectTypeId: "impact",
   condition: "trigger",
-  objectTypeId: "trigger",
+  otherObjectCondition: "trigger",
 };
 
 /** The rule panels holding a field that failed validation. */
@@ -120,6 +160,18 @@ function rulePanelsOf(error: unknown): string[] {
   );
 }
 
+function highlightObjectTypeName(text: string, objectTypeName: string) {
+  const start = objectTypeName ? text.indexOf(objectTypeName) : -1;
+  if (start < 0) return text;
+  return (
+    <>
+      {text.slice(0, start)}
+      <strong className={styles.objectTypeName}>{objectTypeName}</strong>
+      {text.slice(start + objectTypeName.length)}
+    </>
+  );
+}
+
 export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -129,14 +181,41 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     actionTypeId?: string;
     networkId: string;
   }>();
+  const routeOperation = new URLSearchParams(location.search).get("operation");
+  const legacyCreateMode = (location.state as { actionTypeCreateMode?: unknown } | null)
+    ?.actionTypeCreateMode;
+  const requestedOperation =
+    readActionTypeOperationKind(routeOperation) ??
+    (legacyCreateMode === "independent"
+      ? "tool"
+      : readActionTypeContext(location.state)?.prefill?.execution &&
+          !readActionTypeContext(location.state)?.prefill?.objectTypeId
+        ? "tool"
+        : "object");
+  const [operationKind, setOperationKind] = useState<ActionTypeOperationKind>(requestedOperation);
+  const isObjectOperation = operationKind === "object";
+  const isObjectBoundOperation = operationKind !== "tool";
   const [basicForm] = Form.useForm<BasicFormValues>();
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const mergeResolvedObjectTypes = useCallback((resolved: KnowledgeNetworkObjectTypeRecord[]) => {
+    setObjectTypes((current) => {
+      const merged = new Map(current.map((item) => [item.id, item]));
+      resolved.forEach((item) => merged.set(item.id, item));
+      return Array.from(merged.values());
+    });
+  }, []);
+  const [selectedRelation, setSelectedRelation] =
+    useState<KnowledgeNetworkRelationTypeRecord | null>(null);
+  const [hasSavedCondition, setHasSavedCondition] = useState(false);
   const [conditionPropertyOptions, setConditionPropertyOptions] = useState<
     RelationTypePropertyOption[]
   >([]);
+  const [otherPropertyOptions, setOtherPropertyOptions] = useState<RelationTypePropertyOption[]>(
+    [],
+  );
   // A page that opened the form for a need may say what carries the action out: the form starts
   // with it, and reads its parameters as for one chosen here.
   const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(() => {
@@ -157,21 +236,45 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       parameterCount: 0,
     });
   const [executionSourceError, setExecutionSourceError] = useState<string | null>(null);
-  const [openRulePanels, setOpenRulePanels] = useState<string[]>([]);
+  const [relationBindingError, setRelationBindingError] = useState<string | null>(null);
+  const [relationIdentityError, setRelationIdentityError] = useState<string | null>(null);
+  const [openRulePanels, setOpenRulePanels] = useState<string[]>(() =>
+    mode === "create" ? ["execution"] : [],
+  );
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.actionTypeEditTitle")
       : t("knowledgeNetwork.actionTypeCreateTitle"),
   );
+  const headerTitle =
+    mode === "create"
+      ? `${pageTitle} · ${t(
+          operationKind === "tool"
+            ? actionTypeOperationLabelKey("tool")
+            : "knowledgeNetwork.actionOperationObjectEntry",
+        )}`
+      : pageTitle;
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
-  const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
+  const returnPath = knowledgeNetworkReturnPath(
+    networkId,
+    location.state,
+    mode === "create" && operationKind !== "object"
+      ? `${listPath}?view=list&operation=${operationKind}`
+      : listPath,
+  );
   // Another page opened the form for a need of its own: it states the need, fills the form and
   // gets the new action type back. Only on create.
   const [navigationContext] = useState(() =>
     mode === "create" ? readActionTypeContext(location.state) : undefined,
   );
-  const prefillObjectTypeId = navigationContext?.prefill?.objectTypeId;
+  const routeObjectTypeId = (location.state as { actionTypeInitialObjectTypeId?: unknown } | null)
+    ?.actionTypeInitialObjectTypeId;
+  const prefillObjectTypeId =
+    navigationContext?.prefill?.objectTypeId ??
+    (mode === "create" && typeof routeObjectTypeId === "string" && routeObjectTypeId.trim()
+      ? routeObjectTypeId.trim()
+      : undefined);
   const leave = (state?: Record<string, unknown>) =>
     navigationContext
       ? void navigate(navigationContext.returnTo, {
@@ -179,11 +282,78 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         })
       : void navigate(returnPath);
   const watchedObjectTypeId = Form.useWatch("objectTypeId", basicForm);
+  const watchedActionKind = Form.useWatch("actionKind", basicForm);
+  const relationAnchor = Form.useWatch("relationAnchor", basicForm);
+  const otherObjectTypeId =
+    selectedRelation && relationAnchor
+      ? relationAnchor === "source"
+        ? selectedRelation.targetObjectTypeId
+        : selectedRelation.sourceObjectTypeId
+      : "";
+  const currentObjectTypeName =
+    objectTypes.find((item) => item.id === watchedObjectTypeId)?.name ||
+    (selectedRelation && selectedRelation.sourceObjectTypeId === watchedObjectTypeId
+      ? selectedRelation.sourceObjectTypeName
+      : selectedRelation?.targetObjectTypeName) ||
+    watchedObjectTypeId ||
+    t("knowledgeNetwork.actionRelationCurrentObject");
+  const otherObjectTypeName =
+    objectTypes.find((item) => item.id === otherObjectTypeId)?.name ||
+    (relationAnchor === "source"
+      ? selectedRelation?.targetObjectTypeName
+      : selectedRelation?.sourceObjectTypeName) ||
+    otherObjectTypeId;
+  const selfRelation =
+    selectedRelation !== null &&
+    selectedRelation.sourceObjectTypeId === selectedRelation.targetObjectTypeId;
+  const currentConditionObjectName =
+    selfRelation && relationAnchor
+      ? t("knowledgeNetwork.actionRelationObjectWithRole", {
+          objectTypeName: currentObjectTypeName,
+          role: t(
+            relationAnchor === "source"
+              ? "knowledgeNetwork.actionRelationSourceRole"
+              : "knowledgeNetwork.actionRelationTargetRole",
+          ),
+        })
+      : currentObjectTypeName;
+  const otherConditionObjectName =
+    selfRelation && relationAnchor
+      ? t("knowledgeNetwork.actionRelationObjectWithRole", {
+          objectTypeName: otherObjectTypeName,
+          role: t(
+            relationAnchor === "source"
+              ? "knowledgeNetwork.actionRelationTargetRole"
+              : "knowledgeNetwork.actionRelationSourceRole",
+          ),
+        })
+      : otherObjectTypeName;
+  const unsupportedOperation = !canPersistActionTypeOperation({
+    operationConfig:
+      operationKind === "relation"
+        ? {
+            type: "relation",
+            relationTypeId: "",
+            relationOperation: "create",
+          }
+        : { type: operationKind },
+    objectTypeId: watchedObjectTypeId || "",
+  });
   // What the aliases and lifecycle were when the action type was read; a save sends what changed.
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
   const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
   const watchedCondition = Form.useWatch("condition", basicForm);
+  const watchedOtherCondition = Form.useWatch("otherObjectCondition", basicForm);
+  const unsupportedCondition =
+    isObjectBoundOperation &&
+    (!canPersistActionTypeCondition(watchedCondition) ||
+      (operationKind === "relation" && !canPersistActionTypeCondition(watchedOtherCondition)));
   const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
+  const showConditionPanel =
+    operationKind === "relation" ||
+    (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined)
+      ? true
+      : isObjectOperation && (hasSavedCondition || !isActionConditionEmpty(watchedCondition));
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -198,6 +368,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   }, [t]);
 
   useEffect(() => {
+    let cancelled = false;
+    setConditionPropertyOptions([]);
     const loadConditionProperties = async () => {
       if (!networkId || !conditionObjectTypeId) {
         setConditionPropertyOptions([]);
@@ -205,6 +377,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       }
 
       const detail = await getKnowledgeNetworkObjectTypeDetail(networkId, conditionObjectTypeId);
+      if (cancelled) return;
       setConditionPropertyOptions(
         detail?.dataProperties.map((item) => ({
           comment: item.comment,
@@ -217,8 +390,39 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       );
     };
 
-    void loadConditionProperties();
+    void loadConditionProperties().catch(() => {
+      if (!cancelled) setConditionPropertyOptions([]);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [conditionObjectTypeId, networkId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setOtherPropertyOptions([]);
+    if (operationKind !== "relation" || !otherObjectTypeId) return;
+    void getKnowledgeNetworkObjectTypeDetail(networkId, otherObjectTypeId)
+      .then((detail) => {
+        if (!cancelled)
+          setOtherPropertyOptions(
+            detail?.dataProperties.map((item) => ({
+              comment: item.comment,
+              displayName: item.displayName || item.name,
+              label: item.displayName || item.name,
+              name: item.name,
+              type: item.type,
+              value: item.name,
+            })) ?? [],
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setOtherPropertyOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, otherObjectTypeId, operationKind]);
 
   useEffect(() => {
     const condition = basicForm.getFieldValue("condition") as
@@ -231,6 +435,16 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       basicForm.setFieldValue("condition", null);
     }
   }, [basicForm, watchedObjectTypeId]);
+
+  useEffect(() => {
+    if (
+      watchedOtherCondition?.objectTypeId &&
+      otherObjectTypeId &&
+      watchedOtherCondition.objectTypeId !== otherObjectTypeId
+    ) {
+      basicForm.setFieldValue("otherObjectCondition", null);
+    }
+  }, [basicForm, otherObjectTypeId, watchedOtherCondition]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -255,7 +469,21 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           }
 
           const nextBasic: BasicFormValues = {
-            actionKind: detail.actionKind,
+            actionKind:
+              detail.operationConfig?.type === "relation"
+                ? detail.operationConfig.relationOperation === "delete"
+                  ? "unlink"
+                  : "link"
+                : detail.actionKind,
+            ...(detail.operationConfig?.type === "relation" ? detail.operationConfig : {}),
+            relationAnchor:
+              detail.operationConfig?.type === "relation"
+                ? detail.operationConfig.anchorRole
+                : undefined,
+            otherObjectCondition:
+              detail.operationConfig?.type === "relation"
+                ? (detail.operationConfig.otherObjectCondition ?? null)
+                : null,
             affectComment: detail.affect?.comment ?? "",
             affectObjectTypeId: detail.affect?.objectTypeId,
             color: detail.color,
@@ -285,6 +513,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           ];
 
           setExecutionValue(detail.executionConfig);
+          setOperationKind(getActionTypeOperationKind(detail));
+          setHasSavedCondition(!isActionConditionEmpty(detail.condition));
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
         } else if (
@@ -336,6 +566,14 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   };
 
   const handleSubmit = async () => {
+    if (unsupportedCondition) {
+      void message.error(t("knowledgeNetwork.actionTypeConditionPreviewOnly"));
+      return;
+    }
+    if (unsupportedOperation) {
+      void message.error(t("knowledgeNetwork.actionOperationUnavailable"));
+      return;
+    }
     const resolvedBasic = await syncBasicValueFromForm();
     if (!resolvedBasic) {
       return;
@@ -355,25 +593,56 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       return;
     }
     setExecutionSourceError(null);
+    if (operationKind === "relation") {
+      const errorKey =
+        relationIdentityError ?? validateActionRelationBindings(executionValue.parameters ?? []);
+      if (errorKey) {
+        setRelationBindingError(t(errorKey));
+        setOpenRulePanels((open) => (open.includes("execution") ? open : [...open, "execution"]));
+        return;
+      }
+    }
+    setRelationBindingError(null);
 
     const normalizedExecution = normalizeActionTypeExecutionConfig(executionValue);
     const affect =
-      resolvedBasic.affectObjectTypeId || resolvedBasic.affectComment?.trim()
+      isObjectOperation && (resolvedBasic.affectObjectTypeId || resolvedBasic.affectComment?.trim())
         ? {
             comment: resolvedBasic.affectComment?.trim() || undefined,
             objectTypeId: resolvedBasic.affectObjectTypeId,
           }
         : undefined;
+    const operationConfig: ActionTypeOperationConfig =
+      operationKind === "relation"
+        ? {
+            type: "relation",
+            relationTypeId: resolvedBasic.relationTypeId!,
+            relationOperation: resolvedBasic.actionKind === "unlink" ? "delete" : "create",
+            anchorRole: resolvedBasic.relationAnchor!,
+            otherObjectCondition: normalizeActionTypeCondition(
+              resolvedBasic.otherObjectCondition,
+              otherObjectTypeId,
+            ),
+          }
+        : { type: operationKind };
     const payload: KnowledgeNetworkActionTypeMutationPayload = {
-      actionKind: resolvedBasic.actionKind,
+      operationConfig,
+      // The backend still requires an operation enum for object-free actions. It has no object
+      // semantics in this mode, so non-object operations retain the legacy create/add value.
+      actionKind:
+        resolvedBasic.actionKind === "link" || resolvedBasic.actionKind === "unlink"
+          ? "create"
+          : (resolvedBasic.actionKind ?? "create"),
       affect,
       color: resolvedBasic.color,
-      condition: normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
+      condition: !isObjectBoundOperation
+        ? undefined
+        : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
       description: resolvedBasic.description,
       executionConfig: normalizedExecution,
       id: resolvedBasic.id,
       name: resolvedBasic.name,
-      objectTypeId: resolvedBasic.objectTypeId,
+      objectTypeId: resolvedBasic.objectTypeId || "",
       tags: resolvedBasic.tags,
       definitionDeclarationEdit: {
         baseline: definitionBaseline.current,
@@ -398,6 +667,14 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           : undefined,
       );
     } catch (error) {
+      if (error instanceof ActionTypeConditionUnsupportedError) {
+        void message.error(t("knowledgeNetwork.actionTypeConditionPreviewOnly"));
+        return;
+      }
+      if (error instanceof ActionTypeOperationUnsupportedError) {
+        void message.error(t("knowledgeNetwork.actionOperationUnavailable"));
+        return;
+      }
       const refusal = readDeclarationRefusal(error);
       if (refusal) {
         // Shown above the basic info, where the aliases and lifecycle are.
@@ -450,13 +727,16 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           colon={false}
           form={basicForm}
           initialValues={{
-            actionKind: "create",
+            actionKind: requestedOperation === "relation" ? "link" : "create",
+            otherObjectCondition: null,
             aliases: [],
             lifecycleStatus: "active",
             color: DEFAULT_RESOURCE_COLOR,
             description: navigationContext?.prefill?.description ?? "",
             name: navigationContext?.prefill?.name ?? "",
-            ...(prefillObjectTypeId ? { objectTypeId: prefillObjectTypeId } : {}),
+            ...(operationKind === "object" && prefillObjectTypeId
+              ? { objectTypeId: prefillObjectTypeId }
+              : {}),
             tags: [],
           }}
           layout="vertical"
@@ -511,6 +791,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 </Form.Item>
               </Col>
             </Row>
+            <DefinitionAliasField hintInTooltip ownNameFields={["name"]} />
             <Row gutter={24}>
               <Col span={12}>
                 <Form.Item
@@ -539,92 +820,247 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 showCount
               />
             </Form.Item>
-            <DefinitionDeclarationFields
+            <DefinitionLifecycleFields
               definitionId={mode === "edit" ? actionTypeId : undefined}
-              ownNameFields={["name"]}
+              hintInTooltip
               resolveReplacement={resolveReplacement}
               searchReplacements={searchReplacements}
             />
           </section>
           <section className={styles.formSection}>
-            <h3>{t("knowledgeNetwork.actionTypeRuleConfig")}</h3>
+            <div className={styles.operationHeading}>
+              <h3>{t("knowledgeNetwork.actionOperationConfiguration")}</h3>
+            </div>
+            {!isObjectBoundOperation ? null : (
+              <>
+                <Form.Item
+                  label={t("knowledgeNetwork.actionTypeTargetObject")}
+                  name="objectTypeId"
+                  rules={[
+                    { message: t("knowledgeNetwork.actionTypeObjectRequired"), required: true },
+                  ]}
+                >
+                  <RelationTypeObjectTypeSelect
+                    networkId={networkId}
+                    objectTypes={objectTypes}
+                    onResolvedOptionsChange={mergeResolvedObjectTypes}
+                    onChange={(nextId) => {
+                      if (nextId !== watchedObjectTypeId) {
+                        basicForm.setFieldsValue({
+                          condition: null,
+                          otherObjectCondition: null,
+                          relationTypeId: undefined,
+                          relationAnchor: undefined,
+                        });
+                        setSelectedRelation(null);
+                        setHasSavedCondition(false);
+                        setExecutionValue((current) => ({
+                          ...current,
+                          parameters: (current.parameters ?? []).map((parameter) =>
+                            parameter.valueFrom === "property" ||
+                            parameter.valueFrom === "source_identity" ||
+                            parameter.valueFrom === "target_identity"
+                              ? {
+                                  ...parameter,
+                                  valueFrom: "input",
+                                  value: undefined,
+                                  sourcePropertyName: undefined,
+                                }
+                              : parameter,
+                          ),
+                        }));
+                      }
+                    }}
+                    placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t("knowledgeNetwork.actionOperationTypeLabel")}
+                  name="actionKind"
+                  rules={[
+                    { message: t("knowledgeNetwork.actionTypeKindRequired"), required: true },
+                  ]}
+                >
+                  <Radio.Group
+                    onChange={(event) => {
+                      const nextKind =
+                        event.target.value === "link" || event.target.value === "unlink"
+                          ? "relation"
+                          : "object";
+                      if (nextKind !== operationKind) {
+                        basicForm.setFieldsValue({
+                          relationTypeId: undefined,
+                          relationAnchor: undefined,
+                          otherObjectCondition: null,
+                        });
+                        setSelectedRelation(null);
+                        setRelationBindingError(null);
+                        setExecutionValue((current) => ({
+                          ...current,
+                          parameters: (current.parameters ?? []).map((parameter) =>
+                            parameter.valueFrom === "property" ||
+                            parameter.valueFrom === "source_identity" ||
+                            parameter.valueFrom === "target_identity"
+                              ? {
+                                  ...parameter,
+                                  valueFrom: "input",
+                                  value: undefined,
+                                  sourcePropertyName: undefined,
+                                }
+                              : parameter,
+                          ),
+                        }));
+                      }
+                      setOperationKind(nextKind);
+                    }}
+                    options={INSTANCE_OPERATIONS.map(({ kind, titleKey }) => ({
+                      label: t(titleKey),
+                      value: kind,
+                    }))}
+                  />
+                </Form.Item>
+              </>
+            )}
+            {operationKind === "relation" ? (
+              <ActionTypeRelationFields
+                networkId={networkId}
+                objectTypeId={watchedObjectTypeId || ""}
+                onRelationChange={setSelectedRelation}
+                onRelationTypeChange={() => {
+                  basicForm.setFieldValue("otherObjectCondition", null);
+                  setExecutionValue((current) => ({
+                    ...current,
+                    parameters: (current.parameters ?? []).map((parameter) =>
+                      parameter.valueFrom === "source_identity" ||
+                      parameter.valueFrom === "target_identity"
+                        ? { ...parameter, valueFrom: "input", value: undefined }
+                        : parameter,
+                    ),
+                  }));
+                  setRelationBindingError(null);
+                }}
+              />
+            ) : null}
             <Collapse
               bordered={false}
               className={styles.ruleCollapse}
               activeKey={openRulePanels}
               items={[
-                {
-                  // Rendered while collapsed too: a field only reaches the saved values once it
-                  // is mounted, so a save without opening the panel would drop it. The same
-                  // holds for the other two panels.
-                  forceRender: true,
-                  key: "trigger",
-                  label: (
-                    <span className={styles.ruleHeader}>
-                      <span className={styles.ruleIndex}>1</span>
-                      <span>{t("knowledgeNetwork.actionTypeTriggerRule")}</span>
-                    </span>
-                  ),
-                  children: (
-                    <div className={styles.ruleSection}>
-                      <Row gutter={24}>
-                        <Col span={12}>
-                          <Form.Item
-                            label={t("knowledgeNetwork.actionTypeObject")}
-                            name="objectTypeId"
-                            rules={[
-                              {
-                                message: t("knowledgeNetwork.actionTypeObjectRequired"),
-                                required: true,
-                              },
-                            ]}
-                          >
-                            <RelationTypeObjectTypeSelect
-                              networkId={networkId}
-                              objectTypes={objectTypes}
-                              placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item
-                            label={
-                              <span className={styles.labelWithHelp}>
-                                {t("knowledgeNetwork.actionTypeKind")}
-                                <Tooltip title={t("knowledgeNetwork.actionTypeKindHelp")}>
-                                  <QuestionCircleOutlined className={styles.helpIcon} />
-                                </Tooltip>
-                              </span>
-                            }
-                            name="actionKind"
-                            rules={[
-                              {
-                                message: t("knowledgeNetwork.actionTypeKindRequired"),
-                                required: true,
-                              },
-                            ]}
-                          >
-                            <Select
-                              options={buildActionTypeKindSelectOptions(t)}
-                              placeholder={t("knowledgeNetwork.pleaseSelect")}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Form.Item
-                        label={t("knowledgeNetwork.actionTypeTriggerCondition")}
-                        name="condition"
-                      >
-                        <ActionTypeConditionEditor
-                          boundObjectTypeId={watchedObjectTypeId}
-                          hideObjectTypeSelect
-                          objectTypes={objectTypes}
-                          propertyOptions={conditionPropertyOptions}
-                        />
-                      </Form.Item>
-                    </div>
-                  ),
-                },
+                ...(showConditionPanel
+                  ? [
+                      {
+                        // Rendered while collapsed too: a field only reaches the saved values once it
+                        // is mounted, so a save without opening the panel would drop it. The same
+                        // holds for the other two panels.
+                        forceRender: true,
+                        key: "trigger",
+                        label: (
+                          <span className={styles.ruleHeader}>
+                            <span className={styles.ruleIndex}>1</span>
+                            <span>{t("knowledgeNetwork.actionTypeApplicableCondition")}</span>
+                          </span>
+                        ),
+                        children: (
+                          <div className={styles.ruleSection}>
+                            <p className={styles.ruleHint}>
+                              {highlightObjectTypeName(
+                                t(
+                                  operationKind === "relation"
+                                    ? "knowledgeNetwork.actionRelationConditionsHint"
+                                    : watchedActionKind === "create"
+                                      ? "knowledgeNetwork.actionTypeApplicableConditionCreateHint"
+                                      : "knowledgeNetwork.actionTypeApplicableConditionHint",
+                                  {
+                                    objectTypeName: watchedObjectTypeId
+                                      ? currentObjectTypeName
+                                      : t("knowledgeNetwork.actionTypeGenericObjectName"),
+                                  },
+                                ),
+                                operationKind === "object" && watchedObjectTypeId
+                                  ? currentObjectTypeName
+                                  : "",
+                              )}
+                            </p>
+                            <Form.Item
+                              label={
+                                operationKind === "relation"
+                                  ? highlightObjectTypeName(
+                                      t("knowledgeNetwork.actionRelationCurrentCondition", {
+                                        objectTypeName: currentConditionObjectName,
+                                      }),
+                                      watchedObjectTypeId ? currentObjectTypeName : "",
+                                    )
+                                  : t("knowledgeNetwork.actionTypeTriggerCondition")
+                              }
+                              name="condition"
+                              rules={[
+                                {
+                                  validator: (_, condition: ActionTypeCondition | undefined) => {
+                                    const error = validateActionCondition(
+                                      condition,
+                                      conditionPropertyOptions,
+                                      executionValue.parameters ?? [],
+                                    );
+                                    return error
+                                      ? Promise.reject(new Error(t(error)))
+                                      : Promise.resolve();
+                                  },
+                                },
+                              ]}
+                            >
+                              <ActionTypeConditionEditor
+                                boundObjectTypeId={watchedObjectTypeId}
+                                executionParameters={executionValue.parameters ?? []}
+                                hideObjectTypeSelect
+                                objectTypes={objectTypes}
+                                propertyOptions={conditionPropertyOptions}
+                              />
+                            </Form.Item>
+                            {operationKind === "relation" && otherObjectTypeId ? (
+                              <Form.Item
+                                label={highlightObjectTypeName(
+                                  t("knowledgeNetwork.actionRelationOtherCondition", {
+                                    objectTypeName: otherConditionObjectName,
+                                  }),
+                                  otherObjectTypeName,
+                                )}
+                                name="otherObjectCondition"
+                                rules={[
+                                  {
+                                    validator: (_, condition: ActionTypeCondition | undefined) => {
+                                      const error = validateActionCondition(
+                                        condition,
+                                        otherPropertyOptions,
+                                        executionValue.parameters ?? [],
+                                      );
+                                      return error
+                                        ? Promise.reject(new Error(t(error)))
+                                        : Promise.resolve();
+                                    },
+                                  },
+                                ]}
+                              >
+                                <ActionTypeConditionEditor
+                                  boundObjectTypeId={otherObjectTypeId}
+                                  executionParameters={executionValue.parameters ?? []}
+                                  hideObjectTypeSelect
+                                  objectTypes={objectTypes}
+                                  propertyOptions={otherPropertyOptions}
+                                />
+                              </Form.Item>
+                            ) : null}
+                            {unsupportedCondition ? (
+                              <Alert
+                                message={t("knowledgeNetwork.actionTypeConditionPreviewOnly")}
+                                showIcon
+                                type="info"
+                              />
+                            ) : null}
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
                 {
                   // Mounted while collapsed as well, so it reports whether the tool takes
                   // parameters before a save checks them.
@@ -632,22 +1068,48 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                   key: "execution",
                   label: (
                     <span className={styles.ruleHeader}>
-                      <span className={styles.ruleIndex}>2</span>
+                      <span className={styles.ruleIndex}>{showConditionPanel ? 2 : 1}</span>
                       <span>{t("knowledgeNetwork.actionTypeExecutionTool")}</span>
                     </span>
                   ),
                   children: (
                     <div className={styles.ruleSection}>
+                      {operationKind !== "tool" ? (
+                        <p className={styles.ruleHint}>
+                          {highlightObjectTypeName(
+                            t(
+                              operationKind === "relation"
+                                ? "knowledgeNetwork.actionRelationExecutionHint"
+                                : watchedActionKind === "update"
+                                  ? "knowledgeNetwork.actionTypeExecutionUpdateHint"
+                                  : watchedActionKind === "delete"
+                                    ? "knowledgeNetwork.actionTypeExecutionDeleteHint"
+                                    : "knowledgeNetwork.actionTypeExecutionCreateHint",
+                              {
+                                objectTypeName: watchedObjectTypeId
+                                  ? currentObjectTypeName
+                                  : t("knowledgeNetwork.actionTypeGenericObjectName"),
+                              },
+                            ),
+                            operationKind === "object" && watchedObjectTypeId
+                              ? currentObjectTypeName
+                              : "",
+                          )}
+                        </p>
+                      ) : null}
                       <ActionTypeExecutionEditor
                         networkId={networkId}
                         objectTypeId={
-                          watchedObjectTypeId ??
-                          (basicForm.getFieldValue("objectTypeId") as string | undefined) ??
-                          ""
+                          operationKind === "tool"
+                            ? ""
+                            : (watchedObjectTypeId ??
+                              (basicForm.getFieldValue("objectTypeId") as string | undefined) ??
+                              "")
                         }
                         onParameterSchemaStateChange={setExecutionSchemaState}
                         onChange={(nextValue) => {
                           setExecutionValue(nextValue);
+                          setRelationBindingError(null);
                           if (
                             getActionSourceDisplayName(nextValue.actionSource) ||
                             nextValue.sourceName.trim()
@@ -656,47 +1118,74 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                           }
                         }}
                         sourceError={executionSourceError}
+                        parameterError={operationKind === "relation" ? relationBindingError : null}
+                        onRelationValidationChange={setRelationIdentityError}
+                        relationBinding={
+                          operationKind === "relation"
+                            ? {
+                                relation: selectedRelation,
+                              }
+                            : undefined
+                        }
                         value={executionValue}
                       />
                     </div>
                   ),
                 },
-                {
-                  forceRender: true,
-                  key: "impact",
-                  label: (
-                    <span className={styles.ruleHeader}>
-                      <span className={styles.ruleIndex}>3</span>
-                      <span>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</span>
-                    </span>
-                  ),
-                  children: (
-                    <div className={styles.ruleSection}>
-                      <Form.Item
-                        label={t("knowledgeNetwork.actionTypeAffectedObject")}
-                        name="affectObjectTypeId"
-                      >
-                        <RelationTypeObjectTypeSelect
-                          allowClear
-                          networkId={networkId}
-                          objectTypes={objectTypes}
-                          placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label={t("knowledgeNetwork.actionTypeAffectDescription")}
-                        name="affectComment"
-                      >
-                        <Input.TextArea
-                          autoSize={{ minRows: 3, maxRows: 6 }}
-                          maxLength={255}
-                          placeholder={t("knowledgeNetwork.actionTypeAffectDescriptionPlaceholder")}
-                          showCount
-                        />
-                      </Form.Item>
-                    </div>
-                  ),
-                },
+                ...(isObjectOperation
+                  ? [
+                      {
+                        forceRender: true,
+                        key: "impact",
+                        label: (
+                          <span className={styles.ruleHeader}>
+                            <span className={styles.ruleIndex}>{showConditionPanel ? 3 : 2}</span>
+                            <span>{t("knowledgeNetwork.actionTypeAdditionalImpact")}</span>
+                          </span>
+                        ),
+                        children: (
+                          <div className={styles.ruleSection}>
+                            <p className={styles.ruleHint}>
+                              {highlightObjectTypeName(
+                                t("knowledgeNetwork.actionTypeImpactStaticHint", {
+                                  objectTypeName: watchedObjectTypeId
+                                    ? currentObjectTypeName
+                                    : t("knowledgeNetwork.actionTypeGenericObjectName"),
+                                }),
+                                watchedObjectTypeId ? currentObjectTypeName : "",
+                              )}
+                            </p>
+                            <Form.Item
+                              label={t("knowledgeNetwork.actionTypeAffectedObject")}
+                              name="affectObjectTypeId"
+                            >
+                              <RelationTypeObjectTypeSelect
+                                allowClear
+                                networkId={networkId}
+                                objectTypes={objectTypes}
+                                placeholder={t(
+                                  "knowledgeNetwork.actionTypeAffectedObjectPlaceholder",
+                                )}
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              label={t("knowledgeNetwork.actionTypeAffectDescription")}
+                              name="affectComment"
+                            >
+                              <Input.TextArea
+                                autoSize={{ minRows: 3, maxRows: 6 }}
+                                maxLength={255}
+                                placeholder={t(
+                                  "knowledgeNetwork.actionTypeAffectDescriptionPlaceholder",
+                                )}
+                                showCount
+                              />
+                            </Form.Item>
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
               onChange={(keys) => setOpenRulePanels(Array.isArray(keys) ? keys : [keys])}
             />
@@ -714,7 +1203,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         hideSteps
         onBack={goBack}
         steps={steps}
-        title={pageTitle}
+        title={headerTitle}
       >
         <div className={styles.loadingState}>
           <Spin />
@@ -727,6 +1216,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     ? undefined
     : {
         save: {
+          disabled: unsupportedOperation || unsupportedCondition,
           loading: submitting,
           onClick: () => {
             void handleSubmit();
@@ -747,7 +1237,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       hideSteps
       onBack={goBack}
       steps={steps}
-      title={pageTitle}
+      title={headerTitle}
     >
       {loadError ? (
         <Alert className={styles.loadError} message={loadError} showIcon type="error" />

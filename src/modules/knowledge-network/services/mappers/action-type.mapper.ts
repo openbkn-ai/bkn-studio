@@ -8,8 +8,6 @@
 import type {
   ActionTypeActionSource,
   ActionTypeAffect,
-  ActionTypeCondition,
-  ActionTypeConditionOperation,
   ActionTypeDetail,
   ActionTypeExecutionConfig,
   ActionTypeExecutionParameter,
@@ -18,22 +16,24 @@ import type {
   KnowledgeNetworkActionTypeMutationPayload,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import {
+  mapActionOperationConfig,
+  toBackendActionOperationConfig,
+  type BackendActionOperationConfig,
+} from "../../utils/action-type-operation";
+
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 
 import {
   createDefaultActionTypeExecutionConfig,
   getActionSourceDisplayName,
 } from "@/modules/knowledge-network/utils/action-type-execution";
-import { promoteLegacyActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
-
-export type BackendActionCondition = {
-  field?: string;
-  object_type_id?: string;
-  operation?: ActionTypeConditionOperation;
-  sub_conditions?: BackendActionCondition[];
-  value?: string | string[];
-  value_from?: "const";
-};
+import {
+  toBackendActionCondition,
+  mapActionTypeConditionFromBackend,
+  type BackendActionCondition,
+} from "@/modules/knowledge-network/utils/action-type-condition";
+export type { BackendActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 
 export type BackendActionAffect = {
   comment?: string;
@@ -53,10 +53,11 @@ export type BackendActionSource = {
 export type BackendActionParameter = {
   name: string;
   value?: string;
-  value_from?: "property" | "input" | "const";
+  value_from?: "property" | "input" | "const" | "source_identity" | "target_identity";
 };
 
 export type BackendActionTypeCreateEntry = BackendDefinitionDeclarationFields & {
+  operation_config?: BackendActionOperationConfig;
   action_source?: BackendActionSource;
   action_type: "add" | "modify" | "delete" | "notify";
   affect?: BackendActionAffect;
@@ -94,42 +95,6 @@ export function toBackendActionTypeEnum(
     default:
       return "add";
   }
-}
-
-function toBackendActionCondition(
-  condition?: ActionTypeCondition,
-): BackendActionCondition | undefined {
-  const normalized = promoteLegacyActionCondition(condition);
-  if (!normalized) {
-    return undefined;
-  }
-
-  if (normalized.operation === "and" || normalized.operation === "or") {
-    const subConditions = normalized.subConditions
-      ?.map((item) => toBackendActionCondition(item))
-      .filter((item): item is BackendActionCondition => Boolean(item));
-    if (!subConditions?.length) {
-      return undefined;
-    }
-    return {
-      object_type_id: normalized.objectTypeId,
-      operation: normalized.operation,
-      sub_conditions: subConditions,
-      value_from: normalized.valueFrom ?? "const",
-    };
-  }
-
-  if (!normalized.field || !normalized.operation) {
-    return undefined;
-  }
-
-  return {
-    field: normalized.field,
-    object_type_id: normalized.objectTypeId,
-    operation: normalized.operation,
-    value: normalized.value,
-    value_from: normalized.valueFrom ?? "const",
-  };
 }
 
 function toBackendActionAffect(affect?: ActionTypeAffect): BackendActionAffect | undefined {
@@ -189,13 +154,22 @@ function toBackendActionParameters(
 
       return {
         name: item.name.trim(),
-        value: valueFrom === "input" ? undefined : value,
+        value:
+          valueFrom === "input" ||
+          valueFrom === "source_identity" ||
+          valueFrom === "target_identity"
+            ? undefined
+            : value,
         value_from: valueFrom,
       };
     })
     .filter(
       (item) =>
-        item.name.length > 0 && (item.value_from === "input" || Boolean(item.value?.trim())),
+        item.name.length > 0 &&
+        (item.value_from === "input" ||
+          item.value_from === "source_identity" ||
+          item.value_from === "target_identity" ||
+          Boolean(item.value?.trim())),
     );
 
   return nextParameters.length > 0 ? nextParameters : undefined;
@@ -229,29 +203,6 @@ function mapActionTypeActionSourceFromBackend(
     toolName: actionSource.tool_name,
     type: mapActionSourceKind(actionSource.type),
   };
-}
-
-function mapActionTypeConditionFromBackend(
-  condition?: BackendActionType["condition"],
-): ActionTypeCondition | undefined {
-  if (!condition) {
-    return undefined;
-  }
-
-  if (!condition.field && !(condition.sub_conditions?.length ?? 0)) {
-    return undefined;
-  }
-
-  return promoteLegacyActionCondition({
-    field: condition.field,
-    objectTypeId: condition.object_type_id,
-    operation: condition.operation as ActionTypeConditionOperation | undefined,
-    subConditions: condition.sub_conditions
-      ?.map((item) => mapActionTypeConditionFromBackend(item))
-      .filter((item): item is ActionTypeCondition => Boolean(item)),
-    value: condition.value,
-    valueFrom: condition.value_from ?? "const",
-  });
 }
 
 function mapActionTypeAffectFromBackend(
@@ -299,6 +250,9 @@ export function mapActionTypeDetail(item: BackendActionType): ActionTypeDetail {
   return {
     ...(declarations ? { declarations } : {}),
     id: item.id,
+    ...(item.operation_config
+      ? { operationConfig: mapActionOperationConfig(item.operation_config) }
+      : {}),
     name: item.name,
     description: item.comment ?? "",
     color: item.color ?? "#16a34a",
@@ -341,6 +295,9 @@ export function toBackendActionTypeCreateEntry(
   const executionConfig = input.executionConfig;
 
   return {
+    ...(input.operationConfig
+      ? { operation_config: toBackendActionOperationConfig(input.operationConfig) }
+      : {}),
     action_source: toBackendActionSource(executionConfig?.actionSource),
     action_type: toBackendActionTypeEnum(input.actionKind),
     affect: toBackendActionAffect(input.affect),

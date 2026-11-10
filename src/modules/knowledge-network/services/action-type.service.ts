@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { getActionTypeOperationKind } from "../utils/action-type-operation";
+import type { ActionTypeOperationKind } from "../types/action-type";
+
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
@@ -71,6 +74,56 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
+import { hasReferencedConditionValue } from "@/modules/knowledge-network/utils/action-type-condition";
+
+export function canPersistActionTypeCondition(
+  condition?: KnowledgeNetworkActionTypeMutationPayload["condition"] | null,
+) {
+  return useMock || !hasReferencedConditionValue(condition);
+}
+
+export class ActionTypeConditionUnsupportedError extends Error {
+  constructor() {
+    super(
+      "This server does not support property or runtime parameter references in action conditions",
+    );
+    this.name = "ActionTypeConditionUnsupportedError";
+  }
+}
+
+/** The current server cannot persist relation semantics or distinguish a bound tool action.
+ * Keep this gate until the operation_config contract is implemented server-side. */
+export function canPersistActionTypeOperation(
+  input: Pick<KnowledgeNetworkActionTypeMutationPayload, "operationConfig" | "objectTypeId">,
+): boolean {
+  return (
+    useMock ||
+    !input.operationConfig ||
+    input.operationConfig.type === "object" ||
+    (input.operationConfig.type === "tool" && !input.objectTypeId)
+  );
+}
+
+export class ActionTypeOperationUnsupportedError extends Error {
+  constructor() {
+    super("Action operation configuration is not supported by this server");
+    this.name = "ActionTypeOperationUnsupportedError";
+  }
+}
+
+function assertActionTypeOperationSupported(input: KnowledgeNetworkActionTypeMutationPayload) {
+  if (!canPersistActionTypeOperation(input)) throw new ActionTypeOperationUnsupportedError();
+  if (
+    !useMock &&
+    input.executionConfig?.parameters.some(
+      (parameter) =>
+        parameter.valueFrom === "source_identity" || parameter.valueFrom === "target_identity",
+    )
+  )
+    throw new ActionTypeOperationUnsupportedError();
+  if (!canPersistActionTypeCondition(input.condition))
+    throw new ActionTypeConditionUnsupportedError();
+}
 
 function resolveActionTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -137,6 +190,7 @@ export type KnowledgeNetworkActionTypePageQuery = {
   namePattern?: string;
   objectTypeId?: string;
   offset: number;
+  operationKind?: ActionTypeOperationKind;
   sort?: "name" | "update_time";
 };
 
@@ -159,7 +213,8 @@ export async function listKnowledgeNetworkActionTypePage(
           item.name.toLowerCase().includes(keyword) ||
           item.description.toLowerCase().includes(keyword)) &&
         (!query.actionKind || item.actionKind === query.actionKind) &&
-        (!query.objectTypeId || item.objectTypeId === query.objectTypeId),
+        (!query.objectTypeId || item.objectTypeId === query.objectTypeId) &&
+        (!query.operationKind || getActionTypeOperationKind(item) === query.operationKind),
     );
     const sorted = [...filtered].sort((left, right) => {
       const leftValue = query.sort === "name" ? left.name : left.updateTime;
@@ -184,18 +239,28 @@ export async function listKnowledgeNetworkActionTypePage(
       params: {
         action_type: query.actionKind ? toBackendActionTypeEnum(query.actionKind) : undefined,
         direction: query.direction ?? "desc",
-        limit: query.limit,
+        // The legacy API has no operation-kind filter. Filter its complete authorized result
+        // before pagination so categories cannot silently lose rows between server pages.
+        limit: query.operationKind ? -1 : query.limit,
         name_pattern: query.namePattern?.trim() || undefined,
         object_type_id: query.objectTypeId || undefined,
-        offset: query.offset,
+        offset: query.operationKind ? 0 : query.offset,
         sort: query.sort ?? "update_time",
       },
     },
   );
 
+  const entries = response.data.entries.map(mapActionType);
+  if (!query.operationKind) {
+    return { entries, totalCount: response.data.total_count };
+  }
+
+  const scoped = entries.filter(
+    (entry) => getActionTypeOperationKind(entry) === query.operationKind,
+  );
   return {
-    entries: response.data.entries.map(mapActionType),
-    totalCount: response.data.total_count,
+    entries: scoped.slice(query.offset, query.offset + query.limit),
+    totalCount: scoped.length,
   };
 }
 
@@ -373,6 +438,7 @@ export async function createKnowledgeNetworkActionType(
   networkId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
+  assertActionTypeOperationSupported(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -383,6 +449,7 @@ export async function createKnowledgeNetworkActionType(
       description: input.description,
       color: input.color,
       actionKind: input.actionKind,
+      operationConfig: input.operationConfig ? { ...input.operationConfig } : undefined,
       objectTypeId: input.objectTypeId,
       objectTypeName: relatedObject?.name ?? input.objectTypeId,
       tags: input.tags,
@@ -409,7 +476,7 @@ export async function createKnowledgeNetworkActionType(
   const response = await http.post<SingleEntryResponse<BackendActionType> | Array<{ id?: string }>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types`,
     {
-      entries: [toBackendActionTypeCreateEntry(input)],
+      entries: [toBackendActionTypeCreateEntry({ ...input, operationConfig: undefined })],
     },
     // The form shows the refusal itself, with the definitions it names.
     { skipErrorToast: true },
@@ -429,6 +496,7 @@ export async function updateKnowledgeNetworkActionType(
   actionTypeId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
+  assertActionTypeOperationSupported(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -441,6 +509,7 @@ export async function updateKnowledgeNetworkActionType(
             description: input.description,
             color: input.color,
             actionKind: input.actionKind,
+            ...(input.operationConfig ? { operationConfig: { ...input.operationConfig } } : {}),
             objectTypeId: input.objectTypeId,
             objectTypeName: relatedObject?.name ?? input.objectTypeId,
             tags: input.tags,
@@ -464,7 +533,7 @@ export async function updateKnowledgeNetworkActionType(
 
   const response = await http.put<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
-    toBackendActionTypeUpdatePayload(input),
+    toBackendActionTypeUpdatePayload({ ...input, operationConfig: undefined }),
     { skipErrorToast: true },
   );
 

@@ -6,6 +6,7 @@
  */
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -13,6 +14,7 @@ import type {
   ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
+import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
 
 const {
   getKnowledgeNetworkObjectTypeDetail,
@@ -111,6 +113,117 @@ afterEach(() => {
 });
 
 describe("ActionTypeExecutionEditor schema loading", () => {
+  const relation = {
+    id: "order_supplier",
+    sourceObjectTypeId: "orders",
+    targetObjectTypeId: "suppliers",
+  } as KnowledgeNetworkRelationTypeRecord;
+  const schema = [
+    { key: "order_id", name: "order_id", type: "string" },
+    { key: "supplier_id", name: "supplier_id", type: "string" },
+  ];
+  const object = (id: string, key: string) => ({
+    id,
+    name: id,
+    primaryKeys: [key],
+    dataProperties: [{ name: key, displayName: key, type: "string", primaryKey: true }],
+  });
+
+  function RelationEditor({
+    selectedRelation,
+    onChange,
+  }: {
+    selectedRelation: KnowledgeNetworkRelationTypeRecord;
+    onChange: (value: ActionTypeExecutionConfig) => void;
+  }) {
+    const [value, setValue] = useState(() => createExecutionConfig(createSource("relation-tool")));
+    return (
+      <ActionTypeExecutionEditor
+        networkId="network-1"
+        objectTypeId=""
+        relationBinding={{ relation: selectedRelation }}
+        value={value}
+        onChange={(next) => {
+          setValue(next);
+          onChange(next);
+        }}
+      />
+    );
+  }
+
+  it("reads each endpoint's configured identity and defaults matching tool inputs", async () => {
+    resolveActionTypeToolInputSchema.mockResolvedValue(schema);
+    getKnowledgeNetworkObjectTypeDetail.mockImplementation((_network: string, id: string) =>
+      Promise.resolve(object(id, id === "orders" ? "order_id" : "supplier_id")),
+    );
+    const onChange = vi.fn();
+    render(<RelationEditor selectedRelation={relation} onChange={onChange} />);
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          parameters: [
+            expect.objectContaining({
+              name: "order_id",
+              valueFrom: "source_identity",
+              value: undefined,
+            }),
+            expect.objectContaining({
+              name: "supplier_id",
+              valueFrom: "target_identity",
+              value: undefined,
+            }),
+          ],
+        }),
+      ),
+    );
+    expect(getKnowledgeNetworkObjectTypeDetail).toHaveBeenCalledWith("network-1", "orders");
+    expect(getKnowledgeNetworkObjectTypeDetail).toHaveBeenCalledWith("network-1", "suppliers");
+  });
+
+  it("ignores late identity responses after switching to another relationship", async () => {
+    const oldSource = createDeferred<ReturnType<typeof object>>();
+    const oldTarget = createDeferred<ReturnType<typeof object>>();
+    resolveActionTypeToolInputSchema.mockResolvedValue(schema);
+    getKnowledgeNetworkObjectTypeDetail.mockImplementation(async (_network: string, id: string) =>
+      id === "orders"
+        ? oldSource.promise
+        : id === "suppliers"
+          ? oldTarget.promise
+          : object(id, id === "projects" ? "project_id" : "employee_id"),
+    );
+    const onChange = vi.fn();
+    const { rerender } = render(<RelationEditor selectedRelation={relation} onChange={onChange} />);
+    await waitFor(() =>
+      expect(getKnowledgeNetworkObjectTypeDetail).toHaveBeenCalledWith("network-1", "orders"),
+    );
+    rerender(
+      <RelationEditor
+        selectedRelation={{
+          ...relation,
+          id: "project_employee",
+          sourceObjectTypeId: "projects",
+          targetObjectTypeId: "employees",
+        }}
+        onChange={onChange}
+      />,
+    );
+    await waitFor(() =>
+      expect(getKnowledgeNetworkObjectTypeDetail).toHaveBeenCalledWith("network-1", "employees"),
+    );
+    await act(async () => {
+      oldSource.resolve(object("orders", "order_id"));
+      oldTarget.resolve(object("suppliers", "supplier_id"));
+      await Promise.all([oldSource.promise, oldTarget.promise]);
+    });
+    expect(
+      onChange.mock.calls.some(([value]) =>
+        (value as ActionTypeExecutionConfig).parameters.some(
+          (parameter) =>
+            parameter.valueFrom === "source_identity" || parameter.valueFrom === "target_identity",
+        ),
+      ),
+    ).toBe(false);
+  });
   it("ignores stale schema responses after the selected source changes", async () => {
     const noInputSchema = createDeferred<ActionTypeToolInputParam[]>();
     const requiredInputSchema = createDeferred<ActionTypeToolInputParam[]>();

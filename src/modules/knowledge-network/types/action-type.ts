@@ -7,6 +7,18 @@
 
 import type { DefinitionDeclarationEdit, DefinitionDeclarations } from "./declarations";
 
+export type ActionTypeOperationKind = "object" | "relation" | "tool";
+
+export type ActionTypeOperationConfig =
+  | { type: "object" | "tool" }
+  | {
+      type: "relation";
+      relationTypeId: string;
+      relationOperation: "create" | "delete";
+      anchorRole?: "source" | "target";
+      otherObjectCondition?: ActionTypeCondition;
+    };
+
 export type KnowledgeNetworkActionTypeKind = "create" | "update" | "delete" | "notify";
 
 export type ActionTypeConditionOperation =
@@ -31,7 +43,8 @@ export type ActionTypeCondition = {
   operation?: ActionTypeConditionOperation;
   subConditions?: ActionTypeCondition[];
   value?: string | string[];
-  valueFrom?: "const";
+  /** For references, value is a property name or an action runtime parameter name. */
+  valueFrom?: "const" | "property" | "input";
 };
 
 export type ActionTypeAffect = {
@@ -51,7 +64,8 @@ export type ActionTypeActionSource = {
   type: ActionTypeSourceKind;
 };
 
-export type ActionTypeExecutionParameterValueFrom = "const" | "input" | "property";
+export type ActionTypeExecutionParameterValueFrom =
+  "const" | "input" | "property" | "source_identity" | "target_identity";
 
 export type ActionTypeExecutionParameter = {
   description?: string;
@@ -71,6 +85,7 @@ export type ActionTypeExecutionConfig = {
 };
 
 export type KnowledgeNetworkActionTypeRecord = {
+  operationConfig?: ActionTypeOperationConfig;
   actionKind: KnowledgeNetworkActionTypeKind;
   color: string;
   /** Its aliases and lifecycle; absent when it declares neither. */
@@ -93,6 +108,7 @@ export type ActionTypeDetail = KnowledgeNetworkActionTypeRecord & {
 };
 
 export type KnowledgeNetworkActionTypeMutationPayload = {
+  operationConfig?: ActionTypeOperationConfig;
   actionKind: KnowledgeNetworkActionTypeKind;
   affect?: ActionTypeAffect;
   color: string;

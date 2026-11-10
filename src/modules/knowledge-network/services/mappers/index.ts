@@ -40,6 +40,7 @@ import type {
   BackendRelationType,
   BackendSmallModel,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
+import { mapActionOperationConfig } from "../../utils/action-type-operation";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   definitionDeclarationPatch,
@@ -570,6 +571,9 @@ export function mapActionKind(
 export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTypeRecord {
   const declarations = mapDefinitionDeclarations(item);
   return {
+    ...(item.operation_config
+      ? { operationConfig: mapActionOperationConfig(item.operation_config) }
+      : {}),
     ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,

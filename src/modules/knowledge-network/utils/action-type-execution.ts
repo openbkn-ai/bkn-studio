@@ -132,7 +132,11 @@ export function validateActionTypeExecutionConfig(
     }
 
     const valueFrom = item.valueFrom ?? "input";
-    if (valueFrom === "input") {
+    if (
+      valueFrom === "input" ||
+      valueFrom === "source_identity" ||
+      valueFrom === "target_identity"
+    ) {
       return true;
     }
 
@@ -163,7 +167,11 @@ export function normalizeActionTypeExecutionConfig(
       }
 
       const valueFrom = item.valueFrom ?? "input";
-      if (valueFrom === "input") {
+      if (
+        valueFrom === "input" ||
+        valueFrom === "source_identity" ||
+        valueFrom === "target_identity"
+      ) {
         return true;
       }
 
@@ -179,7 +187,12 @@ export function normalizeActionTypeExecutionConfig(
         source: item.source,
         sourcePropertyName: valueFrom === "property" ? resolvedValue : "",
         type: item.type,
-        value: valueFrom === "input" ? undefined : resolvedValue,
+        value:
+          valueFrom === "input" ||
+          valueFrom === "source_identity" ||
+          valueFrom === "target_identity"
+            ? undefined
+            : resolvedValue,
         valueFrom,
       };
     });

@@ -6,6 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
@@ -43,6 +44,147 @@ afterEach(() => {
 });
 
 describe("ActionTypeConditionEditor", () => {
+  it("clears a fixed value when switching sources and picks only matching properties", () => {
+    const handleChange = vi.fn();
+    function Editor() {
+      const [condition, setCondition] = useState<ActionTypeCondition>({
+        field: "amount",
+        objectTypeId: "orders",
+        operation: ">=",
+        value: "100",
+      });
+      return (
+        <ActionTypeConditionEditor
+          boundObjectTypeId="orders"
+          hideObjectTypeSelect
+          objectTypes={[]}
+          onChange={(next) => {
+            handleChange(next);
+            setCondition(next!);
+          }}
+          propertyOptions={[
+            {
+              name: "amount",
+              displayName: "Amount",
+              label: "Amount",
+              value: "amount",
+              type: "number",
+            },
+            {
+              name: "minimum",
+              displayName: "Minimum",
+              label: "Minimum",
+              value: "minimum",
+              type: "integer",
+            },
+            {
+              name: "status",
+              displayName: "Status",
+              label: "Status",
+              value: "status",
+              type: "string",
+            },
+          ]}
+          value={condition}
+        />
+      );
+    }
+    render(<Editor />);
+    expect(screen.getByDisplayValue("100")).toBeInTheDocument();
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "knowledgeNetwork.actionTypeConditionValueSource" }),
+    );
+    fireEvent.click(screen.getByText("knowledgeNetwork.actionTypeExecutionValueFromProperty"));
+    expect(handleChange.mock.lastCall?.[0]).toMatchObject({
+      valueFrom: "property",
+      value: undefined,
+    });
+    expect(screen.queryByDisplayValue("100")).toBeNull();
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", {
+        name: "knowledgeNetwork.actionTypeConditionPropertyPlaceholder",
+      }),
+    );
+    expect(
+      screen.queryByText("Status", { selector: ".ant-select-item-option-content" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByText("Minimum", { selector: ".ant-select-item-option-content" }));
+    expect(handleChange.mock.lastCall?.[0]).toMatchObject({
+      valueFrom: "property",
+      value: "minimum",
+    });
+  });
+
+  it("binds a runtime input without including constant or incompatible tool parameters", () => {
+    const handleChange = vi.fn();
+    render(
+      <ActionTypeConditionEditor
+        boundObjectTypeId="orders"
+        executionParameters={[
+          { name: "requested", type: "number", valueFrom: "input" },
+          { name: "fixed", type: "number", valueFrom: "const", value: "10" },
+          { name: "text", type: "string", valueFrom: "input" },
+        ]}
+        hideObjectTypeSelect
+        objectTypes={[]}
+        onChange={handleChange}
+        propertyOptions={[
+          {
+            name: "amount",
+            displayName: "Amount",
+            label: "Amount",
+            value: "amount",
+            type: "number",
+          },
+        ]}
+        value={{ field: "amount", operation: ">=", valueFrom: "input" }}
+      />,
+    );
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", {
+        name: "knowledgeNetwork.actionTypeConditionParameterPlaceholder",
+      }),
+    );
+    expect(screen.queryByText("fixed")).toBeNull();
+    expect(screen.queryByText("text")).toBeNull();
+    fireEvent.click(screen.getByText("requested", { selector: ".ant-select-item-option-content" }));
+    expect(handleChange.mock.lastCall?.[0]).toMatchObject({
+      valueFrom: "input",
+      value: "requested",
+    });
+  });
+
+  it("keeps reference sources inside nested condition groups when another row changes", () => {
+    const handleChange = vi.fn();
+    render(
+      <ActionTypeConditionEditor
+        boundObjectTypeId="orders"
+        hideObjectTypeSelect
+        objectTypes={[]}
+        onChange={handleChange}
+        propertyOptions={[]}
+        value={{
+          operation: "and",
+          subConditions: [
+            { field: "status", operation: "==", value: "Active", valueFrom: "const" },
+            {
+              operation: "or",
+              subConditions: [
+                { field: "amount", operation: ">=", value: "minimum", valueFrom: "property" },
+                { field: "amount", operation: ">=", value: "requested", valueFrom: "input" },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByDisplayValue("Active"), { target: { value: "Inactive" } });
+    const nextCondition = handleChange.mock.lastCall?.[0] as ActionTypeCondition | undefined;
+    expect(nextCondition?.subConditions?.[1]?.subConditions).toEqual([
+      expect.objectContaining({ valueFrom: "property", value: "minimum" }),
+      expect.objectContaining({ valueFrom: "input", value: "requested" }),
+    ]);
+  });
   it("does not duplicate legacy flat sub-conditions when editing the root row", () => {
     const handleChange = vi.fn();
     const legacyCondition: ActionTypeCondition = {
@@ -133,7 +275,7 @@ describe("ActionTypeConditionEditor", () => {
           objectTypeId: "material_entity",
           operation: "exist",
           value: "stale",
-          valueFrom: "const",
+          valueFrom: "input",
         }}
       />,
     );
@@ -141,6 +283,7 @@ describe("ActionTypeConditionEditor", () => {
     expect(
       screen.queryByPlaceholderText("knowledgeNetwork.actionTypeConditionValueInputPlaceholder"),
     ).toBeNull();
+    expect(screen.queryByLabelText("knowledgeNetwork.actionTypeConditionValueSource")).toBeNull();
 
     fireEvent.mouseDown(screen.getByText("knowledgeNetwork.actionTypeConditionOperation_exist"));
     fireEvent.click(screen.getByText("knowledgeNetwork.actionTypeConditionOperation_not_exist"));
@@ -149,5 +292,6 @@ describe("ActionTypeConditionEditor", () => {
 
     expect(nextCondition.operation).toBe("not_exist");
     expect(nextCondition.value).toBeUndefined();
+    expect(nextCondition.valueFrom).toBe("const");
   });
 });

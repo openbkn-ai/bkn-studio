@@ -75,9 +75,22 @@
   width: 128px;
 }
 
+.valueEditor {
+  align-items: center;
+  display: flex;
+  flex: 1 1 300px;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.valueSource {
+  flex: 0 0 112px;
+  width: 112px;
+}
+
 .valueInput {
-  flex: 1 1 180px;
-  min-width: 160px;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .rowActions {
@@ -104,7 +117,7 @@
   .objectTypeSelect,
   .fieldSelect,
   .operationSelect,
-  .valueInput {
+  .valueEditor {
     flex: 1 1 100%;
     min-width: 0;
   }

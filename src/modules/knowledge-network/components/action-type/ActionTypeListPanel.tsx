@@ -25,6 +25,7 @@ import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { ActionTypeCreateEntryModal } from "@/modules/knowledge-network/components/action-type/ActionTypeCreateEntryModal";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import {
   ObjectTypeResourceGraph,
@@ -49,7 +50,12 @@ import {
   writeKnowledgeNetworkGraphSelection,
   type KnowledgeNetworkGraphSelection,
 } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
-import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
+import {
+  actionTypeOperationLabelKey,
+  getActionTypeOperationKind,
+  readActionTypeOperationKind,
+} from "@/modules/knowledge-network/utils/action-type-operation";
+import type { ActionTypeOperationKind } from "@/modules/knowledge-network/types/action-type";
 import type {
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeRecord,
@@ -118,6 +124,9 @@ export function ActionTypeListPanel({
   const [actionKindFilter, setActionKindFilter] = useState<"all" | KnowledgeNetworkActionTypeKind>(
     () => readActionKind(searchParams.get("actionKind")),
   );
+  const [operationFilter, setOperationFilter] = useState<ActionTypeOperationKind | "all">(
+    () => readActionTypeOperationKind(searchParams.get("operation")) ?? "all",
+  );
   const [objectTypeFilter, setObjectTypeFilter] = useState(
     () => searchParams.get("objectType") ?? "all",
   );
@@ -138,6 +147,7 @@ export function ActionTypeListPanel({
   );
   const [selectedGraphActionType, setSelectedGraphActionType] =
     useState<KnowledgeNetworkActionTypeRecord | null>(null);
+  const [createEntryOpen, setCreateEntryOpen] = useState(false);
   const [authorizingRecord, setAuthorizingRecord] =
     useState<KnowledgeNetworkActionTypeRecord | null>(null);
   const [items, setItems] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
@@ -175,6 +185,7 @@ export function ActionTypeListPanel({
       limit: pageSize,
       namePattern: debouncedKeyword,
       objectTypeId: objectTypeFilter === "all" ? undefined : objectTypeFilter,
+      operationKind: operationFilter === "all" ? undefined : operationFilter,
       offset: (page - 1) * pageSize,
       sort: sortBy === "name" ? "name" : "update_time",
     })
@@ -212,6 +223,7 @@ export function ActionTypeListPanel({
     debouncedKeyword,
     networkId,
     objectTypeFilter,
+    operationFilter,
     page,
     pageSize,
     refreshVersion,
@@ -224,6 +236,7 @@ export function ActionTypeListPanel({
     const nextKeyword = searchParams.get("q") ?? "";
     const nextActionKind = readActionKind(searchParams.get("actionKind"));
     const nextObjectType = searchParams.get("objectType") ?? "all";
+    setOperationFilter(readActionTypeOperationKind(searchParams.get("operation")) ?? "all");
     const nextSortBy = readSortBy(searchParams.get("sort"));
     const nextSortDirection = readSortDirection(searchParams.get("order"));
     const nextPage = readPositiveInteger(searchParams.get("page"), 1);
@@ -250,6 +263,7 @@ export function ActionTypeListPanel({
     setOrDelete("q", keyword.trim(), "");
     setOrDelete("actionKind", actionKindFilter, "all");
     setOrDelete("objectType", objectTypeFilter, "all");
+    setOrDelete("operation", operationFilter, "all");
     setOrDelete("sort", sortBy, "updateTime");
     setOrDelete("order", sortDirection, "desc");
     setOrDelete("page", String(page), "1");
@@ -272,6 +286,7 @@ export function ActionTypeListPanel({
     actionKindFilter,
     keyword,
     objectTypeFilter,
+    operationFilter,
     page,
     pageSize,
     searchParams,
@@ -283,8 +298,12 @@ export function ActionTypeListPanel({
   ]);
 
   const hasActiveFilter = useMemo(
-    () => Boolean(keyword.trim()) || actionKindFilter !== "all" || objectTypeFilter !== "all",
-    [actionKindFilter, keyword, objectTypeFilter],
+    () =>
+      Boolean(keyword.trim()) ||
+      actionKindFilter !== "all" ||
+      objectTypeFilter !== "all" ||
+      operationFilter !== "all",
+    [actionKindFilter, keyword, objectTypeFilter, operationFilter],
   );
 
   const selectedRows = useMemo(
@@ -482,16 +501,21 @@ export function ActionTypeListPanel({
     {
       dataIndex: "actionKind",
       key: "actionKind",
-      title: t("knowledgeNetwork.actionTypeKind"),
-      width: 100,
-      render: (value: KnowledgeNetworkActionTypeKind) => getActionKindLabel(value, t),
+      title: t("knowledgeNetwork.actionOperationType"),
+      width: 180,
+      render: (value: KnowledgeNetworkActionTypeKind, record) => {
+        const kind = getActionTypeOperationKind(record);
+        return kind === "object"
+          ? `${t(actionTypeOperationLabelKey(kind))} · ${getActionKindLabel(value, t)}`
+          : t(actionTypeOperationLabelKey(kind));
+      },
     },
     {
       dataIndex: "objectTypeName",
       key: "objectTypeName",
       title: t("knowledgeNetwork.actionTypeObject"),
       width: 180,
-      render: (value: string) => value || "--",
+      render: (value: string, record) => (record.objectTypeId ? value || "--" : "--"),
     },
     {
       dataIndex: "tags",
@@ -517,6 +541,8 @@ export function ActionTypeListPanel({
     },
   ];
 
+  const openCreate = () => setCreateEntryOpen(true);
+
   const renderEmptyContent = () => {
     if (hasActiveFilter) {
       return (
@@ -539,14 +565,7 @@ export function ActionTypeListPanel({
         description={
           <span>
             {t("knowledgeNetwork.emptyCreateHint")}
-            <AppButton
-              onClick={() => {
-                void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`, {
-                  state: knowledgeNetworkReturnState(currentReturnTo),
-                });
-              }}
-              type="link"
-            >
+            <AppButton onClick={openCreate} type="link">
               {t("knowledgeNetwork.emptyCreateAction")}
             </AppButton>
             {t("knowledgeNetwork.emptyCreateSuffix")}
@@ -630,11 +649,7 @@ export function ActionTypeListPanel({
                 <AppButton
                   className={styles.toolbarButton}
                   icon={<PlusOutlined />}
-                  onClick={() => {
-                    void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`, {
-                      state: knowledgeNetworkReturnState(currentReturnTo),
-                    });
-                  }}
+                  onClick={openCreate}
                   type="primary"
                 >
                   {t("common.create")}
@@ -677,19 +692,23 @@ export function ActionTypeListPanel({
                   />
                   <div className={styles.filterGroup}>
                     <span className={styles.filterLabel}>
-                      {t("knowledgeNetwork.actionTypeKind")}
+                      {t("knowledgeNetwork.actionOperationType")}
                     </span>
                     <Select
                       className={styles.filterSelect}
                       onChange={(value) => {
-                        setActionKindFilter(value);
+                        setOperationFilter(value);
+                        setActionKindFilter("all");
                         setPage(1);
                       }}
                       options={[
                         { label: t("common.all"), value: "all" },
-                        ...buildActionTypeKindSelectOptions(t),
+                        ...(["object", "relation", "tool"] as const).map((kind) => ({
+                          label: t(actionTypeOperationLabelKey(kind)),
+                          value: kind,
+                        })),
                       ]}
-                      value={actionKindFilter}
+                      value={operationFilter}
                     />
                   </div>
                 </>
@@ -926,6 +945,29 @@ export function ActionTypeListPanel({
           </div>
         ) : null}
       </section>
+
+      <ActionTypeCreateEntryModal
+        onCancel={() => setCreateEntryOpen(false)}
+        onChoose={(operation) => {
+          setCreateEntryOpen(false);
+          void navigate(
+            `/knowledge-network/workspace/${networkId}/action-types/create?operation=${operation}`,
+            {
+              state: {
+                ...knowledgeNetworkReturnState(
+                  operation === "object" || viewMode === "list"
+                    ? currentReturnTo
+                    : `${actionTypeListPath}?view=list&operation=${operation}`,
+                ),
+                ...(operation === "object" && viewMode === "graph" && selectedGraphObjectTypeId
+                  ? { actionTypeInitialObjectTypeId: selectedGraphObjectTypeId }
+                  : {}),
+              },
+            },
+          );
+        }}
+        open={createEntryOpen}
+      />
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}
         objectType="action_type"

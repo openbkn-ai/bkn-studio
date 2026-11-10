@@ -107,12 +107,12 @@ vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGr
 
 import { ActionTypeListPanel } from "./ActionTypeListPanel";
 
-function renderPanel(initialEntry = "/?view=list", canDelete = false) {
+function renderPanel(initialEntry = "/?view=list", canDelete = false, canModify = false) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <ActionTypeListPanel
         canDelete={canDelete}
-        canModify={false}
+        canModify={canModify}
         networkId="network-1"
         networkName="Test network"
         onDelete={vi.fn()}
@@ -149,6 +149,78 @@ afterEach(() => {
 });
 
 describe("ActionTypeListPanel menu access", () => {
+  it("opens object and tool entries and routes them into the shared editor", async () => {
+    listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
+    renderPanel("/?view=list", false, true);
+
+    fireEvent.click(await screen.findByText("common.create"));
+    expect(screen.getByText("knowledgeNetwork.actionTypeCreateEntryTitle")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /knowledgeNetwork.actionOperationRelation/ }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.actionOperationTool/ }));
+    expect(navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/create?operation=tool",
+      {
+        state: {
+          knowledgeNetworkReturnTo: "/knowledge-network/workspace/network-1/action-types?view=list",
+        },
+      },
+    );
+
+    navigate.mockClear();
+    fireEvent.click(await screen.findByText("common.create"));
+    fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.actionOperationObject/ }));
+    expect(navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/create?operation=object",
+      {
+        state: {
+          knowledgeNetworkReturnTo: "/knowledge-network/workspace/network-1/action-types?view=list",
+        },
+      },
+    );
+  });
+
+  it("keeps all three creation choices visible when the graph has a selected object", async () => {
+    getObjectTypeDetail.mockResolvedValue(null);
+    listObjectTypePage.mockResolvedValue({
+      entries: [
+        {
+          color: "#1677ff",
+          description: "Sales order",
+          icon: "box",
+          id: "object-1",
+          name: "Order",
+          operations: ["view_detail"],
+          tags: [],
+          updateTime: "2026-08-20 10:00:00",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 1,
+    });
+    renderPanel("/", false, true);
+
+    expect(await screen.findByTestId("action-type-graph")).toHaveTextContent("Order");
+    fireEvent.click(await screen.findByText("common.create"));
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByText("knowledgeNetwork.actionTypeCreateEntryTitle")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /knowledgeNetwork.actionOperationTool/ }),
+    ).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.actionOperationObject/ }));
+    expect(navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/create?operation=object",
+      {
+        state: expect.objectContaining({
+          actionTypeInitialObjectTypeId: "object-1",
+        }) as unknown,
+      },
+    );
+    expect(screen.queryByText("knowledgeNetwork.actionTypeCreateEntryTitle")).toBeNull();
+  });
+
   it("exposes execution management only with execute access", async () => {
     listActionTypePage.mockResolvedValue({
       entries: [

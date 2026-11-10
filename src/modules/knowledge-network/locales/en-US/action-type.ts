@@ -21,6 +21,27 @@ export const actiontypePart = {
   actionTypeCreateDescription:
     "Create an action type and its execution mapping through a multi-step form.",
   actionTypeCreateTitle: "Create action type",
+  actionTypeTargetObject: "Object type to operate on",
+  actionTypeGenericObjectName: "object",
+  actionTypeApplicableCondition: "Applicable conditions (optional)",
+  actionTypeApplicableConditionHint:
+    "Conditions limit which {{objectTypeName}} instances can be operated on; a specific instance must still be selected at execution time.",
+  actionTypeApplicableConditionCreateHint:
+    "This create action retains an existing condition. A condition does not create a new instance; check that it still applies to this definition.",
+  actionTypeExecutionCreateHint:
+    "Choose the tool that creates an instance of {{objectTypeName}}, then set the information passed to it, such as a name or reference number.",
+  actionTypeExecutionUpdateHint:
+    "Choose the tool that updates {{objectTypeName}}, then configure the parameters that identify the record and provide its new values.",
+  actionTypeExecutionDeleteHint:
+    "Choose the tool that deletes an instance of {{objectTypeName}} and map the existing instance identity to its inputs. Confirm that the tool performs deletion.",
+  actionTypeImpactStaticHint:
+    "The primary result is the selected operation on an instance of {{objectTypeName}}. You can describe expected effects on other business data here; verify actual results after execution.",
+  actionTypeAdditionalImpact: "Additional expected effects (optional)",
+  actionTypeInstanceOperationCreate: "Create an object instance",
+  actionTypeInstanceOperationUpdate: "Update an object instance",
+  actionTypeInstanceOperationDelete: "Delete an object instance",
+  actionTypeCreateEntryTitle: "Create action type",
+  actionTypeCreateEntryContinue: "Continue configuring →",
   actionTypeDeleteDescription: 'Delete "{{name}}"? This action cannot be undone.',
   actionTypeDeleteTitle: "Delete action type",
   actionTypeDetailDescription:
@@ -114,6 +135,21 @@ export const actiontypePart = {
   actionTypeConditionObjectPlaceholder: "Select an object type",
   actionTypeConditionValueFromConst: "Constant",
   actionTypeConditionValueInputPlaceholder: "Enter a condition value",
+  actionTypeConditionValueSource: "Condition value source",
+  actionTypeConditionPropertyPlaceholder: "Select a property of the current object",
+  actionTypeConditionParameterPlaceholder: "Select a runtime input parameter",
+  actionTypeConditionNoProperties: "No properties with a matching type",
+  actionTypeConditionNoParameters:
+    "Configure a runtime input with a matching type in the execution unit first",
+  actionTypeConditionPropertyRequired: "Select an existing property with a matching type",
+  actionTypeConditionParameterRequired:
+    "Select an existing runtime input with a matching type in the execution unit",
+  actionTypeConditionValueRequired: "Enter a comparison value",
+  actionTypeConditionArrayPlaceholder:
+    "Separate values with commas; enter a start and end for ranges",
+  actionTypeConditionRangeRequired: "A range requires exactly two values",
+  actionTypeConditionPreviewOnly:
+    "This server supports fixed condition values only. Property and runtime input references can be configured for preview but cannot be saved yet.",
   actionTypeConditionAdd: "Add condition",
   actionTypeConditionOperation: "Operator",
   actionTypeConditionOperationPlaceholder: "Select a condition relation",
@@ -199,4 +235,56 @@ export const actiontypePart = {
   actionTypeExecutionResultEmpty: "No execution result details yet.",
   actionTypeExecutionResultStatusFilter: "Filter results by status",
   actionTypeExecutionResultWindowHint: "Showing the first {{count}} of {{total}} results.",
+  actionOperationObject: "Object instance operation",
+  actionOperationObjectEntry: "Object type operations",
+  actionOperationRelation: "Object relationship operation",
+  actionOperationTool: "Tool invocation",
+  actionOperationObjectDescription:
+    "Select an object type to create, update, or delete instances, or create and remove relationships.",
+  actionOperationRelationDescription:
+    "Select a relationship type, choose whether to create or remove links, and map both endpoint identities.",
+  actionOperationToolDescription:
+    "Invoke a Function, API, or MCP tool for an independent task without an object type.",
+  actionOperationObjectExamples:
+    "Examples: create an order, update a product price, link an order to a supplier",
+  actionOperationRelationExamples:
+    "Examples: link an order to a supplier, assign people to a project",
+  actionOperationToolExamples: "Examples: send a notification, start reconciliation, call ERP",
+  actionOperationConfiguration: "Operation configuration",
+  actionOperationType: "Operation type",
+  actionOperationTypeLabel: "Operation type:",
+  actionRelationType: "Relationship type",
+  actionRelationTypePlaceholder: "Search and select a relationship type",
+  actionRelationObjectFirst: "Select the target object type first",
+  actionRelationBoundEmpty: "No relationships are available for this object type",
+  actionRelationBoundRequired: "Select a loaded relationship connected to the current object type.",
+  actionRelationAnchor: "Current object's position in the relationship",
+  actionRelationAnchorRequired: "Choose whether the current object is the source or target.",
+  actionRelationAnchorSource: "Current object is the source",
+  actionRelationAnchorTarget: "Current object is the target",
+  actionRelationCurrentObject: "Current object",
+  actionRelationCurrentCondition: "{{objectTypeName}} conditions (optional)",
+  actionRelationOtherCondition: "{{objectTypeName}} conditions (optional)",
+  actionRelationObjectWithRole: "{{objectTypeName}} ({{role}})",
+  actionRelationSourceRole: "source",
+  actionRelationTargetRole: "target",
+  actionRelationConditionsHint:
+    "Conditions on both endpoints are optional: set either, both, or neither. Both specific instances must still be supplied at execution time.",
+  actionRelationOperation: "Relationship operation",
+  actionRelationCreate: "Create relationship",
+  actionRelationDelete: "Remove relationship",
+  actionRelationSourceIdentity: "Source object identity",
+  actionRelationTargetIdentity: "Target object identity",
+  actionRelationIdentityProperty: "Identity property",
+  actionRelationIdentityNotReady: "Waiting for object identity definition",
+  actionRelationIdentityLoadFailed:
+    "Unable to load endpoint identity definitions. Select the relationship type again to retry.",
+  actionRelationIdentityUnavailable:
+    "A single identity property with a type matching this tool parameter is required.",
+  actionRelationBindingsRequired:
+    "Bind source and target object identities in the parameter table.",
+  actionRelationIdentityFromSource: "Use the source object type's configured identity",
+  actionRelationIdentityFromTarget: "Use the target object type's configured identity",
+  actionRelationExecutionHint: "Select the tool that creates or removes the relationship.",
+  actionOperationUnavailable: "This environment does not yet support saving this operation.",
 };
