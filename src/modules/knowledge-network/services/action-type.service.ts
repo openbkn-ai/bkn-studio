@@ -70,6 +70,7 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 
 function resolveActionTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -351,6 +352,8 @@ export async function executeKnowledgeNetworkActionTypeNow(
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
     dynamicParams && Object.keys(dynamicParams).length > 0 ? { dynamic_params: dynamicParams } : {},
+    // The action runs as defined in the version on screen.
+    { params: await resolveKnReadParams(networkId) },
   );
 
   return response.data;

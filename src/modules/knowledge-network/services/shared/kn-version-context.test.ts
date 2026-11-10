@@ -14,6 +14,7 @@ import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/confi
 import {
   KnVersionReadOnlyError,
   forgetKnVersionContext,
+  getKnVersionView,
   knVersionQuery,
   resolveKnReadParams,
   setKnVersionView,
@@ -164,6 +165,36 @@ describe("kn version context", () => {
     const reads = request("get", `${NETWORK}/object-types`);
     expect(reads[1].params).toEqual({ kn_version: "2" });
     expect(knVersionQuery("kn-1")).toEqual({ kn_version: "2" });
+  });
+
+  it("does not reopen a remembered version the network no longer keeps", async () => {
+    // Community keeps the running version and the one before it; v1 is gone.
+    window.sessionStorage.setItem("bkn-studio.kn-version-view.kn-1", "1");
+    routes[`GET ${NETWORK}`] = {
+      data: {
+        ...versionedNetwork(["modify"]),
+        versioning: { ...versionedNetwork([]).versioning, full_history: false },
+      },
+    };
+
+    await http.get(`${NETWORK}/object-types`);
+
+    expect(request("get", `${NETWORK}/object-types`)[0].params).toEqual({ kn_version: "draft" });
+  });
+
+  it("goes back to the default view when the version on screen was purged", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.get(`${NETWORK}/object-types`);
+    setKnVersionView("kn-1", 2);
+    routes[`GET ${NETWORK}/object-types`] = {
+      data: { error_code: "BknBackend.KNVersion.VersionPurged" },
+      status: 410,
+    };
+
+    await expect(http.get(`${NETWORK}/object-types`)).rejects.toThrow();
+
+    expect(getKnVersionView("kn-1")).toBe("draft");
+    expect(window.sessionStorage.getItem("bkn-studio.kn-version-view.kn-1")).toBe("draft");
   });
 
   it("keeps what it knows when a summary read of the network leaves the versioning out", async () => {

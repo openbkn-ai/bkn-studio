@@ -45,6 +45,7 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import { listKnowledgeNetworkConceptGroups } from "@/modules/knowledge-network/services/concept-group.service";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 
 function resolveObjectTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -319,6 +320,7 @@ export async function getObjectTypeSampleData(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
     {
       params: {
+        ...(await resolveKnReadParams(networkId)),
         limit: 20,
         need_total: true,
         offset: 0,
@@ -356,6 +358,7 @@ export async function getObjectTypeInstanceData(
     { _instance_identities: [identity], properties },
     {
       headers: { "X-HTTP-Method-Override": "GET" },
+      params: await resolveKnReadParams(networkId),
       skipErrorToast: true,
       transformResponse: transformPrecisionSafeJSONResponse,
     },

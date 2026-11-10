@@ -90,7 +90,8 @@ export async function enableKnVersioning(
     { headers: idempotencyHeaders(), skipErrorToast: true },
   );
   forgetKnVersionContext(networkId);
-  recordKnVersioning(networkId, response.data);
+  // Enabling needs modify, so whoever got here can work on the draft.
+  recordKnVersioning(networkId, response.data, ["modify"]);
   return response.data;
 }
 

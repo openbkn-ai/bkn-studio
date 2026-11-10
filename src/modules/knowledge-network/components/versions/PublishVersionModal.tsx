@@ -79,17 +79,25 @@ export function PublishVersionModal({
   const [conflict, setConflict] = useState(false);
   const [published, setPublished] = useState<KnPublishResult | null>(null);
 
+  // A new opening starts from an empty form.
   useEffect(() => {
     if (!open) {
       return;
     }
-    let cancelled = false;
     form.resetFields();
     setConfirmedOutdated(false);
     setError(null);
     setProblems([]);
     setConflict(false);
     setPublished(null);
+  }, [form, open]);
+
+  useEffect(() => {
+    // After a publish the network reloads and the draft moves on; the completion page stays.
+    if (!open || published) {
+      return;
+    }
+    let cancelled = false;
     setAgainstBase(null);
     setAgainstRunning(null);
     setDiffError(null);
@@ -128,7 +136,7 @@ export function PublishVersionModal({
       cancelled = true;
     };
     // Re-run only when the modal opens for another draft state.
-  }, [base, form, networkId, open, outdated, running, draft?.revision]);
+  }, [base, networkId, open, outdated, published, running, draft?.revision]);
 
   const submit = async () => {
     const values = await form.validateFields();

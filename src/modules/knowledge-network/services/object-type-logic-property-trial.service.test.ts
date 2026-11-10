@@ -15,6 +15,17 @@ vi.mock("@/framework/request/http", () => ({
   },
 }));
 
+// The version on screen; each ontology-query call must carry it.
+vi.mock(
+  "@/modules/knowledge-network/services/shared/kn-version-context",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/modules/knowledge-network/services/shared/kn-version-context")
+    >()),
+    resolveKnReadParams: () => Promise.resolve({ kn_version: "draft" }),
+  }),
+);
+
 const toolProperty = {
   dataSource: { id: "tool-1", name: "Discount", type: "tool" as const },
   displayName: "Discount",
@@ -67,6 +78,7 @@ describe("object-type-logic-property-trial.service", () => {
     });
     expect(options).toEqual({
       headers: { "X-HTTP-Method-Override": "GET" },
+      params: { kn_version: "draft" },
       skipErrorToast: true,
     });
     expect(rows).toEqual([{ instanceIdentity: { order_id: "1001" }, values: { discount: 42 } }]);

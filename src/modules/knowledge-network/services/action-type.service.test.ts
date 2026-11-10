@@ -14,6 +14,17 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
+// The version on screen; each ontology-query call must carry it.
+vi.mock(
+  "@/modules/knowledge-network/services/shared/kn-version-context",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/modules/knowledge-network/services/shared/kn-version-context")
+    >()),
+    resolveKnReadParams: () => Promise.resolve({ kn_version: "draft" }),
+  }),
+);
+
 describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -97,6 +108,7 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
           limit: 10,
         },
       },
+      { params: { kn_version: "draft" } },
     );
   });
 
@@ -109,6 +121,7 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
     expect(postMock).toHaveBeenCalledWith(
       "/ontology-query/v1/knowledge-networks/kn-1/action-types/action-1/execute",
       {},
+      { params: { kn_version: "draft" } },
     );
   });
 });

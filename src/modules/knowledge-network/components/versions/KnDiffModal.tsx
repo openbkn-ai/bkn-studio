@@ -6,7 +6,7 @@
  */
 
 import { Alert, Button, Modal, Select, Space } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -52,13 +52,8 @@ export function KnDiffModal({
   const [result, setResult] = useState<KnDiffResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setBase(initialBase);
-      setTarget(initialTarget);
-    }
-  }, [initialBase, initialTarget, open]);
+  // Only the latest comparison may show; an earlier one that answers late is dropped.
+  const latest = useRef(0);
 
   const options = useMemo(
     () => [
@@ -78,23 +73,43 @@ export function KnDiffModal({
   const asValue = (view: KnVersionView) =>
     view === "running" ? String(versioning.running_version) : String(view);
 
-  const compare = () => {
+  const compare = (from: KnVersionView = base, to: KnVersionView = target) => {
+    const request = ++latest.current;
     setLoading(true);
     setError(null);
     setResult(null);
-    void diffKnVersions(networkId, base, target)
-      .then(setResult)
-      .catch((nextError: unknown) => setError(extractRequestErrorMessage(nextError)))
-      .finally(() => setLoading(false));
+    void diffKnVersions(networkId, from, to)
+      .then((next) => {
+        if (request === latest.current) {
+          setResult(next);
+        }
+      })
+      .catch((nextError: unknown) => {
+        if (request === latest.current) {
+          setError(extractRequestErrorMessage(nextError));
+        }
+      })
+      .finally(() => {
+        if (request === latest.current) {
+          setLoading(false);
+        }
+      });
   };
 
+  // Each opening shows the requested pair and compares exactly that pair: the selectors'
+  // state is not updated yet in this commit, so the comparison takes the values directly.
   useEffect(() => {
-    if (open && versioning.running_version > 0) {
-      compare();
+    if (!open) {
+      return;
     }
-    // Compare once per opening; the selectors run it again on demand.
+    setBase(initialBase);
+    setTarget(initialTarget);
+    if (versioning.running_version > 0) {
+      compare(initialBase, initialTarget);
+    }
+    // The selectors run it again on demand.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [initialBase, initialTarget, open]);
 
   return (
     <Modal
@@ -120,7 +135,7 @@ export function KnDiffModal({
           style={{ minWidth: 180 }}
           value={asValue(target)}
         />
-        <Button onClick={compare} type="primary">
+        <Button onClick={() => compare()} type="primary">
           {t("knowledgeNetwork.versions.diff.compare")}
         </Button>
       </Space>

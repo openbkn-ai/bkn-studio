@@ -142,6 +142,22 @@ function storeView(knId: string, view: KnVersionView) {
   }
 }
 
+/**
+ * Whether a numbered version may still be read. Without full history only the running version
+ * and the one before it are kept; a version purged by hand shows up as a 410 on the read.
+ */
+function keepsVersion(versioning: KnVersioning | null | undefined, version: number) {
+  const running = versioning?.running_version ?? 0;
+  if (version > running) {
+    return false;
+  }
+  return (
+    Boolean(versioning?.full_history) ||
+    version === running ||
+    version === versioning?.previous_version
+  );
+}
+
 /** Remember what the backend says about a network, from its `versioning` view. */
 export function recordKnVersioning(
   knId: string,
@@ -153,6 +169,9 @@ export function recordKnVersioning(
   const canDraft = operations ? operations.includes("modify") : (previous?.canDraft ?? false);
   let view = previous?.view ?? readStoredView(knId) ?? defaultView(canDraft);
 
+  if (typeof view === "number" && !keepsVersion(versioning, view)) {
+    view = defaultView(canDraft);
+  }
   if (!enabled) {
     view = "running";
   } else if (view === "draft" && !canDraft) {
@@ -467,6 +486,35 @@ function observeResponse(response: AxiosResponse): AxiosResponse {
   return response;
 }
 
+const GONE_VERSION_CODES = new Set([
+  "BknBackend.KNVersion.VersionPurged",
+  "BknBackend.KNVersion.VersionNotFound",
+]);
+
+/** A numbered version on screen that the backend no longer has goes back to the default view. */
+function observeError(error: unknown) {
+  const failure = error as {
+    config?: KnRequestConfig;
+    response?: { data?: { error_code?: unknown } };
+  };
+  const target = parseNetworkPath(failure.config?.url);
+  const code = failure.response?.data?.error_code;
+  const current = target ? contexts.get(target.knId) : undefined;
+  if (
+    target &&
+    current &&
+    typeof current.view === "number" &&
+    typeof code === "string" &&
+    GONE_VERSION_CODES.has(code)
+  ) {
+    const view = defaultView(current.canDraft);
+    contexts.set(target.knId, { ...current, view });
+    storeView(target.knId, view);
+    emit();
+  }
+  return Promise.reject(error instanceof Error ? error : new Error("HTTP request failed."));
+}
+
 export function installKnVersionInterceptors() {
   // A test that replaces the shared client with a stub has no interceptors to hook into.
   const interceptors = (http as { interceptors?: typeof http.interceptors }).interceptors;
@@ -475,7 +523,7 @@ export function installKnVersionInterceptors() {
   }
   installed = true;
   interceptors.request.use(applyKnVersion);
-  interceptors.response.use(observeResponse);
+  interceptors.response.use(observeResponse, observeError);
 }
 
 installKnVersionInterceptors();
