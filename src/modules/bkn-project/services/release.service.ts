@@ -86,7 +86,7 @@ type BackendPrepared = {
 
 type BackendVersion = {
   base_version: number;
-  create_time: number;
+  publish_time: number;
   label: string;
   notes: string;
   origin: string;
@@ -238,7 +238,7 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
 
 const mapVersion = (version: BackendVersion): NetworkVersion => ({
   baseVersion: version.base_version,
-  createTime: version.create_time,
+  createTime: version.publish_time,
   label: version.label,
   notes: version.notes,
   origin: version.origin,

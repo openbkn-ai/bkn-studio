@@ -195,7 +195,7 @@ describe("release.service", () => {
         entries: [
           {
             base_version: 6,
-            create_time: 5,
+            publish_time: 5,
             label: "v1.3.0",
             notes: "N",
             origin: "project",
@@ -206,7 +206,7 @@ describe("release.service", () => {
           },
           {
             base_version: 3,
-            create_time: 4,
+            publish_time: 4,
             label: "",
             notes: "",
             origin: "workspace",
