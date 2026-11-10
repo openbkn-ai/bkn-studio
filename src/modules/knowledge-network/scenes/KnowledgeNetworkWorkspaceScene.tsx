@@ -30,6 +30,7 @@ import type { CapabilityState } from "@/framework/entitlement/types";
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { extensionWorkspacePage } from "@/framework/extension/registry";
+import { capabilityReportedByEndpoint } from "@/modules/subscription";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
@@ -95,9 +96,14 @@ export function KnowledgeNetworkWorkspaceScene({
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
   const { snapshot } = useEntitlementContext();
-  // Safe does not report Eval. Match the route and badge license rule;
+  // Use the same capability catalog as the route and badge license rule;
   // network admission belongs to the Eval page, not sidebar discovery.
-  const evalLicensed = capabilitySatisfied(CAPABILITIES.EVAL, snapshot, "professional", false);
+  const evalLicensed = capabilitySatisfied(
+    CAPABILITIES.EVAL,
+    snapshot,
+    "professional",
+    capabilityReportedByEndpoint(CAPABILITIES.EVAL),
+  );
   const evalCapabilityState: CapabilityState = !snapshot
     ? "unknown"
     : evalLicensed

@@ -17,10 +17,22 @@ import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scen
 const mocks = vi.hoisted(() => ({
   evalAccess: vi.fn(),
   evalAccessStatus: "allowed",
+  evalReportedByEndpoint: false,
   extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
   hiddenNavigation: [] as string[],
   navigate: vi.fn(),
 }));
+
+vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/subscription/capability-catalog")>();
+  return {
+    ...actual,
+    capabilityReportedByEndpoint: (capability: string) =>
+      capability === CAPABILITIES.EVAL
+        ? mocks.evalReportedByEndpoint
+        : actual.capabilityReportedByEndpoint(capability),
+  };
+});
 
 vi.mock("../eval/useEvalAccess", () => ({
   useEvalAccess: (networkId: string) => {
@@ -32,6 +44,7 @@ vi.mock("../eval/useEvalAccess", () => ({
 beforeEach(() => {
   mocks.evalAccess.mockClear();
   mocks.evalAccessStatus = "allowed";
+  mocks.evalReportedByEndpoint = false;
   mocks.hiddenNavigation = [];
   mocks.navigate.mockReset();
 });
@@ -254,6 +267,39 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
 
     expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
   });
+
+  it.each([
+    ["professional", false],
+    ["professional", true],
+    ["enterprise", false],
+    ["enterprise", true],
+  ] as const)(
+    "aligns the %s upgrade action and badge when endpoint-reported Eval availability is %s",
+    (edition, available) => {
+      mocks.evalReportedByEndpoint = true;
+      renderScene(
+        entitlement({
+          edition,
+          licensed: true,
+          state: "valid",
+          extensions: [CAPABILITIES.EVAL],
+          capabilities: available ? [CAPABILITIES.EVAL] : [],
+        }),
+      );
+
+      const entry = screen.getByRole("button", { name: /质量评测/ });
+      expect(Boolean(within(entry).queryByText("专业版"))).toBe(!available);
+      fireEvent.click(entry);
+
+      if (available) {
+        expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+        expect(screen.queryByRole("dialog")).toBeNull();
+      } else {
+        expect(screen.getByRole("dialog")).toBeTruthy();
+        expect(mocks.navigate).not.toHaveBeenCalled();
+      }
+    },
+  );
 });
 
 describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
