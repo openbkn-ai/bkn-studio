@@ -6,7 +6,7 @@
  */
 
 import { CloudUploadOutlined } from "@ant-design/icons";
-import { Form, Upload, message as antMessage } from "antd";
+import { Form, Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -92,7 +92,7 @@ export function CreateSkillForm({ formId, onImported }: CreateSkillFormProps) {
           <Upload.Dragger
             beforeUpload={(file) => {
               if (!detectSkillFileType(file)) {
-                antMessage.info(t("executionFactory.skillUnsupportedFile"));
+                void message.info(t("executionFactory.skillUnsupportedFile"));
                 return Upload.LIST_IGNORE;
               }
 

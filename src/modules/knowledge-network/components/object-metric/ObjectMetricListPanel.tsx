@@ -123,7 +123,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       ? { id, objectTypeId: initialLocation.objectTypeId, version }
       : undefined;
   });
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
@@ -588,7 +588,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
 
   const showDeletionBlocked = (check: ObjectMetricVersionDeletionCheckV1) => {
     const hasReferenceBlockers = check.blockers.length > 0 || check.hidden_blocker_count > 0;
-    Modal.warning({
+    modal.warning({
       content: (
         <div>
           <p>
@@ -647,7 +647,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
       showDeletionBlocked(check);
       return;
     }
-    Modal.confirm({
+    modal.confirm({
       content: objectMetricText("metricDeleteVersionConfirm", {
         p0: record.definition.name,
         p1: record.definition.version,
@@ -688,7 +688,7 @@ export function ObjectMetricListPanel({ canDelete, canModify, networkId, network
   const confirmDeprecate = (record: ObjectMetricRecordV1) => {
     const actions = objectMetricActions(record, canModify, canDelete);
     if (!actions.canDeprecate || actions.deprecateReason) return;
-    Modal.confirm({
+    modal.confirm({
       content: objectMetricText("mcb05d2c2df12"),
       okButtonProps: { danger: true },
       onOk: async () => {

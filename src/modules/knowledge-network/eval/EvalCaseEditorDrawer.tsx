@@ -19,7 +19,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Modal,
   Popconfirm,
   Segmented,
   Select,
@@ -606,7 +605,7 @@ export function EvalCaseEditorDrawer({
   onChanged,
 }: Props) {
   const formId = useId();
-  const { message } = useEvalFeedback();
+  const { message, modal } = useEvalFeedback();
   const { t } = useEvalTranslation();
   const assertionNames: Record<string, string> = {
     "expected-value": caseUiText("expectedResultComparison"),
@@ -1352,7 +1351,7 @@ export function EvalCaseEditorDrawer({
       apply();
     };
     if (hasInput)
-      Modal.confirm({
+      modal.confirm({
         title: label("contextChangeTitle"),
         content: label("contextChangeBody"),
         okText: label("continue"),
@@ -1892,7 +1891,7 @@ export function EvalCaseEditorDrawer({
                           resourceCheckPurpose(criteria ?? []) === "business" &&
                           (criteria ?? []).some((c) => c.value !== "" || c.valueProvided)
                         ) {
-                          Modal.confirm({
+                          modal.confirm({
                             title: caseUiText("changeTheCheckPurpose"),
                             content: caseUiText("theCurrentEvaluationCriteriaWillBeResetCall"),
                             okText: caseUiText("confirmChange"),

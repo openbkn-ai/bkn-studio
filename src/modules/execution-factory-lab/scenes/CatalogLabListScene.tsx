@@ -5,13 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Input, Pagination, Select, message } from "antd";
+import { Alert, Input, Pagination, Select } from "antd";
 
 import { useCallback, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { CatalogCard } from "@/modules/execution-factory-lab/components/CatalogCard";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
@@ -26,6 +27,7 @@ import styles from "./capability-lab.module.css";
 
 export function CatalogLabListScene() {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const navigate = useNavigate();
   const location = useLocation();
   const { features, loading: featuresLoading } = useLabFeatures();
