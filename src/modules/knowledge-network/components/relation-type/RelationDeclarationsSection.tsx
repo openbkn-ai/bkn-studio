@@ -68,7 +68,8 @@ export function RelationDeclarationsSection({
   value,
 }: RelationDeclarationsSectionProps) {
   const { t } = useTranslation();
-  const declared = Boolean(normalizeRelationDeclarations(value));
+  // The join basis is not edited here, so a relation declaring only that reads as not declared.
+  const declared = Boolean(normalizeRelationDeclarations({ ...value, verification: undefined }));
   const [open, setOpen] = useState(declared);
   const [notice, setNotice] = useState<ClearedNotice>(null);
   const [candidates, setCandidates] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
