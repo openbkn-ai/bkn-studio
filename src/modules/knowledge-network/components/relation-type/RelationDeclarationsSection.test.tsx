@@ -249,6 +249,18 @@ describe("RelationDeclarationsSection", () => {
     expect(screen.queryByText(`${PREFIX}.fallbackFor`)).toBeNull();
   });
 
+  it("does not edit the verification, and keeps one a BKN file declares", () => {
+    mocks.list.mockResolvedValue({ entries: [], totalCount: 0 });
+    const { changes } = renderSection({ verification: "confirmed" }, otherEnds);
+    expect(screen.queryByText(`${PREFIX}.verification`)).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: `${PREFIX}.importanceOption.secondary` }));
+    expect(lastChange(changes)).toMatchObject({
+      importance: "secondary",
+      verification: "confirmed",
+    });
+  });
+
   it("keeps a reverse name to the backend's length", () => {
     renderSection({ verification: "confirmed" }, otherEnds);
     const input = screen.getByRole<HTMLInputElement>("textbox");
