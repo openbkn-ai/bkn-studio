@@ -19,6 +19,7 @@ export function toBackendKnowledgeNetworkCreatePayload(input: KnowledgeNetworkMu
     id: input.identifier,
     name: input.name,
     tags: input.tags,
+    ...(input.versioning ? { versioning: true } : {}),
   };
 }
 

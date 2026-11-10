@@ -28,6 +28,7 @@ export type KnowledgeNetworkWorkspaceSection =
   | "mcp"
   | "skills"
   | "knowledge-bases"
+  | "versions"
   /** A page another build registered with its sidebar entry (WorkspaceNavEntry.page). */
   | "extension";
 

@@ -20,6 +20,7 @@ import {
   detachMockCapabilities,
   listMockCapabilities,
 } from "@/modules/knowledge-network/services/mock/state";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   AttachCapabilityInput,
@@ -42,10 +43,11 @@ export async function listKnowledgeNetworkCapabilities(
     return wait(listMockCapabilities(networkId, query));
   }
 
+  // Reads follow the version on screen; writes always go to the draft, whatever they name.
   const response = await http.get<BackendCapabilityBindingsList>(capabilitiesPath(networkId), {
     params: {
       box_id: query.boxId || undefined,
-      branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
+      ...(await resolveKnReadParams(networkId)),
       direction: query.direction ?? "desc",
       limit: query.limit ?? CAPABILITY_LIST_DEFAULT_LIMIT,
       metadata_type: query.metadataType,

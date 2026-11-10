@@ -6,6 +6,7 @@
  */
 
 import type { DefinitionDeclarations } from "./declarations";
+import type { KnVersioning } from "./kn-version";
 import type { ObjectTypeIndexStatus } from "./object-type";
 
 export type KnowledgeNetworkListQuery = {
@@ -46,6 +47,8 @@ export type KnowledgeNetworkRecord = {
   tags: string[];
   updateTime: string;
   updaterName: string;
+  /** Version state; present only when the network has versioning. */
+  versioning?: KnVersioning;
   /** Embedding model locked at creation time (immutable). */
   embeddingModelId?: string;
   /** Embedding dimension of the locked model. */
@@ -63,6 +66,8 @@ export type KnowledgeNetworkMutationPayload = {
   identifier: string;
   name: string;
   tags: string[];
+  /** Create only: start the network with versioning (edits go to a draft). */
+  versioning?: boolean;
 };
 
 export type KnowledgeNetworkRecentObject = {

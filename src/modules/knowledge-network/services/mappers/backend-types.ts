@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
+
 export type BackendAccountInfo = {
   id?: string | null;
   name?: string | null;
@@ -25,6 +27,8 @@ export type BackendKnowledgeNetwork = {
   id: string;
   name: string;
   operations?: string[];
+  /** Present only on a network with versioning. */
+  versioning?: KnVersioning;
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;

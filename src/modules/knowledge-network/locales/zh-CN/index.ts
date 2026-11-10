@@ -6,6 +6,7 @@
  */
 
 import { networkPart } from "./network";
+import { versionsPart } from "./versions";
 import { conceptgroupPart } from "./concept-group";
 import { objecttypePart } from "./object-type";
 import { relationtypePart } from "./relation-type";
@@ -32,6 +33,7 @@ import { evalPart } from "@/modules/knowledge-network/eval/locales/zh-CN";
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
     ...networkPart,
+    ...versionsPart,
     ...conceptgroupPart,
     ...objecttypePart,
     ...relationtypePart,

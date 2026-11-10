@@ -62,6 +62,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
     operations: item.operations ?? [],
+    versioning: item.versioning?.enabled ? item.versioning : undefined,
     tags: item.tags ?? [],
     createTime: formatTimestamp(item.create_time),
     updateTime: formatTimestamp(item.update_time),

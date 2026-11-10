@@ -155,6 +155,7 @@ import {
   objectMetricText,
 } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
+import { useKnVersioned } from "@/modules/knowledge-network/hooks/useKnVersionView";
 
 type UnitQuantityKind = ObjectMetricUnitQuantityKind;
 
@@ -1350,13 +1351,14 @@ function withNavigationContext(
 }
 
 export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
-  useTranslation();
+  const { t } = useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { message, runtimeConfig } = useAppServices();
   const networkId = params.networkId ?? "";
+  const knVersioned = useKnVersioned(networkId);
   const metricId = params.metricId;
   const requestedMetricType = parseMetricType(searchParams.get("metricType"));
   const requestedObjectTypeId = searchParams.get("objectTypeId") ?? "";
@@ -3156,12 +3158,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       saved.definition.id,
       saved.definition.version,
     );
-    await publishObjectMetricV1(
-      networkId,
-      validated?.definition.id ?? saved.definition.id,
-      validated?.definition.version ?? saved.definition.version,
-    );
-    void message.success(objectMetricText("mbf73c8faca59"));
+    if (knVersioned) {
+      // The network's publish takes a validated metric live; a metric-level publish is not needed.
+      void message.success(t("knowledgeNetwork.versions.metricValidated"));
+    } else {
+      await publishObjectMetricV1(
+        networkId,
+        validated?.definition.id ?? saved.definition.id,
+        validated?.definition.version ?? saved.definition.version,
+      );
+      void message.success(objectMetricText("mbf73c8faca59"));
+    }
     if (navigationContext) {
       returnWithMetric(saved.definition.id);
       return;
@@ -5313,7 +5320,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 {objectMetricText("m5329e3f0ee46")}
               </Button>
               <Button loading={saving} onClick={() => void publish()} type="primary">
-                {objectMetricText("m5c5fd681a047")}
+                {knVersioned
+                  ? t("knowledgeNetwork.versions.metricSaveAndValidate")
+                  : objectMetricText("m5c5fd681a047")}
               </Button>
             </div>
           </Section>
