@@ -200,7 +200,7 @@ export const cypherQueryPart = {
     agent: {
       notReadyShort: "Cypher 生成 Agent 尚未发布",
       notReady: "Cypher 生成 Agent 尚未发布，请联系管理员配置模型并发布；手写 Cypher 不受影响",
-      forbidden: "当前账号没有使用 Cypher 生成 Agent 或该知识网络的权限",
+      forbidden: "当前账号没有该知识网络的权限",
       busy: "上一次生成还在进行，请稍后再试",
       timeout: "生成查询超时，请缩小问题范围后重试",
       failed: "生成查询失败",
