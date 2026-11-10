@@ -15,14 +15,26 @@ import { registerExtension, resetExtensionsForTesting } from "@/framework/extens
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
 const mocks = vi.hoisted(() => ({
+  evalAccess: vi.fn(),
+  evalAccessStatus: "allowed",
   extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
   hiddenNavigation: [] as string[],
   navigate: vi.fn(),
 }));
 
 vi.mock("../eval/useEvalAccess", () => ({
-  useEvalAccess: () => ({ status: "allowed", retry: vi.fn() }),
+  useEvalAccess: (networkId: string) => {
+    mocks.evalAccess(networkId);
+    return { status: mocks.evalAccessStatus, retry: vi.fn() };
+  },
 }));
+
+beforeEach(() => {
+  mocks.evalAccess.mockClear();
+  mocks.evalAccessStatus = "allowed";
+  mocks.hiddenNavigation = [];
+  mocks.navigate.mockReset();
+});
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
 
@@ -180,6 +192,67 @@ describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
     fireEvent.click(entry);
 
     expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/metrics");
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
+  it.each([
+    { name: "community image", overrides: {} },
+    { name: "unlicensed EE image", overrides: { extensions: [CAPABILITIES.EVAL] } },
+    { name: "expired Professional license", overrides: { edition: "professional" as const } },
+  ])("shows a Professional entry and upgrade dialog in the $name", ({ overrides }) => {
+    mocks.evalAccessStatus = "failed";
+    renderScene(entitlement(overrides));
+
+    const entry = screen.getByRole("button", { name: /质量评测/ });
+    expect(within(entry).getByText("专业版")).toBeTruthy();
+    expect(mocks.evalAccess).not.toHaveBeenCalled();
+
+    fireEvent.click(entry);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("subscription.capabilities.eval.description")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it.each(["professional", "enterprise"] as const)(
+    "opens licensed %s Eval without a badge even when Safe does not report the capability",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+
+      const entry = screen.getByRole("button", { name: /质量评测/ });
+      expect(within(entry).queryByText("专业版")).toBeNull();
+      expect(mocks.evalAccess).not.toHaveBeenCalled();
+
+      fireEvent.click(entry);
+
+      expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+    },
+  );
+
+  it.each([
+    ["professional", "denied"],
+    ["professional", "failed"],
+    ["professional", "loading"],
+    ["enterprise", "denied"],
+    ["enterprise", "failed"],
+    ["enterprise", "loading"],
+  ] as const)("keeps the %s entry visible when admission is %s", (edition, status) => {
+    mocks.evalAccessStatus = status;
+    renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+
+    const entry = screen.getByRole("button", { name: /质量评测/ });
+    expect(within(entry).queryByText("专业版")).toBeNull();
+    expect(mocks.evalAccess).not.toHaveBeenCalled();
+    fireEvent.click(entry);
+    expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/evals");
+  });
+
+  it("respects deployment-hidden Eval in the community edition", () => {
+    mocks.hiddenNavigation = ["evals"];
+    renderScene(entitlement());
+
+    expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
   });
 });
 
@@ -348,7 +421,7 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
     <EntitlementContext.Provider
       value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
     >
-      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension" evalAccessAllowed>
+      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension">
         <div data-testid="embedded-eval">Eval content</div>
       </KnowledgeNetworkWorkspaceScene>
     </EntitlementContext.Provider>,

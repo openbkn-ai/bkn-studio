@@ -15,7 +15,6 @@ import {
   NodeIndexOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
-import { useEvalAccess } from "../eval/useEvalAccess";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -28,7 +27,8 @@ import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgra
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import type { CapabilityState } from "@/framework/entitlement/types";
-import { useCapability } from "@/framework/entitlement/use-entitlement";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { extensionWorkspacePage } from "@/framework/extension/registry";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
@@ -84,7 +84,6 @@ function formatNavCount(count?: number) {
 export function KnowledgeNetworkWorkspaceScene({
   extensionKey,
   children,
-  evalAccessAllowed,
   networkId,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
@@ -95,8 +94,15 @@ export function KnowledgeNetworkWorkspaceScene({
   const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
-  const evalAccess = useEvalAccess(evalAccessAllowed === undefined ? activeNetworkId : "");
-  const showEval = evalAccessAllowed ?? evalAccess.status === "allowed";
+  const { snapshot } = useEntitlementContext();
+  // Safe does not report Eval. Match the route and badge license rule;
+  // network admission belongs to the Eval page, not sidebar discovery.
+  const evalLicensed = capabilitySatisfied(CAPABILITIES.EVAL, snapshot, "professional", false);
+  const evalCapabilityState: CapabilityState = !snapshot
+    ? "unknown"
+    : evalLicensed
+      ? "available"
+      : "not-licensed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const kbMode = useBknProjectKbMode();
   const workspaceData = useWorkspaceData(activeNetworkId, section);
@@ -152,6 +158,8 @@ export function KnowledgeNetworkWorkspaceScene({
         label: t("knowledgeNetwork.eval.title"),
         icon: <ExperimentOutlined />,
         path: `/knowledge-network/workspace/${activeNetworkId}/evals`,
+        paidCapability: CAPABILITIES.EVAL,
+        paidCapabilityState: evalCapabilityState,
         paidEdition: "professional",
       },
       {
@@ -227,10 +235,16 @@ export function KnowledgeNetworkWorkspaceScene({
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
-    return items.filter(
-      (item) => !hiddenNavigation.includes(item.key) && (item.key !== "evals" || showEval),
-    );
-  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, showEval, t]);
+    return items.filter((item) => !hiddenNavigation.includes(item.key));
+  }, [
+    activeNetworkId,
+    detail,
+    evalCapabilityState,
+    hiddenNavigation,
+    kbMode,
+    objectMetricsCapability,
+    t,
+  ]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview" || item.key === "develop",
