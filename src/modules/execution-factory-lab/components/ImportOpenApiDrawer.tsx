@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Drawer, Input, Modal } from "antd";
+import { Alert, Drawer, Input } from "antd";
 
 import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import { importOpenApiCapabilities } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
@@ -27,6 +28,8 @@ type ImportOpenApiDrawerProps = {
 
 export function ImportOpenApiDrawer({ open, onClose, onImported }: ImportOpenApiDrawerProps) {
   const { t } = useTranslation();
+
+  const { modal } = useAppServices();
 
   const [serviceUrl, setServiceUrl] = useState("http://ef-oss-mock:8080");
 
@@ -59,7 +62,7 @@ export function ImportOpenApiDrawer({ open, onClose, onImported }: ImportOpenApi
       }
 
       if (capabilities.length > 1) {
-        Modal.info({
+        modal.info({
           content: t("executionFactoryLab.importOpenApiBatchHint", { count: capabilities.length }),
 
           title: t("executionFactoryLab.importOpenApiBatchTitle"),

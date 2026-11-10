@@ -29,7 +29,6 @@ import {
   Tag,
   Tooltip,
   Typography,
-  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import { RecordMissingDetails } from "./RecordMissingDetails";
 import { TimeRailView } from "../evidence-chain/BusinessProvenance016";
 import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
+import { useAppServices } from "@/framework/context/use-app-services";
 import i18n from "@/app/locales/i18n";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
@@ -704,6 +704,7 @@ function adviceMarkdown(advice: AgentAdvice) {
 
 export function BusinessProvenanceScene() {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [linkedConversationId] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return (params.get("conversation_id") ?? params.get("conversationId"))?.trim() ?? "";
@@ -858,7 +859,13 @@ export function BusinessProvenanceScene() {
     return () => {
       current = false;
     };
-  }, [interactionKeyword, linkedInteractionId, selectedConversationId, interactionListReload]);
+  }, [
+    interactionKeyword,
+    linkedInteractionId,
+    message,
+    selectedConversationId,
+    interactionListReload,
+  ]);
   useEffect(() => {
     if (!selectedInteraction) {
       loadedInteractionId.current = undefined;
@@ -920,7 +927,7 @@ export function BusinessProvenanceScene() {
     return () => {
       current = false;
     };
-  }, [interactionReload, selectedInteraction]);
+  }, [interactionReload, message, selectedInteraction]);
 
   const startAnalysis = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown.trim()) return;
@@ -986,18 +993,24 @@ export function BusinessProvenanceScene() {
     } catch {
       message.error(bpText("agent.copyFailed"));
     }
-  }, [ensureAnalysisMarkdown, selectedInteraction]);
+  }, [ensureAnalysisMarkdown, message, selectedInteraction]);
 
-  const copyPayload = useCallback(async (value: unknown) => {
-    const content = payloadText(value);
-    if (!content) return;
-    await writeTextToClipboard(content);
-    message.success(bpText("detail.payloadCopied"));
-  }, []);
+  const copyPayload = useCallback(
+    async (value: unknown) => {
+      const content = payloadText(value);
+      if (!content) return;
+      await writeTextToClipboard(content);
+      message.success(bpText("detail.payloadCopied"));
+    },
+    [message],
+  );
 
-  const copySourceText = useCallback((value: string) => {
-    void writeTextToClipboard(value).then(() => message.success(bpText("detail.payloadCopied")));
-  }, []);
+  const copySourceText = useCallback(
+    (value: string) => {
+      void writeTextToClipboard(value).then(() => message.success(bpText("detail.payloadCopied")));
+    },
+    [message],
+  );
 
   const downloadMarkdown = useCallback(async () => {
     if (!selectedInteraction) return;
@@ -1017,7 +1030,7 @@ export function BusinessProvenanceScene() {
         message.error(bpText("errors.markdownLoad"));
       }
     }
-  }, [ensureAnalysisMarkdown, selectedInteraction]);
+  }, [ensureAnalysisMarkdown, message, selectedInteraction]);
 
   const prepareAnalysis = useCallback(() => {
     setAnalysisResult(undefined);
@@ -1854,6 +1867,7 @@ function AnalysisResult({
   result: Record<string, unknown>;
   onRestart: () => void;
 }) {
+  const { message } = useAppServices();
   const advice = agentAdvice(result);
   const missing = bpText("notReturned");
   return (

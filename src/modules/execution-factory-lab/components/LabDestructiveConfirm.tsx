@@ -7,9 +7,11 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import { Alert, Modal, Typography } from "antd";
+import { Alert, Typography } from "antd";
 
 import type { TFunction } from "i18next";
+
+import type { AppServicesContextValue } from "@/framework/context/contexts";
 
 import { formatCapabilityStatusLabel } from "@/modules/execution-factory-lab/utils/capability-status";
 
@@ -120,8 +122,10 @@ export function openLabDestructiveConfirm(params: {
   okText: string;
   onOk: () => void | Promise<void>;
   t: TFunction;
+  /** From useAppServices(), so the dialog follows the app theme and locale. */
+  modal: AppServicesContextValue["modal"];
 }) {
-  Modal.confirm({
+  params.modal.confirm({
     cancelText: params.t("common.cancel"),
     content: (
       <LabDestructiveImpactAlert action={params.action} context={params.context} t={params.t} />
