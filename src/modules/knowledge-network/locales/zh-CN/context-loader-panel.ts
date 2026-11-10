@@ -260,18 +260,29 @@ export const contextLoaderPanelPart = {
       oauthInsecureDescription:
         "仅用于可信的自签名证书。需先完全退出客户端，再关闭证书校验重新启动。",
       launchTipsTrigger: "查看各系统启动方式",
-      launchTipsIntro:
-        "以 WorkBuddy 为例。先完全退出客户端（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntro: "先完全退出 {{client}}（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntroGeneric: "先完全退出客户端（含托盘/菜单栏），再运行下面的命令启动：",
+      launchTipsIntroClaude: "先退出正在运行的 Claude Code，再在终端用下面的命令启动：",
       launchTipsMac: "macOS（终端）",
       launchTipsWindows: "Windows（PowerShell）",
       launchTipsLinux: "Linux（终端）",
-      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchTipsUnix: "macOS / Linux（终端）",
+      launchCommandMac: "open -a {{client}} --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandMacGeneric: 'open -a "<客户端应用名>" --env NODE_TLS_REJECT_UNAUTHORIZED=0',
       launchCommandWindows:
-        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<WorkBuddy.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<{{client}}.exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandWindowsGeneric:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<客户端 exe 完整路径>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+        'APP="<{{client}} 启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
+      launchCommandLinuxGeneric:
+        'APP="<客户端启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "把 <> 部分换成 WorkBuddy 实际的路径或启动命令，Windows 需写含盘符的完整路径，如 C:\\Program Files\\WorkBuddy\\WorkBuddy.exe。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+        "把 <> 部分换成 {{client}} 实际的路径或启动命令，Windows 需写完整路径，如 {{examplePath}}。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+      launchTipsNoteGeneric:
+        "把 <> 部分换成客户端实际的名称、路径或启动命令，Windows 需写含盘符的完整路径。命令行客户端直接在启动命令前加上这个变量。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+      launchTipsNoteClaude:
+        "变量只对这一次启动生效，新开的 Claude Code 会话需用同样的方式启动；不建议用 setx 或写进 shell 配置等方式全局设置。",
       selfSignedApiKeyDescription:
         "保持证书校验会让客户端连接失败。可勾选右侧选项跳过校验（仅限可信环境），或为平台配置正式证书。",
       selfSignedTitle: "该地址可能使用自签名证书",

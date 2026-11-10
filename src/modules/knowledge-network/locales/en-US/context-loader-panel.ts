@@ -305,17 +305,30 @@ export const contextLoaderPanelPart = {
         "Only for a trusted self-signed certificate. Quit the client fully, then restart it with certificate checks off.",
       launchTipsTrigger: "How to start it on each system",
       launchTipsIntro:
-        "Using WorkBuddy as an example. Quit the client fully (including the tray or menu bar), then start it with:",
+        "Quit {{client}} fully (including the tray or menu bar), then start it with:",
+      launchTipsIntroGeneric:
+        "Quit the client fully (including the tray or menu bar), then start it with:",
+      launchTipsIntroClaude: "Exit any running Claude Code, then start it from a terminal with:",
       launchTipsMac: "macOS (terminal)",
       launchTipsWindows: "Windows (PowerShell)",
       launchTipsLinux: "Linux (terminal)",
-      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchTipsUnix: "macOS / Linux (terminal)",
+      launchCommandMac: "open -a {{client}} --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandMacGeneric: 'open -a "<client app name>" --env NODE_TLS_REJECT_UNAUTHORIZED=0',
       launchCommandWindows:
-        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to WorkBuddy.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to {{client}}.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandWindowsGeneric:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to the client exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+        'APP="<{{client}} command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
+      launchCommandLinuxGeneric:
+        'APP="<client command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "Replace the <> part with the actual WorkBuddy path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\WorkBuddy\\WorkBuddy.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+        "Replace the <> part with the actual {{client}} path or command. On Windows, use the full path, e.g. {{examplePath}}. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+      launchTipsNoteGeneric:
+        "Replace the <> part with the client's actual name, path or command. On Windows, use the full path with the drive letter. For a command-line client, put the variable in front of its start command. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+      launchTipsNoteClaude:
+        "The variable applies to this start only, so start each new Claude Code session the same way. Avoid setting it globally, e.g. with setx or in your shell profile.",
       selfSignedApiKeyDescription:
         "With certificate checks on, clients will fail to connect. Tick the option on the right to skip the check (trusted environments only), or give the platform a proper certificate.",
       selfSignedTitle: "This address may use a self-signed certificate",
