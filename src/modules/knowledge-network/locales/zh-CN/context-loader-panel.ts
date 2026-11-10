@@ -278,7 +278,7 @@ export const contextLoaderPanelPart = {
       launchCommandLinuxGeneric:
         'APP="<客户端启动命令或路径>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "把 <> 部分换成 {{client}} 实际的路径或启动命令，Windows 需写含盘符的完整路径，如 C:\\Program Files\\{{client}}\\{{client}}.exe。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
+        "把 <> 部分换成 {{client}} 实际的路径或启动命令，Windows 需写完整路径，如 {{examplePath}}。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
       launchTipsNoteGeneric:
         "把 <> 部分换成客户端实际的名称、路径或启动命令，Windows 需写含盘符的完整路径。命令行客户端直接在启动命令前加上这个变量。Windows 和 Linux 需在同一个窗口里设置变量并启动，客户端才能继承；不建议用 setx 等方式全局设置。",
       launchTipsNoteClaude:

@@ -43,9 +43,11 @@ const APP_LAUNCH_PLATFORMS = [
   { label: "launchTipsLinux", command: "launchCommandLinux" },
 ] as const;
 
-const APP_NAMES: Partial<Record<McpClient, string>> = {
-  cursor: "Cursor",
-  workbuddy: "WorkBuddy",
+/** Desktop clients with a known app name and default Windows install path (PowerShell syntax). */
+const APP_CLIENTS: Partial<Record<McpClient, { client: string; examplePath: string }>> = {
+  // Cursor installs per user by default, not under Program Files.
+  cursor: { client: "Cursor", examplePath: "$env:LOCALAPPDATA\\Programs\\cursor\\Cursor.exe" },
+  workbuddy: { client: "WorkBuddy", examplePath: "C:\\Program Files\\WorkBuddy\\WorkBuddy.exe" },
 };
 
 const COPY_FEEDBACK_MS = 1500;
@@ -85,7 +87,7 @@ function CopyCommandButton({ text }: { text: string }) {
 /** Per-OS commands for restarting the selected sign-in client with certificate checks off. */
 function ClientLaunchTips({ client }: { client: McpClient }) {
   const { t } = useTranslation();
-  const appName = APP_NAMES[client];
+  const app = APP_CLIENTS[client];
   let intro: string;
   let note: string;
   let commands: { label: string; command: string }[];
@@ -99,8 +101,8 @@ function ClientLaunchTips({ client }: { client: McpClient }) {
     }));
   } else {
     // A client without a known app name gets the same commands with a placeholder name.
-    const suffix = appName ? "" : "Generic";
-    const values = { client: appName };
+    const suffix = app ? "" : "Generic";
+    const values = { ...app };
     intro = t(`${SECURITY_KEY}.launchTipsIntro${suffix}`, values);
     note = t(`${SECURITY_KEY}.launchTipsNote${suffix}`, values);
     commands = APP_LAUNCH_PLATFORMS.map(({ label, command }) => ({

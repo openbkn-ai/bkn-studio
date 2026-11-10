@@ -19,8 +19,11 @@ vi.mock("react-i18next", async (importOriginal) => {
     ...actual,
     useTranslation: () => ({
       // Interpolated values are appended so tests can see which client a string was built for.
-      t: (key: string, values?: { client?: string }) =>
-        values?.client ? `${key}|${values.client}` : key,
+      t: (key: string, values?: { client?: string; examplePath?: string }) => {
+        if (!values?.client) return key;
+        const path = key.endsWith("launchTipsNote") ? `|${values.examplePath}` : "";
+        return `${key}|${values.client}${path}`;
+      },
     }),
   };
 });
@@ -175,6 +178,12 @@ describe("McpConnectionSecurity", () => {
     expect(await screen.findByText(`${key}.launchCommandMac|Cursor`)).toBeTruthy();
     expect(screen.getByText(`${key}.launchTipsIntro|Cursor`)).toBeTruthy();
     expect(screen.queryByText(/WorkBuddy/)).toBeNull();
+    // Cursor installs per user, so its example path is not under Program Files.
+    expect(
+      screen.getByText(
+        `${key}.launchTipsNote|Cursor|$env:LOCALAPPDATA\\Programs\\cursor\\Cursor.exe`,
+      ),
+    ).toBeTruthy();
     unmount();
 
     render(<McpConnectionSecurity {...props} client="claude" />);

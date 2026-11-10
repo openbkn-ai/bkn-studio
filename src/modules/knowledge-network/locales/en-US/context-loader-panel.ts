@@ -324,7 +324,7 @@ export const contextLoaderPanelPart = {
       launchCommandLinuxGeneric:
         'APP="<client command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "Replace the <> part with the actual {{client}} path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\{{client}}\\{{client}}.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+        "Replace the <> part with the actual {{client}} path or command. On Windows, use the full path, e.g. {{examplePath}}. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
       launchTipsNoteGeneric:
         "Replace the <> part with the client's actual name, path or command. On Windows, use the full path with the drive letter. For a command-line client, put the variable in front of its start command. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
       launchTipsNoteClaude:
