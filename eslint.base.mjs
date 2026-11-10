@@ -55,6 +55,16 @@ export function createTypeScriptConfig({ typeChecked }) {
       "no-restricted-imports": [
         "error",
         {
+          // antd's static feedback renders outside the React tree, so it ignores the app theme
+          // (dark mode, corner radius, primary colour) and locale.
+          paths: [
+            {
+              importNames: ["message", "notification"],
+              message:
+                "Static antd feedback ignores the app theme. Use message from useAppServices() (framework/context/use-app-services).",
+              name: "antd",
+            },
+          ],
           patterns: [
             {
               group: ["@ee/*", "**/openbkn-ee/**"],
@@ -92,6 +102,12 @@ export function createTypeScriptConfig({ typeChecked }) {
             "Do not gate visibility based on license features[]: authorization is edition-based, and features are transmitted but never evaluated. Use useCapability() / CapabilityGate (framework/entitlement). See ee-design.md §3.2.",
           selector:
             "CallExpression[callee.property.name=/^(includes|indexOf|some|find|filter)$/][callee.object.property.name='features']",
+        },
+        {
+          message:
+            "Static Modal dialogs ignore the app theme. Use modal from useAppServices() (framework/context/use-app-services).",
+          selector:
+            "CallExpression[callee.object.name='Modal'][callee.property.name=/^(confirm|info|success|error|warning)$/]",
         },
       ],
       ...(typeChecked

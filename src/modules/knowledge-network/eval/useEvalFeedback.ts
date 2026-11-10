@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+// The static message is only a fallback for renders outside <App>; inside the app the
+// contextual instance below is used, so feedback still follows the app theme.
+// eslint-disable-next-line no-restricted-imports
 import { App, Modal, message as staticMessage } from "antd";
 
 /**
