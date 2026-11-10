@@ -186,6 +186,8 @@ export const networkPart = {
   previewExperience: "Capability verification",
   previewExperienceHint: "Query & retrieval experience for this network is coming soon.",
   previewGraphLegend: "Node = object type, edge = relation type, green dot = indexed",
+  previewGraphLegendDeprecated:
+    "Node = object type, edge = relation type, green dot = indexed, faint = deprecated",
   previewGraphLoadMore: "Load more",
   previewGraphSummary:
     "Showing {{loadedNodes}} of {{totalNodes}} object types and {{loadedEdges}} of {{totalEdges}} relation types",

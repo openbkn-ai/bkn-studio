@@ -9,10 +9,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const {
+  cardProps,
   getCatalogResources,
   getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkOverviewGraph,
 } = vi.hoisted(() => ({
+  // What the graph card was last given.
+  cardProps: { current: undefined as Record<string, unknown> | undefined },
   getCatalogResources: vi.fn(),
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkOverviewGraph: vi.fn(),
@@ -33,13 +36,16 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 }));
 
 vi.mock("./OntologyGraphCard", () => ({
-  OntologyGraphCard: ({ onExpandNode }: { onExpandNode?: (id: string) => void }) => (
-    <button
-      data-testid="ontology-graph-card"
-      onClick={() => onExpandNode?.("object-denied-resource")}
-      type="button"
-    />
-  ),
+  OntologyGraphCard: (props: { onExpandNode?: (id: string) => void }) => {
+    cardProps.current = props;
+    return (
+      <button
+        data-testid="ontology-graph-card"
+        onClick={() => props.onExpandNode?.("object-denied-resource")}
+        type="button"
+      />
+    );
+  },
 }));
 
 import { OverviewOntologyBlock } from "./OverviewOntologyBlock";
@@ -188,5 +194,46 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
 
     expect(await screen.findByText("Core Group")).not.toBeNull();
     expect(screen.getByText("knowledgeNetwork.previewMappingResource")).not.toBeNull();
+  });
+
+  it("draws a deprecated relation apart from the one between the same types", async () => {
+    const deprecated = { lifecycle: { reason: "old codes", status: "deprecated" as const } };
+    getKnowledgeNetworkOverviewGraph.mockResolvedValue({
+      graph: {
+        edges: [
+          { id: "ordered_by", name: "Ordered by", sourceId: "order", targetId: "doctor" },
+          {
+            declarations: deprecated,
+            id: "ordered_by_old",
+            name: "Ordered by (old)",
+            sourceId: "order",
+            targetId: "doctor",
+          },
+        ],
+        nodes: [
+          { color: "#1677ff", declarations: deprecated, id: "order", name: "Order" },
+          { color: "#52c41a", id: "doctor", name: "Doctor" },
+        ],
+      },
+      objectTypeTotal: 2,
+      relationTypeTotal: 2,
+      snapshot: "snapshot-1",
+      truncated: false,
+    });
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue(null);
+
+    render(<OverviewOntologyBlock detailsExpanded networkId="network-1" />);
+
+    await waitFor(() =>
+      expect(cardProps.current?.relationTypes).toEqual([
+        expect.objectContaining({ id: "ordered_by", definitionDeclarations: undefined }),
+        expect.objectContaining({ id: "ordered_by_old", definitionDeclarations: deprecated }),
+      ]),
+    );
+    expect(cardProps.current?.objectTypes).toEqual([
+      expect.objectContaining({ declarations: deprecated, id: "order" }),
+      expect.objectContaining({ declarations: undefined, id: "doctor" }),
+    ]);
+    expect(cardProps.current?.parallelEdges).toBe(true);
   });
 });

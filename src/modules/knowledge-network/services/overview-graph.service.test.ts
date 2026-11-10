@@ -129,4 +129,43 @@ describe("overview-graph.service", () => {
     ]);
     expect(result.truncated).toBe(false);
   });
+
+  it("keeps the lifecycle of a deprecated type or relation, and none for an active one", async () => {
+    const lifecycle = { reason: "merged", replaced_by: "patient", status: "deprecated" };
+    getMock.mockResolvedValue({
+      data: {
+        edges: [
+          { id: "treats", mapping_mode: "direct", name: "Treats", source_id: "a", target_id: "b" },
+          {
+            id: "treats_old",
+            lifecycle,
+            mapping_mode: "direct",
+            name: "Treats (old)",
+            source_id: "a",
+            target_id: "b",
+          },
+        ],
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", lifecycle, name: "B" },
+        ],
+        object_type_total: 2,
+        relation_type_total: 2,
+        returned_edges: 2,
+        returned_nodes: 2,
+        snapshot: "snapshot-1",
+        truncated: false,
+      },
+    });
+    const { getKnowledgeNetworkOverviewGraph } =
+      await import("@/modules/knowledge-network/services/overview-graph.service");
+
+    const { graph } = await getKnowledgeNetworkOverviewGraph("network-1");
+
+    const deprecated = {
+      lifecycle: { reason: "merged", replacedBy: "patient", status: "deprecated" },
+    };
+    expect(graph.nodes.map((node) => node.declarations)).toEqual([undefined, deprecated]);
+    expect(graph.edges.map((edge) => edge.declarations)).toEqual([undefined, deprecated]);
+  });
 });
