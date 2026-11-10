@@ -142,6 +142,8 @@ describe("RollbackDialog", () => {
       ),
     );
     expect(await screen.findByText("使用方将从 v1.0.1 切回 v1.0.0。")).toBeInTheDocument();
+    // The new plan can render before the confirmation button finishes its loading transition.
+    await waitFor(() => expect(confirmButton()).toBeEnabled());
     fireEvent.click(confirmButton());
     await waitFor(() => expect(rollBackMock).toHaveBeenLastCalledWith("p1", "sig-2"));
   });
