@@ -183,6 +183,7 @@ export const networkPart = {
   previewExperience: "能力验证",
   previewExperienceHint: "基于该知识网络的智能问数 / 检索体验入口即将开放。",
   previewGraphLegend: "节点 = 对象类，连线 = 关系类，绿点 = 已建索引",
+  previewGraphLegendDeprecated: "节点 = 对象类，连线 = 关系类，绿点 = 已建索引，淡色 = 已弃用",
   previewGraphLoadMore: "加载更多",
   previewGraphSummary:
     "已加载 {{loadedNodes}} / {{totalNodes}} 个对象类、{{loadedEdges}} / {{totalEdges}} 个关系类",

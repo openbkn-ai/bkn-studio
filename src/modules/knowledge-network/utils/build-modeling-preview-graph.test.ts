@@ -80,4 +80,44 @@ describe("buildModelingPreviewGraph", () => {
       },
     ]);
   });
+
+  it("keeps each type's and relation's lifecycle, so a deprecated one can be drawn apart", () => {
+    const declarations = { lifecycle: { reason: "merged", status: "deprecated" as const } };
+    const record = { conceptGroupIds: [], conceptGroupNames: [], description: "", hasIndex: false };
+    const graph = buildModelingPreviewGraph(
+      [
+        { ...record, color: "", id: "a", name: "A", tags: [], updateTime: "", updaterName: "" },
+        {
+          ...record,
+          color: "",
+          declarations,
+          id: "b",
+          name: "B",
+          tags: [],
+          updateTime: "",
+          updaterName: "",
+        },
+      ],
+      [
+        {
+          color: "",
+          definitionDeclarations: declarations,
+          description: "",
+          id: "r",
+          mappingMode: "direct",
+          name: "R",
+          sourceObjectTypeId: "a",
+          sourceObjectTypeName: "A",
+          tags: [],
+          targetObjectTypeId: "b",
+          targetObjectTypeName: "B",
+          updateTime: "",
+          updaterName: "",
+        },
+      ],
+    );
+
+    expect(graph.nodes.map((node) => node.declarations)).toEqual([undefined, declarations]);
+    expect(graph.edges[0].declarations).toEqual(declarations);
+  });
 });

@@ -8,6 +8,10 @@
 import { http } from "@/framework/request/http";
 import { createPendingRequest } from "@/framework/request/pending-request";
 import type { KnowledgeNetworkOverviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  type BackendLifecycle,
+  mapDefinitionDeclarations,
+} from "@/modules/knowledge-network/services/mappers/declarations";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   mockObjectTypes,
@@ -17,6 +21,8 @@ import {
 type BackendOverviewGraph = {
   edges: Array<{
     id: string;
+    /** Left out while the relation type is active. */
+    lifecycle?: BackendLifecycle | null;
     mapping_mode?: "direct" | "filtered_cross_join" | "indirect";
     name: string;
     source_id: string;
@@ -33,6 +39,8 @@ type BackendOverviewGraph = {
       state?: "available" | "unavailable" | "unknown" | "resource_missing" | "not_applicable";
       source_status?: string;
     };
+    /** Left out while the object type is active. */
+    lifecycle?: BackendLifecycle | null;
     name: string;
   }>;
   object_type_total: number;
@@ -52,10 +60,17 @@ export type KnowledgeNetworkOverviewGraphQuery = {
   nodeLimit?: number;
 };
 
+/** A deprecated definition's lifecycle, as the graph keeps it; nothing for an active one. */
+function withLifecycle(lifecycle: BackendLifecycle | null | undefined) {
+  const declarations = mapDefinitionDeclarations({ lifecycle });
+  return declarations ? { declarations } : {};
+}
+
 function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverviewGraph {
   return {
     graph: {
       edges: value.edges.map((edge) => ({
+        ...withLifecycle(edge.lifecycle),
         id: edge.id,
         mappingMode: edge.mapping_mode === "indirect" ? "resource" : "direct",
         name: edge.name,
@@ -65,6 +80,7 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
       nodes: value.nodes.map((node) => ({
         color: node.color?.trim() || "#1677ff",
         conceptGroups: node.concept_groups,
+        ...withLifecycle(node.lifecycle),
         icon: node.icon,
         id: node.id,
         indexStatus: node.index_status?.state
@@ -126,6 +142,9 @@ export async function getKnowledgeNetworkOverviewGraph(
           id: item.id,
           indexStatus: item.indexStatus,
           name: item.name,
+          ...(item.declarations?.lifecycle
+            ? { declarations: { lifecycle: item.declarations.lifecycle } }
+            : {}),
           conceptGroups: item.conceptGroupIds.map((id, index) => ({
             id,
             name: item.conceptGroupNames[index] ?? id,
@@ -137,6 +156,9 @@ export async function getKnowledgeNetworkOverviewGraph(
           name: item.name,
           sourceId: item.sourceObjectTypeId,
           targetId: item.targetObjectTypeId,
+          ...(item.definitionDeclarations?.lifecycle
+            ? { declarations: { lifecycle: item.definitionDeclarations.lifecycle } }
+            : {}),
         })),
       },
       objectTypeTotal: scopedObjects.length,
