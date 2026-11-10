@@ -9,25 +9,36 @@ export const contextLoaderPanelPart = {
   contextLoaderPanel: {
     toolGroups: {
       network: { label: "知识网络信息", description: "知识网络列表、当前网络详情" },
-      lifecycle: { label: "交互生命周期", description: "受管会话、交互和操作状态" },
+      lifecycle: { label: "会话管理", description: "管理对话上下文，开始和结束每轮问题的处理。" },
       discovery: {
-        label: "知识网络与 Schema",
-        description: "知识网络列表、结构、Schema 探索和类型详情",
+        label: "知识网络概念检索",
+        description: "查找知识网络，检索网络结构、对象类、关系类及属性定义。",
       },
       model: {
         label: "知识网络模型检索",
         description: "语义检索、对象类、关系类、行动类、对象指标定义查询",
       },
-      query: { label: "实例与关系子图查询", description: "实例查询、关系子图查询" },
+      query: {
+        label: "知识网络数据查询",
+        description: "查询业务实例、关联关系、指标及逻辑属性计算结果。",
+      },
       data: { label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
       logic: { label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
       resource: { label: "数据资源", description: "数据资源检查、技能召回和执行" },
-      action: { label: "行动", description: "行动工具召回、执行与执行记录" },
-      execution: {
-        label: "代码执行",
-        description: "在沙箱内运行 Python 或 shell 命令，脚本里可直接调用上面这些工具",
+      action: {
+        label: "行动类执行",
+        description: "查看行动类信息，执行业务行动，查询执行结果和历史记录。",
       },
-      skill: { label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
+      execution: {
+        label: "代码与命令执行",
+        description: "运行代码和命令，完成数据处理与工具调用。",
+      },
+      skill: { label: "技能", description: "查找可用技能，读取技能说明、使用方法及相关文件。" },
+      tool: { label: "工具", description: "检索可用能力，调用函数、API、MCP 等工具。" },
+      evaluation: {
+        label: "质量评测",
+        description: "查找测试集、发起评测、领取用例、提交结果及查看进度。",
+      },
       other: { label: "其他能力", description: "暂未归类的 MCP 能力" },
     },
     toolNames: {
@@ -69,6 +80,11 @@ export const contextLoaderPanelPart = {
       bkn_retry_operation: "重试操作",
       bkn_get_receipt: "查看调用回执",
       execute_skill: "执行技能",
+      bkn_eval_list_suites: "查找测试集",
+      bkn_eval_start_run: "发起评测",
+      bkn_eval_next_case: "领取下一条用例",
+      bkn_eval_submit_result: "提交用例结果",
+      bkn_eval_get_progress: "查看评测进度",
       fallbackLifecycle: "交互生命周期工具",
       fallbackModel: "知识模型工具",
       fallbackData: "数据资源工具",

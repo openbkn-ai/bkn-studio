@@ -40,33 +40,38 @@ export type McpToolGroup<T> = {
  * known group keys get concise UI descriptions here.
  */
 const GROUP_DESCRIPTIONS: Record<string, string> = {
-  lifecycle: "Create conversations, manage interactions, and write managed context",
-  discovery: "Knowledge network lists, structure, schema discovery, and type details",
-  query: "Object instances, relation subgraphs, logical properties, metrics, and SQL queries",
-  action: "Action recall, execution, and execution history",
+  lifecycle: "Manage conversation context and start or finish each turn.",
+  discovery:
+    "Find knowledge networks and inspect their structure, object types, relation types, and properties.",
+  query:
+    "Query business instances, relationships, metrics, and logical property calculation results.",
+  action: "Inspect action types, execute business actions, and view results and history.",
   resource: "Data resource inspection, skill recall, and execution",
   network: "Knowledge network list and current network details",
   model: "Semantic search and object, relation, action, and metric definitions",
   data: "Data resource lists, field schemas, and SQL data queries",
   logic: "Logical property calculation, action recall, and action execution",
-  skill: "Skill search and online dynamic tools",
+  skill: "Find available skills and read their instructions, usage, and related files.",
+  tool: "Find available capabilities and call functions, APIs, MCP tools, and more.",
   // run_code / run_shell. The server merged them onto the business tool surface,
   // so they arrive as ordinary tools with their own group rather than a mode switch.
-  execution:
-    "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
+  execution: "Run code and commands to process data and call tools.",
+  evaluation:
+    "Find test suites, start evaluations, claim cases, submit results, and track progress.",
   other: "Unclassified MCP capabilities",
 };
 
 /** Local fallback groups; array order is display order. */
 const LOCAL_GROUPS: Array<{ key: string; label: string }> = [
-  { key: "lifecycle", label: "Session and interaction lifecycle" },
-  { key: "network", label: "Knowledge network info" },
-  { key: "model", label: "Knowledge model discovery" },
-  { key: "query", label: "Object and subgraph queries" },
-  { key: "data", label: "Data resources and SQL" },
-  { key: "logic", label: "Logic and actions" },
-  { key: "skill", label: "Skills and dynamic tools" },
-  { key: "execution", label: "Code execution" },
+  { key: "lifecycle", label: "Session management" },
+  { key: "discovery", label: "Knowledge network concept search" },
+  { key: "query", label: "Knowledge network data queries" },
+  { key: "action", label: "Action execution" },
+  { key: "skill", label: "Skills" },
+  { key: "tool", label: "Tools" },
+  { key: "execution", label: "Code and command execution" },
+  { key: "evaluation", label: "Quality evaluation" },
+  { key: "resource", label: "Data resources" },
   { key: "other", label: "Other capabilities" },
 ];
 
@@ -85,33 +90,38 @@ const LOCAL_TOOLS: Array<{ id: string; groupKey: string; name: string }> = [
   { id: "bkn_get_operation", groupKey: "lifecycle", name: "View operation status" },
   { id: "bkn_retry_operation", groupKey: "lifecycle", name: "Retry operation" },
   { id: "bkn_get_receipt", groupKey: "lifecycle", name: "View call receipt" },
-  { id: "list_knowledge_networks", groupKey: "network", name: "Knowledge network list" },
-  { id: "get_kn_detail", groupKey: "network", name: "Knowledge network details" },
-  { id: "search_schema", groupKey: "model", name: "Semantic search" },
-  { id: "get_object_types", groupKey: "model", name: "Object type definitions" },
-  { id: "get_relation_types", groupKey: "model", name: "Relation type definitions" },
-  { id: "get_action_types", groupKey: "model", name: "Action type definitions" },
-  { id: "get_metric_types", groupKey: "model", name: "Metric definitions" },
+  { id: "list_knowledge_networks", groupKey: "discovery", name: "Knowledge network list" },
+  { id: "get_kn_detail", groupKey: "discovery", name: "Knowledge network details" },
+  { id: "search_schema", groupKey: "discovery", name: "Semantic search" },
+  { id: "get_object_types", groupKey: "discovery", name: "Object type definitions" },
+  { id: "get_relation_types", groupKey: "discovery", name: "Relation type definitions" },
+  { id: "get_action_types", groupKey: "discovery", name: "Action type definitions" },
+  { id: "get_metric_types", groupKey: "discovery", name: "Metric definitions" },
   { id: "query_object_instance", groupKey: "query", name: "Object instance query" },
   { id: "query_instance_subgraph", groupKey: "query", name: "Relation subgraph query" },
-  { id: "list_resources", groupKey: "data", name: "Data resource list" },
-  { id: "describe_resource", groupKey: "data", name: "Resource field schema" },
-  { id: "run_sql", groupKey: "data", name: "SQL data query" },
-  { id: "get_logic_properties_values", groupKey: "logic", name: "Logical property calculation" },
-  { id: "get_action_info", groupKey: "logic", name: "Action tool recall" },
-  { id: "execute_action", groupKey: "logic", name: "Execute action" },
-  { id: "get_action_execution", groupKey: "logic", name: "Action execution result" },
-  { id: "list_action_execution", groupKey: "logic", name: "Action execution history" },
-  { id: "list_action_executions", groupKey: "logic", name: "Action execution history" },
-  { id: "query_metric", groupKey: "logic", name: "Metric data query" },
-  { id: "search_capabilities", groupKey: "logic", name: "Capability search" },
-  { id: "execute_tool", groupKey: "logic", name: "Execute tool" },
+  { id: "list_resources", groupKey: "resource", name: "Data resource list" },
+  { id: "describe_resource", groupKey: "resource", name: "Resource field schema" },
+  { id: "run_sql", groupKey: "query", name: "SQL data query" },
+  { id: "get_logic_properties_values", groupKey: "query", name: "Logical property calculation" },
+  { id: "get_action_info", groupKey: "action", name: "Action tool recall" },
+  { id: "execute_action", groupKey: "action", name: "Execute action" },
+  { id: "get_action_execution", groupKey: "action", name: "Action execution result" },
+  { id: "list_action_execution", groupKey: "action", name: "Action execution history" },
+  { id: "list_action_executions", groupKey: "action", name: "Action execution history" },
+  { id: "query_metric", groupKey: "query", name: "Metric data query" },
+  { id: "search_capabilities", groupKey: "tool", name: "Capability search" },
+  { id: "execute_tool", groupKey: "tool", name: "Execute tool" },
   { id: "list_skills", groupKey: "skill", name: "Skill list" },
   { id: "get_skill_content", groupKey: "skill", name: "View skill content" },
   { id: "read_skill_file", groupKey: "skill", name: "Read skill file" },
   { id: "execute_skill", groupKey: "skill", name: "Execute skill" },
   { id: "run_code", groupKey: "execution", name: "Run code" },
   { id: "run_shell", groupKey: "execution", name: "Run command" },
+  { id: "bkn_eval_list_suites", groupKey: "evaluation", name: "List evaluation suites" },
+  { id: "bkn_eval_start_run", groupKey: "evaluation", name: "Start evaluation run" },
+  { id: "bkn_eval_next_case", groupKey: "evaluation", name: "Get next evaluation case" },
+  { id: "bkn_eval_submit_result", groupKey: "evaluation", name: "Submit case result" },
+  { id: "bkn_eval_get_progress", groupKey: "evaluation", name: "View evaluation progress" },
 ];
 
 /** Fallback order base; local fallback entries sort after server-declared entries. */
@@ -144,6 +154,7 @@ const LOCAL_TOOL_INDEX = new Map<string, { groupKey: string; name: string; order
 /** Guesses a group when neither server metadata nor the local catalog knows the tool. */
 function guessLocal(toolId: string): { groupKey: string; name: string } {
   const id = toolId.toLowerCase();
+  if (id.startsWith("bkn_eval_")) return { groupKey: "evaluation", name: toolId };
   // Platform tools use the bkn_ prefix. Check it before keyword matching because
   // bkn_* contains "kn" and interaction contains "action".
   if (id.startsWith("bkn_")) return { groupKey: "lifecycle", name: "Session lifecycle tool" };
@@ -155,17 +166,18 @@ function guessLocal(toolId: string): { groupKey: string; name: string } {
     id.includes("schema") ||
     id.includes("metric_type")
   ) {
-    return { groupKey: "model", name: "Knowledge model tool" };
+    return { groupKey: "discovery", name: "Knowledge model tool" };
   }
   if (id.includes("resource") || id.includes("sql") || id.includes("catalog"))
-    return { groupKey: "data", name: "Data resource tool" };
+    return { groupKey: "resource", name: "Data resource tool" };
   if (id.includes("skill")) return { groupKey: "skill", name: "Skills and dynamic tools" };
-  if (id.includes("action") || id.includes("logic") || id.includes("metric"))
-    return { groupKey: "logic", name: "Logic and action tool" };
+  if (id.includes("action")) return { groupKey: "action", name: "Action tool" };
+  if (id.includes("logic") || id.includes("metric"))
+    return { groupKey: "query", name: "Calculation tool" };
   if (id.includes("instance") || id.includes("subgraph") || id.includes("query"))
     return { groupKey: "query", name: "Object query tool" };
   if (id.includes("kn") || id.includes("network"))
-    return { groupKey: "network", name: "Knowledge network tool" };
+    return { groupKey: "discovery", name: "Knowledge network tool" };
   return { groupKey: "other", name: "MCP capability" };
 }
 
@@ -193,7 +205,9 @@ export function toolDisplayOf(toolId: string, tool?: McpToolDef | null): McpTool
   const groupKey = serverGroup ?? local.groupKey;
   return {
     groupKey,
-    groupLabel: serverGroup ? (tool?.groupTitle ?? serverGroup) : local.groupLabel,
+    groupLabel: serverGroup
+      ? (tool?.groupTitle ?? LOCAL_GROUP_LABELS.get(serverGroup) ?? serverGroup)
+      : local.groupLabel,
     groupDescription: GROUP_DESCRIPTIONS[groupKey] ?? null,
     name: tool?.title ?? local.name,
     order: tool?.order ?? local.order,
