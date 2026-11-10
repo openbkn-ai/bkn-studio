@@ -168,7 +168,8 @@ function guessLocal(toolId: string): { groupKey: string; name: string } {
   ) {
     return { groupKey: "discovery", name: "Knowledge model tool" };
   }
-  if (id.includes("resource") || id.includes("sql") || id.includes("catalog"))
+  if (id.includes("sql")) return { groupKey: "query", name: "SQL data query" };
+  if (id.includes("resource") || id.includes("catalog"))
     return { groupKey: "resource", name: "Data resource tool" };
   if (id.includes("skill")) return { groupKey: "skill", name: "Skills and dynamic tools" };
   if (id.includes("action")) return { groupKey: "action", name: "Action tool" };

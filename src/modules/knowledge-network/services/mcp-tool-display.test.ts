@@ -90,6 +90,19 @@ describe("toolDisplayOf", () => {
     expect(display).toMatchObject({ name: "Run SQL", groupKey: "query", fromServer: false });
   });
 
+  it("groups unknown SQL tools with SQL queries while keeping resource tools separate", () => {
+    expect(toolDisplayOf("run_sql_v2")).toMatchObject({
+      groupKey: toolDisplayOf("run_sql").groupKey,
+      name: "SQL data query",
+    });
+    expect(toolDisplayOf("describe_resource_v2")).toMatchObject({ groupKey: "resource" });
+    expect(toolDisplayOf("list_catalogs")).toMatchObject({ groupKey: "resource" });
+    expect(toolDisplayOf("run_sql_v2", tool("run_sql_v2", { group: "custom" }))).toMatchObject({
+      groupKey: "custom",
+      fromServer: true,
+    });
+  });
+
   it("keeps the lifecycle / execution / skill tools in their own groups when the server sends no metadata", () => {
     // The fallback catalog is the full display source for old servers.
     expect(toolDisplayOf("bkn_get_operation")).toMatchObject({
@@ -140,8 +153,8 @@ describe("toolDisplayOf", () => {
         name: title,
         groupKey: "evaluation",
         groupLabel: "Quality evaluation",
-        groupDescription: expect.any(String),
       });
+      expect(toolDisplayOf(name, tool(name, extra)).groupDescription).toEqual(expect.any(String));
     }
   });
 
