@@ -11,6 +11,18 @@ import { colorWithAlpha, createSemanticColors } from "@/app/theme/semantic-color
 import type { ResolvedTheme } from "@/app/theme/theme-mode";
 import type { RuntimeConfig } from "@/framework/runtime/types";
 
+/**
+ * Floating layers in dark mode (messages, notifications, modals, dropdowns, popovers, select
+ * panels): one clear step lighter than the page, ringed by a hairline, over a deeper mask.
+ * Shadows alone barely show on a dark page, so the ring is what sets the layer apart.
+ */
+const DARK_OVERLAY_TOKENS = {
+  colorBgElevated: "#24272e",
+  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 32px rgba(0, 0, 0, 0.55)",
+  boxShadowSecondary: "0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.5)",
+  colorBgMask: "rgba(0, 0, 0, 0.65)",
+};
+
 const DARK_STATUS_TOKENS = {
   colorError: "#f87171",
   colorErrorBg: "rgba(248, 113, 113, 0.12)",
@@ -82,7 +94,7 @@ export function createThemeConfig(
       borderRadius: runtimeConfig.theme.borderRadius,
       colorBgLayout: isDark ? "#111318" : "#f6f8fb",
       colorBgContainer: isDark ? "#1a1d23" : "#ffffff",
-      ...(isDark ? { colorBgElevated: "#20232a", colorBorderSecondary: "#23262d" } : {}),
+      ...(isDark ? { ...DARK_OVERLAY_TOKENS, colorBorderSecondary: "#23262d" } : {}),
       colorBorder: isDark ? "#2b2f37" : "#e5eaf2",
       colorInfo: "#2563eb",
       colorLink: colors.link,

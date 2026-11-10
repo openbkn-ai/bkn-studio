@@ -68,12 +68,12 @@ export function DefinitionDeclarationFields({
     <>
       <Form.Item
         dependencies={[...ownNameFields]}
-        extra={t(`${PREFIX}.aliasesHint`, {
+        label={t(`${PREFIX}.aliases`)}
+        name="aliases"
+        tooltip={t(`${PREFIX}.aliasesHint`, {
           length: MAX_ALIAS_LENGTH,
           max: MAX_PROPERTY_ALIASES,
         })}
-        label={t(`${PREFIX}.aliases`)}
-        name="aliases"
         rules={[
           {
             validator: (_, value: string[] | undefined) => {
@@ -102,9 +102,9 @@ export function DefinitionDeclarationFields({
         />
       </Form.Item>
       <Form.Item
-        extra={t(`${PREFIX}.lifecycleHint`)}
         label={t(`${PREFIX}.lifecycle`)}
         name="lifecycleStatus"
+        tooltip={t(`${PREFIX}.lifecycleHint`)}
       >
         <Radio.Group
           options={(["active", "deprecated"] as const).map((value) => ({
@@ -126,9 +126,9 @@ export function DefinitionDeclarationFields({
             />
           </Form.Item>
           <Form.Item
-            extra={t(`${PREFIX}.replacedByHint`)}
             label={t(`${PREFIX}.replacedBy`)}
             name="replacedBy"
+            tooltip={t(`${PREFIX}.replacedByHint`)}
           >
             <ReplacementSelect
               definitionId={definitionId}

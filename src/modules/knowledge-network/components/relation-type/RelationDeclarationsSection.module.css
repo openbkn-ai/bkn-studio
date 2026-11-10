@@ -23,14 +23,6 @@
   font-weight: 400;
 }
 
-.note {
-  display: block;
-  padding-left: 12px;
-  color: var(--color-text-tertiary);
-  font-size: 12px;
-  text-align: right;
-}
-
 .cleared {
   margin-bottom: 16px;
 }
@@ -46,21 +38,8 @@
   flex-direction: column;
   gap: 4px;
 }
-
-.sentence {
-  margin: -8px 0 16px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--color-fill-quaternary);
-  color: var(--color-text-secondary);
-}
-
 @media (max-width: 480px) {
   .row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .note {
-    display: none;
   }
 }

@@ -16,7 +16,7 @@ import type { Edition } from "@/framework/entitlement/edition";
  * **产品自带、不在运行时去拉**——决策 7:客户常常完全离线,而离线激活流程正是为拉不到
  * license-server 的客户存在的,那些客户同样拉不到名字。
  *
- * 只收对客户在售的行。`planned`(sso / multi_tenant / version_mgmt /
+ * 只收对客户在售的行。`planned`(multi_tenant / version_mgmt /
  * offline_bundle / bigdata_connect,以及上游 e8fdf2f 退回 planned 的 audit /
  * ops_dashboard / branding——EE 侧从未实现)一条都不进。`impact_graph` 与
  * `source_sync` 同样不进:登记表里是 active,但这一版产品里没有对应功能,列出来就是在卖
@@ -64,6 +64,12 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 ];
 
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
+  {
+    category: "permission",
+    key: CAPABILITIES.SSO,
+    minEdition: "professional",
+    reportedByEndpoint: true,
+  },
   {
     category: "permission",
     key: CAPABILITIES.RBAC_BASIC,

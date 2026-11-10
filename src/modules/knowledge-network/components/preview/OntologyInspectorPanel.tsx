@@ -229,13 +229,17 @@ export function OntologyInspectorPanel({
               <div key={relation.id} className={styles.relRow}>
                 <span className={styles.relVerb}>
                   <DeprecatedName declarations={relation.definitionDeclarations}>
-                    {relation.name}
+                    <span className={styles.relName} title={relation.name}>
+                      {relation.name}
+                    </span>
                   </DeprecatedName>
                 </span>
                 <span className={styles.relArrow}>{out ? "→" : "←"}</span>
                 <span className={styles.relTarget}>
                   <span className={styles.dot} style={{ background: other?.color || "#999" }} />
-                  {otherName}
+                  <span className={styles.relTargetName} title={otherName}>
+                    {otherName}
+                  </span>
                 </span>
               </div>
             );

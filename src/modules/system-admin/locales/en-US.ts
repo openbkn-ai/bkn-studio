@@ -7,6 +7,82 @@
 
 export const systemAdminEnUS = {
   systemAdmin: {
+    sso: {
+      useDatabaseSecret: "Use database secret",
+      errors: {
+        INVALID_PARAMETER:
+          "The configuration is incomplete or invalid. Check the highlighted field.",
+        RESOURCE_EXISTED: "This provider ID already exists.",
+        RESOURCE_NOT_FOUND: "The provider no longer exists. Refresh the list.",
+        SSO_IDENTITY_BOUND:
+          "This provider has linked users. Create a new provider to use another issuer.",
+        SSO_DISCOVERY_FAILED:
+          "Cannot load valid OIDC discovery. Check the URL, issuer and connectivity.",
+        SSO_JWKS_FAILED:
+          "Cannot load usable RS256 signing keys. Check the identity provider signing configuration.",
+        INTERNAL_ERROR: "The operation failed. Retry or contact an administrator.",
+      },
+      title: "Single sign-on",
+      description: "Manage identity providers, browser sign-in and API token exchange.",
+      add: "Add identity provider",
+      edit: "Edit",
+      save: "Save",
+      cancel: "Cancel",
+      refresh: "Refresh",
+      test: "Test connection",
+      saved: "Identity provider saved",
+      testPassed: "Discovery and signing keys passed. Verify an actual sign-in next.",
+      invalidField: "Invalid configuration. Check this field.",
+      required: "This field is required.",
+      idFormat: "Use lowercase letters, digits and hyphens, up to 64 characters.",
+      generic: "Generic OIDC",
+      yes: "Yes",
+      no: "No",
+      actions: "Actions",
+      enable: "Enable",
+      disable: "Disable",
+      enableConfirm: "Enable this provider?",
+      disableConfirm: "Disable this provider?",
+      defaultConfirm: "Use this provider as the default sign-in?",
+      defaultHint:
+        "This replaces the current default. Verify sign-in first and keep a local administrator sign-in path.",
+      previous: "Previous",
+      next: "Next",
+      total: "{{count}} identity providers",
+      total_one: "{{count}} identity provider",
+      total_other: "{{count}} identity providers",
+      secretKept: "A secret is configured. Leave blank to keep it, or enter a replacement.",
+      secretHint:
+        "Enter the identity provider application secret. It is never displayed after saving.",
+      envSecret:
+        "This provider uses an environment secret first. Updating the database secret does not override it.",
+      callbackHint: "Copy the callback URL and register it with the identity provider.",
+      exchangeHint:
+        "Separate application IDs, audiences and scopes with spaces. External and issued scopes are configured separately.",
+      advanced: "Departments and advanced settings",
+      httpHint: "Allow HTTP only in trusted test environments. Use HTTPS for normal deployments.",
+      testHint:
+        "Tests discovery and RS256 public keys, not client credentials, user identity or department API permissions.",
+      id: "Provider ID",
+      display_name: "Display name",
+      adapter: "Provider type",
+      issuer: "Issuer URL",
+      discovery_url: "OIDC discovery URL",
+      client_id: "Client ID",
+      client_secret: "Client secret",
+      redirect_uri: "Sign-in callback URL",
+      scopes: "Sign-in scopes",
+      department_claim: "Department claim",
+      allowed_client_ids: "Allowed external client IDs",
+      exchange_audience: "External token audience",
+      external_required_scope: "Required external scopes",
+      hydra_issue_scope: "OpenBKN token scopes",
+      enabled: "Enable provider",
+      login_enabled: "Browser sign-in",
+      exchange_enabled: "API token exchange",
+      default_for_login: "Default sign-in provider",
+      allow_insecure_http: "Allow HTTP",
+    },
     userPicker: {
       allOrganizations: "All organizations",
       allUsers: "All users",

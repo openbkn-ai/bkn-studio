@@ -14,6 +14,7 @@ import type {
   RelationDeclarations,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import { RelationCardinalityBadge } from "./RelationCardinalityBadge";
 import styles from "./RelationDeclarationTags.module.css";
 
 const PREFIX = "knowledgeNetwork.relationDeclarations.listTag";
@@ -22,19 +23,32 @@ type RelationDeclarationTagsProps = {
   declarations: RelationDeclarations | undefined;
   /** Relation types whose names a fallback path may use; an absent one shows by its ID. */
   relationTypes: KnowledgeNetworkRelationTypeRecord[];
+  /** The names of its ends, for what its cardinality means. */
+  sourceName: string;
+  targetName: string;
 };
 
 /**
- * A relation type's name with the tags of a secondary relation, of a fallback path and of an
- * inferred join, which name prefixes used to stand in for.
+ * A relation type's name with its cardinality and the tags of a secondary relation, of a fallback
+ * path and of an inferred join, which name prefixes used to stand in for.
  */
 export function RelationDeclarationName({
   children,
   declarations,
   relationTypes,
+  sourceName,
+  targetName,
 }: RelationDeclarationTagsProps & { children: ReactNode }) {
   const { t } = useTranslation();
   const tags = [
+    declarations?.cardinality ? (
+      <RelationCardinalityBadge
+        declarations={declarations}
+        key="cardinality"
+        sourceName={sourceName}
+        targetName={targetName}
+      />
+    ) : null,
     declarations?.importance === "secondary" ? (
       <Tag key="secondary">{t(`${PREFIX}.secondary`)}</Tag>
     ) : null,

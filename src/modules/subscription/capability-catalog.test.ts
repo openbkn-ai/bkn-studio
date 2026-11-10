@@ -15,7 +15,7 @@ import {
 import { resolveQuota } from "@/modules/subscription/subscription-plans";
 
 describe("capability catalog", () => {
-  // 登记表里 planned 的行(sso / explorer 等)对客户不可见——写进版本对比页就是在卖
+  // 登记表里 planned 的行(explorer 等)对客户不可见——写进版本对比页就是在卖
   // 还没有的东西。business_provenance 不在此列:产品决定按企业能力在售(2026-08-06),
   // 上游登记表转 active 之前,页面先按在售展示。
   it("不收录任何 planned 能力", () => {
@@ -29,7 +29,6 @@ describe("capability catalog", () => {
       "bigdata_connect",
       "multi_tenant",
       "offline_bundle",
-      "sso",
       "version_mgmt",
     ]) {
       expect(keys).not.toContain(planned);
@@ -42,7 +41,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(8);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(9);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
     expect(CAPABILITY_CATALOG.find((entry) => entry.key === CAPABILITIES.EVAL)).toMatchObject({
       minEdition: "professional",
@@ -71,6 +70,7 @@ describe("capability catalog", () => {
       "perm_fine_grained",
       "perm_object_level",
       "rbac_basic",
+      "sso",
       "workshop",
     ]);
   });

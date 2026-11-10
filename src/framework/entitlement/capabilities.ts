@@ -20,6 +20,8 @@
  * 只是"哪个能力"的标识,不参与任何授权判定。
  */
 export const CAPABILITIES = {
+  /** SSO configuration management; Professional and higher. */
+  SSO: "sso",
   /** 自定义角色/部门/权限的写入面。专业档起。 */
   RBAC_BASIC: "rbac_basic",
   /** 对象细粒度授权、显式 allow / deny 与来源级撤销。专业档起。 */
