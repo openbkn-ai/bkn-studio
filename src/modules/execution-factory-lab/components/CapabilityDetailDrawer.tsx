@@ -22,7 +22,6 @@ import {
   Tag,
   Tooltip,
   Upload,
-  message,
 } from "antd";
 import type { MenuProps } from "antd";
 
@@ -409,7 +408,7 @@ export function CapabilityDetailDrawer({
 }: CapabilityDetailDrawerProps) {
   const { t } = useTranslation();
   const { features } = useLabFeatures();
-  const { runtimeConfig } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const userPermissions = runtimeConfig.currentUser.permissions ?? [];
   const currentAuditUser = {
     id: runtimeConfig.currentUser.id,

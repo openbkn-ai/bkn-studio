@@ -223,11 +223,11 @@ it("does not mount Eval content when backend admission denies the current user",
   );
   expect(screen.queryByText("Eval content: supply")).toBeNull();
   expect(screen.getByText("knowledgeNetwork.eval.access.denied")).toBeTruthy();
-  expect(screen.queryByTitle("knowledgeNetwork.eval.title")).toBeNull();
+  expect(screen.getByTitle("knowledgeNetwork.eval.title")).toBeTruthy();
   access.status = "allowed";
 });
 
-it("shares page admission with navigation and synchronizes both after retry", () => {
+it("keeps navigation visible during an admission failure and retries only the page request", () => {
   access.status = "failed";
   const page = () => (
     <MemoryRouter initialEntries={["/knowledge-network/workspace/supply/evals"]}>
@@ -237,13 +237,14 @@ it("shares page admission with navigation and synchronizes both after retry", ()
     </MemoryRouter>
   );
   const { rerender } = render(page());
-  expect(access.ids).toEqual(["supply", ""]);
-  expect(screen.queryByTitle("knowledgeNetwork.eval.title")).toBeNull();
+  expect(access.ids).toEqual(["supply"]);
+  expect(screen.queryByText("Eval content: supply")).toBeNull();
+  expect(screen.getByTitle("knowledgeNetwork.eval.title")).toBeTruthy();
   fireEvent.click(screen.getByText("knowledgeNetwork.eval.access.retry"));
   expect(access.retry).toHaveBeenCalledOnce();
   access.status = "allowed";
   rerender(page());
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
   expect(screen.getByTitle("knowledgeNetwork.eval.title")).toBeTruthy();
-  expect(access.ids).toEqual(["supply", "", "supply", ""]);
+  expect(access.ids).toEqual(["supply", "supply"]);
 });

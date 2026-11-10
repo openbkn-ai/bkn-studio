@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Empty, message, Modal, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Modal, Spin, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   BUSINESS_MODULES,
@@ -56,6 +57,7 @@ const MANAGEMENT_AUDIT_SOURCE_ID = "audit-ledger";
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);

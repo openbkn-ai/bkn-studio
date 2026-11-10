@@ -19,13 +19,14 @@ import {
   RocketOutlined,
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
-import { Modal, Tooltip, message } from "antd";
+import { Modal, Tooltip } from "antd";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import type { PermissionCheckMode } from "@/framework/permission/has-permissions";
 import { canAccessHomeAction } from "@/modules/home/lib/action-access";
@@ -380,6 +381,7 @@ export function HomeScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const runtimeConfig = useRuntimeConfig();
+  const { message } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const { path: activePath, stage: activeStage } = readHomeBuildState(searchParams);

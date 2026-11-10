@@ -19,13 +19,13 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -171,6 +171,7 @@ function buildDiagnostics(detail: SandboxSessionDetail) {
 
 export function SandboxRuntimeScene() {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [health, setHealth] = useState<SandboxRuntimeHealth | null>(null);
   const [pool, setPool] = useState<SandboxRuntimePool | null>(null);
   const [sessions, setSessions] = useState<SandboxSessionSummary[]>([]);

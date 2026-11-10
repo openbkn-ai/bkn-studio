@@ -5,18 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  Alert,
-  Collapse,
-  Dropdown,
-  Input,
-  Pagination,
-  Select,
-  Steps,
-  Tag,
-  Tooltip,
-  message,
-} from "antd";
+import { Alert, Collapse, Dropdown, Input, Pagination, Select, Steps, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -65,7 +54,7 @@ export function CapabilityLabListScene() {
   const { t } = useTranslation();
   const location = useLocation();
   const { features } = useLabFeatures();
-  const { runtimeConfig } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const userPermissions = useMemo(
     () => runtimeConfig.currentUser.permissions ?? [],
     [runtimeConfig.currentUser.permissions],
@@ -169,7 +158,7 @@ export function CapabilityLabListScene() {
       setDetailOpen(true);
       await load();
     },
-    [load, t],
+    [load, message, t],
   );
 
   const debugTabForKind = (capKind: CapabilityRecord["kind"]) =>
