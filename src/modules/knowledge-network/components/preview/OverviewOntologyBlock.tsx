@@ -187,7 +187,6 @@ export function OverviewOntologyBlock({
     const names = new Map(graph.nodes.map((node) => [node.id, node.name]));
     return graph.edges.map((edge) => ({
       color: DEFAULT_COLOR,
-      declarations: edge.relationDeclarations,
       definitionDeclarations: edge.declarations,
       description: "",
       id: edge.id,

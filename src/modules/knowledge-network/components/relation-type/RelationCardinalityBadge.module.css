@@ -7,9 +7,13 @@
 
 .badge {
   cursor: help;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 600;
   margin-inline-end: 0;
+  padding-inline: 5px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.02em;
 }
 
 .tip {

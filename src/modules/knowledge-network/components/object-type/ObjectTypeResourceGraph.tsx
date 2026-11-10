@@ -61,6 +61,7 @@ import { isDeprecated } from "@/modules/knowledge-network/utils/definition-decla
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeResourceGraph.module.css";
+import { parallelRelationOffsets } from "./relation-graph-geometry";
 
 const DEPRECATED_TAG = "knowledgeNetwork.definitionDeclarations.deprecatedTag";
 
@@ -1297,14 +1298,18 @@ export function ObjectTypeResourceGraph({
   const relationGeometries = new Map(
     relationGroups.flatMap((neighbor) => {
       const neighborPosition = position(`neighbor:${neighbor.id}`);
-      const middleRelationIndex = (neighbor.relations.length - 1) / 2;
       const dx = neighborPosition.x - ownerPosition.x;
       const dy = neighborPosition.y - ownerPosition.y;
       const distance = Math.hypot(dx, dy) || 1;
       const unitX = dx / distance;
       const unitY = dy / distance;
+      const parallelOffsets = parallelRelationOffsets(
+        neighbor.relations.map((relation) => relationLabelWidth(relation.name)),
+        unitX,
+        unitY,
+      );
       return neighbor.relations.map((relation, relationIndex) => {
-        const parallelOffset = 70 * (relationIndex - middleRelationIndex);
+        const parallelOffset = parallelOffsets[relationIndex];
         const baseGeometry = relationGeometry(
           ownerPosition,
           neighborPosition,
@@ -2771,7 +2776,7 @@ export function ObjectTypeResourceGraph({
         onClose={() => setSelected(undefined)}
         open={Boolean(selected && selected.kind !== "metric")}
         title={selectedDrawerTitle}
-        width={400}
+        width={440}
       >
         {selected && selected.kind !== "metric" ? (
           <Spin spinning={selected.kind === "action" && selectedActionLoading}>
@@ -2913,18 +2918,22 @@ export function ObjectTypeResourceGraph({
                           : "knowledgeNetwork.relationTypeResourceMapping",
                       )}
                     </Descriptions.Item>
-                    {selected.value.declarations?.cardinality ? (
-                      <Descriptions.Item
-                        label={t("knowledgeNetwork.relationDeclarations.cardinality")}
-                      >
+                    <Descriptions.Item
+                      label={t("knowledgeNetwork.relationDeclarations.cardinality")}
+                    >
+                      {selected.value.declarations?.cardinality ? (
                         <RelationCardinalityBadge
                           declarations={selected.value.declarations}
                           showLabel
                           sourceName={selected.value.sourceObjectTypeName}
                           targetName={selected.value.targetObjectTypeName}
                         />
-                      </Descriptions.Item>
-                    ) : null}
+                      ) : (
+                        <span className={styles.drawerMuted}>
+                          {t("knowledgeNetwork.relationDeclarations.notDeclared")}
+                        </span>
+                      )}
+                    </Descriptions.Item>
                   </>
                 ) : null}
                 {selected.kind === "action" ? (

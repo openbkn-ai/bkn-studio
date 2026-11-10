@@ -30,12 +30,6 @@ export const relationDeclarationsPart = {
       ends: "The source and target are no longer the same object type, so the characteristics were cleared.",
       symmetric: "A symmetric relation has no direction, so these were cleared: {{names}}.",
     },
-    clearedOnSave: {
-      content:
-        "The source and target are no longer the same object type, so saving also clears this relation's characteristics (symmetric, transitive).",
-      ok: "Clear and save",
-      title: "Saving clears the characteristics",
-    },
     clearedName: {
       cardinality: "the one-to-many or many-to-one cardinality",
       characteristics: "the characteristics",

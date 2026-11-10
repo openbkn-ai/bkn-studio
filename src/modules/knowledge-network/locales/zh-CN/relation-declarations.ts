@@ -7,7 +7,7 @@
 
 export const relationDeclarationsPart = {
   relationDeclarations: {
-    cardinality: "基数",
+    cardinality: "关系基数",
     cardinalityHint: "从起点到终点，每端的一个实例对应几个对端。",
     cardinalityOption: {
       manyToMany: "多对多",
@@ -29,13 +29,8 @@ export const relationDeclarationsPart = {
       ends: "起点与终点不再是同一对象类，清除了特性。",
       symmetric: "对称关系没有方向，清除了{{names}}。",
     },
-    clearedOnSave: {
-      content: "起点与终点不再是同一对象类，保存时会一并清除这条关系声明的特性（对称、传递）。",
-      ok: "清除并保存",
-      title: "保存会清除特性",
-    },
     clearedName: {
-      cardinality: "一对多或多对一的基数",
+      cardinality: "一对多或多对一的关系基数",
       characteristics: "特性",
       requiredEnds: "只选一端的必有端",
       reverseName: "反向名称",

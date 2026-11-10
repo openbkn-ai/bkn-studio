@@ -1187,7 +1187,7 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(drawer).getByText("更新订单")).toBeInTheDocument();
   });
 
-  it("shows a relation's cardinality in its drawer, and no row for one that declares none", async () => {
+  it("shows a relation's cardinality in its drawer, and says when one declares none", async () => {
     mocks.listRelations.mockResolvedValue({
       entries: [
         { ...relation, declarations: { cardinality: "many_to_one" } },
@@ -1204,7 +1204,9 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "关系类 客户关系（未声明）" }));
     drawer = screen.getByRole("dialog", { name: "关系类详情" });
-    expect(within(drawer).queryByText("基数")).not.toBeInTheDocument();
+    expect(within(drawer).getByText("关系基数")).toBeInTheDocument();
+    expect(within(drawer).getByText("未声明")).toBeInTheDocument();
+    expect(within(drawer).queryByText(/^[1N]:[1N]$/)).not.toBeInTheDocument();
   });
 
   it("aligns relation graph operations with the list while keeping edit removed", async () => {

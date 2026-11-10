@@ -124,10 +124,11 @@ describe("OntologyInspectorPanel", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("shows the cardinality of a relation that declares one", () => {
+  it("keeps each relation on one line, with its full name on hover and no cardinality", () => {
     renderPanel("patient");
 
-    // Only 入院 declares one.
-    expect(screen.getAllByText(/^[1N]:[1N]$/).map((badge) => badge.textContent)).toEqual(["1:N"]);
+    // The panel is narrow: cardinality shows in the relation's own drawer instead.
+    expect(screen.queryByText(/^[1N]:[1N]$/)).toBeNull();
+    expect(screen.getByText("入院（旧）")).toHaveAttribute("title", "入院（旧）");
   });
 });

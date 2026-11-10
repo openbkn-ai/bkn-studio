@@ -53,7 +53,7 @@ export function RelationCardinalityBadge({
         </span>
       }
     >
-      <Tag aria-label={label} className={styles.badge} color="geekblue">
+      <Tag aria-label={label} bordered={false} className={styles.badge} color="geekblue">
         {CARDINALITY_NOTATION[cardinality]}
       </Tag>
     </Tooltip>
