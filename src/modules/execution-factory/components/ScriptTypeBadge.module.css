@@ -32,9 +32,11 @@
 
 /* python.org's own colors: its yellow with its dark blue, as on that site's buttons. */
 .badge[data-script-type="python"] {
+  --python-yellow: #ffd343;
+  --python-blue: #2b5b84;
   border-color: #e9bd18;
-  background: #ffd343;
-  color: #2b5b84;
+  background: var(--python-yellow);
+  color: var(--python-blue);
 }
 
 .badge[data-script-type="cypher"] {

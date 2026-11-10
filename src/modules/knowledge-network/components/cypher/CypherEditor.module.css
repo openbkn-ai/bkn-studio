@@ -6,14 +6,11 @@
  */
 
 /*
- * A `$name` parameter: a color none of Monaco's Cypher tokens use, so it reads as a slot. The
- * editor scope outranks the token color classes Monaco injects after this sheet.
+ * A `$name` parameter: the accent color, which none of Monaco's Cypher tokens use, so it reads as
+ * a slot; the token follows the theme. The editor scope outranks the token color classes Monaco
+ * injects after this sheet.
  */
 :global(.monaco-editor) .parameter {
-  color: #a21caf;
+  color: var(--color-text-accent);
   font-weight: 600;
-}
-
-:global(:root[data-theme="dark"] .monaco-editor) .parameter {
-  color: #e879f9;
 }
