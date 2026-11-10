@@ -134,6 +134,8 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
   // What the declarations were when the object type was read; a save sends only what changed.
   const declarationBaseline = useRef<DataPropertyDeclarationBaseline>(new Map());
+  // Not edited in the form; sent back so a save keeps it.
+  const incrementalKey = useRef<string | undefined>(undefined);
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.objectTypeEditTitle")
@@ -199,6 +201,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             tags: detail.tags,
             ...toDefinitionDeclarationForm(detail.declarations),
           };
+          incrementalKey.current = detail.incrementalKey;
           definitionBaseline.current = detail.declarations
             ? structuredClone(detail.declarations)
             : undefined;
@@ -472,6 +475,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
       description: normalizedBasicValue.description,
       icon: normalizedBasicValue.icon,
       id: normalizedBasicValue.id,
+      incrementalKey: mode === "edit" ? incrementalKey.current : undefined,
       logicProperties: normalizedLogicProperties,
       name: normalizedBasicValue.name,
       tags: normalizedBasicValue.tags,

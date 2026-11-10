@@ -205,6 +205,11 @@ export type KnowledgeNetworkObjectTypeMutationPayload = {
   description: string;
   icon?: string;
   id?: string;
+  /**
+   * The stored incremental key. Studio does not edit it, but a save replaces the whole object
+   * type, so it is sent back; absent for a new object type.
+   */
+  incrementalKey?: string;
   logicProperties?: ObjectTypeLogicProperty[];
   name: string;
   tags: string[];
