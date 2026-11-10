@@ -87,6 +87,14 @@ describe("RelationDeclarationsSummary", () => {
     expect(screen.getByText(`${PREFIX}.verificationShort.unconfirmed`)).toBeTruthy();
   });
 
+  it("shows the cardinality with its badge, and leaves what it means to the badge's hover", () => {
+    renderSummary(primary.id, { cardinality: "many_to_one", requiredEnds: ["source"] });
+
+    expect(screen.getByText("N:1")).toBeTruthy();
+    expect(screen.getByText(`${PREFIX}.cardinalityOption.manyToOne`)).toBeTruthy();
+    expect(screen.queryByText((text) => text.includes(`${PREFIX}.count.`))).toBeNull();
+  });
+
   it("says not declared where the relation declares nothing, and primary as the default", () => {
     renderSummary(primary.id, { cardinality: "many_to_one" });
 
@@ -109,7 +117,12 @@ describe("RelationDeclarationsSummary", () => {
 describe("RelationDeclarationName", () => {
   it("tags a secondary relation, its primary and an inferred join", () => {
     render(
-      <RelationDeclarationName declarations={byIdCard} relationTypes={[primary, fallback]}>
+      <RelationDeclarationName
+        declarations={byIdCard}
+        relationTypes={[primary, fallback]}
+        sourceName="检验申请"
+        targetName="患者"
+      >
         <span>{fallback.name}</span>
       </RelationDeclarationName>,
     );
@@ -119,9 +132,30 @@ describe("RelationDeclarationName", () => {
     expect(screen.getByText(`${PREFIX}.listTag.unconfirmed`)).toBeTruthy();
   });
 
+  it("shows a relation's cardinality as a badge beside its name", () => {
+    render(
+      <RelationDeclarationName
+        declarations={{ cardinality: "many_to_one" }}
+        relationTypes={[]}
+        sourceName="检验申请"
+        targetName="患者"
+      >
+        <span>{primary.name}</span>
+      </RelationDeclarationName>,
+    );
+
+    expect(screen.getByText("N:1")).toBeTruthy();
+    expect(screen.getByText(primary.name)).toBeTruthy();
+  });
+
   it("shows only the name of a relation that is none of these", () => {
     const { container } = render(
-      <RelationDeclarationName declarations={{ cardinality: "one_to_one" }} relationTypes={[]}>
+      <RelationDeclarationName
+        declarations={{ reverseName: "检验申请", verification: "confirmed" }}
+        relationTypes={[]}
+        sourceName="检验申请"
+        targetName="患者"
+      >
         <span>{primary.name}</span>
       </RelationDeclarationName>,
     );

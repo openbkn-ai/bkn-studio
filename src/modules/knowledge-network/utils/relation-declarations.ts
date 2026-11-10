@@ -33,6 +33,14 @@ export const CARDINALITY_LABEL_KEYS: Readonly<Record<RelationCardinality, string
   one_to_one: "oneToOne",
 };
 
+/** The short form of each cardinality, from source to target, as a badge shows it. */
+export const CARDINALITY_NOTATION: Readonly<Record<RelationCardinality, string>> = {
+  many_to_many: "N:N",
+  many_to_one: "N:1",
+  one_to_many: "1:N",
+  one_to_one: "1:1",
+};
+
 /** The cardinalities a symmetric relation can declare: it reads the same from either end. */
 export const SYMMETRIC_CARDINALITIES: readonly RelationCardinality[] = [
   "one_to_one",

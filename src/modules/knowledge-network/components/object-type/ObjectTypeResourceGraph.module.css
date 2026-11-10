@@ -622,6 +622,11 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Tighter buttons so the actions fit on one line in English too. */
+.drawerActions :global(.ant-btn) {
+  padding-inline: 12px;
+}
+
 .drawerDescription {
   display: grid;
   gap: 6px;
@@ -673,4 +678,23 @@
   .svg {
     min-height: 420px;
   }
+}
+
+/* A deprecated relation is still in use by queries; it is drawn faint and dashed, as on the overview graph. */
+.deprecatedRelation .relationEdge {
+  opacity: 0.4;
+  stroke-dasharray: 4 4;
+}
+
+.deprecatedRelation .relationNode {
+  opacity: 0.5;
+}
+
+.deprecatedOwner circle,
+.deprecatedOwner text {
+  opacity: 0.45;
+}
+
+.drawerMuted {
+  color: var(--color-text-tertiary);
 }

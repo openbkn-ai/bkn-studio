@@ -423,7 +423,12 @@ export function RelationTypeListPanel({
           <span className={styles.objectIconSquare} style={{ backgroundColor: "#5381DF" }}>
             <ApartmentOutlined />
           </span>
-          <RelationDeclarationName declarations={record.declarations} relationTypes={items}>
+          <RelationDeclarationName
+            declarations={record.declarations}
+            relationTypes={items}
+            sourceName={record.sourceObjectTypeName}
+            targetName={record.targetObjectTypeName}
+          >
             <DeprecatedName declarations={record.definitionDeclarations}>
               <span className={styles.objectName}>{value}</span>
             </DeprecatedName>

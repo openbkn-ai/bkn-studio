@@ -156,31 +156,31 @@ describe("RelationTypeMappingScene", () => {
     await save();
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalled());
-    expect(mocks.confirm).not.toHaveBeenCalled();
     expect(mocks.update.mock.calls[0][2]).not.toHaveProperty("declarationEdit");
   });
 
-  it("asks first, then clears the characteristics new ends no longer allow", async () => {
+  it("clears the characteristics new ends no longer allow, and says so before saving", async () => {
     renderScene();
     fireEvent.click(await screen.findByRole("button", { name: "move target" }));
+
+    expect(
+      await screen.findByText("knowledgeNetwork.relationDeclarations.cleared.ends"),
+    ).toBeInTheDocument();
     await save();
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalled());
-    expect(mocks.confirm).toHaveBeenCalledTimes(1);
     expect(mocks.update.mock.calls[0][2]).toMatchObject({
       declarationEdit: { baseline: detail.declarations, current: { cardinality: "many_to_many" } },
       targetObjectTypeId: "nurse",
     });
   });
 
-  it("saves nothing when the user keeps the characteristics", async () => {
-    mocks.confirm.mockImplementation(({ onCancel }: { onCancel: () => void }) => onCancel());
+  it("shows the relation declarations below the mapping", async () => {
     renderScene();
-    fireEvent.click(await screen.findByRole("button", { name: "move target" }));
-    await save();
 
-    await waitFor(() => expect(mocks.confirm).toHaveBeenCalled());
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("knowledgeNetwork.relationDeclarations.title"),
+    ).toBeInTheDocument();
   });
 
   it("shows a declaration refusal with links to what it names, not as a toast", async () => {

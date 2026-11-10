@@ -51,12 +51,3 @@
 .link:hover {
   text-decoration: underline;
 }
-
-.sentence {
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--color-fill-quaternary);
-  color: var(--color-text-secondary);
-}

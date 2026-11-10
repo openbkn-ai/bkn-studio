@@ -71,7 +71,7 @@ const relation = {
   updaterName: "",
 };
 const relationTypes: KnowledgeNetworkRelationTypeRecord[] = [
-  { ...relation, id: "admitted", name: "入院" },
+  { ...relation, declarations: { cardinality: "one_to_many" }, id: "admitted", name: "入院" },
   { ...relation, definitionDeclarations: deprecated, id: "admitted_old", name: "入院（旧）" },
 ];
 
@@ -122,5 +122,13 @@ describe("OntologyInspectorPanel", () => {
     expect(tags).toHaveLength(1);
     expect(tags[0].closest("span[class]")?.parentElement?.textContent).toContain("入院（旧）");
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("keeps each relation on one line, with its full name on hover and no cardinality", () => {
+    renderPanel("patient");
+
+    // The panel is narrow: cardinality shows in the relation's own drawer instead.
+    expect(screen.queryByText(/^[1N]:[1N]$/)).toBeNull();
+    expect(screen.getByText("入院（旧）")).toHaveAttribute("title", "入院（旧）");
   });
 });
