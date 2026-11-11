@@ -2105,6 +2105,15 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
+        keptDocument:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocument_one:
+          "{{count}} field was decided as the documents have it right. The published data still uses the business system's value and the release records the difference; correct it in the business system:",
+        keptDocument_other:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocumentItem:
+          "“{{field}}” of {{object}}: the document says “{{document}}”, the business system “{{system}}”",
+        keptDocumentReason: "{{row}} (reason: {{reason}})",
         originalDocuments:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         originalDocuments_one:
@@ -2129,6 +2138,23 @@ export const bknProjectEnUS = {
         reason: {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_review_items:
+            "The knowledge base still has items to review: {{items}}. Review them on the build page, or accept publishing with them.",
+          reviewItems: {
+            uncounted:
+              "The knowledge base still has items to review. Review them on the build page, or accept publishing with them.",
+            links: "{{count}} links",
+            links_one: "{{count}} link",
+            links_other: "{{count}} links",
+            values: "{{count}} current values",
+            values_one: "{{count}} current value",
+            values_other: "{{count}} current values",
+            conflicts: "{{count}} differences from the business system",
+            conflicts_one: "{{count}} difference from the business system",
+            conflicts_other: "{{count}} differences from the business system",
+          },
+          knowledge_base_review_not_applied:
+            "Some review decisions are not applied yet. Save links and current values on the build page, then review again.",
           knowledge_base_originals_changed:
             "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           knowledge_base_permission:
@@ -2174,12 +2200,14 @@ export const bknProjectEnUS = {
           similar_names: "I know the names are close; publish anyway",
           check_partial: "I know part of the data was not checked; publish anyway",
           index_not_ready: "I know some indexes are not ready; publish anyway",
+          knowledge_base_review_items: "I know some items are not reviewed; publish with them",
           other: "I know this did not pass; publish anyway",
         },
         accepted: {
           similar_names: "names close to existing content",
           check_partial: "part of the data not checked",
           index_not_ready: "some local indexes not ready",
+          knowledge_base_review_items: "items not reviewed",
           other: "a check that did not pass",
         },
         refusal: {

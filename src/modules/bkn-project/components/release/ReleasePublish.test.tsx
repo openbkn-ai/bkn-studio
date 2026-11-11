@@ -336,6 +336,89 @@ describe("ReleasePublish", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
+  it("publishes with items left to review only once the owner accepts them, by kind", async () => {
+    prepareReleaseMock.mockResolvedValue(undefined);
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: ["knowledge_base_review_items"],
+        blocked: false,
+        checks: [
+          {
+            accept: "knowledge_base_review_items",
+            code: "knowledge_base",
+            details: {
+              original_documents: 0,
+              review_conflicts: 1,
+              review_links: 2,
+              review_values: 0,
+            },
+            passed: false,
+            reason: "knowledge_base_review_items",
+          },
+        ],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "知识库还有未处理的待核实条目：关联待核查 2 条、与业务系统不一致 1 条。可以在构建页逐条处理，或确认后带着它们发布。",
+      ),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/review_|knowledge_base/)).toBeNull();
+    expect(prepareButton()).toBeDisabled();
+    fireEvent.click(view.getByText("知道还有未处理的待核实条目，带着它们发布"));
+    fireEvent.click(prepareButton());
+    await waitFor(() =>
+      expect(prepareReleaseMock).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ accepts: ["knowledge_base_review_items"] }),
+      ),
+    );
+  });
+
+  it("lists, field by field, what the release keeps from the business system against the documents", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        checks: [
+          {
+            code: "knowledge_base",
+            details: {
+              kept_document: [
+                {
+                  document_values: ["45 日"],
+                  field: "付款账期",
+                  object: "合同",
+                  reason: "补充协议更新",
+                  record: { number: "HT-031" },
+                  system_value: "60 日",
+                },
+              ],
+              original_documents: 0,
+            },
+            passed: true,
+          },
+        ],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "1 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      view.getByText(
+        "合同 HT-031 的「付款账期」：文档为「45 日」，业务系统为「60 日」（理由：补充协议更新）",
+      ),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/kept_document|document_values/)).toBeNull();
+  });
+
   it("asks what happens to online edits nobody published, and commits or overwrites them", async () => {
     prepareReleaseMock
       .mockRejectedValueOnce(refusal("Release.DraftHasChanges"))
@@ -617,6 +700,10 @@ describe("ReleasePublish", () => {
     ],
     ["knowledge_base_permission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
     ["knowledge_base_unavailable", "暂时无法核对知识库发布条件，请稍后重新审核。"],
+    [
+      "knowledge_base_review_not_applied",
+      "有逐条核实的决定还没应用，请先在构建页“保存关联与当前值”，再重新审核。",
+    ],
   ])("blocks knowledge-base publication in business language: %s", async (reason, message) => {
     getReleaseReviewMock.mockResolvedValue(
       review({
