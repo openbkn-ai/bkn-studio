@@ -126,11 +126,13 @@ describe("KnVersionBar", () => {
 
   it("shows a network without versions as its running v1, with nothing to publish", () => {
     render(<KnUnversionedBar networkId="kn-1" />);
-    expect(screen.getByText("v1 (knowledgeNetwork.versions.status.running)")).toBeTruthy();
+    expect(screen.getByText("v1")).toBeTruthy();
+    expect(screen.queryByText(/knowledgeNetwork\.versions\.status\.running/)).toBeNull();
     expect(screen.queryByText("main")).toBeNull();
     expect(screen.queryByText(/knowledgeNetwork\.versions\.publish\.action/)).toBeNull();
 
     fireEvent.mouseDown(screen.getByRole("combobox"));
+    expect(screen.getByText("v1 (knowledgeNetwork.versions.status.running)")).toBeTruthy();
     expect(screen.getByText("knowledgeNetwork.versions.title")).toBeTruthy();
   });
 

@@ -80,6 +80,8 @@ export function KnUnversionedBar({ networkId }: { networkId: string }) {
       {...link}
       aria-label={t("knowledgeNetwork.versions.viewing")}
       className={styles.viewSelect}
+      // As on a versioned network, the closed picker names the version; the list says it runs.
+      labelRender={() => knVersionName(1)}
       options={[
         {
           label: `${knVersionName(1)} (${t("knowledgeNetwork.versions.status.running")})`,
