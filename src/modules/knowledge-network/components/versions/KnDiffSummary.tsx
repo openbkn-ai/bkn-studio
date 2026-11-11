@@ -11,10 +11,6 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  KnStatusText,
-  type KnStatusTone,
-} from "@/modules/knowledge-network/components/versions/KnStatusText";
-import {
   SELF_GROUP,
   changedEntries,
   parseChangePath,
@@ -39,13 +35,6 @@ type KnDiffSummaryProps = {
 
 type Action = KnDiffDefinition["action"];
 
-const ACTION_TONE: Record<Action, KnStatusTone> = {
-  create: "success",
-  delete: "error",
-  skip: "neutral",
-  update: "warning",
-};
-
 const KINDS = [
   "network",
   "object_type",
@@ -59,6 +48,23 @@ const KINDS = [
 type Row = { field: string; kind: Action; newValue?: string; oldValue?: string; raw: string };
 
 type ChangeGroup = { action: Action; key: string; label: string; member: string; rows: Row[] };
+
+// Each count names its action, and reads in the colour of that action.
+const COUNTS = [
+  { action: "create", count: "create", key: "created" },
+  { action: "update", count: "update", key: "updated" },
+  { action: "delete", count: "delete", key: "deleted" },
+  { action: "skip", count: "skip", key: "unchanged" },
+] as const;
+
+/** A word, not a glyph, on a light tint of its colour. */
+function ActionBadge({ action, t }: { action: Action; t: TFunction }) {
+  return (
+    <span className={`${styles.diffBadge} ${styles[`diffBadge_${action}`]}`}>
+      {t(`knowledgeNetwork.versions.diff.action.${action}`)}
+    </span>
+  );
+}
 
 function entryKey(entry: KnDiffDefinition) {
   return `${entry.type}:${entry.id}`;
@@ -258,18 +264,16 @@ export function KnDiffSummary({
   return (
     <div className={styles.diff}>
       <div className={styles.diffCounts}>
-        <KnStatusText tone="success">
-          {t("knowledgeNetwork.versions.diff.created", { n: summary.created })}
-        </KnStatusText>
-        <KnStatusText tone="warning">
-          {t("knowledgeNetwork.versions.diff.updated", { n: summary.updated })}
-        </KnStatusText>
-        <KnStatusText tone="error">
-          {t("knowledgeNetwork.versions.diff.deleted", { n: summary.deleted })}
-        </KnStatusText>
-        <KnStatusText tone="neutral">
-          {t("knowledgeNetwork.versions.diff.unchanged", { n: summary.unchanged })}
-        </KnStatusText>
+        {COUNTS.map(({ action, count, key }) => (
+          <div
+            aria-label={t(`knowledgeNetwork.versions.diff.${key}`, { n: summary[key] })}
+            className={`${styles.diffCount} ${styles[`diffCount_${action}`]}`}
+            key={key}
+          >
+            <span className={styles.diffCountValue}>{summary[key]}</span>
+            <span>{t(`knowledgeNetwork.versions.diff.action.${count}`)}</span>
+          </div>
+        ))}
       </div>
       {entries.length === 0 || !selected ? (
         <Empty
@@ -297,9 +301,7 @@ export function KnDiffSummary({
                       onClick={() => setPicked(key)}
                       type="button"
                     >
-                      <KnStatusText tone={ACTION_TONE[entry.action]}>
-                        {t(`knowledgeNetwork.versions.diff.action.${entry.action}`)}
-                      </KnStatusText>
+                      <ActionBadge action={entry.action} t={t} />
                       <span className={styles.diffRailName}>{entryTitle(entry)}</span>
                     </button>
                   );
@@ -340,9 +342,7 @@ export function KnDiffSummary({
                 {groups.map((group) => (
                   <div className={styles.diffCard} key={group.key}>
                     <div className={styles.diffCardHead}>
-                      <KnStatusText tone={ACTION_TONE[group.action]}>
-                        {t(`knowledgeNetwork.versions.diff.action.${group.action}`)}
-                      </KnStatusText>
+                      <ActionBadge action={group.action} t={t} />
                       <span>
                         {group.label}
                         {group.member ? ` · ${group.member}` : ""}

@@ -10,12 +10,12 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
-  background: var(--ant-color-bg-container);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .viewSelect {
-  color: var(--ant-color-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .picker {
@@ -27,7 +27,7 @@
 
 .notice {
   padding: 6px 16px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .draftStatus {
@@ -35,7 +35,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  color: var(--ant-color-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .changesDot {
@@ -43,7 +43,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ant-color-warning);
+  background: var(--color-warning-text);
 }
 
 .statusText {
@@ -58,34 +58,107 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ant-color-text-quaternary);
+  background: var(--color-text-faint);
 }
 
 .tone_success {
-  background: var(--ant-color-success);
+  background: var(--color-success-text);
 }
 
 .tone_warning {
-  background: var(--ant-color-warning);
+  background: var(--color-warning-text);
 }
 
 .tone_error {
-  background: var(--ant-color-error);
+  background: var(--color-error-text);
 }
 
 .tone_info {
-  background: var(--ant-color-primary);
+  background: var(--color-selection-accent);
 }
 
 .diffCounts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  color: var(--ant-color-text-secondary);
+  gap: 8px;
+}
+
+.diffCount {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 96px;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.diffCountValue {
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.diffCount_create {
+  border-left-color: var(--color-success-text);
+}
+
+.diffCount_create .diffCountValue {
+  color: var(--color-success-text);
+}
+
+.diffCount_update {
+  border-left-color: var(--color-warning-text);
+}
+
+.diffCount_update .diffCountValue {
+  color: var(--color-warning-text);
+}
+
+.diffCount_delete {
+  border-left-color: var(--color-error-text);
+}
+
+.diffCount_delete .diffCountValue {
+  color: var(--color-error-text);
+}
+
+.diffBadge {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.diffBadge_create {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.diffBadge_update {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.diffBadge_delete {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.diffBadge_skip {
+  background: var(--color-fill-secondary);
+  color: var(--color-text-secondary);
 }
 
 .outdatedText {
-  color: var(--ant-color-error);
+  color: var(--color-error-text);
 }
 
 /* In the summary the status is the value itself, so it keeps the value's weight and color. */
@@ -107,7 +180,7 @@
 }
 
 .summaryLabel {
-  color: var(--ant-color-text-secondary, #8c8c8c);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -138,13 +211,14 @@
 
 .diffRail {
   padding: 4px 0;
-  border: 1px solid var(--ant-color-border-secondary);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
+  background: var(--color-interface-panel-bg);
 }
 
 .diffRailTitle {
   padding: 8px 12px 4px;
-  color: var(--ant-color-text-tertiary);
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
@@ -164,18 +238,18 @@
 }
 
 .diffRailItem:hover {
-  background: var(--ant-color-fill-quaternary);
+  background: var(--color-fill-secondary);
 }
 
 .diffRailItemActive {
-  border-left-color: var(--ant-color-primary);
-  background: var(--ant-color-primary-bg);
+  border-left-color: var(--color-selection-accent);
+  background: var(--color-bg-selected);
 }
 
 .diffRailName {
   min-width: 0;
   overflow: hidden;
-  color: var(--ant-color-text);
+  color: var(--color-text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -201,13 +275,13 @@
 }
 
 .diffDetailMeta {
-  color: var(--ant-color-text-tertiary);
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
 .diffCard {
   overflow: hidden;
-  border: 1px solid var(--ant-color-border-secondary);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -216,8 +290,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
-  background: var(--ant-color-fill-quaternary);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
   font-size: 13px;
   font-weight: 500;
 }
@@ -231,14 +305,14 @@
 
 .diffColumns {
   padding: 0 12px;
-  color: var(--ant-color-text-tertiary);
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
 .diffFieldRow,
 .diffContentRow {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--color-border);
   font-size: 13px;
   align-items: start;
 }
@@ -255,7 +329,7 @@
 }
 
 .diffFieldName {
-  color: var(--ant-color-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .diffValue,
@@ -266,15 +340,15 @@
 }
 
 .diffValueOld {
-  color: var(--ant-color-error);
+  color: var(--color-error-text);
 }
 
 .diffValueNew {
-  color: var(--ant-color-success);
+  color: var(--color-success-text);
 }
 
 .diffValueAbsent {
-  color: var(--ant-color-text-quaternary);
+  color: var(--color-text-faint);
 }
 
 .diffTableScroll {
@@ -289,8 +363,8 @@
 
 .diffTable th {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
-  color: var(--ant-color-text-tertiary);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
   font-weight: 400;
   text-align: left;
   white-space: nowrap;
@@ -298,7 +372,7 @@
 
 .diffTable td {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--color-border);
   vertical-align: top;
   word-break: break-word;
 }
@@ -343,7 +417,7 @@
   flex-direction: column;
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--ant-color-split);
+  border-top: 1px solid var(--color-divider);
 }
 
 .pickerActions :global(.ant-btn) {

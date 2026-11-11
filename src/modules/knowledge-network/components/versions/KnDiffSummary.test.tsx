@@ -48,9 +48,9 @@ describe("KnDiffSummary", () => {
       summary: { created: 1, deleted: 0, unchanged: 60, updated: 0 },
     };
     render(<KnDiffSummary baseLabel="v2" result={result} targetLabel="draft" />);
-    expect(screen.getByText("knowledgeNetwork.versions.diff.updated:1")).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.versions.diff.created:1")).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.versions.diff.unchanged:60")).toBeTruthy();
+    expect(screen.getByLabelText("knowledgeNetwork.versions.diff.updated:1")).toBeTruthy();
+    expect(screen.getByLabelText("knowledgeNetwork.versions.diff.created:1")).toBeTruthy();
+    expect(screen.getByLabelText("knowledgeNetwork.versions.diff.unchanged:60")).toBeTruthy();
   });
 
   it("does not list the network as changed when only the branch read differs", () => {
@@ -65,7 +65,7 @@ describe("KnDiffSummary", () => {
       summary: { created: 1, deleted: 0, unchanged: 61, updated: 0 },
     };
     render(<KnDiffSummary baseLabel="v2" result={result} targetLabel="draft" />);
-    expect(screen.getByText("knowledgeNetwork.versions.diff.updated:0")).toBeTruthy();
+    expect(screen.getByLabelText("knowledgeNetwork.versions.diff.updated:0")).toBeTruthy();
     expect(screen.queryByText("knowledgeNetwork.versions.diff.kind.network · 1")).toBeNull();
   });
 
