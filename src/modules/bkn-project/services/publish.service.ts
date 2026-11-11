@@ -91,7 +91,13 @@ type BackendStatus = {
         suggested_version?: string;
       }[]
     | null;
-  release?: { in_use: boolean; network_id: string; version: string };
+  release?: {
+    kn_version: number;
+    network_id: string;
+    rolled_back?: boolean;
+    running?: { kn_version: number; label: string } | null;
+    version: string;
+  };
   stage: ProjectStatus["stage"];
   stale: string[] | null;
   undecided: number;
@@ -260,7 +266,11 @@ function mapStatus(status: BackendStatus): ProjectStatus {
     })),
     release: status.release
       ? {
-          inUse: status.release.in_use,
+          knVersion: status.release.kn_version,
+          rolledBack: status.release.rolled_back ?? false,
+          running: status.release.running
+            ? { knVersion: status.release.running.kn_version, label: status.release.running.label }
+            : null,
           networkId: status.release.network_id,
           version: status.release.version,
         }
@@ -625,33 +635,6 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
         : check.status === "passed"
           ? "confirmed"
           : "check_needs_attention";
-  // Once checked, the confirmation is reviewed and published; once published, consumers switch.
-  const published = mockProjectRelease(projectId);
-  if (current && published && confirmation && published.createTime >= confirmation.time) {
-    return {
-      ...base,
-      check: check ? { current, status: check.status } : null,
-      confirmation: { current, time: confirmation.time },
-      // Once consumers use the release, it may be rolled back; the rollback says who may.
-      nextActions: published.inUse
-        ? [{ accepts: [], action: "review_rollback", allowed: true, discardsDecisions: 0 }]
-        : [
-            {
-              accepts: [],
-              action: "switch_consumers",
-              allowed: owns,
-              discardsDecisions: 0,
-              ...(owns ? {} : { reason: "not_owner" }),
-            },
-          ],
-      release: {
-        inUse: published.inUse,
-        networkId: published.latest.networkId,
-        version: published.latest.version,
-      },
-      stage: "published",
-    };
-  }
   const review: ProjectNextAction = {
     accepts: [],
     action: "review_release",
@@ -659,6 +642,29 @@ async function mockStatus(projectId: string): Promise<ProjectStatus> {
     discardsDecisions: 0,
     suggestedVersion: mockNextVersion(),
   };
+  // Once checked, the confirmation is reviewed and published; once published, it may be rolled back.
+  const published = mockProjectRelease(projectId);
+  if (current && published && confirmation && published.createTime >= confirmation.time) {
+    return {
+      ...base,
+      check: check ? { current, status: check.status } : null,
+      confirmation: { current, time: confirmation.time },
+      // Switched back to another version, it is published again; otherwise it may be rolled back.
+      nextActions: published.latest.rolledBack
+        ? [review]
+        : [
+            {
+              accepts: [],
+              action: "review_rollback",
+              allowed: owns,
+              discardsDecisions: 0,
+              ...(owns ? {} : { reason: "not_owner" }),
+            },
+          ],
+      release: published.latest,
+      stage: "published",
+    };
+  }
   return {
     ...base,
     blockers,

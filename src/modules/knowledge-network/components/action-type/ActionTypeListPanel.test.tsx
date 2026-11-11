@@ -186,6 +186,37 @@ afterEach(() => {
 });
 
 describe("ActionTypeListPanel menu access", () => {
+  it("keeps multiple tags inside the compact list column", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "notify",
+          color: "#1677ff",
+          description: "",
+          id: "send-alert",
+          name: "Send alert",
+          objectTypeId: "",
+          objectTypeName: "",
+          operationConfig: { type: "tool" },
+          tags: ["独立工具行动", "电商", "真实环境", "联调"],
+          updateTime: "",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 1,
+    });
+
+    renderPanel("/?view=list");
+
+    const firstTag = await screen.findByText("独立工具行动");
+    expect(firstTag.closest(".ant-tag")).toHaveAttribute("title", "独立工具行动");
+    const remainingTags = screen.getByText("+3");
+    expect(remainingTags).toBeInTheDocument();
+    expect(screen.queryByText("电商")).toBeNull();
+    fireEvent.mouseOver(remainingTags);
+    expect(await screen.findByText("电商")).toBeInTheDocument();
+  });
+
   it("resets the URL and request page when changing tool type on page three", async () => {
     listActionTypePage.mockResolvedValue({ entries: [], totalCount: 30 });
     renderPanel("/?view=list&page=3");
@@ -394,7 +425,7 @@ describe("ActionTypeListPanel menu access", () => {
     const requests = listActionTypePage.mock.calls as Array<[string, { objectTypeId?: string }]>;
     expect(requests.every(([, query]) => query.objectTypeId === "orders")).toBe(true);
   });
-  it("opens object and tool entries and routes them into the shared editor", async () => {
+  it("opens the tool entry and routes it into the shared editor", async () => {
     listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
     renderPanel("/?view=list", false, true);
 
@@ -412,8 +443,12 @@ describe("ActionTypeListPanel menu access", () => {
         },
       },
     );
+  });
 
-    navigate.mockClear();
+  it("opens the object entry and routes it into the shared editor", async () => {
+    listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
+    renderPanel("/?view=list", false, true);
+
     fireEvent.click(await screen.findByText("common.create"));
     fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.actionOperationObject/ }));
     expect(navigate).toHaveBeenCalledWith(

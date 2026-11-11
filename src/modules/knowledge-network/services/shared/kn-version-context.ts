@@ -46,6 +46,8 @@ type KnVersionContext = {
   versioning?: KnVersioning;
   /** A failed probe is remembered only until this time. */
   expiresAt?: number;
+  /** The probe failed: whether the network has versioning is not known. */
+  unknown?: boolean;
 };
 
 type KnRequestConfig = InternalAxiosRequestConfig & {
@@ -73,6 +75,13 @@ export class KnVersionReadOnlyError extends Error {
   constructor() {
     super(i18n.t("knowledgeNetwork.versions.writeBlocked"));
     this.name = "KnVersionReadOnlyError";
+  }
+}
+
+export class KnVersionUnknownError extends Error {
+  constructor() {
+    super(i18n.t("knowledgeNetwork.versions.stateUnknown"));
+    this.name = "KnVersionUnknownError";
   }
 }
 
@@ -270,6 +279,7 @@ async function probe(knId: string): Promise<KnVersionContext> {
       view: "running",
       runningVersion: 0,
       expiresAt: Date.now() + PROBE_FAILURE_TTL_MS,
+      unknown: true,
     });
   }
   return contexts.get(knId) as KnVersionContext;
@@ -359,6 +369,19 @@ async function fetchEtag(knId: string, rest: string, url: string) {
   return etags.get(etagKey(knId, rest));
 }
 
+/**
+ * A request that may change the definitions. A POST on the network itself is not one: no write
+ * goes there, while lookups such as `knowledge-networks/names` match its path.
+ */
+function isWrite(method: string, rest: string) {
+  return (
+    method === "put" ||
+    method === "patch" ||
+    method === "delete" ||
+    (method === "post" && rest !== "")
+  );
+}
+
 async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig> {
   const target = parseNetworkPath(config.url);
   if (!target || config._knSkip || config._knProbe || isUnscoped(target.rest)) {
@@ -366,7 +389,16 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
   }
 
   const method = (config.method ?? "get").toLowerCase();
-  const context = await ensureKnVersionContext(target.knId);
+  let context = await ensureKnVersionContext(target.knId);
+  if (context.unknown && isWrite(method, target.rest)) {
+    // Taken for a network without versioning, a write to a versioned one would be published at
+    // once. Ask again instead of guessing.
+    contexts.delete(target.knId);
+    context = await ensureKnVersionContext(target.knId);
+    if (context.unknown) {
+      throw new KnVersionUnknownError();
+    }
+  }
   if (!context.versioned) {
     return config;
   }
@@ -380,9 +412,9 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
   }
 
   if (method === "post") {
-    // Creates and validations go to the draft on their own; only the branch they name is dropped.
-    if (context.view === "draft" && existingParams.branch !== undefined) {
-      config.params = withoutBranch(existingParams);
+    // Creates and validations name the draft: a write without it is published at once.
+    if (context.view === "draft") {
+      config.params = { ...existingParams, branch: "draft" };
     }
     return config;
   }
@@ -394,9 +426,9 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
   if (context.view !== "draft") {
     throw new KnVersionReadOnlyError();
   }
-  if (existingParams.branch !== undefined) {
-    config.params = withoutBranch(existingParams);
-  }
+  // Studio edits the draft and publishes it on its own; a write without the branch would be
+  // published at once.
+  config.params = { ...existingParams, branch: "draft" };
 
   const currentParams = (config.params ?? {}) as Record<string, unknown>;
   const key = etagKey(target.knId, target.rest);

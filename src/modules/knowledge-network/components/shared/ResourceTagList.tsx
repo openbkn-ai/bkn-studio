@@ -22,12 +22,14 @@ export function ResourceTagList({ maxVisible = 3, tags = [] }: ResourceTagListPr
   return (
     <div className={styles.tableTags}>
       {visibleTags.map((tag) => (
-        <Tag key={tag}>{tag}</Tag>
+        <Tag key={tag} title={tag}>
+          {tag}
+        </Tag>
       ))}
       {hiddenCount > 0 ? (
         <Tooltip
+          classNames={{ root: styles.tableTagsTooltipOverlay }}
           color="#fff"
-          overlayClassName={styles.tableTagsTooltipOverlay}
           title={
             <div className={styles.tableTagsTooltip}>
               {tags.map((tag) => (

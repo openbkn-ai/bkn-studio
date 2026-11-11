@@ -66,8 +66,6 @@ export type KnowledgeNetworkMutationPayload = {
   identifier: string;
   name: string;
   tags: string[];
-  /** Create only: start the network with versioning (edits go to a draft). */
-  versioning?: boolean;
 };
 
 export type KnowledgeNetworkRecentObject = {

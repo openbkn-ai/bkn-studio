@@ -11,36 +11,49 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { versionName } from "@/modules/bkn-project/components/release/releaseMessages";
 import { Questions } from "@/modules/bkn-project/components/release/ReleaseReviewDialog";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import { getRollbackPlan, rollBack } from "@/modules/bkn-project/services/release.service";
-import type { RollbackNetwork, RollbackPlan } from "@/modules/bkn-project/types/release";
+import type { RollbackPlan, RollbackVersion } from "@/modules/bkn-project/types/release";
 
 import styles from "./Release.module.css";
 
 const PREFIX = "bknProject.release.rollback";
 
-const REFUSALS = new Set(["NoPrevious", "NotProjectRelease"]);
-const CONSUMERS = new Set(["agents", "mcp", "workshop", "eval"]);
-const ERRORS = new Set(["NotOwner", "ProjectArchived"]);
+const REFUSALS = new Set([
+  "NoPrevious",
+  "NotProjectRelease",
+  "EditionRestricted",
+  "NotFound",
+  "VersionPurged",
+  "NotActivatable",
+]);
+const ERRORS = new Set(["NotOwner", "ProjectArchived", "BrokenReferences"]);
 
 const codeName = (code: string) => code.slice(code.lastIndexOf(".") + 1);
 
 /**
- * Rolls consumers back to the network before the one in use, once the owner has read what it
- * does: the schedules that move back, the consumers their owners switch, and the scenario
- * questions it changes. It only switches; no data or definitions are rewritten.
+ * Switches the network's running version to an earlier one, once the owner has read what it
+ * changes for the scenario questions. It takes effect at once for every consumer; the project's
+ * content and the network's draft stay as they are.
  */
 export function RollbackDialog({
   canRollBack,
   onCancel,
   onRolledBack,
   projectId,
+  rollback,
+  toVersion,
 }: {
   canRollBack: boolean;
   onCancel: () => void;
   onRolledBack: () => void;
   projectId: string;
+  /** Going back to the previous version, said as such; otherwise switching to another one. */
+  rollback: boolean;
+  /** The version to switch to; the previous version without it. */
+  toVersion?: number;
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -52,32 +65,26 @@ export function RollbackDialog({
     setFailed(false);
     setPlan(null);
     try {
-      setPlan(await getRollbackPlan(projectId));
+      setPlan(await getRollbackPlan(projectId, toVersion));
     } catch {
       setFailed(true);
     }
-  }, [projectId]);
+  }, [projectId, toVersion]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const version = (item: RollbackNetwork) => `v${item.version}`;
-  // The network before the first release has no version: its own wording names it.
-  const toBase = (item: RollbackNetwork | null) => Boolean(item && (item.base || !item.version));
+  const name = (version: RollbackVersion) => versionName(t, version.knVersion, version.label);
 
   const confirm = async () => {
-    if (!plan) {
+    if (!plan?.to) {
       return;
     }
     setRolling(true);
     try {
-      await rollBack(projectId, plan.signature);
-      message.success(
-        toBase(plan.to)
-          ? t(`${PREFIX}.doneBase`)
-          : t(`${PREFIX}.done`, { to: plan.to ? version(plan.to) : "" }),
-      );
+      await rollBack(projectId, plan.signature, plan.to.knVersion);
+      message.success(t(`${PREFIX}.done`, { version: name(plan.to) }));
       onRolledBack();
     } catch (error) {
       const code = projectErrorCode(error) ?? "";
@@ -86,11 +93,11 @@ export function RollbackDialog({
         message.warning(t(`${PREFIX}.outdated`));
         void load();
       } else {
-        const name = codeName(code);
+        const known = codeName(code);
         message.error(
-          REFUSALS.has(name)
-            ? t(`${PREFIX}.refusal.${name}`)
-            : t(`${PREFIX}.error.${ERRORS.has(name) ? name : "other"}`),
+          REFUSALS.has(known)
+            ? t(`${PREFIX}.refusal.${known}`)
+            : t(`${PREFIX}.error.${ERRORS.has(known) ? known : "other"}`),
         );
       }
     } finally {
@@ -99,18 +106,26 @@ export function RollbackDialog({
   };
 
   const refused = Boolean(plan?.refusals.length) || !plan?.to;
-  const consumers = plan?.consumers.filter((kind) => CONSUMERS.has(kind)) ?? [];
+  const affected = plan
+    ? plan.questions.unanswerable.length +
+      plan.questions.affected.length +
+      plan.questions.answerableNew.length
+    : 0;
   return (
     <Modal
       cancelText={t("common.cancel")}
       confirmLoading={rolling}
       destroyOnHidden
-      okButtonProps={{ danger: true, disabled: !plan || refused || !canRollBack }}
+      okButtonProps={{ disabled: !plan || refused || !canRollBack }}
       okText={t(`${PREFIX}.confirm`)}
       onCancel={onCancel}
       onOk={() => void confirm()}
       open
-      title={t(`${PREFIX}.title`)}
+      title={
+        plan?.to
+          ? t(`${PREFIX}.${rollback ? "titleBack" : "titleSwitch"}`, { version: name(plan.to) })
+          : t(`${PREFIX}.title`)
+      }
       width={640}
     >
       {failed ? (
@@ -132,8 +147,8 @@ export function RollbackDialog({
             <Alert
               message={plan.refusals
                 .map((code) => {
-                  const name = codeName(code);
-                  return t(`${PREFIX}.refusal.${REFUSALS.has(name) ? name : "other"}`);
+                  const known = codeName(code);
+                  return t(`${PREFIX}.refusal.${REFUSALS.has(known) ? known : "other"}`);
                 })
                 .join(t("bknProject.sentenceSeparator"))}
               showIcon
@@ -141,48 +156,37 @@ export function RollbackDialog({
             />
           ) : null}
           {plan.to ? (
-            <p>
-              {toBase(plan.to)
-                ? t(`${PREFIX}.fromToBase`, { from: version(plan.from) })
-                : t(`${PREFIX}.fromTo`, { from: version(plan.from), to: version(plan.to) })}
-            </p>
-          ) : null}
-          <p className={styles.muted}>{t(`${PREFIX}.onlySwitches`)}</p>
-          {plan.schedules.length ? (
-            <div className={styles.stack}>
-              <span className={styles.label}>
-                {t(`${PREFIX}.${toBase(plan.to) ? "schedulesBase" : "schedules"}`, {
-                  count: plan.schedules.length,
-                  from: version(plan.from),
-                  to: plan.to ? version(plan.to) : "",
-                })}
-              </span>
-              <ul className={styles.list}>
-                {plan.schedules.map((schedule) => (
-                  <li className={styles.listItem} key={schedule.id}>
-                    {schedule.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p className={styles.muted}>{t(`${PREFIX}.noSchedules`)}</p>
-          )}
-          {consumers.length ? (
-            <p className={styles.muted}>
-              {t(`${PREFIX}.consumers`, {
-                kinds: consumers
-                  .map((kind) => t(`${PREFIX}.consumer.${kind}`))
-                  .join(t("bknProject.listSeparator")),
-              })}
-            </p>
-          ) : null}
-          {plan.questions.total ? (
-            <div className={styles.stack}>
-              <Questions list={plan.questions.unanswerable} title={t(`${PREFIX}.unanswerable`)} />
-              <Questions list={plan.questions.affected} title={t(`${PREFIX}.affected`)} />
-              <Questions list={plan.questions.answerableNew} title={t(`${PREFIX}.answerableNew`)} />
-            </div>
+            <>
+              <p className={styles.muted}>
+                {t(`${PREFIX}.effect`, { from: name(plan.from), to: name(plan.to) })}
+              </p>
+              <dl className={styles.keyValues}>
+                <dt>{t(`${PREFIX}.running`)}</dt>
+                <dd>{name(plan.from)}</dd>
+                <dt>{t(`${PREFIX}.target`)}</dt>
+                <dd>{name(plan.to)}</dd>
+                <dt>{t(`${PREFIX}.questions`)}</dt>
+                <dd>
+                  {affected
+                    ? t(`${PREFIX}.questionsCount`, { count: affected })
+                    : t(`${PREFIX}.questionsNone`)}
+                </dd>
+              </dl>
+              {affected ? (
+                <div className={styles.stack}>
+                  <Questions
+                    list={plan.questions.unanswerable}
+                    title={t(`${PREFIX}.unanswerable`)}
+                  />
+                  <Questions list={plan.questions.affected} title={t(`${PREFIX}.affected`)} />
+                  <Questions
+                    list={plan.questions.answerableNew}
+                    title={t(`${PREFIX}.answerableNew`)}
+                  />
+                </div>
+              ) : null}
+              <Alert message={t(`${PREFIX}.projectStays`)} showIcon type="info" />
+            </>
           ) : null}
           {canRollBack ? null : <p className={styles.muted}>{t(`${PREFIX}.ownerOnly`)}</p>}
         </div>

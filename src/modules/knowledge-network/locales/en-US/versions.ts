@@ -20,6 +20,8 @@ export const versionsPart = {
       "The running version was switched to {{running}}, but the draft is still based on {{base}}. Publishing it brings back what was rolled back.",
     outdatedTag: "Outdated",
     writeBlocked: "This version is read-only. Switch to the draft to make changes.",
+    stateUnknown:
+      "The version state of this knowledge network could not be checked. Try again shortly.",
     history: "Version history",
     viewChanges: "View changes",
     discard: "Discard changes",
@@ -68,10 +70,6 @@ export const versionsPart = {
     metricSaveAndValidate: "Save and validate",
     metricValidated:
       "The metric is saved and validated. It goes live when the knowledge network is published.",
-    create: {
-      versioning: "Enable versioning",
-      versioningHint: "Edits go to a draft and take effect only after you publish a version.",
-    },
     status: {
       running: "Running",
       history: "History",

@@ -154,8 +154,23 @@ export async function listProjects(query: ProjectListQuery): Promise<ProjectList
   };
 }
 
+/** Networks of the mock that keep versions; a project of another one turns versioning on. */
+const mockVersioned = new Set(["supply_chain"]);
+
 export async function createProject(input: CreateProjectInput): Promise<Project> {
   if (useMock) {
+    if (input.knId && !mockVersioned.has(input.knId)) {
+      if (!input.enableVersioning) {
+        throw new AxiosError("versioning required", "ERR_BAD_REQUEST", undefined, undefined, {
+          data: {
+            description: "versioning required",
+            error_code: "BknProject.Project.VersioningRequired",
+          },
+          status: 409,
+        } as AxiosResponse);
+      }
+      mockVersioned.add(input.knId);
+    }
     const now = Date.now();
     const knId = input.knId ?? `new_${now}`;
     const created: BackendProject = {
@@ -172,17 +187,24 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
       update_time: now,
     };
     if (input.newKnName) {
+      mockVersioned.add(knId);
       mockNetworks.unshift({ id: knId, name: input.newKnName.trim() });
     }
     mockProjects.unshift(created);
     return wait(mapProject({ ...created, other_projects: mockOtherProjects(created) }));
   }
-  const response = await http.post<BackendProject>(API_PREFIX, {
-    catalog_ids: input.catalogIds,
-    kn_id: input.knId || undefined,
-    name: input.name.trim(),
-    new_kn: input.newKnName ? { name: input.newKnName.trim() } : undefined,
-  });
+  // The dialog words every refusal, versioning ones included.
+  const response = await http.post<BackendProject>(
+    API_PREFIX,
+    {
+      catalog_ids: input.catalogIds,
+      enable_versioning: input.enableVersioning || undefined,
+      kn_id: input.knId || undefined,
+      name: input.name.trim(),
+      new_kn: input.newKnName ? { name: input.newKnName.trim() } : undefined,
+    },
+    { skipErrorToast: true },
+  );
   return mapProject(response.data);
 }
 
