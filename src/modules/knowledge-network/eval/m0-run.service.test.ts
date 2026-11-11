@@ -15,6 +15,7 @@ import {
   getM0OperationAttempt,
   getEvalRunPlanCount,
   listEvalCases,
+  listEvalCallableFunctions,
   getEvalRunResultRevisionPage,
   getEvalSuite,
   getEvalSuiteCaseDetail,
@@ -293,4 +294,14 @@ it("preserves numeric program literals across rule library load and save", async
   const encode = saveOptions!.transformRequest as (data: unknown) => string;
   expect(encode(body)).toContain('"value":9007199254740993.01');
   expect(encode(body)).not.toContain('"value":"9007199254740993.01"');
+});
+
+it("loads Function identities from the current user resource catalogue", async () => {
+  const entries = [{ resource_id: "mount", name: "Function", operation: "tool" }];
+  getMock.mockResolvedValue({ data: { entries } });
+  await expect(listEvalCallableFunctions("kn/1")).resolves.toEqual(entries);
+  expect(getMock).toHaveBeenCalledWith(
+    "/bkn-backend/v1/knowledge-networks/kn%2F1/evals/runs/multi/functions",
+    { skipErrorToast: true },
+  );
 });

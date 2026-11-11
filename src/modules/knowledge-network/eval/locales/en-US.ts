@@ -85,7 +85,6 @@ export const evalPart = {
         notConfigured: "Execution configuration is required",
         unsupported: "Automatic execution is unavailable for this object",
         invalidContract: "Execution configuration needs correction",
-        grantMissing: "Read-only authorization is missing",
         pending: "Execution conditions need checking",
       },
       comparison: {

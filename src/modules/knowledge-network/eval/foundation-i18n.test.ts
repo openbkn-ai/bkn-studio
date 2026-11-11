@@ -32,7 +32,6 @@ it.each([
     array: "参数.items至少需要2项",
     condition: "逐行校验第 1 条：请填写字段",
     execution: "可运行",
-    grant: "缺少只读授权",
     comparison: "只能比较已有质量结论的运行",
   },
   {
@@ -42,7 +41,6 @@ it.each([
     array: "Parameters.items must contain at least 2 items",
     condition: "Row checks, condition 1: enter a field",
     execution: "Runnable",
-    grant: "Read-only authorization is missing",
     comparison: "Only runs with a quality result can be compared",
   },
 ])("translates validation and execution messages in $language", async (copy) => {
@@ -75,7 +73,6 @@ it.each([
       execution_setup: "ready_for_preflight",
     }),
   ).toBe(copy.execution);
-  expect(caseExecutionSetupReason("grant_missing")).toBe(copy.grant);
   await expect(compareEvalRuns("kn", { id: "a" }, { id: "b" })).rejects.toThrow(copy.comparison);
 });
 

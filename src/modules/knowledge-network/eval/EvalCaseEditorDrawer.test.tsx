@@ -6,8 +6,8 @@
  */
 
 import { Modal } from "antd";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -29,7 +29,7 @@ import {
   getM1RunCapabilities,
   listEvalCaseResources,
   listEvalCaseResourcesPage,
-  listEvalReviewedFunctions,
+  listEvalCallableFunctions,
   replaceEvalCase,
   removeEvalCase,
   trialEvalCase,
@@ -43,7 +43,7 @@ vi.mock("./m0-run.service", () => ({
   getM1RunCapabilities: vi.fn(),
   listEvalCaseResources: vi.fn(),
   listEvalCaseResourcesPage: vi.fn(),
-  listEvalReviewedFunctions: vi.fn(),
+  listEvalCallableFunctions: vi.fn(),
   replaceEvalCase: vi.fn(),
   trialEvalCase: vi.fn(),
   removeEvalCase: vi.fn(),
@@ -108,7 +108,7 @@ beforeEach(() => {
   vi.mocked(createEvalCase).mockResolvedValue({ ...draft, enabled: false, revision: 1 });
   vi.mocked(getEvalCaseDraft).mockResolvedValue(draft);
   vi.mocked(getM1RunCapabilities).mockResolvedValue(true);
-  vi.mocked(listEvalReviewedFunctions).mockResolvedValue([]);
+  vi.mocked(listEvalCallableFunctions).mockResolvedValue([]);
   vi.mocked(listEvalCaseResourcesPage).mockResolvedValue({
     entries: [],
     total: 0,
@@ -135,12 +135,12 @@ beforeEach(() => {
   });
 });
 
-it("creates a reviewed read-only Function draft without self-granting execution rights", async () => {
-  vi.mocked(listEvalReviewedFunctions).mockResolvedValue([
-    { name: "标准交期", operation: "leadtime_days" },
+it("creates a Function draft from the current user resource catalogue", async () => {
+  vi.mocked(listEvalCallableFunctions).mockResolvedValue([
+    { resource_id: "leadtime", name: "标准交期", operation: "leadtime_days" },
   ]);
   render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  await waitFor(() => expect(listEvalReviewedFunctions).toHaveBeenCalledWith("kn-1"));
+  await waitFor(() => expect(listEvalCallableFunctions).toHaveBeenCalledWith("kn-1"));
   fireEvent.mouseDown(
     screen.getByLabelText("资源类型", { exact: true, selector: '[role="combobox"]' }),
   );
@@ -149,7 +149,7 @@ it("creates a reviewed read-only Function draft without self-granting execution 
     screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
   );
   fireEvent.click(await screen.findByText("标准交期"));
-  await screen.findByRole("combobox", { name: "只读函数" });
+  await screen.findByRole("combobox", { name: "函数" });
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "交期应该为 14 天" },
   });
@@ -211,6 +211,111 @@ it("creates a reviewed read-only Function draft without self-granting execution 
     definition.assertions.some((a) => a.type === "resource_used" && a.resource === "标准交期"),
   ).toBe(true);
 }, 60000);
+
+it.each(["新的交期函数", "标准交期"])(
+  "uses the new Function operation after switching to another resource named %s",
+  async (nextName) => {
+    const confirmSpy = vi
+      .spyOn(Modal, "confirm")
+      .mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+    onTestFinished(() => confirmSpy.mockRestore());
+    const original = { resource_id: "leadtime", name: "标准交期", operation: "current_days" };
+    const next = { resource_id: "next-function", name: nextName, operation: "next_days" };
+    const fixed: EvalCaseDraft = {
+      ...draft,
+      definition: {
+        ...draft.definition,
+        category: "calculation",
+        input_spec: { question: "核对交期", arguments: {} },
+        execution_spec: {
+          runner: "direct_capability",
+          target: {
+            kn_id: "kn-1",
+            capability_type: "function",
+            metadata_type: "function",
+            ...original,
+            operation: "legacy_days",
+          },
+        },
+        assertions: [
+          { id: "expected-value", type: "equals", path: "$.days", required: true },
+          { id: "function-used", type: "resource_used", resource: original.name, required: true },
+          { id: "evidence", type: "evidence_complete", required: true },
+        ],
+        expected_spec: { days: 14 },
+      },
+    };
+    vi.mocked(getEvalCaseDraft).mockResolvedValue(fixed);
+    vi.mocked(replaceEvalCase).mockResolvedValue({ ...fixed, revision: 3 });
+    vi.mocked(listEvalCallableFunctions).mockResolvedValue([original, next]);
+    vi.mocked(listEvalCaseResources).mockResolvedValue({
+      entries: [original, next].map((entry) => ({
+        id: entry.resource_id,
+        name: entry.name,
+        kind: "function",
+      })),
+      total: 2,
+    });
+    render(
+      <EvalCaseEditorDrawer
+        networkId="kn-1"
+        caseId="manual-1"
+        open
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "试运行" })).toBeEnabled(), {
+      timeout: 10_000,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+    await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
+    expect(vi.mocked(trialEvalCase).mock.calls[0][1].execution_spec.target).toMatchObject({
+      ...original,
+      operation: "legacy_days",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "返回编辑" }));
+    fireEvent.mouseDown(
+      screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
+    );
+    const options = await screen.findAllByText(nextName, {
+      selector: ".ant-select-item-option-content",
+    });
+    fireEvent.click(options[options.length - 1]);
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalledOnce());
+    await act(async () => {
+      await confirmSpy.mock.calls[0][0].onOk?.();
+    });
+    await waitFor(() =>
+      expect(getCaseTargetSchema).toHaveBeenCalledWith(
+        { id: next.resource_id, kind: "function", name: next.name },
+        "kn-1",
+      ),
+    );
+    fireEvent.change(
+      screen.getByLabelText("预期结果（JSON）", { exact: true, selector: "input,textarea" }),
+      { target: { value: '{"days":14}' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText("比对字段路径", { exact: true, selector: "input,textarea" }),
+      { target: { value: "$.days" } },
+    );
+    fireEvent.change(
+      screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
+      { target: { value: "新函数独立验收样本" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+    await waitFor(() => expect(trialEvalCase).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(trialEvalCase).mock.calls[1][1].execution_spec.target).toMatchObject(next);
+    fireEvent.click(screen.getByRole("button", { name: "返回编辑" }));
+    fireEvent.click(screen.getByRole("button", { name: "确定" }));
+    await waitFor(() => expect(replaceEvalCase).toHaveBeenCalledOnce());
+    expect(
+      vi.mocked(replaceEvalCase).mock.calls[0][1].definition.execution_spec.target,
+    ).toMatchObject(next);
+  },
+  60_000,
+);
 
 it("requires an executable object check instead of accepting a natural-language request", async () => {
   render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
@@ -322,7 +427,7 @@ it("requires an implemented execution for a business scenario", async () => {
   saveWithoutEnabling();
   expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
   expect(
-    await screen.findByText("当前没有已授权的场景执行入口，请先配置只读函数授权。"),
+    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
   ).toBeTruthy();
   expect(createEvalCase).not.toHaveBeenCalled();
   expect(replaceEvalCase).not.toHaveBeenCalled();
@@ -356,7 +461,7 @@ it("clears a previous resource and blocks an unbound scenario", async () => {
   saveWithoutEnabling();
   expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
   expect(
-    await screen.findByText("当前没有已授权的场景执行入口，请先配置只读函数授权。"),
+    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
   ).toBeTruthy();
   expect(createEvalCase).not.toHaveBeenCalled();
   expect(replaceEvalCase).not.toHaveBeenCalled();
@@ -385,7 +490,7 @@ it("does not save an unsupported security scenario", async () => {
   saveWithoutEnabling();
   expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
   expect(
-    await screen.findByText("当前没有已授权的场景执行入口，请先配置只读函数授权。"),
+    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
   ).toBeTruthy();
   expect(createEvalCase).not.toHaveBeenCalled();
   expect(replaceEvalCase).not.toHaveBeenCalled();
@@ -725,7 +830,7 @@ it("observation-only cases still require an implemented execution", async () => 
   fireEvent.click(screen.getByRole("button", { name: "确定" }));
   expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
   expect(
-    await screen.findByText("当前没有已授权的场景执行入口，请先配置只读函数授权。"),
+    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
   ).toBeTruthy();
   expect(createEvalCase).not.toHaveBeenCalled();
 }, 30000);
@@ -1102,8 +1207,8 @@ it("keeps custom business criteria when the user cancels a purpose switch", asyn
 });
 
 it("blocks Function save and trial when its source contract cannot be read", async () => {
-  vi.mocked(listEvalReviewedFunctions).mockResolvedValue([
-    { name: "标准交期", operation: "leadtime_days" },
+  vi.mocked(listEvalCallableFunctions).mockResolvedValue([
+    { resource_id: "leadtime", name: "标准交期", operation: "leadtime_days" },
   ]);
   vi.mocked(getCaseTargetSchema).mockRejectedValue(new Error("contract unavailable"));
   vi.mocked(getEvalCaseDraft).mockResolvedValue({
@@ -1241,8 +1346,8 @@ it("preserves a rule resource standard and provenance when editing invocation ar
 
 it("explains which required Function parameter is missing instead of reporting a generic JSON error", async () => {
   vi.mocked(getCaseFormOptions).mockResolvedValue({ version: 2, predicates: ["equals"] });
-  vi.mocked(listEvalReviewedFunctions).mockResolvedValue([
-    { name: "标准交期", operation: "leadtime_days" },
+  vi.mocked(listEvalCallableFunctions).mockResolvedValue([
+    { resource_id: "leadtime", name: "标准交期", operation: "leadtime_days" },
   ]);
   vi.mocked(getCaseTargetSchema).mockResolvedValue({
     runner: "direct_capability",
@@ -1514,8 +1619,8 @@ it.each(["场景测试", "安全测试"])(
       version: 2,
       predicates: ["equals", "exists", "json_schema"],
     });
-    vi.mocked(listEvalReviewedFunctions).mockResolvedValue([
-      { name: "标准交期", operation: "leadtime_days" },
+    vi.mocked(listEvalCallableFunctions).mockResolvedValue([
+      { resource_id: "entry-fn", name: "标准交期", operation: "leadtime_days" },
     ]);
     vi.mocked(listEvalCaseResourcesPage).mockResolvedValue({
       entries: [{ id: "entry-fn", name: "标准交期", kind: "function" }],

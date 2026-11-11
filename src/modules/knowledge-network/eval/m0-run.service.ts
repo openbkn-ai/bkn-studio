@@ -409,8 +409,7 @@ export type EvalCaseSummary = {
     | "review_required"
     | "execution_not_configured"
     | "unsupported_runner"
-    | "invalid_contract"
-    | "grant_missing";
+    | "invalid_contract";
   created_at: string;
 };
 
@@ -1286,13 +1285,13 @@ export async function getM1RunCapabilities(networkId: string): Promise<boolean> 
   }
 }
 
-export type EvalReviewedFunction = { name: string; operation: string };
+export type EvalCallableFunction = { resource_id?: string; name: string; operation: string };
 
-export async function listEvalReviewedFunctions(
+export async function listEvalCallableFunctions(
   networkId: string,
-): Promise<EvalReviewedFunction[]> {
-  const response = await http.get<{ entries: EvalReviewedFunction[] }>(
-    `${base(networkId)}/multi/reviewed-functions`,
+): Promise<EvalCallableFunction[]> {
+  const response = await http.get<{ entries: EvalCallableFunction[] }>(
+    `${base(networkId)}/multi/functions`,
     { skipErrorToast: true },
   );
   return response.data.entries;

@@ -37,7 +37,7 @@ import {
   getM1RunCapabilities,
   listEvalCaseResources,
   listEvalCaseResourcesPage,
-  listEvalReviewedFunctions,
+  listEvalCallableFunctions,
   removeEvalCase,
   replaceEvalCase,
   trialEvalCase,
@@ -45,7 +45,7 @@ import {
   type EvalCaseDraft,
   type EvalCaseTrialResult,
   type EvalCaseResource,
-  type EvalReviewedFunction,
+  type EvalCallableFunction,
 } from "./m0-run.service";
 import { EvalRelationCheckResult } from "./EvalRelationCheckResult";
 import { EvalRelationCaseFields } from "./EvalRelationCaseFields";
@@ -98,7 +98,7 @@ type CaseForm = {
   sourceKind: EvalCaseDefinition["expected_source"]["kind"];
   evidenceRef: string;
   diagnosticNote: string;
-  reviewedFunction?: string;
+  callableFunction?: string;
   argumentsJson?: string;
   expectedPath?: string;
   criteria?: CaseCriterion[];
@@ -131,7 +131,8 @@ const initialValues: Partial<CaseForm> = {
   sourceKind: "business_expert",
   argumentsJson: "{}",
 };
-const functionKey = (item: EvalReviewedFunction) => JSON.stringify([item.name, item.operation]);
+const functionKey = (item: EvalCallableFunction) =>
+  JSON.stringify([item.resource_id, item.name, item.operation]);
 const stringField = (value: unknown): string => (typeof value === "string" ? value : "");
 const caseCategoryForResource = (kind?: string): EvalCaseDefinition["category"] =>
   kind === "relationType"
@@ -208,14 +209,14 @@ const trialErrorMessage = (error: unknown) => {
       case 403:
         return caseUiText("yourAccountDoesNotHavePermissionToRun");
       case 409:
-        return caseUiText("readOnlyFunctionAuthorizationHasChangedRefreshAndSelect");
+        return caseUiText("executionBindingChanged");
       case 424:
         return caseUiText("theFunctionResourceCannotBeVerifiedRightNow");
       case 503:
-        return caseUiText("liveTestRunsAreNotAvailableInThis");
+        return caseUiText("executionDependenciesUnavailable");
     }
   }
-  return caseUiText("theTestRunFailedCheckTheInputReadOnly");
+  return caseUiText("trialFailedCheckInputAndServices");
 };
 const assertionReasons = (): Record<string, string> => ({
   "observed value differs from independent expectation": caseUiText(
@@ -272,9 +273,13 @@ const toForm = (draft: EvalCaseDraft, imported: boolean): CaseForm => ({
   sourceKind: draft.definition.expected_source.kind,
   evidenceRef: draft.definition.expected_source.evidence_refs.join("\n"),
   diagnosticNote: stringField(draft.definition.diagnostic_spec.note),
-  reviewedFunction:
+  callableFunction:
     draft.definition.execution_spec.runner === "direct_capability"
       ? functionKey({
+          resource_id: stringField(
+            (draft.definition.execution_spec.target as Record<string, unknown> | undefined)
+              ?.resource_id,
+          ),
           name: stringField(
             (draft.definition.execution_spec.target as Record<string, unknown> | undefined)?.name,
           ),
@@ -299,7 +304,7 @@ const caseTypeArguments = (
 const fromForm = (
   values: CaseForm,
   networkId: string,
-  reviewedFunction?: EvalReviewedFunction,
+  callableFunction?: EvalCallableFunction,
   draft?: EvalCaseDraft,
   imported = false,
   selectedResource?: EvalCaseResource,
@@ -442,7 +447,7 @@ const fromForm = (
             name: queryResource.name,
           },
         }
-      : executionMode === "direct" && reviewedFunction
+      : executionMode === "direct" && callableFunction
         ? {
             runner: "direct_capability",
             target_kind: scopeType,
@@ -452,10 +457,11 @@ const fromForm = (
               kn_id: networkId,
               capability_type: "function",
               metadata_type: "function",
-              name: reviewedFunction.name,
-              operation: reviewedFunction.operation,
+              name: callableFunction.name,
+              operation: callableFunction.operation,
               ...(selectedResource?.id ||
               executionResource?.id ||
+              callableFunction.resource_id ||
               (
                 draft?.definition.execution_spec.target as
                   | {
@@ -467,6 +473,7 @@ const fromForm = (
                     resource_id:
                       selectedResource?.id ||
                       executionResource?.id ||
+                      callableFunction.resource_id ||
                       (
                         draft?.definition.execution_spec.target as
                           | {
@@ -477,7 +484,7 @@ const fromForm = (
                   }
                 : {}),
             },
-            allowed_capabilities: [reviewedFunction.name],
+            allowed_capabilities: [callableFunction.name],
             forbidden_capabilities: ["execute_action"],
           }
         : imported
@@ -521,12 +528,12 @@ const fromForm = (
                 },
                 { id: "evidence", type: "evidence_complete", required: true },
               ]
-            : executionMode === "direct" && reviewedFunction
+            : executionMode === "direct" && callableFunction
               ? [
                   {
                     id: "function-used",
                     type: "resource_used",
-                    resource: reviewedFunction.name,
+                    resource: callableFunction.name,
                     required: true,
                   },
                   { id: "evidence", type: "evidence_complete", required: true },
@@ -535,7 +542,7 @@ const fromForm = (
                   ["resource_used", "evidence_complete"].includes(String(a.type)),
                 ) ?? [])),
         ]
-      : executionMode === "direct" && reviewedFunction
+      : executionMode === "direct" && callableFunction
         ? [
             {
               id: "expected-value",
@@ -548,7 +555,7 @@ const fromForm = (
             {
               id: "function-used",
               type: "resource_used",
-              resource: reviewedFunction.name,
+              resource: callableFunction.name,
               required: true,
             },
             { id: "evidence", type: "evidence_complete", required: true },
@@ -609,7 +616,7 @@ export function EvalCaseEditorDrawer({
   const { t } = useEvalTranslation();
   const assertionNames: Record<string, string> = {
     "expected-value": caseUiText("expectedResultComparison"),
-    "function-used": caseUiText("readOnlyFunctionCall"),
+    "function-used": caseUiText("functionCall"),
     evidence: evalTerm("evidence"),
   };
   const label = (key: string) => t(`knowledgeNetwork.eval.caseEditor.${key}`);
@@ -645,8 +652,8 @@ export function EvalCaseEditorDrawer({
   const [trialResult, setTrialResult] = useState<EvalCaseTrialResult>();
   const [trialBusy, setTrialBusy] = useState(false);
   const [trialAvailable, setTrialAvailable] = useState(false);
-  const [reviewedFunctions, setReviewedFunctions] = useState<EvalReviewedFunction[]>([]);
-  const [reviewedFunctionsError, setReviewedFunctionsError] = useState(false);
+  const [callableFunctions, setCallableFunctions] = useState<EvalCallableFunction[]>([]);
+  const [callableFunctionsError, setCallableFunctionsError] = useState(false);
   const [resourceKind, setResourceKind] = useState("objectType");
   const [resourceQuery, setResourceQuery] = useState("");
   const [resources, setResources] = useState<EvalCaseResource[]>([]);
@@ -703,7 +710,7 @@ export function EvalCaseEditorDrawer({
           ? "resource"
           : "manual";
   const currentArguments = Form.useWatch("argumentsJson", form);
-  const currentFunction = Form.useWatch("reviewedFunction", form);
+  const currentFunction = Form.useWatch("callableFunction", form);
   const currentCheckLimit = Form.useWatch("checkLimit", form);
   const fieldContext = JSON.stringify([
     networkId,
@@ -796,27 +803,38 @@ export function EvalCaseEditorDrawer({
     !resources.some((item) => item.id === selectedResource.id)
       ? [selectedResource, ...resources]
       : resources;
-  const selectableFunctions = useMemo(
-    () =>
+  const selectableFunctions = useMemo(() => {
+    const target = draft?.definition.execution_spec.target as
+      { name?: string; resource_id?: string; operation?: string } | undefined;
+    const selectedId =
+      selectedResource?.kind === "function" ? selectedResource.id : target?.resource_id;
+    const selectedName =
+      selectedResource?.kind === "function" ? selectedResource.name : target?.name;
+    const entries =
       !imported && selectedResource?.kind === "function"
-        ? reviewedFunctions.filter((item) => item.name === selectedResource.name)
+        ? callableFunctions.filter((item) =>
+            item.resource_id ? item.resource_id === selectedId : item.name === selectedName,
+          )
         : draft?.definition.execution_spec.runner === "direct_capability"
-          ? reviewedFunctions.filter(
-              (item) =>
-                item.name ===
-                (
-                  draft.definition.execution_spec.target as
-                    | {
-                        name?: string;
-                      }
-                    | undefined
-                )?.name,
+          ? callableFunctions.filter((item) =>
+              selectedId && item.resource_id
+                ? item.resource_id === selectedId
+                : item.name === selectedName,
             )
           : standaloneExecution
-            ? reviewedFunctions
-            : [],
-    [reviewedFunctions, imported, selectedResource, draft, standaloneExecution],
-  );
+            ? callableFunctions
+            : [];
+    return entries.map((item) => ({
+      ...item,
+      resource_id: item.resource_id || selectedId || "",
+      ...(target?.operation &&
+      (target.resource_id
+        ? (item.resource_id || selectedId) === target.resource_id
+        : item.name === target.name)
+        ? { operation: target.operation }
+        : {}),
+    }));
+  }, [callableFunctions, imported, selectedResource, draft, standaloneExecution]);
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -839,13 +857,15 @@ export function EvalCaseEditorDrawer({
     if (draft) return;
     setExecutionResource(undefined);
     if (!open || !standaloneExecution || !currentFunction) return;
-    const selected = reviewedFunctions.find((item) => functionKey(item) === currentFunction);
+    const selected = callableFunctions.find((item) => functionKey(item) === currentFunction);
     if (!selected) return;
     setExecutionLookupBusy(true);
     void listEvalCaseResourcesPage(networkId, "function", selected.name, 1, 30, true)
       .then((page) => {
         if (!active) return;
-        const matches = page.entries.filter((item) => item.name === selected.name);
+        const matches = page.entries.filter((item) =>
+          selected.resource_id ? item.id === selected.resource_id : item.name === selected.name,
+        );
         if (matches.length !== 1)
           setExecutionLookupError(
             matches.length
@@ -863,7 +883,7 @@ export function EvalCaseEditorDrawer({
     return () => {
       active = false;
     };
-  }, [open, standaloneExecution, currentFunction, reviewedFunctions, networkId, draft]);
+  }, [open, standaloneExecution, currentFunction, callableFunctions, networkId, draft]);
   useEffect(() => {
     if (!open || !criteriaMode) return;
     if (!form.getFieldValue("criteria"))
@@ -980,14 +1000,14 @@ export function EvalCaseEditorDrawer({
   useEffect(() => {
     if (!open) return;
     let active = true;
-    setReviewedFunctions([]);
-    setReviewedFunctionsError(false);
-    void listEvalReviewedFunctions(networkId)
+    setCallableFunctions([]);
+    setCallableFunctionsError(false);
+    void listEvalCallableFunctions(networkId)
       .then((items) => {
-        if (active) setReviewedFunctions(items);
+        if (active) setCallableFunctions(items);
       })
       .catch(() => {
-        if (active) setReviewedFunctionsError(true);
+        if (active) setCallableFunctionsError(true);
       });
     return () => {
       active = false;
@@ -1122,7 +1142,7 @@ export function EvalCaseEditorDrawer({
           "input_spec.question": "question",
           "input_spec.arguments": "argumentsJson",
           execution_spec: "resourceKey",
-          "execution_spec.target": executionMode === "direct" ? "reviewedFunction" : "resourceKey",
+          "execution_spec.target": executionMode === "direct" ? "callableFunction" : "resourceKey",
           expected_source: "evidenceRef",
           assertions: criteriaMode ? "criteria" : "answer",
           definition: "title",
@@ -1178,15 +1198,15 @@ export function EvalCaseEditorDrawer({
       setError(caseUiText("thisEvaluationTargetDoesNotSupportAutomaticExecution"));
       return;
     }
-    const reviewedFunction = selectableFunctions.find(
-      (item) => functionKey(item) === values.reviewedFunction,
+    const callableFunction = selectableFunctions.find(
+      (item) => functionKey(item) === values.callableFunction,
     );
     if (definitionOnly && activate) {
       setError(t("knowledgeNetwork.eval.definitionOnly.enableBlocked"));
       return;
     }
-    if (executionMode === "direct" && !reviewedFunction && !resourceEditor) {
-      setError(caseUiText("authorizationForTheSelectedReadOnlyFunctionHasChanged"));
+    if (executionMode === "direct" && !callableFunction && !resourceEditor) {
+      setError(caseUiText("executionBindingChanged"));
       return;
     }
     await execute(
@@ -1199,7 +1219,7 @@ export function EvalCaseEditorDrawer({
                 definition: fromForm(
                   values,
                   networkId,
-                  reviewedFunction,
+                  callableFunction,
                   draft,
                   imported,
                   selectedResource,
@@ -1216,7 +1236,7 @@ export function EvalCaseEditorDrawer({
               fromForm(
                 values,
                 networkId,
-                reviewedFunction,
+                callableFunction,
                 undefined,
                 false,
                 selectedResource,
@@ -1230,7 +1250,7 @@ export function EvalCaseEditorDrawer({
         const definition = fromForm(
           values,
           networkId,
-          reviewedFunction,
+          callableFunction,
           draft,
           imported,
           selectedResource,
@@ -1284,16 +1304,16 @@ export function EvalCaseEditorDrawer({
         return;
       }
     }
-    const reviewedFunction = selectableFunctions.find(
-      (item) => functionKey(item) === values.reviewedFunction,
+    const callableFunction = selectableFunctions.find(
+      (item) => functionKey(item) === values.callableFunction,
     );
     if (
-      !reviewedFunction &&
+      !callableFunction &&
       !resourceEditor &&
       !isObjectDefinition &&
       !["resource", "relation"].includes(executionMode)
     ) {
-      setError(caseUiText("authorizationForTheSelectedReadOnlyFunctionHasChanged"));
+      setError(caseUiText("executionBindingChanged"));
       return;
     }
     setTrialBusy(true);
@@ -1303,7 +1323,7 @@ export function EvalCaseEditorDrawer({
       const definition = fromForm(
         values,
         networkId,
-        reviewedFunction,
+        callableFunction,
         draft,
         imported,
         selectedResource,
@@ -1340,7 +1360,7 @@ export function EvalCaseEditorDrawer({
     const change = () => {
       setPreparedObject(undefined);
       form.setFieldsValue({
-        reviewedFunction: undefined,
+        callableFunction: undefined,
         argumentsJson: "{}",
         expectedPath: undefined,
         answer: "",
@@ -1361,9 +1381,11 @@ export function EvalCaseEditorDrawer({
     else change();
   };
   useEffect(() => {
-    if (draft || standaloneExecution || selectableFunctions.length !== 1) return;
+    if ((!draft && standaloneExecution) || selectableFunctions.length !== 1) return;
+    if (draft && form.getFieldValue("callableFunction") === functionKey(selectableFunctions[0]))
+      return;
     form.setFieldsValue({
-      reviewedFunction: functionKey(selectableFunctions[0]),
+      callableFunction: functionKey(selectableFunctions[0]),
     });
   }, [criteriaMode, draft, form, selectableFunctions, selectedResource?.id, standaloneExecution]);
   const canEdit = !caseId || !!draft;
@@ -1450,7 +1472,7 @@ export function EvalCaseEditorDrawer({
                   title={
                     trialAvailable
                       ? caseUiText("runOnceWithTheCurrentIdentityAndCheck")
-                      : caseUiText("liveTestRunsAreNotAvailableInThisEnvironment")
+                      : caseUiText("executionDependenciesUnavailableEnvironment")
                   }
                   onClick={() => void tryRun()}
                 >
@@ -1577,7 +1599,7 @@ export function EvalCaseEditorDrawer({
                 onChange={(nextType) =>
                   changeContext(() => {
                     form.setFieldValue("caseType", nextType);
-                    form.setFieldsValue({ reviewedFunction: undefined });
+                    form.setFieldsValue({ callableFunction: undefined });
                     if (nextType === "scenario") {
                       setSelectedResource(undefined);
                       setRelatedResources([]);
@@ -1638,7 +1660,7 @@ export function EvalCaseEditorDrawer({
                           setSelectedResource(undefined);
                           form.setFieldsValue({
                             resourceKey: undefined,
-                            reviewedFunction: undefined,
+                            callableFunction: undefined,
                           });
                         })
                       }
@@ -1698,7 +1720,7 @@ export function EvalCaseEditorDrawer({
                             resourceOptions.find((item) => `${item.kind}:${item.id}` === key),
                           );
                           form.setFieldsValue({
-                            reviewedFunction: undefined,
+                            callableFunction: undefined,
                           });
                         })
                       }
@@ -1726,11 +1748,11 @@ export function EvalCaseEditorDrawer({
             )}
             {standaloneExecution && (
               <Form.Item
-                name="reviewedFunction"
+                name="callableFunction"
                 label={caseUiText("executionEntry")}
                 validateTrigger="onBlur"
                 getValueFromEvent={() => currentFunction}
-                extra={caseUiText("selectAnAuthorizedReadOnlyFunctionThatCanExecute")}
+                extra={caseUiText("selectACallableFunctionForTheScenario")}
                 rules={[
                   { required: true, message: caseUiText("selectAnExecutionEntryForTheScenario") },
                 ]}
@@ -1746,29 +1768,24 @@ export function EvalCaseEditorDrawer({
                     label: item.name + (item.operation !== item.name ? ` · ${item.operation}` : ""),
                   }))}
                   onChange={(value) =>
-                    changeContext(() => form.setFieldValue("reviewedFunction", value))
+                    changeContext(() => form.setFieldValue("callableFunction", value))
                   }
                 />
               </Form.Item>
             )}
-            {standaloneExecution && !reviewedFunctionsError && !reviewedFunctions.length && (
-              <Alert
-                type="warning"
-                message={caseUiText("noAuthorizedScenarioExecutionEntriesAreAvailableConfigure")}
-              />
+            {standaloneExecution && !callableFunctionsError && !callableFunctions.length && (
+              <Alert type="warning" message={caseUiText("noScenarioExecutionEntriesAvailable")} />
             )}
             {standaloneExecution && executionLookupError && (
               <Alert type="error" message={executionLookupError} />
             )}
             <div className={styles.sectionTitle}>{evalTerm("testContent")}</div>
-            {reviewedFunctionsError &&
+            {callableFunctionsError &&
               (selectedResource?.kind === "function" || standaloneExecution) && (
                 <Alert
                   type="warning"
                   showIcon
-                  message={caseUiText(
-                    "readOnlyFunctionAuthorizationIsUnavailableRestoreAuthorizationAccess",
-                  )}
+                  message={caseUiText("functionCatalogueUnavailable")}
                   style={{ marginBottom: 16 }}
                 />
               )}
@@ -1937,15 +1954,13 @@ export function EvalCaseEditorDrawer({
               <>
                 {!standaloneExecution && (
                   <Form.Item
-                    name="reviewedFunction"
+                    name="callableFunction"
                     hidden={criteriaMode && selectableFunctions.length === 1}
-                    label={caseUiText("readOnlyFunction")}
-                    rules={[
-                      { required: true, message: caseUiText("selectAnAuthorizedReadOnlyFunction") },
-                    ]}
+                    label={caseUiText("targetFunction")}
+                    rules={[{ required: true, message: caseUiText("selectACallableFunction") }]}
                   >
                     <Select
-                      aria-label={caseUiText("readOnlyFunction")}
+                      aria-label={caseUiText("targetFunction")}
                       placeholder={caseUiText("selectAnAuthorizedFunction")}
                       options={selectableFunctions.map((item) => ({
                         value: functionKey(item),

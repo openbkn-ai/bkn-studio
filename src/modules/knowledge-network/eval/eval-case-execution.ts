@@ -37,8 +37,6 @@ export const caseExecutionSetupReason = (setup: EvalCaseSummary["execution_setup
       return executionText("unsupported");
     case "invalid_contract":
       return executionText("invalidContract");
-    case "grant_missing":
-      return executionText("grantMissing");
     default:
       return executionText("pending");
   }
