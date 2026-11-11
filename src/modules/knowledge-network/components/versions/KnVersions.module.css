@@ -15,7 +15,6 @@
 }
 
 .viewSelect {
-  min-width: 64px;
   color: var(--ant-color-text-secondary);
 }
 
@@ -165,4 +164,13 @@
   max-width: 280px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.titleSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.titleSlot:empty {
+  display: none;
 }

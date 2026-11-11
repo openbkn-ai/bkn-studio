@@ -37,6 +37,7 @@ import type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import { KnVersionSlotProvider } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { KnVersioningOffEntry } from "@/modules/knowledge-network/components/versions/KnVersioningOffEntry";
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
 import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
@@ -423,163 +424,172 @@ export function KnowledgeNetworkWorkspaceScene({
     );
   };
   return (
-    <section className={styles.workspace}>
-      <div className={styles.workspaceLayout}>
-        <aside
-          className={`${styles.workspaceSide} ${sideCollapsed ? styles.workspaceSideCollapsed : ""}`}
-        >
-          <div className={styles.workspaceSideScroll}>
-            {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
-            {hasAbilityVerification ? (
-              <>
-                <div className={styles.sideDivider} />
-                {sideCollapsed ? null : (
-                  <div className={styles.sideTitle}>
-                    {t("knowledgeNetwork.workspaceAbilityVerification")}
-                  </div>
-                )}
-                {experienceNavItems
-                  .filter((item) => item.key !== "evals")
-                  .map((item) => renderSideNavItem(item, { showCount: false }))}
-                <WorkspaceExtensionNavItems
-                  activeKey={activeExtensionKey}
-                  collapsed={sideCollapsed}
-                  hiddenKeys={hiddenNavigation}
-                  networkId={activeNetworkId}
-                />
-                {experienceNavItems
-                  .filter((item) => item.key === "evals")
-                  .map((item) => renderSideNavItem(item, { showCount: false }))}
-              </>
-            ) : null}
-            {/* Shown only while another build lists an entry there. */}
-            {analysisEntries.items.length > 0 ? (
-              <>
-                <div className={styles.sideDivider} />
-                {sideCollapsed ? null : (
-                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceAnalysis")}</div>
-                )}
-                <WorkspaceExtensionNavItems
-                  activeKey={activeExtensionKey}
-                  collapsed={sideCollapsed}
-                  hiddenKeys={hiddenNavigation}
-                  networkId={activeNetworkId}
-                  section="analysis"
-                />
-              </>
-            ) : null}
-            {resourceNavItems.length > 0 ? (
-              <>
-                <div className={styles.sideDivider} />
-                {sideCollapsed ? null : (
-                  <div className={styles.sideTitle}>
-                    {t("knowledgeNetwork.workspaceConceptModel")}
-                  </div>
-                )}
-                {resourceNavItems.map((item) => renderSideNavItem(item))}
-              </>
-            ) : null}
-            {dynamicNavItems.length > 0 ? (
-              <>
-                <div className={styles.sideDivider} />
-                {sideCollapsed ? null : (
-                  <div className={styles.sideTitle}>
-                    {t("knowledgeNetwork.workspaceDynamicModel")}
-                  </div>
-                )}
-                {dynamicNavItems.map((item) => renderSideNavItem(item))}
-              </>
-            ) : null}
-          </div>
-          <div className={styles.workspaceSideFooter}>
-            <button
-              aria-label={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
-              className={styles.sideCollapseButton}
-              onClick={() => setSideCollapsed((current) => !current)}
-              title={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
-              type="button"
-            >
-              {sideCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </button>
-          </div>
-        </aside>
-        <main
-          className={
-            section === "overview"
-              ? `${styles.workspaceContent} ${styles.workspaceContentOverview}`
-              : styles.workspaceContent
-          }
-        >
-          {versioning && section !== "versions" ? (
-            <KnVersionBar
-              canModify={mayModify}
-              hasCapabilities={hasCapabilities}
-              networkId={activeNetworkId}
-              onChanged={() => setReloadTick((tick) => tick + 1)}
-              onViewChange={setVersionView}
-              versioning={versioning}
-              view={versionView}
-            />
-          ) : detail && mayModify && section !== "versions" ? (
-            <KnVersioningOffEntry
-              networkId={activeNetworkId}
-              onEnabled={() => setReloadTick((tick) => tick + 1)}
-            />
-          ) : null}
-          {detailError && !childMetricDetailHandlesLoadState ? (
-            <Alert className={styles.workspaceAlert} message={detailError} showIcon type="error" />
-          ) : null}
-          {sectionError && !childMetricDetailHandlesLoadState ? (
-            <Alert
-              className={styles.workspaceAlert}
-              message={sectionError}
-              showIcon
-              type="warning"
-            />
-          ) : null}
-          {section === "overview" || (section === "extension" && children !== undefined) ? (
-            <Fragment key={reloadKey}>{renderSectionContent()}</Fragment>
-          ) : (
-            <div
-              // The versions page reloads itself; remounting it would close its open dialogs.
-              key={section === "versions" ? section : reloadKey}
-              className={
-                section === "experience-agent" ||
-                section === "experience-cypher" ||
-                section === "extension" ||
-                section === "metrics" ||
-                section === "object-types" ||
-                section === "relation-types" ||
-                section === "action-types"
-                  ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
-                  : styles.workspaceSectionPage
-              }
-            >
-              {renderSectionContent()}
+    <KnVersionSlotProvider>
+      <section className={styles.workspace}>
+        <div className={styles.workspaceLayout}>
+          <aside
+            className={`${styles.workspaceSide} ${sideCollapsed ? styles.workspaceSideCollapsed : ""}`}
+          >
+            <div className={styles.workspaceSideScroll}>
+              {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+              {hasAbilityVerification ? (
+                <>
+                  <div className={styles.sideDivider} />
+                  {sideCollapsed ? null : (
+                    <div className={styles.sideTitle}>
+                      {t("knowledgeNetwork.workspaceAbilityVerification")}
+                    </div>
+                  )}
+                  {experienceNavItems
+                    .filter((item) => item.key !== "evals")
+                    .map((item) => renderSideNavItem(item, { showCount: false }))}
+                  <WorkspaceExtensionNavItems
+                    activeKey={activeExtensionKey}
+                    collapsed={sideCollapsed}
+                    hiddenKeys={hiddenNavigation}
+                    networkId={activeNetworkId}
+                  />
+                  {experienceNavItems
+                    .filter((item) => item.key === "evals")
+                    .map((item) => renderSideNavItem(item, { showCount: false }))}
+                </>
+              ) : null}
+              {/* Shown only while another build lists an entry there. */}
+              {analysisEntries.items.length > 0 ? (
+                <>
+                  <div className={styles.sideDivider} />
+                  {sideCollapsed ? null : (
+                    <div className={styles.sideTitle}>
+                      {t("knowledgeNetwork.workspaceAnalysis")}
+                    </div>
+                  )}
+                  <WorkspaceExtensionNavItems
+                    activeKey={activeExtensionKey}
+                    collapsed={sideCollapsed}
+                    hiddenKeys={hiddenNavigation}
+                    networkId={activeNetworkId}
+                    section="analysis"
+                  />
+                </>
+              ) : null}
+              {resourceNavItems.length > 0 ? (
+                <>
+                  <div className={styles.sideDivider} />
+                  {sideCollapsed ? null : (
+                    <div className={styles.sideTitle}>
+                      {t("knowledgeNetwork.workspaceConceptModel")}
+                    </div>
+                  )}
+                  {resourceNavItems.map((item) => renderSideNavItem(item))}
+                </>
+              ) : null}
+              {dynamicNavItems.length > 0 ? (
+                <>
+                  <div className={styles.sideDivider} />
+                  {sideCollapsed ? null : (
+                    <div className={styles.sideTitle}>
+                      {t("knowledgeNetwork.workspaceDynamicModel")}
+                    </div>
+                  )}
+                  {dynamicNavItems.map((item) => renderSideNavItem(item))}
+                </>
+              ) : null}
             </div>
-          )}
-        </main>
-      </div>
-      <KnowledgeNetworkFormModal
-        mode="edit"
-        onCancel={() => setNetworkFormOpen(false)}
-        onSubmit={async (values: KnowledgeNetworkMutationPayload) => {
-          await updateKnowledgeNetwork(activeNetworkId, values);
-          setNetworkFormOpen(false);
-          void message.success(t("common.success"));
-          await loadWorkspaceData();
-        }}
-        open={networkFormOpen}
-        record={detail}
-      />
-      {upgradeItem?.paidCapability && upgradeItem.paidEdition ? (
-        <CapabilityUpgradeDialog
-          capability={upgradeItem.paidCapability}
-          minEdition={upgradeItem.paidEdition}
-          onClose={() => setUpgradeItem(null)}
-          open
+            <div className={styles.workspaceSideFooter}>
+              <button
+                aria-label={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+                className={styles.sideCollapseButton}
+                onClick={() => setSideCollapsed((current) => !current)}
+                title={sideCollapsed ? t("shell.expandSidenav") : t("shell.collapseSidenav")}
+                type="button"
+              >
+                {sideCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              </button>
+            </div>
+          </aside>
+          <main
+            className={
+              section === "overview"
+                ? `${styles.workspaceContent} ${styles.workspaceContentOverview}`
+                : styles.workspaceContent
+            }
+          >
+            {versioning && section !== "versions" ? (
+              <KnVersionBar
+                canModify={mayModify}
+                hasCapabilities={hasCapabilities}
+                networkId={activeNetworkId}
+                onChanged={() => setReloadTick((tick) => tick + 1)}
+                onViewChange={setVersionView}
+                versioning={versioning}
+                view={versionView}
+              />
+            ) : detail && mayModify && section !== "versions" ? (
+              <KnVersioningOffEntry
+                networkId={activeNetworkId}
+                onEnabled={() => setReloadTick((tick) => tick + 1)}
+              />
+            ) : null}
+            {detailError && !childMetricDetailHandlesLoadState ? (
+              <Alert
+                className={styles.workspaceAlert}
+                message={detailError}
+                showIcon
+                type="error"
+              />
+            ) : null}
+            {sectionError && !childMetricDetailHandlesLoadState ? (
+              <Alert
+                className={styles.workspaceAlert}
+                message={sectionError}
+                showIcon
+                type="warning"
+              />
+            ) : null}
+            {section === "overview" || (section === "extension" && children !== undefined) ? (
+              <Fragment key={reloadKey}>{renderSectionContent()}</Fragment>
+            ) : (
+              <div
+                // The versions page reloads itself; remounting it would close its open dialogs.
+                key={section === "versions" ? section : reloadKey}
+                className={
+                  section === "experience-agent" ||
+                  section === "experience-cypher" ||
+                  section === "extension" ||
+                  section === "metrics" ||
+                  section === "object-types" ||
+                  section === "relation-types" ||
+                  section === "action-types"
+                    ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
+                    : styles.workspaceSectionPage
+                }
+              >
+                {renderSectionContent()}
+              </div>
+            )}
+          </main>
+        </div>
+        <KnowledgeNetworkFormModal
+          mode="edit"
+          onCancel={() => setNetworkFormOpen(false)}
+          onSubmit={async (values: KnowledgeNetworkMutationPayload) => {
+            await updateKnowledgeNetwork(activeNetworkId, values);
+            setNetworkFormOpen(false);
+            void message.success(t("common.success"));
+            await loadWorkspaceData();
+          }}
+          open={networkFormOpen}
+          record={detail}
         />
-      ) : null}
-    </section>
+        {upgradeItem?.paidCapability && upgradeItem.paidEdition ? (
+          <CapabilityUpgradeDialog
+            capability={upgradeItem.paidCapability}
+            minEdition={upgradeItem.paidEdition}
+            onClose={() => setUpgradeItem(null)}
+            open
+          />
+        ) : null}
+      </section>
+    </KnVersionSlotProvider>
   );
 }

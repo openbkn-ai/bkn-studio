@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { KnVersionSlotPortal } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { EnableVersioningModal } from "@/modules/knowledge-network/components/versions/EnableVersioningModal";
 
 type KnVersioningOffEntryProps = {
@@ -26,14 +27,17 @@ export function KnVersioningOffEntry({ networkId, onEnabled }: KnVersioningOffEn
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [open, setOpen] = useState(false);
+  const entry = (
+    <Button onClick={() => setOpen(true)} size="small" type="link">
+      {t("knowledgeNetwork.versions.enable.action")}
+    </Button>
+  );
 
   return (
     <>
-      <ShellTrailPortal>
-        <Button onClick={() => setOpen(true)} size="small" type="link">
-          {t("knowledgeNetwork.versions.enable.action")}
-        </Button>
-      </ShellTrailPortal>
+      <KnVersionSlotPortal fallback={<ShellTrailPortal>{entry}</ShellTrailPortal>}>
+        {entry}
+      </KnVersionSlotPortal>
       <EnableVersioningModal
         networkId={networkId}
         onClose={() => setOpen(false)}

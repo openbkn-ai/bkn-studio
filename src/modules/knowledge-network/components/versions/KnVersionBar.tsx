@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EllipsisOutlined } from "@ant-design/icons";
+import { BranchesOutlined, EllipsisOutlined } from "@ant-design/icons";
 import { Alert, Button, Dropdown, Select } from "antd";
 import type { MenuProps } from "antd";
 import { useState } from "react";
@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { KnVersionSlotPortal } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { KnDiffModal } from "@/modules/knowledge-network/components/versions/KnDiffModal";
 import { PublishVersionModal } from "@/modules/knowledge-network/components/versions/PublishVersionModal";
 import { confirmResetDraft } from "@/modules/knowledge-network/components/versions/kn-version-actions";
@@ -42,8 +43,8 @@ type KnVersionBarProps = {
 };
 
 /**
- * Which version of a versioned network is on screen, as a quiet picker after the top bar's
- * trail. A draft that matches the running version reads as that version; only unpublished
+ * Which version of a versioned network is on screen, as a quiet picker beside the network's
+ * title on the overview, and after the top bar's trail elsewhere. A draft that matches the running version reads as that version; only unpublished
  * changes bring out the draft, its base and the publish action.
  */
 export function KnVersionBar({
@@ -134,9 +135,10 @@ export function KnVersionBar({
         onChange={(value) => onViewChange(parseKnVersionView(value))}
         options={options}
         popupMatchSelectWidth={false}
+        prefix={<BranchesOutlined />}
         size="small"
         value={isDraft ? "draft" : viewValue}
-        variant="borderless"
+        variant="filled"
       />
       {canPublish ? (
         <Button onClick={() => setPublishOpen(true)} size="small" type="link">
@@ -159,9 +161,15 @@ export function KnVersionBar({
 
   return (
     <>
-      <ShellTrailPortal fallback={<div className={styles.bar}>{picker}</div>}>
+      <KnVersionSlotPortal
+        fallback={
+          <ShellTrailPortal fallback={<div className={styles.bar}>{picker}</div>}>
+            {picker}
+          </ShellTrailPortal>
+        }
+      >
         {picker}
-      </ShellTrailPortal>
+      </KnVersionSlotPortal>
       {outdated || !isDraft ? (
         <div className={styles.notice}>
           {outdated ? (

@@ -40,6 +40,10 @@ vi.mock("@/modules/knowledge-network/components/versions/KnDiffModal", () => ({
 }));
 
 import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import {
+  KnVersionSlotHost,
+  KnVersionSlotProvider,
+} from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 
 function versioning(running: number, hasChanges: boolean): KnVersioning {
   return {
@@ -102,5 +106,25 @@ describe("KnVersionBar", () => {
       screen.getByText("knowledgeNetwork.versions.draft · knowledgeNetwork.versions.notPublished"),
     ).toBeTruthy();
     expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
+  });
+
+  it("sits beside the network's title when the section shows one", () => {
+    render(
+      <KnVersionSlotProvider>
+        <h2 data-testid="title">
+          name
+          <KnVersionSlotHost />
+        </h2>
+        <KnVersionBar
+          canModify
+          networkId="kn-1"
+          onChanged={vi.fn()}
+          onViewChange={vi.fn()}
+          versioning={versioning(2, false)}
+          view="draft"
+        />
+      </KnVersionSlotProvider>,
+    );
+    expect(screen.getByTestId("title").textContent).toContain("v2");
   });
 });
