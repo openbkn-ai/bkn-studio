@@ -440,11 +440,14 @@ export function KnVersionsPanel({
                   {t("knowledgeNetwork.versions.danger.discardTitle")}
                 </div>
                 <div className={styles.dangerRowBody}>
-                  {draft?.has_changes
-                    ? t("knowledgeNetwork.versions.danger.discardBody", {
-                        version: knVersionName(running),
-                      })
-                    : t("knowledgeNetwork.versions.danger.discardNone")}
+                  {!draft?.has_changes
+                    ? t("knowledgeNetwork.versions.danger.discardNone")
+                    : running > 0
+                      ? t("knowledgeNetwork.versions.danger.discardBody", {
+                          version: knVersionName(running),
+                        })
+                      : // Nothing is running before the first publish: discarding empties the draft.
+                        t("knowledgeNetwork.versions.danger.discardBodyEmpty")}
                 </div>
               </div>
               <Button

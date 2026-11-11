@@ -51,7 +51,12 @@ const versioned = (fullHistory: boolean): KnVersioning => ({
   running_version: 3,
 });
 
-function renderPanel(props: { fullHistory?: boolean; canModify?: boolean; unversioned?: boolean }) {
+function renderPanel(props: {
+  fullHistory?: boolean;
+  canModify?: boolean;
+  unversioned?: boolean;
+  versioning?: KnVersioning;
+}) {
   return render(
     <KnVersionsPanel
       canDelete
@@ -60,9 +65,10 @@ function renderPanel(props: { fullHistory?: boolean; canModify?: boolean; unvers
       onChanged={vi.fn()}
       onViewChange={vi.fn()}
       versioning={
-        props.unversioned
+        props.versioning ??
+        (props.unversioned
           ? { enabled: false, full_history: true, previous_version: 0, running_version: 0 }
-          : versioned(props.fullHistory ?? true)
+          : versioned(props.fullHistory ?? true))
       }
     />,
   );
@@ -112,6 +118,25 @@ describe("KnVersionsPanel", () => {
     expect(
       screen.getAllByRole("button", { name: "knowledgeNetwork.versions.discard" }),
     ).toHaveLength(1);
+  });
+
+  it("names the running version the draft goes back to, and none before the first publish", () => {
+    renderPanel({});
+    expect(screen.getByText("knowledgeNetwork.versions.danger.discardBody")).toBeInTheDocument();
+    cleanup();
+
+    renderPanel({
+      versioning: {
+        draft: { base_version: 0, has_changes: true, outdated: false, revision: 2 },
+        enabled: true,
+        full_history: true,
+        previous_version: 0,
+        running_version: 0,
+      },
+    });
+    expect(
+      screen.getByText("knowledgeNetwork.versions.danger.discardBodyEmpty"),
+    ).toBeInTheDocument();
   });
 
   it("shows no danger zone to a reader", () => {

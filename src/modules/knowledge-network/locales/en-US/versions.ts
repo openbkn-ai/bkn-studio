@@ -29,6 +29,8 @@ export const versionsPart = {
       discardTitle: "Discard the draft's changes",
       discardBody:
         "The draft goes back to the running version {{version}}. Unpublished changes cannot be recovered.",
+      discardBodyEmpty:
+        "There is no running version yet, so the draft is emptied. Unpublished changes cannot be recovered.",
       discardNone: "The draft has no unpublished changes.",
       rollbackTitle: "Roll back to the previous version",
       rollbackBody:

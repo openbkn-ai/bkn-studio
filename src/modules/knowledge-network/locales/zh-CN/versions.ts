@@ -28,6 +28,7 @@ export const versionsPart = {
       title: "危险操作",
       discardTitle: "放弃草稿的修改",
       discardBody: "草稿回到运行版本 {{version}} 的内容，未发布的修改无法找回。",
+      discardBodyEmpty: "还没有运行版本，草稿会被清空，未发布的修改无法找回。",
       discardNone: "草稿没有未发布的修改。",
       rollbackTitle: "回退到上一版",
       rollbackBody:
