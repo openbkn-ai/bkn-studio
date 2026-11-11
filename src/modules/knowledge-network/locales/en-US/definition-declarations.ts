@@ -37,7 +37,7 @@ export const definitionDeclarationsPart = {
       relation_type: "relation type",
     },
     noAliases: "No aliases",
-    lifecycle: "Status",
+    lifecycle: "Lifecycle",
     lifecycleHint:
       "A deprecated definition can still be viewed, edited and queried; only concept recall leaves it out.",
     lifecycleOption: {
