@@ -68,7 +68,7 @@ export function KnVersionsPanel({
 }: KnVersionsPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [versions, setVersions] = useState<KnVersion[]>([]);
   const [events, setEvents] = useState<KnVersionEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -132,7 +132,7 @@ export function KnVersionsPanel({
   }
 
   const draft = versioning.draft;
-  const actionContext = { networkId, notify: message, onChanged, t, versioning };
+  const actionContext = { modal, networkId, notify: message, onChanged, t, versioning };
   const professional = versioning.full_history;
   const previous = versioning.previous_version;
 

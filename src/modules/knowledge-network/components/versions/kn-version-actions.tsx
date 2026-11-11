@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Modal } from "antd";
+import type { HookAPI } from "antd/es/modal/useModal";
 import type { TFunction } from "i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -21,6 +21,8 @@ import {
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
 
 type ActionContext = {
+  /** The app-provided modal API, so dialogs follow the app theme. */
+  modal: HookAPI;
   /** Called after the change went through, or after a conflict that needs a reload. */
   onChanged: () => void;
   networkId: string;
@@ -32,7 +34,7 @@ type ActionContext = {
 function showFailure(context: ActionContext, error: unknown) {
   const { t } = context;
   if (isKnVersionConflict(error)) {
-    Modal.warning({
+    context.modal.warning({
       content: t("knowledgeNetwork.versions.conflict"),
       okText: t("knowledgeNetwork.versions.reload"),
       onOk: context.onChanged,
@@ -42,7 +44,7 @@ function showFailure(context: ActionContext, error: unknown) {
   }
   const problems = readKnVersionProblems(error);
   if (problems.length > 0) {
-    Modal.error({
+    context.modal.error({
       content: (
         <ul>
           {problems.map((problem, index) => (
@@ -71,7 +73,7 @@ export function confirmResetDraft(context: ActionContext, fromVersion?: number) 
   const { t, versioning } = context;
   const hasChanges = Boolean(versioning.draft?.has_changes);
   const copy = fromVersion !== undefined;
-  Modal.confirm({
+  context.modal.confirm({
     content: hasChanges
       ? t("knowledgeNetwork.versions.reset.overwriteWarning")
       : t("knowledgeNetwork.versions.reset.noChanges"),
@@ -101,7 +103,7 @@ export function confirmResetDraft(context: ActionContext, fromVersion?: number) 
 /** Makes a history version the running one, which is also how a rollback is done. */
 export function confirmActivate(context: ActionContext, version: number, rollback = false) {
   const { t, versioning } = context;
-  Modal.confirm({
+  context.modal.confirm({
     content: (
       <>
         <p>
@@ -136,7 +138,7 @@ export function confirmStatusChange(
   action: "deprecate" | "restore" | "purge",
 ) {
   const { t } = context;
-  Modal.confirm({
+  context.modal.confirm({
     content: t(`knowledgeNetwork.versions.${action}Body`),
     okButtonProps: { danger: action === "purge" },
     okText: t(`knowledgeNetwork.versions.${action}`),
