@@ -71,14 +71,29 @@ describe("validateActionTypeExecutionConfig", () => {
     ).toBeNull();
   });
 
-  it("keeps rejecting incomplete constant or property mappings", () => {
+  it("rejects an empty constant before serialization even when another mapping is valid", () => {
     expect(
       validateActionTypeExecutionConfig(
         createExecutionConfig({
-          parameters: [{ name: "status", valueFrom: "const", value: "" }],
+          parameters: [{ name: "enabled", type: "boolean", valueFrom: "const", value: "" }],
         }),
       ),
-    ).toBe(ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY);
+    ).toBe(ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY);
+    expect(
+      validateActionTypeExecutionConfig(
+        createExecutionConfig({
+          parameters: [
+            { name: "order_id", valueFrom: "input" },
+            { name: "enabled", type: "boolean", valueFrom: "const", value: "" },
+          ],
+        }),
+      ),
+    ).toBe(ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY);
+    expect(
+      firstInvalidActionConstantParameter([
+        { name: "enabled", type: "boolean", valueFrom: "const", value: "" },
+      ]),
+    ).toBe("enabled");
   });
 
   it("identifies the parameter when a typed constant has the wrong shape", () => {

@@ -51,7 +51,7 @@ export function parseActionConstantValue(type: string | undefined, value: string
 }
 
 export function isInvalidActionConstantValue(type: string | undefined, value: string): boolean {
-  if (!value.trim()) return false;
+  if (!value.trim()) return true;
   try {
     parseActionConstantValue(type, value);
     return false;
@@ -205,12 +205,12 @@ export function validateActionTypeExecutionConfig(
     return Boolean(item.value?.trim() || item.sourcePropertyName?.trim());
   });
 
-  if (validParameters.length === 0 && !options.allowEmptyParameters) {
-    return ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY;
+  if (firstInvalidActionConstantParameter(value.parameters)) {
+    return ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY;
   }
 
-  if (firstInvalidActionConstantParameter(validParameters)) {
-    return ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY;
+  if (validParameters.length === 0 && !options.allowEmptyParameters) {
+    return ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY;
   }
 
   return null;

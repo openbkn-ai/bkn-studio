@@ -71,6 +71,22 @@ describe("relationship identities in the tool parameter table", () => {
     expect(input).toHaveAttribute("aria-invalid", "false");
   });
 
+  it("marks an empty fixed value invalid before it reaches the mapper", async () => {
+    renderWithoutAntdStyles(
+      <ActionTypeToolParamsTable
+        hasSource
+        inputSchema={[{ key: "enabled", name: "enabled", type: "boolean" }]}
+        parameters={[{ name: "enabled", type: "boolean", valueFrom: "const", value: "" }]}
+        propertyOptions={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    const input = await screen.findByPlaceholderText(
+      "knowledgeNetwork.actionTypeExecutionValueConstPlaceholder",
+    );
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
   it("binds an endpoint directly in the row and displays the configured identity as read-only", async () => {
     const onChange = vi.fn();
     function Editor() {
