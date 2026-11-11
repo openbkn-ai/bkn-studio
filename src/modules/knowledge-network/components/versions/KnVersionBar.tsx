@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Select, Tag } from "antd";
+import { Alert, Button, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -90,19 +90,19 @@ export function KnVersionBar({
           options={options}
           value={isDraft ? "draft" : viewValue}
         />
-        {isDraft ? (
-          <>
-            <Tag>
-              {running === 0
+        {/* A draft that matches what runs needs no status; only a difference is worth a line. */}
+        {isDraft && (running === 0 || draft?.has_changes) ? (
+          <span className={styles.draftStatus}>
+            {draft?.has_changes ? <span aria-hidden className={styles.changesDot} /> : null}
+            {[
+              running === 0
                 ? t("knowledgeNetwork.versions.notPublished")
-                : t("knowledgeNetwork.versions.basedOn", { version: knVersionName(base) })}
-            </Tag>
-            {draft?.has_changes ? (
-              <Tag color="warning">{t("knowledgeNetwork.versions.hasChanges")}</Tag>
-            ) : (
-              <Tag color="success">{t("knowledgeNetwork.versions.noChanges")}</Tag>
-            )}
-          </>
+                : t("knowledgeNetwork.versions.basedOn", { version: knVersionName(base) }),
+              draft?.has_changes ? t("knowledgeNetwork.versions.hasChanges") : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
         ) : null}
         <span className={styles.barSpacer} />
         {canModify && isDraft ? (

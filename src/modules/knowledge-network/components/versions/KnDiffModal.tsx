@@ -24,7 +24,7 @@ import type {
 } from "@/modules/knowledge-network/types/kn-version";
 
 type KnDiffModalProps = {
-  /** What to show on the left when the dialog opens. */
+  /** The pair to compare when the dialog opens; the older one ends up on the left. */
   initialBase?: KnVersionView;
   initialTarget?: KnVersionView;
   networkId: string;
@@ -73,7 +73,20 @@ export function KnDiffModal({
   const asValue = (view: KnVersionView) =>
     view === "running" ? String(versioning.running_version) : String(view);
 
-  const compare = (from: KnVersionView = base, to: KnVersionView = target) => {
+  // Older first: the draft is newer than every version, and numbers grow with time.
+  const age = (view: KnVersionView) =>
+    view === "draft"
+      ? Number.POSITIVE_INFINITY
+      : view === "running"
+        ? versioning.running_version
+        : view;
+
+  // A comparison always reads from the older side to the newer one, so "added" means
+  // what the newer side has; a pair picked the other way round is turned around.
+  const compare = (picked: KnVersionView = base, other: KnVersionView = target) => {
+    const [from, to] = age(picked) > age(other) ? [other, picked] : [picked, other];
+    setBase(from);
+    setTarget(to);
     const request = ++latest.current;
     setLoading(true);
     setError(null);
@@ -102,10 +115,11 @@ export function KnDiffModal({
     if (!open) {
       return;
     }
-    setBase(initialBase);
-    setTarget(initialTarget);
     if (versioning.running_version > 0) {
       compare(initialBase, initialTarget);
+    } else {
+      setBase(initialBase);
+      setTarget(initialTarget);
     }
     // The selectors run it again on demand.
     // eslint-disable-next-line react-hooks/exhaustive-deps

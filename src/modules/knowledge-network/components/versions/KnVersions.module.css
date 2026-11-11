@@ -29,6 +29,69 @@
   min-width: 200px;
 }
 
+.draftStatus {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--ant-color-text-secondary);
+}
+
+.changesDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ant-color-warning);
+}
+
+.statusText {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.statusDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ant-color-text-quaternary);
+}
+
+.tone_success {
+  background: var(--ant-color-success);
+}
+
+.tone_warning {
+  background: var(--ant-color-warning);
+}
+
+.tone_error {
+  background: var(--ant-color-error);
+}
+
+.tone_info {
+  background: var(--ant-color-primary);
+}
+
+.diffCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--ant-color-text-secondary);
+}
+
+.outdatedText {
+  color: var(--ant-color-error);
+}
+
+/* In the summary the status is the value itself, so it keeps the value's weight and color. */
+.summaryValue .draftStatus {
+  color: inherit;
+}
+
 .page {
   display: flex;
   flex-direction: column;

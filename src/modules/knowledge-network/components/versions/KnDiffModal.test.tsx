@@ -83,6 +83,20 @@ describe("KnDiffModal", () => {
     expect(diffVersions).toHaveBeenLastCalledWith("kn-1", 2, "draft");
   });
 
+  it("reads a pair picked newer-first from the older side", async () => {
+    diffVersions.mockResolvedValue({ changes: [] });
+    render(<KnDiffModal {...props} initialBase="running" initialTarget={2} open />);
+    await waitFor(() => expect(diffVersions).toHaveBeenCalledTimes(1));
+    expect(diffVersions).toHaveBeenLastCalledWith("kn-1", 2, "running");
+  });
+
+  it("puts the draft after any version", async () => {
+    diffVersions.mockResolvedValue({ changes: [] });
+    render(<KnDiffModal {...props} initialBase="draft" initialTarget={2} open />);
+    await waitFor(() => expect(diffVersions).toHaveBeenCalledTimes(1));
+    expect(diffVersions).toHaveBeenLastCalledWith("kn-1", 2, "draft");
+  });
+
   it("keeps the latest comparison when an earlier one answers last", async () => {
     let answerFirst: (value: KnDiffResult) => void = () => undefined;
     const first = { changes: [{ id: "old" }] } as unknown as KnDiffResult;

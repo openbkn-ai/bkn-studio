@@ -5,9 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse, Empty, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Collapse, Empty, Space, Spin, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
+import {
+  KnStatusText,
+  type KnStatusTone,
+} from "@/modules/knowledge-network/components/versions/KnStatusText";
 import type { KnDiffDefinition, KnDiffResult } from "@/modules/knowledge-network/types/kn-version";
 
 import styles from "./KnVersions.module.css";
@@ -18,9 +22,10 @@ type KnDiffSummaryProps = {
   result?: KnDiffResult | null;
 };
 
-const ACTION_COLOR: Record<string, string> = {
+const ACTION_TONE: Record<KnDiffDefinition["action"], KnStatusTone> = {
   create: "success",
   delete: "error",
+  skip: "neutral",
   update: "warning",
 };
 
@@ -42,25 +47,35 @@ export function KnDiffSummary({ error, loading, result }: KnDiffSummaryProps) {
     return null;
   }
 
-  const summary = result.summary ?? {};
+  // The server counts definitions only; the network itself is listed too, so it is counted here.
+  const counted = result.summary ?? {};
+  const networkAction = result.network?.action;
+  const summary = {
+    created: (counted.created ?? 0) + (networkAction === "create" ? 1 : 0),
+    updated: (counted.updated ?? 0) + (networkAction === "update" ? 1 : 0),
+    deleted: (counted.deleted ?? 0) + (networkAction === "delete" ? 1 : 0),
+    unchanged: counted.unchanged ?? 0,
+  };
   const entries = [...(result.network ? [result.network] : []), ...(result.entries ?? [])].filter(
     (entry) => entry.action !== "skip",
   );
 
   return (
     <div className={styles.diff}>
-      <Space size={[8, 4]} wrap>
-        <Tag color="success">
-          {t("knowledgeNetwork.versions.diff.created", { n: summary.created ?? 0 })}
-        </Tag>
-        <Tag color="warning">
-          {t("knowledgeNetwork.versions.diff.updated", { n: summary.updated ?? 0 })}
-        </Tag>
-        <Tag color="error">
-          {t("knowledgeNetwork.versions.diff.deleted", { n: summary.deleted ?? 0 })}
-        </Tag>
-        <Tag>{t("knowledgeNetwork.versions.diff.unchanged", { n: summary.unchanged ?? 0 })}</Tag>
-      </Space>
+      <div className={styles.diffCounts}>
+        <KnStatusText tone="success">
+          {t("knowledgeNetwork.versions.diff.created", { n: summary.created })}
+        </KnStatusText>
+        <KnStatusText tone="warning">
+          {t("knowledgeNetwork.versions.diff.updated", { n: summary.updated })}
+        </KnStatusText>
+        <KnStatusText tone="error">
+          {t("knowledgeNetwork.versions.diff.deleted", { n: summary.deleted })}
+        </KnStatusText>
+        <KnStatusText tone="neutral">
+          {t("knowledgeNetwork.versions.diff.unchanged", { n: summary.unchanged })}
+        </KnStatusText>
+      </div>
       {entries.length === 0 ? (
         <Empty
           description={t("knowledgeNetwork.versions.diff.noDifferences")}
@@ -73,9 +88,9 @@ export function KnDiffSummary({ error, loading, result }: KnDiffSummaryProps) {
             key: `${entry.type}:${entry.id}`,
             label: (
               <Space size={8}>
-                <Tag color={ACTION_COLOR[entry.action]}>
+                <KnStatusText tone={ACTION_TONE[entry.action]}>
                   {t(`knowledgeNetwork.versions.diff.action.${entry.action}`)}
-                </Tag>
+                </KnStatusText>
                 <Typography.Text type="secondary">{entry.type}</Typography.Text>
                 <Typography.Text strong>{entryTitle(entry)}</Typography.Text>
               </Space>
