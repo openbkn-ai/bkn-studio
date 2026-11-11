@@ -43,7 +43,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { objectTypeName?: string }) =>
+      options?.objectTypeName &&
+      (key === "knowledgeNetwork.actionRelationCurrentCondition" ||
+        key === "knowledgeNetwork.actionRelationOtherCondition")
+        ? `${key}:${options.objectTypeName}`
+        : key,
+  }),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => ({
@@ -95,6 +102,13 @@ vi.mock("@/framework/runtime/config", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/framework/runtime/config")>()),
   getRuntimeConfig: () => ({ currentUser: { isSuperAdmin: false } }),
 }));
+
+vi.mock(
+  "@/modules/knowledge-network/components/action-type/ActionTypeExecutionConfigTable",
+  () => ({
+    ActionTypeExecutionConfigTable: () => <div data-testid="execution-config-table" />,
+  }),
+);
 
 vi.mock("@/framework/entitlement/use-entitlement", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/framework/entitlement/use-entitlement")>()),
@@ -156,6 +170,13 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   listKnowledgeNetworkRelationTypes: mocks.listKnowledgeNetworkRelationTypes,
 }));
 
+vi.mock("@/modules/knowledge-network/services/relation-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/relation-type.service")
+  >()),
+  getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
+}));
+
 vi.mock(
   "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell",
   () => ({
@@ -208,6 +229,56 @@ beforeEach(() => {
 });
 
 describe("knowledge network detail scene headers", () => {
+  it("names both object types in relation action condition labels", async () => {
+    mocks.routeParams.current = { actionTypeId: "action-relation", networkId: "network-1" };
+    mocks.searchParams.current = "?view=detail";
+    mocks.listKnowledgeNetworkObjectTypes.mockResolvedValue([
+      { id: "product-spu", name: "Product SPU" },
+      { id: "brand", name: "Brand" },
+    ]);
+    mocks.getKnowledgeNetworkRelationTypeDetail.mockResolvedValue({
+      id: "product-brand",
+      name: "Product belongs to brand",
+      sourceObjectTypeId: "brand",
+      sourceObjectTypeName: "Brand",
+      targetObjectTypeId: "product-spu",
+      targetObjectTypeName: "Product SPU",
+    });
+    mocks.getKnowledgeNetworkActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#126ee3",
+      description: "",
+      executionConfig: {
+        actionSource: { type: "manual" },
+        parameters: [],
+        sourceName: "Manual",
+        sourceType: "manual",
+      },
+      id: "action-relation",
+      name: "Link brand",
+      objectTypeId: "product-spu",
+      objectTypeName: "Product SPU",
+      operationConfig: {
+        type: "relation",
+        relationTypeId: "product-brand",
+        relationOperation: "create",
+        anchorRole: "target",
+      },
+      tags: [],
+      updateTime: "2026-11-11 10:00:00",
+      updaterName: "admin",
+    });
+
+    render(<ActionTypeDetailScene />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionRelationCurrentCondition:Product SPU"),
+    ).not.toBeNull();
+    expect(
+      await screen.findByText("knowledgeNetwork.actionRelationOtherCondition:Brand"),
+    ).not.toBeNull();
+  });
+
   it("shows action type operations granted by the detail record", async () => {
     const graphReturnTo =
       "/knowledge-network/workspace/network-1/action-types?objectTypeId=object-1&graphResourceKind=action&graphResourceId=action-1";

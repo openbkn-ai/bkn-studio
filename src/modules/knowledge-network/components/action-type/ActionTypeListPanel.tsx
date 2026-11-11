@@ -708,7 +708,11 @@ export function ActionTypeListPanel({
       title: t("common.tag"),
       width: 160,
       render: (value: string[]) =>
-        value.length > 0 ? <ResourceTagList tags={value} /> : t("knowledgeNetwork.noTags"),
+        value.length > 0 ? (
+          <ResourceTagList maxVisible={1} tags={value} />
+        ) : (
+          t("knowledgeNetwork.noTags")
+        ),
     },
     {
       dataIndex: "updaterName",
