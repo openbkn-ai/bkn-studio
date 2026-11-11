@@ -13,6 +13,7 @@ import { hasDevAccessToken, seedDevTokensFromEnv } from "@/framework/auth/dev-au
 import { isOAuthCallbackPath, shouldUseOAuthGate } from "@/framework/auth/oauth";
 import { OAuthCallback } from "@/framework/auth/OAuthCallback";
 import { SignInScreen } from "@/framework/auth/SignInScreen";
+import { buildAppPath } from "@/app/router/app-paths";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import type { RuntimeUser } from "@/framework/runtime/types";
 
@@ -34,6 +35,10 @@ export function AuthGate({ children, onCurrentUser }: AuthGateProps) {
 
   if (isOAuthCallbackPath()) {
     return <OAuthCallback />;
+  }
+
+  if (window.location.pathname.replace(/\/+$/, "") === buildAppPath("/local-login")) {
+    return <SignInScreen onDevTokenSaved={() => forceRender((tick) => tick + 1)} />;
   }
 
   if (hasDevAccessToken()) {
