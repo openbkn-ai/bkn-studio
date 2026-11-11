@@ -29,7 +29,7 @@ import {
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
-import { listReleases } from "@/modules/bkn-project/services/release.service";
+import { getProjectVersions } from "@/modules/bkn-project/services/release.service";
 import {
   CHECK_POLL_MS,
   getOntologyCheck,
@@ -37,7 +37,7 @@ import {
   runOntologyCheck,
 } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
-import type { LineageRelease } from "@/modules/bkn-project/types/release";
+import type { ProjectVersions } from "@/modules/bkn-project/types/release";
 import type {
   CheckCountState,
   CheckJoinResult,
@@ -352,7 +352,7 @@ export function ProjectReleasePage({
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
   onGoToModel: () => void;
-  /** Something was published, switched or rolled back: the workspace header reads it again. */
+  /** Something was published or the running version switched: the workspace reads it again. */
   onReleaseChanged?: () => void;
   ownerIsCaller: boolean;
   project: Project;
@@ -374,24 +374,24 @@ export function ProjectReleasePage({
     void load();
   }, [load]);
 
-  // The release whose regression is open.
-  const [regressionOf, setRegressionOf] = useState<{ networkId: string; version: string } | null>(
+  // The release whose regression is open: by its version, and whether it is only prepared.
+  const [regressionOf, setRegressionOf] = useState<{ prepared: boolean; version: string } | null>(
     null,
   );
 
-  // The releases of the project's network; read again after publishing or switching.
-  const [releases, setReleases] = useState<LineageRelease[] | "failed" | null>(null);
-  const loadReleases = useCallback(async () => {
-    setReleases(null);
+  // The versions of the project's network; read again after preparing, publishing or switching.
+  const [versions, setVersions] = useState<ProjectVersions | "failed" | null>(null);
+  const loadVersions = useCallback(async () => {
+    setVersions(null);
     try {
-      setReleases(await listReleases(project.knId));
+      setVersions(await getProjectVersions(project.id));
     } catch {
-      setReleases("failed");
+      setVersions("failed");
     }
-  }, [project.knId]);
+  }, [project.id]);
   useEffect(() => {
-    void loadReleases();
-  }, [loadReleases]);
+    void loadVersions();
+  }, [loadVersions]);
 
   // The check names items by id; the draft gives the names people know. Ids are shown without it.
   useEffect(() => {
@@ -451,8 +451,14 @@ export function ProjectReleasePage({
   }
 
   const canRun = ownerIsCaller && !project.archived;
+  const changed = () => {
+    void load();
+    void loadVersions();
+    onReleaseChanged?.();
+  };
   return (
     <div className={styles.page}>
+      <p className={styles.muted}>{t("bknProject.release.description")}</p>
       <div className={styles.head}>
         <LightStatusTag tone="success">
           {t("bknProject.release.confirmed", { time: formatTime(status.confirmation.time) })}
@@ -474,27 +480,14 @@ export function ProjectReleasePage({
         />
       ) : null}
       <ReleasePublish
-        // The lineage is named after the network it started from.
-        baseNetworkId={project.knId}
         canPublish={canRun}
         onGoToBuild={onGoToBuild}
         onGoToKinetic={onGoToKinetic}
-        onChanged={() => {
-          void load();
-          void loadReleases();
-          onReleaseChanged?.();
-        }}
-        onOpenRegression={() =>
-          status.release &&
-          setRegressionOf({ networkId: status.release.networkId, version: status.release.version })
-        }
+        onChanged={changed}
+        onOpenRegression={(version, prepared) => setRegressionOf({ prepared, version })}
         projectId={project.id}
         status={status}
-        versionOf={(networkId) =>
-          Array.isArray(releases)
-            ? releases.find((release) => release.networkId === networkId)?.version
-            : undefined
-        }
+        versions={versions && versions !== "failed" ? versions : null}
       />
       <CheckSection
         canRun={canRun}
@@ -504,17 +497,18 @@ export function ProjectReleasePage({
         projectId={project.id}
       />
       <ReleaseVersions
-        inUseNetworkId={status.release?.inUse ? status.release.networkId : null}
-        onOpenRegression={({ networkId, version }) => setRegressionOf({ networkId, version })}
-        onRetry={() => void loadReleases()}
+        canManage={canRun}
+        onChanged={changed}
+        onOpenRegression={(version) => setRegressionOf({ prepared: false, version })}
+        onRetry={() => void loadVersions()}
         projectId={project.id}
-        releases={releases}
+        versions={versions}
       />
       {regressionOf ? (
         <RegressionDrawer
           canRun={canRun}
-          networkId={regressionOf.networkId}
           onClose={() => setRegressionOf(null)}
+          prepared={regressionOf.prepared}
           projectId={project.id}
           version={regressionOf.version}
         />

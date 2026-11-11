@@ -46,14 +46,15 @@ const PREFIX = "bknProject.release.regression";
  */
 export function RegressionDrawer({
   canRun,
-  networkId,
   onClose,
+  prepared = false,
   projectId,
   version,
 }: {
   canRun: boolean;
-  networkId: string;
   onClose: () => void;
+  /** The release is written into the network and not published yet. */
+  prepared?: boolean;
   projectId: string;
   version: string;
 }) {
@@ -71,7 +72,7 @@ export function RegressionDrawer({
   const load = useCallback(async () => {
     const read = ++latest.current;
     try {
-      const next = await getRegression(projectId, networkId);
+      const next = await getRegression(projectId, version);
       if (read === latest.current) {
         setRegression(next);
         setFailed(false);
@@ -83,7 +84,7 @@ export function RegressionDrawer({
     } finally {
       setReads((count) => count + 1);
     }
-  }, [networkId, projectId]);
+  }, [projectId, version]);
 
   useEffect(() => {
     void load();
@@ -103,7 +104,7 @@ export function RegressionDrawer({
     try {
       // What the run replies wins over a read sent before it.
       latest.current += 1;
-      setRegression(await runRegression(projectId, networkId));
+      setRegression(await runRegression(projectId, version));
       setFailed(false);
       message.success(t(`${PREFIX}.started`));
     } catch {
@@ -130,7 +131,7 @@ export function RegressionDrawer({
       }
       onClose={onClose}
       open
-      title={t(`${PREFIX}.title`, { version })}
+      title={prepared ? t(`${PREFIX}.titlePrepared`) : t(`${PREFIX}.title`, { version })}
       width={760}
     >
       {failed && regression === undefined ? (
@@ -150,6 +151,7 @@ export function RegressionDrawer({
         <p className={styles.muted}>{t(`${PREFIX}.none`)}</p>
       ) : (
         <div className={styles.stack}>
+          {prepared ? <p className={styles.muted}>{t(`${PREFIX}.preparedHint`)}</p> : null}
           <div className={styles.row}>
             <LightStatusTag tone={regressionTone(regression.status)}>
               {regressionStatusText(t, regression.status)}

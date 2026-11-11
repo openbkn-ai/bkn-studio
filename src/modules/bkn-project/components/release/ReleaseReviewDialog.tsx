@@ -24,10 +24,11 @@ import {
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import { DraftChangesDialog } from "@/modules/bkn-project/components/release/DraftChangesDialog";
 import {
   commitDrift,
   getReleaseReview,
-  publishRelease,
+  prepareRelease,
   syncBranch,
 } from "@/modules/bkn-project/services/release.service";
 import type {
@@ -43,16 +44,17 @@ const PREFIX = "bknProject.release.publish";
 const VERSION = /^\d+\.\d+\.\d+$/;
 
 /**
- * Reviews what publishing the project as a version would bring, then publishes it. The owner
- * accepts what did not pass and may be accepted; publishing sends the review's signature, so a
- * review the draft or the live version moved past is read again, never published.
+ * Reviews what publishing the project as a version would bring, then prepares it: the confirmed
+ * content is written into the network and its scenario regression starts there, while the running
+ * version stays. The owner accepts what did not pass and may be accepted; preparing sends the
+ * review's signature, so a review the project or the network moved past is read again.
  */
 export function ReleaseReviewDialog({
   canPublish,
   onCancel,
   onGoToBuild,
   onGoToKinetic,
-  onPublished,
+  onPrepared,
   projectId,
   suggestedVersion,
 }: {
@@ -63,7 +65,7 @@ export function ReleaseReviewDialog({
   onGoToBuild?: () => void;
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
-  onPublished: (version: string) => void;
+  onPrepared: (version: string) => void;
   projectId: string;
   suggestedVersion: string;
 }) {
@@ -74,10 +76,11 @@ export function ReleaseReviewDialog({
   const [review, setReview] = useState<ReleaseReview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState<string[]>([]);
-  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  // Why the last publishing failed, kept in the dialog so the owner can read it and try again.
+  // Why the last preparing failed, kept in the dialog so the owner can read it and try again.
   const [publishError, setPublishError] = useState<string | null>(null);
+  // The network has edits nobody published: the owner chooses what happens to them.
+  const [draftChanged, setDraftChanged] = useState(false);
   // Only the newest read is shown: reading again for another version or after a move wins.
   const latest = useRef(0);
 
@@ -120,31 +123,50 @@ export function ReleaseReviewDialog({
     !versionChanged &&
     review.accepts.every((accept) => accepted.includes(accept));
 
-  const publish = async () => {
+  const prepare = async (overwriteDraftChanges = false) => {
     if (!review) {
       return;
     }
     setBusy(true);
     setPublishError(null);
     try {
-      await publishRelease(projectId, {
+      await prepareRelease(projectId, {
         accepts: accepted,
-        notes: notes.trim(),
+        overwriteDraftChanges,
         signature: review.signature,
         version: review.version,
       });
-      message.success(t(`${PREFIX}.published`, { version: review.version }));
-      onPublished(review.version);
+      setDraftChanged(false);
+      message.success(t(`${PREFIX}.prepared`));
+      onPrepared(review.version);
     } catch (error) {
       const code = projectErrorCode(error);
       if (code === "Release.ReviewOutdated" || code === "Release.ChecksFailed") {
-        // The draft, the branch or the live version moved since the review: read it again.
+        // The project, the branch or the network moved since the review: read it again.
         message.warning(publishErrorText(t, code));
         void load(review.version);
+      } else if (code === "Release.DraftHasChanges") {
+        setDraftChanged(true);
       } else {
         // A server error included: the dialog stays, says why and keeps the button to try again.
+        setDraftChanged(false);
         setPublishError(publishErrorText(t, code));
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Brings the network's unpublished edits into the project, then reviews again. */
+  const commitEdits = async () => {
+    setBusy(true);
+    try {
+      await commitDrift(projectId);
+      setDraftChanged(false);
+      message.success(t(`${PREFIX}.draftCommitted`));
+      void load(reviewed);
+    } catch (error) {
+      message.error(publishErrorText(t, projectErrorCode(error)));
     } finally {
       setBusy(false);
     }
@@ -170,14 +192,15 @@ export function ReleaseReviewDialog({
       confirmLoading={busy}
       destroyOnHidden
       okButtonProps={{ disabled: !ready, hidden: !canPublish }}
-      okText={t(`${PREFIX}.publishVersion`, { version: reviewed })}
+      okText={t(`${PREFIX}.prepare`)}
       onCancel={onCancel}
-      onOk={() => void publish()}
+      onOk={() => void prepare()}
       open
-      title={t(`${PREFIX}.dialogTitle`)}
+      title={t(`${PREFIX}.dialogTitle`, { version: reviewed })}
       width={760}
     >
       <div className={styles.stack}>
+        <p className={styles.muted}>{t(`${PREFIX}.dialogDescription`)}</p>
         <div className={styles.row}>
           <label className={styles.label} htmlFor="release-version">
             {t(`${PREFIX}.version`)}
@@ -221,7 +244,6 @@ export function ReleaseReviewDialog({
             accepted={accepted}
             busy={busy}
             canPublish={canPublish}
-            notes={notes}
             onGoToBuild={onGoToBuild}
             onGoToKinetic={onGoToKinetic}
             onAccept={(accept, checked) =>
@@ -229,7 +251,6 @@ export function ReleaseReviewDialog({
                 checked ? [...current, accept] : current.filter((item) => item !== accept),
               )
             }
-            onNotes={setNotes}
             onSettle={(action) => void settle(action)}
             review={review}
           />
@@ -244,6 +265,14 @@ export function ReleaseReviewDialog({
           />
         ) : null}
       </div>
+      {draftChanged ? (
+        <DraftChangesDialog
+          busy={busy}
+          onCancel={() => setDraftChanged(false)}
+          onCommit={() => void commitEdits()}
+          onOverwrite={() => void prepare(true)}
+        />
+      ) : null}
     </Modal>
   );
 }
@@ -252,22 +281,18 @@ function ReviewBody({
   accepted,
   busy,
   canPublish,
-  notes,
   onGoToBuild,
   onGoToKinetic,
   onAccept,
-  onNotes,
   onSettle,
   review,
 }: {
   accepted: string[];
   busy: boolean;
   canPublish: boolean;
-  notes: string;
   onGoToBuild?: () => void;
   onGoToKinetic?: () => void;
   onAccept: (accept: string, checked: boolean) => void;
-  onNotes: (notes: string) => void;
   onSettle: (action: "commitDrift" | "sync") => void;
   review: ReleaseReview;
 }) {
@@ -391,21 +416,6 @@ function ReviewBody({
         </section>
       ) : null}
 
-      {canPublish ? (
-        <section className={styles.stack}>
-          <label className={styles.blockTitle} htmlFor="release-notes">
-            {t(`${PREFIX}.notes`)}
-          </label>
-          <Input.TextArea
-            autoSize={{ maxRows: 6, minRows: 2 }}
-            id="release-notes"
-            maxLength={2000}
-            onChange={(event) => onNotes(event.target.value)}
-            placeholder={t(`${PREFIX}.notesPlaceholder`)}
-            value={notes}
-          />
-        </section>
-      ) : null}
       <p className={styles.muted}>{t(`${PREFIX}.regressionHint`)}</p>
     </>
   );
