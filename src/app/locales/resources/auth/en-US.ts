@@ -7,6 +7,15 @@
 
 export const authEnUS = {
   auth: {
+    popup: {
+      disconnected:
+        "The authorization window lost its connection. Return to the original page and try again.",
+      blocked: "Allow the authorization popup and try again.",
+      incomplete:
+        "Authorization was not completed. The plan creator must try again with the original account.",
+      cancelled: "Authorization was cancelled.",
+      timeout: "Authorization timed out. Try again.",
+    },
     signInSubtitle: "Sign in to access the business knowledge network console",
     signInButton: "Sign in",
     devTokenToggle: "Sign in with a token (dev mode)",

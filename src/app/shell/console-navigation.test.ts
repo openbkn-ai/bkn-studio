@@ -83,10 +83,10 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     );
   });
 
-  it("仅持有 admin-client:manage → 系统管理只显示访问地址", () => {
+  it("仅持有 admin-client:manage → 显示访问地址与 SSO 配置", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-client:manage"]));
     expect(group).toBeDefined();
-    expect(keys(group!.children ?? [])).toEqual(["access-address-management"]);
+    expect(keys(group!.children ?? [])).toEqual(["sso-management", "access-address-management"]);
   });
 
   it("仅持有 admin-agent:manage → 系统管理只显示内置 Agent", () => {
@@ -133,7 +133,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     ]);
   });
 
-  it("数据资源知识网络入口不依赖菜单权限", () => {
+  it("数据资源入口不依赖菜单权限，知识库位于任务管理之后", () => {
     const filtered = filterNavByPermission(consoleNavigation, []);
     const businessGroup = filtered.find(
       (item) => item.key === "general-business-knowledge-network",
@@ -143,8 +143,8 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(businessGroup?.children ?? [])).toEqual([
       "data-connection",
       "data-catalog",
-      "knowledge-base",
       "task-management",
+      "knowledge-base",
     ]);
   });
 

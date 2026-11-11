@@ -5,8 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
+import { getActionTypeOperationKind } from "../utils/action-type-operation";
+import { getActionTypeToolboxMetadataType } from "./action-type-tool.service";
+import type { ActionTypeOperationKind } from "../types/action-type";
+
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
+import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
@@ -16,6 +23,7 @@ import type {
   ActionTypeExecutionLogQuery,
   ActionTypeExecutionResultPage,
   ActionTypeExecutionResultQuery,
+  ActionTypeExecutionToolCategory,
   KnowledgeNetworkActionTypeMutationPayload,
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkImportMode,
@@ -42,6 +50,8 @@ import {
   toBackendActionTypeUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers";
 import {
+  buildMockObjectTypeDetail,
+  mockRelationTypes,
   cancelMockActionTypeExecutionLog,
   cloneActionTypeExecutionConfig,
   completeMockActionTypeExecutionLog,
@@ -68,6 +78,14 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
+import type { ActionExecutionInput, ActionExecutionSchema } from "../utils/action-execution-input";
+
+function requireActionOperation(input: KnowledgeNetworkActionTypeMutationPayload) {
+  if (!input.operationConfig)
+    throw new Error("operation_config is required; migrate existing actions before editing");
+}
 
 function resolveActionTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -103,7 +121,7 @@ export async function listKnowledgeNetworkActionTypes(
     return wait(
       (mockActionTypes[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -128,14 +146,48 @@ export async function listKnowledgeNetworkActionTypes(
 }
 
 export type KnowledgeNetworkActionTypePageQuery = {
+  executionToolCategory?: ActionTypeExecutionToolCategory;
   actionKind?: KnowledgeNetworkActionTypeKind;
   direction?: "asc" | "desc";
+  independentOnly?: boolean;
   limit: number;
   namePattern?: string;
   objectTypeId?: string;
   offset: number;
+  operationKind?: ActionTypeOperationKind;
+  relationOperation?: "create" | "delete";
   sort?: "name" | "update_time";
 };
+
+async function filterByExecutionToolCategory(
+  records: KnowledgeNetworkActionTypeRecord[],
+  category?: ActionTypeExecutionToolCategory,
+): Promise<KnowledgeNetworkActionTypeRecord[]> {
+  if (!category) return records;
+  if (category === "mcp") {
+    return records.filter((record) => record.actionSource?.type === "mcp");
+  }
+
+  const boxIds = [
+    ...new Set(
+      records.flatMap((record) =>
+        record.actionSource?.type === "tool" && record.actionSource.boxId
+          ? [record.actionSource.boxId]
+          : [],
+      ),
+    ),
+  ];
+  const metadata = new Map(
+    await Promise.all(
+      boxIds.map(async (boxId) => [boxId, await getActionTypeToolboxMetadataType(boxId)] as const),
+    ),
+  );
+  return records.filter(
+    (record) =>
+      record.actionSource?.type === "tool" &&
+      metadata.get(record.actionSource.boxId || "") === category,
+  );
+}
 
 export type KnowledgeNetworkActionTypePage = {
   entries: KnowledgeNetworkActionTypeRecord[];
@@ -156,9 +208,18 @@ export async function listKnowledgeNetworkActionTypePage(
           item.name.toLowerCase().includes(keyword) ||
           item.description.toLowerCase().includes(keyword)) &&
         (!query.actionKind || item.actionKind === query.actionKind) &&
-        (!query.objectTypeId || item.objectTypeId === query.objectTypeId),
+        (!query.objectTypeId || item.objectTypeId === query.objectTypeId) &&
+        (!query.operationKind || getActionTypeOperationKind(item) === query.operationKind) &&
+        (!query.independentOnly || !item.objectTypeId) &&
+        (!query.relationOperation ||
+          (item.operationConfig?.type === "relation" &&
+            item.operationConfig.relationOperation === query.relationOperation)),
     );
-    const sorted = [...filtered].sort((left, right) => {
+    const categoryFiltered = await filterByExecutionToolCategory(
+      filtered,
+      query.executionToolCategory,
+    );
+    const sorted = [...categoryFiltered].sort((left, right) => {
       const leftValue = query.sort === "name" ? left.name : left.updateTime;
       const rightValue = query.sort === "name" ? right.name : right.updateTime;
       const result = leftValue.localeCompare(rightValue, undefined, {
@@ -168,46 +229,72 @@ export async function listKnowledgeNetworkActionTypePage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: sorted.slice(query.offset, query.offset + query.limit).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
 
+  const requiresLocalFilter = Boolean(query.independentOnly || query.executionToolCategory);
   const response = await http.get<BackendListResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types`,
     {
       params: {
         action_type: query.actionKind ? toBackendActionTypeEnum(query.actionKind) : undefined,
         direction: query.direction ?? "desc",
-        limit: query.limit,
+        // Tool categories still require toolbox metadata; operation filters are applied by the server.
+        limit: requiresLocalFilter ? -1 : query.limit,
         name_pattern: query.namePattern?.trim() || undefined,
         object_type_id: query.objectTypeId || undefined,
-        offset: query.offset,
+        operation_kind: query.operationKind,
+        relation_operation: query.relationOperation,
+        offset: requiresLocalFilter ? 0 : query.offset,
         sort: query.sort ?? "update_time",
       },
     },
   );
 
+  const entries = response.data.entries.map(mapActionType);
+  if (!requiresLocalFilter) {
+    return { entries, totalCount: response.data.total_count };
+  }
+
+  const scoped = entries.filter(
+    (entry) =>
+      (!query.operationKind || getActionTypeOperationKind(entry) === query.operationKind) &&
+      (!query.independentOnly || !entry.objectTypeId) &&
+      (!query.relationOperation ||
+        (entry.operationConfig?.type === "relation" &&
+          entry.operationConfig.relationOperation === query.relationOperation)),
+  );
+  const categoryFiltered = await filterByExecutionToolCategory(scoped, query.executionToolCategory);
   return {
-    entries: response.data.entries.map(mapActionType),
-    totalCount: response.data.total_count,
+    entries: categoryFiltered.slice(query.offset, query.offset + query.limit),
+    totalCount: categoryFiltered.length,
   };
 }
 
-export async function getKnowledgeNetworkActionType(networkId: string, actionTypeId: string) {
+export async function getKnowledgeNetworkActionType(
+  networkId: string,
+  actionTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     return wait(
       (() => {
         const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
-        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+        return record
+          ? { ...record, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+          : null;
       })(),
     );
   }
 
   const response = await http.get<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -321,10 +408,104 @@ export async function listKnowledgeNetworkActionTypeExecutionResults(
   }
 }
 
+/** Discovery returns the execution contract without scanning objects. */
+export async function getActionTypeExecutionSchema(
+  networkId: string,
+  actionTypeId: string,
+): Promise<ActionExecutionSchema> {
+  if (useMock) {
+    const detail = await getKnowledgeNetworkActionTypeDetail(networkId, actionTypeId);
+    if (!detail?.operationConfig) throw new Error("Action execution schema is unavailable");
+    const fields: Record<string, ActionExecutionSchema> = {};
+    const required: string[] = [];
+    const valueSchema = (type?: string): ActionExecutionSchema => ({
+      type: ["integer", "number", "boolean", "array", "object"].includes(type ?? "")
+        ? type
+        : "string",
+    });
+    const identity = (id: string): ActionExecutionSchema => {
+      const object = buildMockObjectTypeDetail(networkId, id);
+      if (!object?.primaryKeys?.length) throw new Error("Object identity is unavailable");
+      return {
+        type: "object",
+        title: object.name,
+        required: object.primaryKeys,
+        properties: Object.fromEntries(
+          object.primaryKeys.map((key) => {
+            const property = object.dataProperties.find((item) => item.name === key);
+            return [key, { ...valueSchema(property?.type), title: property?.displayName || key }];
+          }),
+        ),
+      };
+    };
+    const parameters = detail.executionConfig.parameters.filter(
+      (item) => item.valueFrom === "input",
+    );
+    if (parameters.length) {
+      fields.dynamic_params = {
+        type: "object",
+        properties: Object.fromEntries(
+          parameters.map((item) => [item.name, valueSchema(item.type)]),
+        ),
+        required: parameters.map((item) => item.name),
+      };
+      required.push("dynamic_params");
+    }
+    if (detail.operationConfig.type === "relation") {
+      const relationId = detail.operationConfig.relationTypeId;
+      const relation = (mockRelationTypes[networkId] ?? []).find((item) => item.id === relationId);
+      if (!relation) throw new Error("Relation is unavailable");
+      fields.relation_target = {
+        type: "object",
+        properties: {
+          source_identity: identity(relation.sourceObjectTypeId),
+          target_identity: identity(relation.targetObjectTypeId),
+        },
+        required: ["source_identity", "target_identity"],
+      };
+      required.push("relation_target");
+    } else if (detail.operationConfig.type === "object") {
+      if (detail.actionKind === "create") {
+        const object = buildMockObjectTypeDetail(networkId, detail.objectTypeId);
+        fields.object_input = {
+          type: "object",
+          title: object?.name,
+          properties: Object.fromEntries(
+            (object?.dataProperties ?? []).map((item) => [
+              item.name,
+              { ...valueSchema(item.type), title: item.displayName || item.name },
+            ]),
+          ),
+        };
+      } else {
+        fields._instance_identities = {
+          type: "array",
+          minItems: 1,
+          items: identity(detail.objectTypeId),
+        };
+        required.push("_instance_identities");
+      }
+    }
+    return { type: "object", properties: fields, required };
+  }
+  const response = await http.post<{ execution_schema?: ActionExecutionSchema }>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+    {},
+    { headers: { "x-http-method-override": "GET" }, params: await resolveKnReadParams(networkId) },
+  );
+  if (
+    response.data.execution_schema?.type !== "object" ||
+    !response.data.execution_schema.properties
+  ) {
+    throw new Error("Action execution schema is unavailable");
+  }
+  return response.data.execution_schema;
+}
+
 export async function executeKnowledgeNetworkActionTypeNow(
   networkId: string,
   actionTypeId: string,
-  dynamicParams?: Record<string, unknown>,
+  input: ActionExecutionInput = {},
 ) {
   if (useMock) {
     const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
@@ -343,7 +524,12 @@ export async function executeKnowledgeNetworkActionTypeNow(
 
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
-    dynamicParams && Object.keys(dynamicParams).length > 0 ? { dynamic_params: dynamicParams } : {},
+    input,
+    {
+      headers: { "Content-Type": "application/json" },
+      params: await resolveKnReadParams(networkId),
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   return response.data;
@@ -363,6 +549,7 @@ export async function createKnowledgeNetworkActionType(
   networkId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
+  requireActionOperation(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -373,9 +560,11 @@ export async function createKnowledgeNetworkActionType(
       description: input.description,
       color: input.color,
       actionKind: input.actionKind,
+      operationConfig: input.operationConfig ? { ...input.operationConfig } : undefined,
       objectTypeId: input.objectTypeId,
       objectTypeName: relatedObject?.name ?? input.objectTypeId,
       tags: input.tags,
+      ...withMockDefinitionDeclarations(undefined, input.definitionDeclarationEdit),
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Local Admin",
     };
@@ -400,6 +589,12 @@ export async function createKnowledgeNetworkActionType(
     {
       entries: [toBackendActionTypeCreateEntry(input)],
     },
+    // The form shows the refusal itself, with the definitions it names.
+    {
+      headers: { "Content-Type": "application/json" },
+      skipErrorToast: true,
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -416,6 +611,7 @@ export async function updateKnowledgeNetworkActionType(
   actionTypeId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
+  requireActionOperation(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -428,9 +624,11 @@ export async function updateKnowledgeNetworkActionType(
             description: input.description,
             color: input.color,
             actionKind: input.actionKind,
+            ...(input.operationConfig ? { operationConfig: { ...input.operationConfig } } : {}),
             objectTypeId: input.objectTypeId,
             objectTypeName: relatedObject?.name ?? input.objectTypeId,
             tags: input.tags,
+            ...withMockDefinitionDeclarations(item.declarations, input.definitionDeclarationEdit),
             updateTime: formatTimestamp(Date.now()),
             updaterName: "Local Admin",
           }
@@ -451,6 +649,11 @@ export async function updateKnowledgeNetworkActionType(
   const response = await http.put<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
     toBackendActionTypeUpdatePayload(input),
+    {
+      headers: { "Content-Type": "application/json" },
+      skipErrorToast: true,
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -472,7 +675,16 @@ export async function deleteKnowledgeNetworkActionType(networkId: string, action
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`);
+  try {
+    await http.delete(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+      // The caller shows the refusal, with the definitions that still name this one.
+      { skipErrorToast: true },
+    );
+  } catch (error) {
+    throwIfStillReferenced(error, { id: actionTypeId, kind: "action_type" });
+    throw error;
+  }
 }
 
 export async function importKnowledgeNetworkActionTypes(

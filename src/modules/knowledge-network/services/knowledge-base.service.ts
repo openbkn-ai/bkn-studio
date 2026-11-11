@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { http } from "@/framework/request/http";
 import { mockKnowledgeBases } from "@/modules/knowledge-network/services/mock/state";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
@@ -56,7 +57,9 @@ export async function listQueryableKnowledgeBases(name = ""): Promise<QueryableK
   if (useMock) {
     return wait(
       mapQueryableKnowledgeBases(
-        mockKnowledgeBases.filter((item) => !keyword || item.name.includes(keyword)),
+        mockKnowledgeBases
+          .filter((item) => !keyword || item.name.includes(keyword))
+          .map((item) => ({ ...item, operations: filterMockOperations(item.operations ?? []) })),
       ),
     );
   }

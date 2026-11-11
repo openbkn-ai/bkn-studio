@@ -94,6 +94,24 @@ describe("createThemeConfig", () => {
     expect(tableTokens?.rowSelectedHoverBg).toBe("#223049");
   });
 
+  it("sets floating layers apart from the page in dark mode only", () => {
+    const dark = createThemeConfig(runtimeConfig, "dark").token;
+    const light = createThemeConfig(runtimeConfig, "light").token;
+
+    // Messages, modals, dropdowns and select panels sit a step above cards and the page,
+    // ringed by a hairline that still shows where a shadow does not.
+    expect(dark?.colorBgElevated).toBe("#24272e");
+    expect(dark?.colorBgElevated).not.toBe(dark?.colorBgContainer);
+    expect(dark?.boxShadow).toMatch(/^0 0 0 1px rgba\(255, 255, 255, 0\.1\)/);
+    expect(dark?.boxShadowSecondary).toMatch(/^0 0 0 1px rgba\(255, 255, 255, 0\.1\)/);
+    expect(dark?.colorBgMask).toBe("rgba(0, 0, 0, 0.65)");
+
+    expect(light?.colorBgElevated).toBeUndefined();
+    expect(light?.boxShadow).toBeUndefined();
+    expect(light?.boxShadowSecondary).toBeUndefined();
+    expect(light?.colorBgMask).toBeUndefined();
+  });
+
   it("uses legible selected tab colors on both themes", () => {
     const lightTabs = createThemeConfig(runtimeConfig, "light").components?.Tabs;
     const darkTabs = createThemeConfig(runtimeConfig, "dark").components?.Tabs;

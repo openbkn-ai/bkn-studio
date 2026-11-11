@@ -22,6 +22,7 @@ export const BKN_AGENT_EXECUTIONS_PATH = "/api/bkn-agent/v1/executions";
 
 /** Fixed built-in Agent for Studio smart Q&A; its configuration is shared and server-side. */
 export const SMART_QA_AGENT_ID = "studio_smart_qa";
+export const EVAL_ASSISTANT_AGENT_ID = "eval_assistant";
 
 export type ExecutionStatus = "pending" | "running" | "succeeded" | "failed" | "cancelled";
 export type TerminalStatus = "succeeded" | "failed" | "cancelled";

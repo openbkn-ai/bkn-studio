@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, Modal } from "antd";
+import { Form, Input, Modal, Switch } from "antd";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -61,6 +61,7 @@ export function KnowledgeNetworkFormModal({
       identifier: record?.identifier ?? "",
       name: record?.name ?? "",
       tags: record?.tags ?? [],
+      versioning: false,
     });
   }, [form, open, record]);
 
@@ -148,6 +149,16 @@ export function KnowledgeNetworkFormModal({
         >
           <ResourceTagsSelect />
         </Form.Item>
+        {mode === "create" ? (
+          <Form.Item
+            extra={t("knowledgeNetwork.versions.create.versioningHint")}
+            label={t("knowledgeNetwork.versions.create.versioning")}
+            name="versioning"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
         <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
           <Input.TextArea
             maxLength={1000}

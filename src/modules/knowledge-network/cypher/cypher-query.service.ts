@@ -229,12 +229,17 @@ export async function runCypherQuery(params: {
   objectProperties?: Record<string, string[]>;
   /** Check and plan the query without reading any data. */
   explain?: boolean;
+  /** Values for the query's `$name` parameters. */
+  parameters?: Record<string, unknown>;
   signal?: AbortSignal;
 }): Promise<CypherRun> {
   const body: Rec = {
     kn_id: params.env.knId,
     query: params.query,
     ...(params.explain ? { explain: true } : {}),
+    ...(params.parameters && Object.keys(params.parameters).length > 0
+      ? { parameters: params.parameters }
+      : {}),
   };
   // A plan returns no nodes, so there is nothing to name.
   const extra = params.explain ? {} : (params.objectProperties ?? {});

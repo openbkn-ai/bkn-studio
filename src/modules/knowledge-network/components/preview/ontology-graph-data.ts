@@ -16,6 +16,7 @@ import type { ComboData, EdgeData, GraphData, NodeData } from "@antv/g6";
 
 import { GRAPH_PALETTE, type GraphTokens } from "@/modules/knowledge-network/lib/graph-style";
 import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 import {
   GROUP_HULL_PAD,
   HUB_RADIUS,
@@ -59,7 +60,7 @@ export function drawnRadius(degree: number, hub: boolean): number {
   const radius = MIN_DRAWN_RADIUS + 2.8 * Math.sqrt(Math.max(0, degree));
   return Math.min(hub ? MAX_DRAWN_HUB_RADIUS : MAX_DRAWN_RADIUS, radius);
 }
-/** How faint a faded type or relation is drawn. */
+/** How faint a faded or deprecated type or relation is drawn. */
 const FADED_OPACITY = 0.35;
 /** Characters of a name drawn under its disc. */
 const NAME_CHARS = 10;
@@ -169,7 +170,7 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
         size: drawnRadius(degree.get(node.id) ?? 0, hub) * 2,
         fill: color,
         // Stated so G6 has a value to return to when the dimmed state is cleared.
-        opacity: node.faded ? FADED_OPACITY : 1,
+        opacity: node.faded || isDeprecated(node) ? FADED_OPACITY : 1,
         stroke: tokens.inverse,
         lineWidth: 1.5,
         haloStroke: color,
@@ -184,38 +185,41 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
     };
   });
 
-  const edges: EdgeData[] = graph.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.sourceId,
-    target: edge.targetId,
-    data: { name: edge.name },
-    ...(edge.curveOffset ? { type: "quadratic" } : {}),
-    style: {
-      ...(edge.curveOffset ? { curveOffset: edge.curveOffset } : {}),
-      // Stated so G6 has a value to return to when the dimmed state is cleared.
-      opacity: edge.faded ? FADED_OPACITY : 1,
-      // Relations stay one quiet grey: the types carry the colour.
-      stroke: tokens.faint,
-      lineWidth: 1,
-      ...(edge.faded ? { lineDash: [4, 4] } : {}),
-      endArrow: true,
-      endArrowSize: 6,
-      labelFill: tokens.text,
-      labelFontSize: RELATION_FONT,
-      labelFontWeight: 500,
-      labelBackground: true,
-      labelBackgroundFill: tokens.surface,
-      labelBackgroundStroke: tokens.border,
-      labelBackgroundLineWidth: 1,
-      labelBackgroundRadius: 8,
-      labelPadding: [2, 6],
-      labelAutoRotate: false,
-      // Right on the line's midpoint: G6 nudges it aside by default, which the overlap test
-      // does not know about.
-      labelOffsetX: 0,
-      labelOffsetY: 0,
-    },
-  }));
+  const edges: EdgeData[] = graph.edges.map((edge) => {
+    const faint = edge.faded || isDeprecated(edge);
+    return {
+      id: edge.id,
+      source: edge.sourceId,
+      target: edge.targetId,
+      data: { name: edge.name },
+      ...(edge.curveOffset ? { type: "quadratic" } : {}),
+      style: {
+        ...(edge.curveOffset ? { curveOffset: edge.curveOffset } : {}),
+        // Stated so G6 has a value to return to when the dimmed state is cleared.
+        opacity: faint ? FADED_OPACITY : 1,
+        // Relations stay one quiet grey: the types carry the colour.
+        stroke: tokens.faint,
+        lineWidth: 1,
+        ...(faint ? { lineDash: [4, 4] } : {}),
+        endArrow: true,
+        endArrowSize: 6,
+        labelFill: tokens.text,
+        labelFontSize: RELATION_FONT,
+        labelFontWeight: 500,
+        labelBackground: true,
+        labelBackgroundFill: tokens.surface,
+        labelBackgroundStroke: tokens.border,
+        labelBackgroundLineWidth: 1,
+        labelBackgroundRadius: 8,
+        labelPadding: [2, 6],
+        labelAutoRotate: false,
+        // Right on the line's midpoint: G6 nudges it aside by default, which the overlap test
+        // does not know about.
+        labelOffsetX: 0,
+        labelOffsetY: 0,
+      },
+    };
+  });
 
   const combos: ComboData[] = clusters.map((cluster) => ({
     id: cluster.id,

@@ -42,6 +42,11 @@ export const GraphOverviewPage = lazyNamedExport(
   "GraphOverviewPage",
 );
 
+export const EvalRoutePage = lazyNamedExport(
+  () => import("@/modules/knowledge-network/eval/EvalRoutePage"),
+  "EvalRoutePage",
+);
+
 export const ConceptGroupCreatePage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/ConceptGroupCreatePage"),
   "ConceptGroupCreatePage",

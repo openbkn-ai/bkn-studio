@@ -5,10 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Select } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { Input, Select } from "antd";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import {
+  formatPrecisionSafeJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
   filterOperationsForField,
@@ -18,6 +24,7 @@ import {
   type FilterNode,
   type FilterOperation,
   type FilterQueryPath,
+  type UnsupportedFilterNode,
 } from "@/modules/data-catalog/lib/filter-tree";
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 
@@ -32,6 +39,59 @@ type Props = {
   | { readOnly: true; onChange?: never }
   | { readOnly?: false; onChange: (value: FilterGroup) => void }
 );
+
+function UnsupportedCondition({
+  node,
+  onRemove,
+}: {
+  node: UnsupportedFilterNode;
+  onRemove?: () => void;
+}) {
+  const { t } = useTranslation();
+  const [expandedNode, setExpandedNode] = useState<UnsupportedFilterNode | null>(null);
+  const expanded = expandedNode === node;
+  const jsonId = useId();
+  const reason = t(`dataCatalog.filter.unsupportedReasons.${node.reason}`);
+  return (
+    <div className={styles.unsupportedNode}>
+      <div className={styles.unsupportedHeader}>
+        <span className={styles.unsupportedReason} title={reason}>
+          <ExclamationCircleOutlined />
+          <span>{reason}</span>
+        </span>
+        <div className={styles.unsupportedActions}>
+          <AppButton
+            type="link"
+            size="small"
+            aria-expanded={expanded}
+            aria-controls={jsonId}
+            onClick={() => setExpandedNode(expanded ? null : node)}
+          >
+            {t(expanded ? "dataCatalog.filter.collapseJSON" : "dataCatalog.filter.expandJSON")}
+          </AppButton>
+          {onRemove ? (
+            <AppButton danger type="link" size="small" onClick={onRemove}>
+              {t("dataCatalog.filter.removeUnsupported")}
+            </AppButton>
+          ) : null}
+        </div>
+      </div>
+      <Input.TextArea
+        id={jsonId}
+        readOnly
+        className={styles.unsupportedJSON}
+        aria-label={t("dataCatalog.filter.unsupportedNode")}
+        rows={2}
+        autoSize={expanded ? { minRows: 2, maxRows: 6 } : false}
+        value={
+          typeof node.raw === "string"
+            ? JSON.stringify(node.raw)
+            : formatPrecisionSafeJSON(transformPrecisionSafeJSONRequest(node.raw))
+        }
+      />
+    </div>
+  );
+}
 
 export function FilterTreeEditor({
   value,
@@ -107,6 +167,14 @@ export function FilterTreeEditor({
         {group.children.map((child, index) => {
           const childPath = [...path, index];
           if (child.kind === "group") return renderGroup(child, childPath);
+          if (child.kind === "unsupported")
+            return (
+              <UnsupportedCondition
+                key={childPath.join("-")}
+                node={child}
+                onRemove={readOnly ? undefined : () => updateAt(childPath, () => null)}
+              />
+            );
           const selectedField = fields.find((field) => field.name === child.field);
           return (
             <div className={styles.rule} key={childPath.join("-")}>
@@ -207,7 +275,7 @@ export function FilterTreeEditor({
                       label: ["==", "!=", ">", "<", ">=", "<="].includes(operation)
                         ? operation
                         : t(
-                            `dataCatalog.filter.operations.${operation === "contain" && queryPath === "local_index" ? "containAny" : operation}`,
+                            `dataCatalog.filter.operations.${operation === "contain" && queryPath !== "source" ? "containAny" : operation}`,
                           ),
                       value: operation,
                     }))}
@@ -228,6 +296,15 @@ export function FilterTreeEditor({
             </div>
           );
         })}
+        {!group.children.length ? (
+          <span className={styles.valueHint}>
+            {t(
+              path.length
+                ? "dataCatalog.filter.errors.emptyGroup"
+                : "dataCatalog.filter.noConditions",
+            )}
+          </span>
+        ) : null}
         {!readOnly ? (
           <div className={styles.actions}>
             <AppButton

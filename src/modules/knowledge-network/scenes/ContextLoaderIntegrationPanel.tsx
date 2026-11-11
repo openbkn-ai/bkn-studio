@@ -718,6 +718,7 @@ export function ContextLoaderIntegrationPanel({
             <McpConnectionSecurity
               protocol={mcpProtocol}
               authMode={mcpAuthMode}
+              client={activeMcpConfigTab}
               likelySelfSigned={isLikelySelfSignedMcpHost(mcpUrlWithSlash)}
               allowInsecureTls={allowInsecureTls}
               onAllowInsecureTlsChange={setAllowInsecureTls}

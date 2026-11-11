@@ -5,13 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { PropertyDeclarations } from "./declarations";
+import type {
+  DefinitionDeclarationEdit,
+  DefinitionDeclarations,
+  PropertyDeclarations,
+} from "./declarations";
 
 export type KnowledgeNetworkObjectTypeRecord = {
   color: string;
   conceptGroupIds: string[];
   conceptGroupNames: string[];
   dataSource?: ObjectTypeDataSource;
+  /** Its aliases and lifecycle; absent when it declares neither. */
+  declarations?: DefinitionDeclarations;
   description: string;
   hasIndex: boolean;
   indexStatus?: ObjectTypeIndexStatus;
@@ -193,10 +199,17 @@ export type KnowledgeNetworkObjectTypeMutationPayload = {
    * such as a mask rule save, sends no declaration and the backend keeps the stored ones.
    */
   declarationBaseline?: DataPropertyDeclarationBaseline;
+  /** The aliases and lifecycle the form edits; absent on a save that does not edit them. */
+  definitionDeclarationEdit?: DefinitionDeclarationEdit;
   dataSource?: ObjectTypeDataSource;
   description: string;
   icon?: string;
   id?: string;
+  /**
+   * The stored incremental key. Studio does not edit it, but a save replaces the whole object
+   * type, so it is sent back; absent for a new object type.
+   */
+  incrementalKey?: string;
   logicProperties?: ObjectTypeLogicProperty[];
   name: string;
   tags: string[];

@@ -6,7 +6,7 @@
  */
 
 export const relationtypePart = {
-  relationTypeAddPropertyMapping: "Add data property",
+  relationTypeAddPropertyMapping: "Add join field",
   relationTypeBasicInfo: "Basic information",
   relationTypeBatchDeleteDescription:
     "Delete the selected {{count}} relation types? This action cannot be undone.",
@@ -51,7 +51,7 @@ export const relationtypePart = {
   relationTypeEmptyNoSearchResult: "No matching relation types found.",
   relationTypeMappingAssociation: "Relation association",
   relationTypeMappingDescription: "Maintain relation type mapping configuration.",
-  relationTypeMappingEntry: "Mapping config",
+  relationTypeMappingEntry: "Mapping",
   relationTypeMappingItemResource: "Resource mapping rules",
   relationTypeMappingItemDirect: "Direct mapping rules",
   relationTypeMappingItemProperty: "Property mapping table",
@@ -64,7 +64,10 @@ export const relationtypePart = {
   relationTypeMappingPropertyRow: "Data property",
   relationTypeMappingSourcePoint: "Source",
   relationTypeMappingSourcePropertyPlaceholder: "Select a source property",
-  relationTypeMappingStep: "Mapping rules",
+  relationTypeConfigEnds: "Ends and mapping mode",
+  relationTypeConfigRules: "Mapping rules",
+  relationTypeConfigSemantics: "Relation semantics",
+  relationTypeMappingStep: "Relation settings",
   relationTypeMappingSubtitle: "Maintain source/target object types and property mapping rules.",
   relationTypeMappingTargetPoint: "Target",
   relationTypeMappingTargetPropertyPlaceholder: "Select a target property",

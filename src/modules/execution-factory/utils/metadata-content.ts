@@ -34,6 +34,8 @@ export type BackendMetadata = {
     inputs?: FunctionInputPayload["inputs"];
     outputs?: FunctionInputPayload["outputs"];
     script_type?: string;
+    kn_id?: string;
+    result_shape?: string;
   };
   method?: string;
   path?: string;
@@ -711,6 +713,10 @@ export function parseOpenApiDataPayload(
   return parsed.document;
 }
 
+function readScriptType(value: string | undefined): FunctionInputPayload["script_type"] {
+  return value === "python" || value === "cypher" ? value : undefined;
+}
+
 export function mapFunctionContent(metadata?: BackendMetadata): FunctionInputPayload | undefined {
   const content = metadata?.function_content;
 
@@ -722,10 +728,24 @@ export function mapFunctionContent(metadata?: BackendMetadata): FunctionInputPay
   // reconstruct them from api_spec JSON Schema. Missing parameters leave the edit form empty and saving overwrites them.
   const fallback = parseFunctionParametersFromApiSpec(metadata?.api_spec);
 
+  // Keep absent backend values empty; do not fill "python" on reads as if it were returned. Write paths have a separate fallback.
+  const scriptType = readScriptType(content.script_type);
+  if (scriptType === "cypher") {
+    // A Cypher function's outputs are the shape bkn-backend returns, not a declared contract.
+    return {
+      code: content.code,
+      script_type: "cypher",
+      kn_id: content.kn_id ?? "",
+      result_shape: content.result_shape === "table" ? "table" : "value",
+      inputs: content.inputs?.length ? content.inputs : fallback.inputs,
+      outputs: [],
+      dependencies: [],
+    };
+  }
+
   return {
     code: content.code,
-    // Keep absent backend values empty; do not fill "python" on reads as if it were returned. Write paths have a separate fallback.
-    script_type: content.script_type as "python" | undefined,
+    script_type: scriptType,
     dependencies: content.dependencies,
     inputs: content.inputs?.length ? content.inputs : fallback.inputs,
     outputs: content.outputs?.length ? content.outputs : fallback.outputs,

@@ -40,9 +40,20 @@ import type {
   BackendRelationType,
   BackendSmallModel,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
+import { mapActionOperationConfig } from "../../utils/action-type-operation";
+import { mapActionTypeActionSourceFromBackend } from "./action-type.mapper";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
-import { mapPropertyDeclarations, propertyDeclarationPatch } from "./declarations";
-import { mapRelationTypeMappingsFromBackend } from "./relation-type.mapper";
+import {
+  definitionDeclarationPatch,
+  mapDefinitionDeclarations,
+  mapPropertyDeclarations,
+  mapRelationDeclarations,
+  propertyDeclarationPatch,
+} from "./declarations";
+import {
+  mapRelationTypeMappingsFromBackend,
+  mapStoredRelationProperties,
+} from "./relation-type.mapper";
 
 export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNetworkRecord {
   return {
@@ -53,6 +64,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
     operations: item.operations ?? [],
+    versioning: item.versioning?.enabled ? item.versioning : undefined,
     tags: item.tags ?? [],
     createTime: formatTimestamp(item.create_time),
     updateTime: formatTimestamp(item.update_time),
@@ -92,8 +104,10 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
   const indexStatus = item.index_status?.state
     ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
     : { state: item.data_source ? ("unknown" as const) : ("not_applicable" as const) };
+  const declarations = mapDefinitionDeclarations(item);
 
   return {
+    ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,
     operations: item.operations,
@@ -123,6 +137,7 @@ export function mapDataProperty(
   item: BackendDataProperty,
   meta: {
     displayKey: string;
+    incrementalKey?: string;
     primaryKeys: string[];
   },
 ): ObjectTypeDataProperty {
@@ -135,7 +150,7 @@ export function mapDataProperty(
     ...(declarations ? { declarations } : {}),
     displayKey: name === meta.displayKey,
     displayName,
-    incrementalKey: false,
+    incrementalKey: Boolean(meta.incrementalKey) && name === meta.incrementalKey,
     indexFeatures: item.index_features?.map((feature) => ({
       available: feature.available ?? null,
       configured: feature.configured ?? false,
@@ -244,7 +259,7 @@ export function mapObjectTypeDetail(item: BackendObjectType): ObjectTypeDetail {
   return {
     ...mapObjectType(item),
     dataProperties: (item.data_properties ?? []).map((property) =>
-      mapDataProperty(property, { displayKey, primaryKeys }),
+      mapDataProperty(property, { displayKey, incrementalKey, primaryKeys }),
     ),
     dataSource: item.data_source
       ? {
@@ -327,6 +342,18 @@ export function toBackendLogicProperty(property: ObjectTypeLogicProperty): Backe
   };
 }
 
+// The types the backend accepts for an incremental key.
+const INCREMENTAL_KEY_TYPES = new Set(["datetime", "integer", "timestamp"]);
+
+/**
+ * The stored incremental key, sent back while it still names a data property of a type the backend
+ * accepts for it. Otherwise it is left out and the backend stores none, rather than refusing the save.
+ */
+function keptIncrementalKey(key: string | undefined, dataProperties: ObjectTypeDataProperty[]) {
+  const property = key ? dataProperties.find((item) => item.name === key) : undefined;
+  return property && INCREMENTAL_KEY_TYPES.has(property.type) ? { incremental_key: key } : {};
+}
+
 export function buildBackendObjectTypePayload(
   input: KnowledgeNetworkObjectTypeMutationPayload,
   conceptGroups: Array<{ id: string; name: string }>,
@@ -355,10 +382,17 @@ export function buildBackendObjectTypePayload(
     display_key: dataProperties.find((item) => item.displayKey)?.name ?? "",
     icon: input.icon,
     id: objectTypeId ?? input.id,
+    ...keptIncrementalKey(input.incrementalKey, dataProperties),
     logic_properties: (input.logicProperties ?? []).map(toBackendLogicProperty),
     name: input.name,
     primary_keys: dataProperties.filter((item) => item.primaryKey).map((item) => item.name),
     tags: input.tags,
+    ...(input.definitionDeclarationEdit
+      ? definitionDeclarationPatch(
+          input.definitionDeclarationEdit.current,
+          input.definitionDeclarationEdit.baseline,
+        )
+      : {}),
   };
 }
 
@@ -485,12 +519,25 @@ export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRela
     tags: item.tags ?? [],
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
+    ...withRelationDeclarations(item),
+  };
+}
+
+function withRelationDeclarations(
+  item: BackendRelationType,
+): Pick<KnowledgeNetworkRelationTypeRecord, "declarations" | "definitionDeclarations"> {
+  const declarations = mapRelationDeclarations(item);
+  const definitionDeclarations = mapDefinitionDeclarations(item);
+  return {
+    ...(declarations ? { declarations } : {}),
+    ...(definitionDeclarations ? { definitionDeclarations } : {}),
   };
 }
 
 export function mapRelationTypeDetail(item: BackendRelationType): RelationTypeDetail {
   const record = mapRelationType(item);
   const mappings = mapRelationTypeMappingsFromBackend(item.mapping_rules, record.mappingMode);
+  const relationProperties = mapStoredRelationProperties(item.mapping_rules);
 
   return {
     ...record,
@@ -498,6 +545,7 @@ export function mapRelationTypeDetail(item: BackendRelationType): RelationTypeDe
     backingDataSourceName: mappings.backingDataSourceName,
     resourceMappings: mappings.resourceMappings,
     propertyMappings: mappings.propertyMappings,
+    ...(relationProperties.length ? { relationProperties } : {}),
   };
 }
 
@@ -522,7 +570,15 @@ export function mapActionKind(
 }
 
 export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTypeRecord {
+  const declarations = mapDefinitionDeclarations(item);
   return {
+    ...(item.action_source
+      ? { actionSource: mapActionTypeActionSourceFromBackend(item.action_source) }
+      : {}),
+    ...(item.operation_config
+      ? { operationConfig: mapActionOperationConfig(item.operation_config) }
+      : {}),
+    ...(declarations ? { declarations } : {}),
     id: item.id,
     name: item.name,
     operations: item.operations,

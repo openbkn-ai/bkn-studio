@@ -14,6 +14,10 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { DefinitionAliases } from "@/modules/knowledge-network/components/definition-declarations/DefinitionAliases";
+import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
+import { DeprecatedBanner } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedBanner";
+import { RelationDeclarationsSummary } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSummary";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
@@ -27,7 +31,12 @@ import {
   deleteKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
+import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
+import type {
+  KnowledgeNetworkRelationTypeRecord,
+  RelationTypeDetail,
+} from "@/modules/knowledge-network/types/knowledge-network";
+import { fallbackPathsFor } from "@/modules/knowledge-network/utils/relation-declarations";
 
 import styles from "./RelationTypeDetailScene.module.css";
 
@@ -44,6 +53,11 @@ export function RelationTypeDetailScene() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  // The relation types with the same ends: names for the fallback path, and the paths to this one.
+  const [sameEndRelationTypes, setSameEndRelationTypes] = useState<
+    KnowledgeNetworkRelationTypeRecord[]
+  >([]);
+  const showDeleteError = useDefinitionDeleteRefusal();
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -62,7 +76,12 @@ export function RelationTypeDetailScene() {
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        await deleteKnowledgeNetworkRelationType(networkId, relationTypeId);
+        try {
+          await deleteKnowledgeNetworkRelationType(networkId, relationTypeId);
+        } catch (deleteError) {
+          showDeleteError(deleteError, [detail]);
+          return;
+        }
         void message.success(t("common.success"));
         void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
@@ -82,6 +101,18 @@ export function RelationTypeDetailScene() {
     try {
       const result = await getKnowledgeNetworkRelationTypeDetail(networkId, relationTypeId);
       setDetail(result);
+      if (result) {
+        void listKnowledgeNetworkRelationTypePage(networkId, {
+          direction: "asc",
+          limit: -1,
+          offset: 0,
+          sort: "name",
+          sourceObjectTypeId: result.sourceObjectTypeId,
+          targetObjectTypeId: result.targetObjectTypeId,
+        })
+          .then((page) => setSameEndRelationTypes(page.entries))
+          .catch(() => setSameEndRelationTypes([]));
+      }
     } catch (nextError) {
       setError(extractRequestErrorMessage(nextError));
     } finally {
@@ -163,6 +194,11 @@ export function RelationTypeDetailScene() {
         title={detail.name}
       >
         <div className={styles.page}>
+          <DeprecatedBanner
+            declarations={detail.definitionDeclarations}
+            kind="relation_type"
+            networkId={networkId}
+          />
           <section className={styles.summaryCard}>
             <div className={styles.summaryHead}>
               <span className={styles.objectIconSquare} style={{ backgroundColor: detail.color }}>
@@ -182,6 +218,14 @@ export function RelationTypeDetailScene() {
                 <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
               )}
             </div>
+            <div className={styles.tagRow}>
+              <span>{t("knowledgeNetwork.definitionDeclarations.aliases")}:</span>
+              <DefinitionAliases
+                aliases={detail.definitionDeclarations?.aliases}
+                emptyClassName={styles.placeholder}
+                rowClassName={styles.tagRow}
+              />
+            </div>
             <div className={styles.metaRow}>
               <span>ID: {detail.id}</span>
               <span>
@@ -190,10 +234,39 @@ export function RelationTypeDetailScene() {
                   ? t("knowledgeNetwork.relationTypeDirectMapping")
                   : t("knowledgeNetwork.relationTypeResourceMapping")}
               </span>
+              {detail.relationProperties?.length ? (
+                <span title={t("knowledgeNetwork.relationDeclarations.relationPropertiesHint")}>
+                  {t("knowledgeNetwork.relationDeclarations.relationProperties", {
+                    count: detail.relationProperties.length,
+                  })}
+                </span>
+              ) : null}
               <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
               <span>{detail.updateTime}</span>
             </div>
           </section>
+
+          {detail.declarations || fallbackPathsFor(detail.id, sameEndRelationTypes).length ? (
+            <section className={styles.sectionCard}>
+              <h3>{t("knowledgeNetwork.relationDeclarations.title")}</h3>
+              <RelationDeclarationsSummary
+                declarations={detail.declarations}
+                ends={detail}
+                onOpenRelationType={(id) => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/relation-types/${id}/detail`,
+                    {
+                      state: knowledgeNetworkReturnState(returnPath),
+                    },
+                  );
+                }}
+                relationTypeId={detail.id}
+                sameEndRelationTypes={sameEndRelationTypes}
+                sourceName={detail.sourceObjectTypeName}
+                targetName={detail.targetObjectTypeName}
+              />
+            </section>
+          ) : null}
 
           <section className={styles.sectionCard}>
             <h3>{t("knowledgeNetwork.relationTypeConfigSection")}</h3>

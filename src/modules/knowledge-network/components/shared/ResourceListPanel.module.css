@@ -226,6 +226,7 @@
 
 .tableTags :global(.ant-tag) {
   flex-shrink: 0;
+  margin-inline-end: 0;
   max-width: 64px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -535,6 +536,55 @@
 
 .actionTypePage .objectIconSquare {
   color: var(--color-success-text);
+}
+
+.actionTypePage .toolbarRight {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 8px;
+}
+
+.actionTypePage .toolbarLeft {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.actionTypePage .searchInput {
+  flex: 1 1 180px;
+  width: 200px;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.actionTypePage .filterGroup {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 6px;
+}
+
+.actionTypePage .filterSelect {
+  width: 160px;
+  max-width: 100%;
+}
+
+.actionTypeToolbarActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 1280px) {
+  .actionTypeOperationRow {
+    flex-wrap: wrap;
+  }
+
+  .actionTypePage .toolbarRight {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 .metricPage .objectIconSquare {

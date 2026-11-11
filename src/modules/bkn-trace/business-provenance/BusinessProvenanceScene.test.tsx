@@ -10,7 +10,6 @@ import { resolve } from "node:path";
 
 import { act, configure, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { message } from "antd";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
@@ -21,6 +20,13 @@ const getInteraction = vi.hoisted(() => vi.fn());
 const getMarkdown = vi.hoisted(() => vi.fn());
 const streamAnalysis = vi.hoisted(() => vi.fn());
 const writeClipboard = vi.hoisted(() => vi.fn());
+const message = vi.hoisted(() => ({
+  error: vi.fn(),
+  info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
+}));
+vi.mock("@/framework/context/use-app-services", () => ({ useAppServices: () => ({ message }) }));
 vi.mock("@/framework/compat/clipboard", () => ({ writeTextToClipboard: writeClipboard }));
 vi.mock("@/modules/bkn-trace/evidence-chain/CurrentExplanationPanel", () => ({
   CurrentExplanationPanel: ({ interactionId }: { interactionId: string }) => (
@@ -408,8 +414,9 @@ describe("BusinessProvenanceScene", () => {
         derivedFacts: [],
         contextRelations: [],
       });
-      const error = vi.spyOn(message, "error");
-      const success = vi.spyOn(message, "success");
+      const { error, success } = message;
+      error.mockClear();
+      success.mockClear();
       const failNextRead = () => {
         if (failure === "request failure")
           getMarkdown.mockRejectedValueOnce(new Error("server unavailable"));
@@ -441,8 +448,8 @@ describe("BusinessProvenanceScene", () => {
         await waitFor(() => expect(error).toHaveBeenCalledWith("复制失败"));
         expect(getMarkdown).toHaveBeenCalledTimes(3);
       } finally {
-        error.mockRestore();
-        success.mockRestore();
+        error.mockClear();
+        success.mockClear();
       }
     },
   );
@@ -477,7 +484,8 @@ describe("BusinessProvenanceScene", () => {
             rejectFirst = reject;
           }),
       );
-      const error = vi.spyOn(message, "error");
+      const { error } = message;
+      error.mockClear();
       try {
         renderWithoutAntdStyles(<BusinessProvenanceScene />);
         fireEvent.click(await screen.findByRole("button", { name: "Stale read" }));
@@ -493,7 +501,7 @@ describe("BusinessProvenanceScene", () => {
         expect(error).not.toHaveBeenCalled();
         expect(writeClipboard).not.toHaveBeenCalled();
       } finally {
-        error.mockRestore();
+        error.mockClear();
       }
     },
   );

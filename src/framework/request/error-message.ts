@@ -58,7 +58,23 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+const codeMessages = new Map<string, () => string>();
+
+/**
+ * Replaces the backend's description of a known error code with a message written for the
+ * user, resolved at display time so it follows the current language.
+ */
+export function registerErrorCodeMessage(code: string, resolve: () => string) {
+  codeMessages.set(code, resolve);
+}
+
 export function extractRequestErrorDetails(error: unknown): RequestErrorDetails {
+  const details = extractBackendErrorDetails(error);
+  const resolve = details.code ? codeMessages.get(details.code) : undefined;
+  return resolve ? { ...details, description: resolve(), descriptionSource: undefined } : details;
+}
+
+function extractBackendErrorDetails(error: unknown): RequestErrorDetails {
   let responseDetails: Omit<RequestErrorDetails, "description"> = {};
   if (axios.isAxiosError<BackendErrorResponseBody>(error)) {
     const data = error.response?.data;

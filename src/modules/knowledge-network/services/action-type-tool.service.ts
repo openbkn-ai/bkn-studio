@@ -529,6 +529,28 @@ async function fetchMcpToolInputSchema(
     });
 }
 
+/**
+ * A function tool's script type (`python` or `cypher`) and, for Cypher, its result shape. Empty
+ * for any other tool or when its detail cannot be read.
+ */
+export async function resolveFunctionKind(
+  boxId: string,
+  toolId: string,
+): Promise<{ scriptType?: string; resultShape?: string }> {
+  if (useMock) {
+    return {};
+  }
+  try {
+    const detail = await getToolDetail(boxId, toolId, { skipErrorToast: true });
+    return {
+      scriptType: detail.functionInput?.script_type,
+      resultShape: detail.functionInput?.result_shape,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export async function resolveActionTypeToolInputSchema(
   actionSource: ActionTypeActionSource,
 ): Promise<ActionTypeToolInputParam[]> {
@@ -611,6 +633,14 @@ export function needsActionTypeActionSourceDisplayResolution(
     actionSource.boxId &&
     (!actionSource.boxName || (actionSource.toolId && !actionSource.toolName)),
   );
+}
+
+export async function getActionTypeToolboxMetadataType(boxId: string) {
+  try {
+    return (await getToolbox(boxId, { skipErrorToast: true })).metadataType;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function resolveActionTypeActionSourceDisplay(

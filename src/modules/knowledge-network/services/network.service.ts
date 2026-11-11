@@ -5,11 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import {
   parseContentDispositionFilename,
   triggerBrowserDownload,
 } from "@/framework/download/file-download";
 import { http } from "@/framework/request/http";
+import { createPendingRequest } from "@/framework/request/pending-request";
 import i18n from "@/app/locales/i18n";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import type {
@@ -48,6 +50,7 @@ import {
   mockRelationTypes,
   replaceMockKnowledgeNetworks,
 } from "@/modules/knowledge-network/services/mock/state";
+import { knVersionQuery } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import {
   downloadJsonFile,
   emptyStatistics,
@@ -102,6 +105,10 @@ const KNOWLEDGE_NETWORK_IMPORT_CONFLICT_ERROR_CODES = new Set([
 const KNOWLEDGE_NETWORK_IMPORT_BINDING_ERROR_CODE =
   "BknBackend.KnowledgeNetwork.Proxy.TargetInvalid";
 
+function projectMockKnowledgeNetwork(record: KnowledgeNetworkRecord): KnowledgeNetworkRecord {
+  return { ...record, operations: filterMockOperations(record.operations ?? []) };
+}
+
 export async function listKnowledgeNetworks(
   query: KnowledgeNetworkListQuery,
 ): Promise<KnowledgeNetworkListResult> {
@@ -110,7 +117,9 @@ export async function listKnowledgeNetworks(
     const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize),
+      items: filtered
+        .slice(startIndex, startIndex + query.pageSize)
+        .map(projectMockKnowledgeNetwork),
       total: filtered.length,
     });
   }
@@ -168,23 +177,29 @@ export async function listKnowledgeNetworkTags() {
   return [...tagSet].sort((left, right) => left.localeCompare(right));
 }
 
+const pendingNetwork = createPendingRequest<KnowledgeNetworkRecord | null>();
+const pendingStatistics = createPendingRequest<KnowledgeNetworkStatistics | null>();
+
 export async function getKnowledgeNetwork(
   networkId: string,
   options: { skipErrorToast?: boolean } = {},
 ) {
   if (useMock) {
-    return wait(mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null);
+    const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
+    return wait(record ? projectMockKnowledgeNetwork(record) : null);
   }
 
-  const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}`,
-    {
-      skipErrorToast: options.skipErrorToast,
-    },
-  );
+  return pendingNetwork(JSON.stringify([networkId, Boolean(options.skipErrorToast)]), async () => {
+    const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
+      `/bkn-backend/v1/knowledge-networks/${networkId}`,
+      {
+        skipErrorToast: options.skipErrorToast,
+      },
+    );
 
-  const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapKnowledgeNetwork(record) : null;
+    const record = unwrapSingleEntryResponse(response.data);
+    return record ? mapKnowledgeNetwork(record) : null;
+  });
 }
 
 /** Loads navigation counts independently so workspace content is not blocked by statistics. */
@@ -195,14 +210,16 @@ export async function getKnowledgeNetworkStatistics(
     return wait(mockKnowledgeNetworks.find((item) => item.id === networkId)?.statistics ?? null);
   }
 
-  const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}`,
-    {
-      params: { detail_level: "summary", include_statistics: true },
-    },
-  );
-  const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapKnowledgeNetwork(record).statistics : null;
+  return pendingStatistics(networkId, async () => {
+    const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
+      `/bkn-backend/v1/knowledge-networks/${networkId}`,
+      {
+        params: { detail_level: "summary", include_statistics: true },
+      },
+    );
+    const record = unwrapSingleEntryResponse(response.data);
+    return record ? mapKnowledgeNetwork(record).statistics : null;
+  });
 }
 
 export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayload) {
@@ -231,7 +248,7 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
     mockActionTypes[nextRecord.id] = [];
 
     await wait(undefined);
-    return nextRecord;
+    return projectMockKnowledgeNetwork(nextRecord);
   }
 
   const response = await http.post<{ id: string }>(
@@ -270,7 +287,8 @@ export async function updateKnowledgeNetwork(
     );
 
     await wait(undefined);
-    return mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null;
+    const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
+    return record ? projectMockKnowledgeNetwork(record) : null;
   }
 
   await http.put(
@@ -368,8 +386,13 @@ export async function exportKnowledgeNetwork(
 
   try {
     if (format === "bkn") {
+      // A versioned network exports the version on screen, not always the running one.
+      const exportParams = {
+        ...(options.bknSpec ? { bkn_spec: options.bknSpec } : {}),
+        ...knVersionQuery(networkId),
+      };
       const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
-        ...(options.bknSpec ? { params: { bkn_spec: options.bknSpec } } : {}),
+        ...(Object.keys(exportParams).length > 0 ? { params: exportParams } : {}),
         responseType: "blob",
         skipErrorToast: true,
         timeout: KNOWLEDGE_NETWORK_EXPORT_TIMEOUT_MS,

@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { http } from "@/framework/request/http";
+import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
 import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
@@ -43,6 +46,7 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import { listKnowledgeNetworkConceptGroups } from "@/modules/knowledge-network/services/concept-group.service";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 
 function resolveObjectTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
@@ -128,7 +132,7 @@ export async function listKnowledgeNetworkObjectTypes(
     return wait(
       (mockObjectTypes[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -225,9 +229,10 @@ export async function listKnowledgeNetworkObjectTypePage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: sorted.slice(query.offset, query.offset + query.limit).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
@@ -253,14 +258,23 @@ export async function listKnowledgeNetworkObjectTypePage(
   };
 }
 
-export async function getKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {
+export async function getKnowledgeNetworkObjectType(
+  networkId: string,
+  objectTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
-    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
+    return wait(
+      record
+        ? { ...record, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -270,7 +284,11 @@ export async function getKnowledgeNetworkObjectType(networkId: string, objectTyp
 export async function getKnowledgeNetworkObjectTypeDetail(networkId: string, objectTypeId: string) {
   if (useMock) {
     const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
-    return wait(detail ? { ...detail, operations: mockKnowledgeNetworkChildOperations } : null);
+    return wait(
+      detail
+        ? { ...detail, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
@@ -312,6 +330,7 @@ export async function getObjectTypeSampleData(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
     {
       params: {
+        ...(await resolveKnReadParams(networkId)),
         limit: 20,
         need_total: true,
         offset: 0,
@@ -349,6 +368,7 @@ export async function getObjectTypeInstanceData(
     { _instance_identities: [identity], properties },
     {
       headers: { "X-HTTP-Method-Override": "GET" },
+      params: await resolveKnReadParams(networkId),
       skipErrorToast: true,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
@@ -376,6 +396,7 @@ export async function createKnowledgeNetworkObjectType(
       tags: input.tags,
       conceptGroupIds: input.conceptGroupIds,
       conceptGroupNames: relatedGroups.map((group) => group.name),
+      ...withMockDefinitionDeclarations(undefined, input.definitionDeclarationEdit),
       hasIndex: false,
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Local Admin",
@@ -451,6 +472,7 @@ export async function updateKnowledgeNetworkObjectType(
             tags: input.tags,
             conceptGroupIds: input.conceptGroupIds,
             conceptGroupNames: relatedGroups.map((group) => group.name),
+            ...withMockDefinitionDeclarations(item.declarations, input.definitionDeclarationEdit),
             updateTime: formatTimestamp(Date.now()),
             updaterName: "Local Admin",
           }
@@ -532,7 +554,16 @@ export async function deleteKnowledgeNetworkObjectType(networkId: string, object
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`);
+  try {
+    await http.delete(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`,
+      // The caller shows the refusal, with the definitions that still name this one.
+      { skipErrorToast: true },
+    );
+  } catch (error) {
+    throwIfStillReferenced(error, { id: objectTypeId, kind: "object_type" });
+    throw error;
+  }
 }
 
 export async function importKnowledgeNetworkObjectTypes(

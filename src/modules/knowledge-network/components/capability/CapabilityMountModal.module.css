@@ -6,9 +6,9 @@
  */
 
 /*
- * Ant Design paints a dialog with colorBgElevated, which this app never overrides, so in dark mode
- * a modal comes out neutral grey while the table and tree inside it use the navy container colour.
- * Pin the dialog to the same surface token the rest of the console uses.
+ * Ant Design paints a dialog with colorBgElevated, which dark mode lifts above the page, while the
+ * table and tree inside this dialog keep the container colour. Pin the dialog to the same surface
+ * token so the picker reads as one panel instead of darker patches on a lighter dialog.
  */
 .pickerModal :global(.ant-modal-content),
 .pickerModal :global(.ant-modal-header) {

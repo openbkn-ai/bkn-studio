@@ -6,7 +6,7 @@
  */
 
 import { Alert, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -21,6 +21,9 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor";
+import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
+import { RelationDeclarationsSection } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSection";
+import { useRelationPropertyGuard } from "@/modules/knowledge-network/components/relation-type/relation-property-guard";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
@@ -28,8 +31,14 @@ import {
   listKnowledgeNetworkObjectTypes,
   updateKnowledgeNetworkRelationType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { relationDeclarationPatch } from "@/modules/knowledge-network/services/mappers/declarations";
+import {
+  type DeclarationRefusal,
+  readDeclarationRefusal,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
 import type {
   KnowledgeNetworkObjectTypeRecord,
+  RelationDeclarations,
   RelationTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -45,6 +54,7 @@ export function RelationTypeMappingScene() {
     relationTypeId: string;
   }>();
   const [detail, setDetail] = useState<RelationTypeDetail | null>(null);
+  const confirmRelationPropertyChange = useRelationPropertyGuard();
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [mappingValue, setMappingValue] = useState<RelationTypeMappingFormValues>(
     createDefaultRelationTypeMappingValues(),
@@ -52,6 +62,10 @@ export function RelationTypeMappingScene() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<DeclarationRefusal | null>(null);
+  const [declarations, setDeclarations] = useState<RelationDeclarations | undefined>();
+  // What the declarations were when read: a save sends only the ones that changed.
+  const declarationBaseline = useRef<RelationDeclarations | undefined>(undefined);
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -81,6 +95,8 @@ export function RelationTypeMappingScene() {
         }
 
         setDetail(relationTypeDetail);
+        declarationBaseline.current = relationTypeDetail.declarations;
+        setDeclarations(relationTypeDetail.declarations);
         setObjectTypes(nextObjectTypes);
         setMappingValue({
           mappingMode: relationTypeDetail.mappingMode,
@@ -96,6 +112,8 @@ export function RelationTypeMappingScene() {
     void loadData();
   }, [networkId, relationTypeId, t]);
 
+  const objectTypeName = (id: string) => objectTypes.find((item) => item.id === id)?.name ?? id;
+
   const handleSave = async () => {
     if (!detail) {
       return;
@@ -108,8 +126,12 @@ export function RelationTypeMappingScene() {
     }
 
     const normalizedMapping = normalizeRelationTypeMappingValues(mappingValue);
+    // Only declarations that changed are sent, whether edited here or cleared by new ends.
+    const declarationsChanged =
+      Object.keys(relationDeclarationPatch(declarations, declarationBaseline.current)).length > 0;
 
     setSubmitting(true);
+    setRefusal(null);
     try {
       await updateKnowledgeNetworkRelationType(networkId, relationTypeId, {
         color: detail.color,
@@ -120,11 +142,20 @@ export function RelationTypeMappingScene() {
         sourceObjectTypeId: normalizedMapping.mappingRules.sourceObjectTypeId,
         tags: detail.tags,
         targetObjectTypeId: normalizedMapping.mappingRules.targetObjectTypeId,
+        ...(declarationsChanged
+          ? { declarationEdit: { baseline: declarationBaseline.current, current: declarations } }
+          : {}),
       });
       void message.success(t("common.success"));
       void navigate(returnPath);
     } catch (nextError) {
-      void message.error(extractRequestErrorMessage(nextError));
+      // A refusal of the declarations names the definitions involved; shown above the mapping.
+      const declarationRefusal = readDeclarationRefusal(nextError);
+      if (declarationRefusal) {
+        setRefusal(declarationRefusal);
+      } else {
+        void message.error(extractRequestErrorMessage(nextError));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -151,12 +182,41 @@ export function RelationTypeMappingScene() {
         <Alert message={error} showIcon type="error" />
       ) : (
         <div className={styles.mappingFormPanel}>
-          <RelationTypeMappingEditor
+          {refusal ? (
+            <DefinitionRefusal
+              networkId={networkId}
+              refusal={refusal}
+              saved={{ id: relationTypeId, kind: "relation_type" }}
+            />
+          ) : null}
+          <RelationDeclarationsSection
+            ends={mappingValue.mappingRules}
             networkId={networkId}
-            objectTypes={objectTypes}
-            onChange={setMappingValue}
-            value={mappingValue}
-          />
+            onChange={setDeclarations}
+            refused={Boolean(refusal)}
+            relationName={detail?.name ?? ""}
+            relationTypeId={relationTypeId}
+            sourceName={objectTypeName(mappingValue.mappingRules.sourceObjectTypeId)}
+            targetName={objectTypeName(mappingValue.mappingRules.targetObjectTypeId)}
+            value={declarations}
+          >
+            {({ advanced, semantics }) => (
+              <>
+                <RelationTypeMappingEditor
+                  confirmRelationPropertyChange={confirmRelationPropertyChange}
+                  networkId={networkId}
+                  objectTypes={objectTypes}
+                  onChange={setMappingValue}
+                  relationProperties={
+                    mappingValue.mappingMode === "resource" ? detail?.relationProperties : undefined
+                  }
+                  semantics={semantics}
+                  value={mappingValue}
+                />
+                {advanced}
+              </>
+            )}
+          </RelationDeclarationsSection>
         </div>
       )}
     </KnowledgeNetworkResourceConfigShell>

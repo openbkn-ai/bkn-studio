@@ -209,3 +209,9 @@
 .switchLabelColon {
   color: var(--color-text-secondary);
 }
+
+.valueTypeTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

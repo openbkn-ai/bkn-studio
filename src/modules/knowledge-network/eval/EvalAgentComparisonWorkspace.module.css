@@ -1,0 +1,145 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.workspace {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.header,
+.filters,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header {
+  margin: 0 0 16px;
+}
+.header h4 {
+  margin: 0;
+}
+.filters {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-secondary);
+}
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.suiteSelect {
+  width: 300px;
+}
+.versionSelect {
+  width: 140px;
+}
+.search {
+  width: 320px;
+}
+.dateRange {
+  width: 280px;
+}
+.surface {
+  min-width: 0;
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-surface);
+}
+.sectionHeader {
+  padding: 14px 16px;
+  justify-content: space-between;
+}
+.selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 14px;
+}
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.secondary {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.matrixHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: normal;
+}
+.cell {
+  height: auto;
+  padding: 4px 0;
+  text-align: left;
+  white-space: normal;
+}
+.cell > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.pagination {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+.notice {
+  margin-bottom: 12px;
+}
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.loadMore {
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 700px) {
+  .filters label {
+    flex: 1 1 100%;
+  }
+  .suiteSelect,
+  .search,
+  .dateRange {
+    max-width: 100%;
+  }
+}
+
+.selected :global(.ant-tag) {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+.selected :global(.ant-tag-close-icon) {
+  flex-shrink: 0;
+}
+.selectedLabel {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.meta > strong,
+.meta > span {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

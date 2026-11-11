@@ -76,7 +76,6 @@ vi.mock("antd", async (importOriginal) => {
 import { ValueTypeReferencedError } from "@/modules/knowledge-network/services/value-type.service";
 import type { ValueType } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { ValueTypeFormDrawer } from "./ValueTypeFormDrawer";
 import { ValueTypeListDrawer } from "./ValueTypeListDrawer";
 
 const PREFIX = "knowledgeNetwork.valueTypes";
@@ -127,15 +126,23 @@ function choose(label: string, option: string) {
   fireEvent.click(document.querySelector(`.ant-select-item-option[title='${option}']`)!);
 }
 
-function renderForm(props: Partial<Parameters<typeof ValueTypeFormDrawer>[0]> = {}) {
-  const onSaved = vi.fn();
-  const onClose = vi.fn();
+/** Opens the form of a value type from the list, or the form of a new one. */
+async function renderForm({
+  canModify = true,
+  valueType,
+}: { canModify?: boolean; valueType?: ValueType } = {}) {
+  mocks.list.mockResolvedValue(valueType ? [valueType] : []);
   renderWithoutAntdStyles(
     <MemoryRouter>
-      <ValueTypeFormDrawer networkId="kn-1" onClose={onClose} onSaved={onSaved} open {...props} />
+      <ValueTypeListDrawer canModify={canModify} networkId="kn-1" onClose={vi.fn()} open />
     </MemoryRouter>,
   );
-  return { onClose, onSaved };
+  if (valueType) {
+    fireEvent.click(await screen.findByText(valueType.name));
+  } else {
+    await waitFor(() => expect(mocks.list).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`${PREFIX}.create`) }));
+  }
 }
 
 const save = () => fireEvent.click(screen.getByRole("button", { name: "common.save" }));
@@ -167,11 +174,12 @@ afterEach(() => {
   cleanup();
 });
 
-describe("ValueTypeFormDrawer", () => {
+describe("the value type form in the list drawer", () => {
   it("creates an enum value type and reports its ID", async () => {
     mocks.create.mockResolvedValue("lis_apply_status");
-    const { onClose, onSaved } = renderForm({ defaultBaseType: "keyword" });
+    await renderForm();
 
+    choose(`${PREFIX}.form.baseType`, "keyword");
     fireEvent.change(input(`${PREFIX}.form.name`), { target: { value: " Lab order status " } });
     fireEvent.change(input(`${PREFIX}.form.id`), { target: { value: "lis_apply_status" } });
     fireEvent.click(screen.getByRole("radio", { name: `${PREFIX}.form.ruleEnum` }));
@@ -186,7 +194,7 @@ describe("ValueTypeFormDrawer", () => {
     });
     save();
 
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith("lis_apply_status"));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
     expect(mocks.create).toHaveBeenCalledWith("kn-1", {
       baseType: "keyword",
       color: undefined,
@@ -198,12 +206,15 @@ describe("ValueTypeFormDrawer", () => {
       tags: [],
       unit: undefined,
     });
-    expect(onClose).toHaveBeenCalled();
+    // Saved, the drawer shows the list again and reads it anew.
+    expect(await screen.findByText(`${PREFIX}.drawerTitle`)).toBeInTheDocument();
+    expect(mocks.list).toHaveBeenCalledTimes(2);
   });
 
   it("refuses an enum without codes", async () => {
-    renderForm({ defaultBaseType: "keyword" });
+    await renderForm();
 
+    choose(`${PREFIX}.form.baseType`, "keyword");
     fireEvent.change(input(`${PREFIX}.form.name`), { target: { value: "Status" } });
     fireEvent.click(screen.getByRole("radio", { name: `${PREFIX}.form.ruleEnum` }));
     save();
@@ -213,7 +224,7 @@ describe("ValueTypeFormDrawer", () => {
   });
 
   it("refuses a code that is not a value of the base type, and a repeated code", async () => {
-    renderForm({
+    await renderForm({
       valueType: {
         ...status,
         baseType: "integer",
@@ -233,7 +244,7 @@ describe("ValueTypeFormDrawer", () => {
   });
 
   it("offers the rules of the base type, and drops them when it changes", async () => {
-    renderForm({ valueType: amount });
+    await renderForm({ valueType: amount });
 
     expect(screen.getByText(`${PREFIX}.rules.rangeMin`)).toBeInTheDocument();
     expect(screen.getByText(`${PREFIX}.rules.unit`)).toBeInTheDocument();
@@ -261,7 +272,7 @@ describe("ValueTypeFormDrawer", () => {
   });
 
   it("refuses a range whose lower bound is above the upper one", async () => {
-    renderForm({ valueType: { ...amount, range: { max: 1, min: 5 } } });
+    await renderForm({ valueType: { ...amount, range: { max: 1, min: 5 } } });
 
     save();
 
@@ -273,7 +284,7 @@ describe("ValueTypeFormDrawer", () => {
     mocks.update.mockRejectedValue(
       new ValueTypeReferencedError("BknBackend.ValueType.Referenced", references),
     );
-    const { onSaved } = renderForm({ valueType: amount });
+    await renderForm({ valueType: amount });
 
     choose(`${PREFIX}.form.baseType`, "integer");
     save();
@@ -283,12 +294,13 @@ describe("ValueTypeFormDrawer", () => {
       "href",
       "/knowledge-network/workspace/kn-1/object-types/lab_order/detail",
     );
-    expect(onSaved).not.toHaveBeenCalled();
+    // The form stays open, so the change is not lost.
+    expect(screen.getByText(`${PREFIX}.form.editTitle`)).toBeInTheDocument();
     expect(mocks.error).not.toHaveBeenCalled();
   });
 
-  it("shows a value type without a way to change it", () => {
-    renderForm({ readOnly: true, valueType: status });
+  it("shows a value type without a way to change it", async () => {
+    await renderForm({ canModify: false, valueType: status });
 
     expect(screen.getByText(`${PREFIX}.form.viewTitle`)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
@@ -372,5 +384,23 @@ describe("ValueTypeListDrawer", () => {
     await waitFor(() => expect(screen.queryByText("Amount")).toBeNull());
     expect(mocks.list).toHaveBeenCalledTimes(2);
     expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.deleted`);
+  });
+
+  it("shows the form in place of the list and goes back without saving", async () => {
+    mocks.list.mockResolvedValue([amount]);
+    renderList();
+
+    fireEvent.click(await screen.findByText(`${PREFIX}.edit`));
+
+    // One drawer: the form takes its title and body, and the list is gone.
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
+    expect(screen.getByRole("heading")).toHaveTextContent(`${PREFIX}.form.editTitle`);
+    expect(screen.queryByPlaceholderText(`${PREFIX}.searchPlaceholder`)).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "common.back" })[0]);
+
+    expect(screen.getByRole("heading")).toHaveTextContent(`${PREFIX}.drawerTitle`);
+    expect(await screen.findByText("Amount")).toBeInTheDocument();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

@@ -52,6 +52,36 @@ const TYPE_OPERATION_MAPPING: Record<string, ActionTypeConditionOperation[]> = {
 
 const DEFAULT_OPERATIONS = TYPE_OPERATION_MAPPING.string;
 
+export function conditionNeedsValue(operation?: ActionTypeConditionOperation) {
+  return operation !== "exist" && operation !== "not_exist";
+}
+
+export function conditionNeedsArray(operation?: ActionTypeConditionOperation) {
+  return operation !== undefined && ["in", "not_in", "range", "out_range"].includes(operation);
+}
+
+/** Unknown tool parameter types stay selectable; known types must match the comparison. */
+export function isConditionReferenceCompatible(
+  fieldType: string | undefined,
+  referenceType: string | undefined,
+  operation?: ActionTypeConditionOperation,
+) {
+  if (!referenceType) return true;
+  const isArray = referenceType === "array" || referenceType.endsWith("[]");
+  if (conditionNeedsArray(operation)) {
+    if (!isArray) return false;
+    return (
+      referenceType === "array" ||
+      transformConditionFieldType(fieldType) ===
+        transformConditionFieldType(referenceType.slice(0, -2))
+    );
+  }
+  return (
+    !isArray &&
+    transformConditionFieldType(fieldType) === transformConditionFieldType(referenceType)
+  );
+}
+
 export function transformConditionFieldType(type?: string): string {
   if (!type) {
     return "string";

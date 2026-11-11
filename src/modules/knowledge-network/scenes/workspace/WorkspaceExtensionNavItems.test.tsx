@@ -6,7 +6,7 @@
  */
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
@@ -16,6 +16,8 @@ import {
   registerExtension,
   resetExtensionsForTesting,
 } from "@/framework/extension/registry";
+import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
+import { knowledgeNetworkZhCN } from "@/modules/knowledge-network/locales/zh-CN";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 
@@ -24,7 +26,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function registerGraphExplorer() {
+function registerGraphExplorer(openIn?: "workspace") {
   registerExtension({
     capability: "graph_explorer",
     id: "graph-explorer",
@@ -33,6 +35,7 @@ function registerGraphExplorer() {
         icon: <span data-testid="graph-explorer-icon" />,
         id: "graph-explorer",
         labelKey: "knowledgeNetwork.graphExplorer.openAction",
+        openIn,
         path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
       },
     ],
@@ -53,6 +56,54 @@ function ReturnToProbe() {
 }
 
 describe("WorkspaceExtensionNavItems", () => {
+  it("provides a translated Eval label and page metadata in both languages", () => {
+    expect(knowledgeNetworkZhCN.knowledgeNetwork.eval.openAction).toBe("质量评测");
+    expect(knowledgeNetworkZhCN.knowledgeNetwork.eval.title).toBe("质量评测");
+    expect(knowledgeNetworkZhCN.knowledgeNetwork.eval.description).toBeTruthy();
+    expect(knowledgeNetworkEnUS.knowledgeNetwork.eval.openAction).toBe("Quality evaluation");
+    expect(knowledgeNetworkEnUS.knowledgeNetwork.eval.title).toBe("Quality evaluation");
+    expect(knowledgeNetworkEnUS.knowledgeNetwork.eval.description).toBeTruthy();
+  });
+
+  it("navigates workspace entries in place and follows browser history", () => {
+    registerGraphExplorer("workspace");
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    function Navigation() {
+      const navigate = useNavigate();
+      const location = useLocation();
+      return (
+        <>
+          <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />
+          <output>{location.pathname}</output>
+          <button onClick={() => void navigate(-1)}>Back</button>
+          <button onClick={() => void navigate(1)}>Forward</button>
+        </>
+      );
+    }
+    render(
+      <MemoryRouter
+        basename="/studio"
+        initialEntries={["/studio/knowledge-network/workspace/network-1/overview"]}
+      >
+        <Navigation />
+      </MemoryRouter>,
+    );
+    const item = screen.getByTestId("workspace-nav-graph-explorer");
+    fireEvent.click(item);
+    expect(open).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toBe(
+      "/knowledge-network/workspace/network-1/graph-explorer",
+    );
+    expect(item.getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByText("Back"));
+    expect(screen.getByRole("status").textContent).toBe(
+      "/knowledge-network/workspace/network-1/overview",
+    );
+    expect(item.hasAttribute("aria-current")).toBe(false);
+    fireEvent.click(screen.getByText("Forward"));
+    expect(item.getAttribute("aria-current")).toBe("page");
+  });
+
   it("names the graph explorer with its edition and offers the upgrade when no build has it", async () => {
     renderItems();
 
@@ -131,7 +182,8 @@ describe("WorkspaceExtensionNavItems", () => {
     });
     renderItems();
 
-    expect(screen.queryByTestId(/^workspace-nav-/)).toBeNull();
+    expect(screen.queryByTestId("workspace-nav-eval")).toBeNull();
+    expect(screen.queryByTestId("workspace-nav-graph-explorer")).toBeNull();
   });
 
   it("opens a registered page for this network in place, naming the workspace as the way back", () => {
@@ -222,6 +274,31 @@ describe("WorkspaceExtensionNavItems", () => {
 
     expect(screen.getByTestId("return-to").textContent).toBe("");
     expect(screen.getByTestId("workspace-nav-analyses").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("opens an entry in a new tab when the extension explicitly requests it", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    registerExtension({
+      capability: "graph_explorer",
+      id: "external-graph",
+      workspaceNavItems: [
+        {
+          id: "external-graph",
+          labelKey: "External graph",
+          openIn: "new-tab",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/external-graph`,
+        },
+      ],
+    });
+    renderItems();
+
+    fireEvent.click(screen.getByTestId("workspace-nav-external-graph"));
+
+    expect(open).toHaveBeenCalledWith(
+      "/studio/knowledge-network/workspace/network-1/external-graph",
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 
   it("leaves the upgrade entry out when the build has the page", () => {

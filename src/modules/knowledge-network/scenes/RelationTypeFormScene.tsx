@@ -7,7 +7,7 @@
 
 import { ShareAltOutlined } from "@ant-design/icons";
 import { Alert, Form, Input, Spin } from "antd";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -20,6 +20,13 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/mapping-utils";
+import {
+  DefinitionAliasField,
+  DefinitionLifecycleFields,
+} from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
+import { RelationDeclarationsSection } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSection";
+import { useRelationPropertyGuard } from "@/modules/knowledge-network/components/relation-type/relation-property-guard";
 import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
 import { ResourceFormStepsShell } from "@/modules/knowledge-network/components/shared/ResourceFormStepsShell";
 import {
@@ -37,12 +44,32 @@ import {
   createKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
   getKnowledgeNetworkObjectType,
+  getKnowledgeNetworkRelationType,
   listKnowledgeNetworkObjectTypePage,
+  listKnowledgeNetworkRelationTypePage,
   updateKnowledgeNetworkRelationType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  definitionDeclarationPatch,
+  relationDeclarationPatch,
+} from "@/modules/knowledge-network/services/mappers/declarations";
+import {
+  type DeclarationRefusal,
+  readDeclarationRefusal,
+} from "@/modules/knowledge-network/services/shared/declaration-errors";
+import { isRelationBasicInfoRefusal } from "@/modules/knowledge-network/services/shared/definition-refusals";
+import {
+  type DefinitionDeclarationFormValues,
+  definitionAliasProblem,
+  fromDefinitionDeclarationForm,
+  toDefinitionDeclarationForm,
+} from "@/modules/knowledge-network/utils/definition-declarations";
 import type {
+  DefinitionDeclarations,
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeMutationPayload,
+  RelationDeclarations,
+  StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeFormScene.module.css";
@@ -53,7 +80,7 @@ const RelationTypeMappingEditor = lazy(async () => {
   return { default: module.RelationTypeMappingEditor };
 });
 
-type BasicFormValues = {
+type BasicFormValues = DefinitionDeclarationFormValues & {
   color: string;
   description: string;
   id?: string;
@@ -85,6 +112,16 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
   const [mappingValue, setMappingValue] = useState<RelationTypeMappingFormValues>(
     createDefaultRelationTypeMappingValues(),
   );
+  const [declarations, setDeclarations] = useState<RelationDeclarations | undefined>();
+  // What the declarations were when read: a save sends only the ones that changed.
+  const declarationBaseline = useRef<RelationDeclarations | undefined>(undefined);
+  const [relationProperties, setRelationProperties] = useState<StoredRelationProperty[]>([]);
+  const [refusal, setRefusal] = useState<DeclarationRefusal | null>(null);
+  // Whether the refusal concerns the aliases or lifecycle, shown in the basic info.
+  const [refusalOnBasicInfo, setRefusalOnBasicInfo] = useState(false);
+  // What the aliases and lifecycle were when read; a save sends what changed.
+  const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
+  const confirmRelationPropertyChange = useRelationPropertyGuard();
   const [pageTitle, setPageTitle] = useState(
     mode === "edit"
       ? t("knowledgeNetwork.relationTypeEditTitle")
@@ -135,7 +172,11 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             id: detail.id,
             name: detail.name,
             tags: detail.tags,
+            ...toDefinitionDeclarationForm(detail.definitionDeclarations),
           };
+          definitionBaseline.current = detail.definitionDeclarations
+            ? structuredClone(detail.definitionDeclarations)
+            : undefined;
           const nextMapping: RelationTypeMappingFormValues = {
             mappingMode: detail.mappingMode,
             mappingRules: buildRelationTypeMappingRulesFromDetail(detail),
@@ -163,6 +204,9 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
 
           setBasicValue(nextBasic);
           setMappingValue(nextMapping);
+          declarationBaseline.current = detail.declarations;
+          setDeclarations(detail.declarations);
+          setRelationProperties(detail.relationProperties ?? []);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
           setDoneStep(1);
@@ -283,6 +327,14 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       return;
     }
 
+    // The reverse name is set on the mapping step; an alias may not repeat it either.
+    if (definitionAliasProblem(resolvedBasic.aliases, ownNames(resolvedBasic.name))) {
+      setCurrentStep(0);
+      basicForm.setFieldsValue(resolvedBasic);
+      setTimeout(() => void basicForm.validateFields(["aliases"]).catch(() => undefined));
+      return;
+    }
+
     const normalizedMapping = normalizeRelationTypeMappingValues(mappingValue);
     const payload: KnowledgeNetworkRelationTypeMutationPayload = {
       color: resolvedBasic.color,
@@ -294,9 +346,27 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       sourceObjectTypeId: normalizedMapping.mappingRules.sourceObjectTypeId,
       tags: resolvedBasic.tags,
       targetObjectTypeId: normalizedMapping.mappingRules.targetObjectTypeId,
+      declarationEdit: { baseline: declarationBaseline.current, current: declarations },
+      definitionDeclarationEdit: {
+        baseline: definitionBaseline.current,
+        current: fromDefinitionDeclarationForm(resolvedBasic),
+      },
+    };
+
+    const changed = {
+      definition:
+        Object.keys(
+          definitionDeclarationPatch(
+            payload.definitionDeclarationEdit?.current,
+            payload.definitionDeclarationEdit?.baseline,
+          ),
+        ).length > 0,
+      relation:
+        Object.keys(relationDeclarationPatch(declarations, declarationBaseline.current)).length > 0,
     };
 
     setSubmitting(true);
+    setRefusal(null);
     try {
       if (mode === "edit" && relationTypeId) {
         await updateKnowledgeNetworkRelationType(networkId, relationTypeId, payload);
@@ -307,11 +377,73 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       void message.success(t("common.success"));
       void navigate(returnPath);
     } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
+      const declarationRefusal = readDeclarationRefusal(error);
+      if (declarationRefusal) {
+        // Shown with the declarations it concerns, not as a toast: the aliases and lifecycle are
+        // in the basic info, the relation's own declarations on the mapping step.
+        const onBasicInfo = isRelationBasicInfoRefusal(declarationRefusal, changed);
+        setRefusal(declarationRefusal);
+        setRefusalOnBasicInfo(onBasicInfo);
+        if (onBasicInfo) {
+          if (currentStep !== 0) {
+            basicForm.setFieldsValue(resolvedBasic);
+          }
+          setCurrentStep(0);
+        }
+      } else {
+        void message.error(extractRequestErrorMessage(error));
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  const ownNames = (name: string | undefined) =>
+    [name ?? "", declarations?.reverseName ?? ""].filter((item) => item.trim() !== "");
+
+  const searchReplacements = useCallback(
+    async (keyword: string) =>
+      (
+        await listKnowledgeNetworkRelationTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          namePattern: keyword || undefined,
+          offset: 0,
+          sort: "name",
+        })
+      ).entries.map((item) => ({
+        declarations: item.definitionDeclarations,
+        id: item.id,
+        name: item.name,
+      })),
+    [networkId],
+  );
+  const resolveReplacement = useCallback(
+    async (id: string) => {
+      // The select says itself when the replacement is gone or hidden; no error toast.
+      const item = await getKnowledgeNetworkRelationType(networkId, id, { skipErrorToast: true });
+      return item
+        ? { declarations: item.definitionDeclarations, id: item.id, name: item.name }
+        : undefined;
+    },
+    [networkId],
+  );
+
+  const refusalBanner = refusal ? (
+    <DefinitionRefusal
+      networkId={networkId}
+      refusal={refusal}
+      saved={{
+        id:
+          mode === "edit"
+            ? relationTypeId
+            : (basicValue?.id ?? (basicForm.getFieldValue("id") as string | undefined)),
+        kind: "relation_type",
+      }}
+    />
+  ) : null;
+
+  const objectTypeName = (id: string) => objectTypes.find((item) => item.id === id)?.name ?? id;
 
   const renderRelationInfoBar = () => {
     if (!basicValue || currentStep === 0) {
@@ -358,11 +490,14 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
     if (currentStep === 0) {
       return (
         <div className={styles.basicForm}>
+          {refusalOnBasicInfo ? refusalBanner : null}
           <Form
             colon={false}
             form={basicForm}
             initialValues={{
+              aliases: [],
               description: "",
+              lifecycleStatus: "active",
               name: "",
               tags: [],
             }}
@@ -386,6 +521,11 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             >
               <Input count={RESOURCE_NAME_COUNT} showCount />
             </Form.Item>
+            <DefinitionAliasField
+              hintInTooltip
+              otherOwnNames={ownNames(undefined)}
+              ownNameFields={["name"]}
+            />
             <Form.Item
               label="ID"
               name="id"
@@ -416,6 +556,12 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
               <Input.TextArea autoSize={{ minRows: 6, maxRows: 10 }} maxLength={1000} showCount />
             </Form.Item>
+            <DefinitionLifecycleFields
+              definitionId={mode === "edit" ? relationTypeId : undefined}
+              hintInTooltip
+              resolveReplacement={resolveReplacement}
+              searchReplacements={searchReplacements}
+            />
           </Form>
         </div>
       );
@@ -425,20 +571,43 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       <>
         {renderRelationInfoBar()}
         <div className={`${styles.sectionPanel} ${styles.mappingFormPanel}`}>
-          <Suspense
-            fallback={
-              <div className={styles.loadingState}>
-                <Spin />
-              </div>
-            }
+          <RelationDeclarationsSection
+            ends={mappingValue.mappingRules}
+            networkId={networkId}
+            onChange={setDeclarations}
+            refused={Boolean(refusal)}
+            relationName={basicValue?.name ?? ""}
+            relationTypeId={mode === "edit" ? relationTypeId : undefined}
+            sourceName={objectTypeName(mappingValue.mappingRules.sourceObjectTypeId)}
+            targetName={objectTypeName(mappingValue.mappingRules.targetObjectTypeId)}
+            value={declarations}
           >
-            <RelationTypeMappingEditor
-              networkId={networkId}
-              objectTypes={objectTypes}
-              onChange={setMappingValue}
-              value={mappingValue}
-            />
-          </Suspense>
+            {({ advanced, semantics }) => (
+              <>
+                <Suspense
+                  fallback={
+                    <div className={styles.loadingState}>
+                      <Spin />
+                    </div>
+                  }
+                >
+                  <RelationTypeMappingEditor
+                    confirmRelationPropertyChange={confirmRelationPropertyChange}
+                    networkId={networkId}
+                    objectTypes={objectTypes}
+                    onChange={setMappingValue}
+                    relationProperties={
+                      mappingValue.mappingMode === "resource" ? relationProperties : undefined
+                    }
+                    semantics={semantics}
+                    value={mappingValue}
+                  />
+                </Suspense>
+                {refusalOnBasicInfo ? null : refusalBanner}
+                {advanced}
+              </>
+            )}
+          </RelationDeclarationsSection>
         </div>
       </>
     );

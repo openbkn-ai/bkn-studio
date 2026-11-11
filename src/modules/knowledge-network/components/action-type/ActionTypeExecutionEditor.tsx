@@ -7,7 +7,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import { Form } from "antd";
+import { Alert, Form } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -27,6 +27,13 @@ import { mergeExecutionParametersWithSchema } from "@/modules/knowledge-network/
 import { ActionTypeSourcePicker } from "./ActionTypeSourcePicker";
 import { ActionTypeToolParamsTable } from "./ActionTypeToolParamsTable";
 import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
+import {
+  getActionRelationIdentity,
+  inferActionRelationBindings,
+  canBindActionRelationIdentity,
+  type ActionRelationBindingContext,
+  type ActionRelationIdentity,
+} from "@/modules/knowledge-network/utils/action-type-operation";
 
 import styles from "./ActionTypeExecutionEditor.module.css";
 
@@ -43,6 +50,9 @@ type ActionTypeExecutionEditorProps = {
   networkId: string;
   objectTypeId: string;
   sourceError?: string | null;
+  parameterError?: string | null;
+  relationBinding?: ActionRelationBindingContext;
+  onRelationValidationChange?: (errorKey: string | null) => void;
   value: ActionTypeExecutionConfig;
   onChange: (value: ActionTypeExecutionConfig) => void;
   onParameterSchemaStateChange?: (state: ActionTypeExecutionParameterSchemaState) => void;
@@ -84,6 +94,9 @@ export function ActionTypeExecutionEditor({
   networkId,
   objectTypeId,
   sourceError,
+  parameterError,
+  relationBinding,
+  onRelationValidationChange,
   value,
   onChange,
   onParameterSchemaStateChange,
@@ -105,6 +118,21 @@ export function ActionTypeExecutionEditor({
     () => (needsActionTypeActionSourceDisplayResolution(value.actionSource) ? "loading" : "idle"),
   );
   const [schemaLoading, setSchemaLoading] = useState(false);
+  const relationRef = useRef(relationBinding);
+  relationRef.current = relationBinding;
+  const autoBindingRef = useRef("");
+  const relation = relationBinding?.relation;
+  const relationKey = relation
+    ? `${networkId}:${relation.id}:${relation.sourceObjectTypeId}:${relation.targetObjectTypeId}`
+    : "";
+  const [relationIdentities, setRelationIdentities] = useState<{
+    key: string;
+    source?: ActionRelationIdentity;
+    target?: ActionRelationIdentity;
+    loaded: boolean;
+    failed: boolean;
+  }>({ key: "", loaded: false, failed: false });
+  const currentIdentities = relationIdentities.key === relationKey ? relationIdentities : undefined;
   const [propertyOptions, setPropertyOptions] = useState<
     Array<{
       comment?: string;
@@ -127,6 +155,76 @@ export function ActionTypeExecutionEditor({
   );
   const displaySourceNeedsResolution =
     needsActionTypeActionSourceDisplayResolution(displayActionSource);
+  const relationValidationError = !relationBinding
+    ? null
+    : !currentIdentities?.loaded
+      ? "knowledgeNetwork.actionRelationIdentityNotReady"
+      : currentIdentities.failed
+        ? "knowledgeNetwork.actionRelationIdentityLoadFailed"
+        : (value.parameters ?? []).some(
+              (parameter) =>
+                (parameter.valueFrom === "source_identity" &&
+                  !canBindActionRelationIdentity(currentIdentities.source, parameter.type)) ||
+                (parameter.valueFrom === "target_identity" &&
+                  !canBindActionRelationIdentity(currentIdentities.target, parameter.type)),
+            )
+          ? "knowledgeNetwork.actionRelationIdentityUnavailable"
+          : null;
+
+  useEffect(() => {
+    onRelationValidationChange?.(relationValidationError);
+  }, [onRelationValidationChange, relationValidationError]);
+
+  useEffect(() => {
+    if (!relation || !relationKey) return;
+    let cancelled = false;
+    setRelationIdentities({ key: relationKey, loaded: false, failed: false });
+    const ids = [...new Set([relation.sourceObjectTypeId, relation.targetObjectTypeId])];
+    void Promise.all(ids.map((id) => getKnowledgeNetworkObjectTypeDetail(networkId, id)))
+      .then((details) => {
+        if (cancelled) return;
+        const identities = new Map(
+          ids.map((id, index) => [
+            id,
+            details[index] ? getActionRelationIdentity(details[index]) : undefined,
+          ]),
+        );
+        setRelationIdentities({
+          key: relationKey,
+          source: identities.get(relation.sourceObjectTypeId),
+          target: identities.get(relation.targetObjectTypeId),
+          loaded: true,
+          failed: details.some((detail) => !detail),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setRelationIdentities({ key: relationKey, loaded: true, failed: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, relation, relationKey]);
+
+  useEffect(() => {
+    const binding = relationRef.current;
+    const key = `${relationKey}:${sourceKey}`;
+    if (
+      !binding ||
+      !currentIdentities?.loaded ||
+      schemaLoading ||
+      !sourceKey ||
+      loadedSourceKeyRef.current !== sourceKey ||
+      autoBindingRef.current === key
+    )
+      return;
+    autoBindingRef.current = key;
+    const next = inferActionRelationBindings(valueRef.current.parameters, {
+      sourceIdentity: currentIdentities.source,
+      targetIdentity: currentIdentities.target,
+    });
+    if (next.some((parameter, index) => parameter !== valueRef.current.parameters[index]))
+      onChangeRef.current({ ...valueRef.current, parameters: next });
+  }, [currentIdentities, relationKey, schemaLoading, sourceKey, inputSchema]);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -278,6 +376,7 @@ export function ActionTypeExecutionEditor({
   );
 
   const handleSourceChange = (nextSource: ActionTypeExecutionConfig["actionSource"]) => {
+    autoBindingRef.current = "";
     loadedSourceKeyRef.current = "";
     resolvedDisplaySourceKeyRef.current = "";
     setDisplayActionSource(nextSource);
@@ -307,6 +406,7 @@ export function ActionTypeExecutionEditor({
   const handleSourceSelected = (
     nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>,
   ) => {
+    autoBindingRef.current = "";
     loadedSourceKeyRef.current = "";
     resolvedDisplaySourceKeyRef.current = "";
     setDisplayActionSource(nextSource);
@@ -362,7 +462,22 @@ export function ActionTypeExecutionEditor({
         onChange={handleParametersChange}
         parameters={value.parameters}
         propertyOptions={propertyOptions}
+        relationBinding={
+          relationBinding
+            ? {
+                sourceIdentity: currentIdentities?.source,
+                targetIdentity: currentIdentities?.target,
+              }
+            : undefined
+        }
       />
+      {parameterError || currentIdentities?.failed ? (
+        <Alert
+          message={parameterError || t("knowledgeNetwork.actionRelationIdentityLoadFailed")}
+          showIcon
+          type="error"
+        />
+      ) : null}
     </div>
   );
 }

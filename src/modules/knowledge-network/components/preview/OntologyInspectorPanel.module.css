@@ -99,7 +99,15 @@
   font-size: 15px;
 }
 
-.headTitle span {
+.headMeta {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.replacement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   color: var(--color-text-tertiary);
   font-size: 12px;
 }
@@ -216,16 +224,36 @@
 }
 
 .relRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, max-content);
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
   padding: 5px 2px;
 }
 
 .relVerb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
+}
+
+.relVerb :global(.ant-tag) {
+  flex-shrink: 0;
+  margin-inline-end: 0;
+  padding-inline: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.relName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .relArrow {
@@ -236,6 +264,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   color: var(--color-text-secondary);
   font-size: 13px;
+}
+
+.relTargetName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

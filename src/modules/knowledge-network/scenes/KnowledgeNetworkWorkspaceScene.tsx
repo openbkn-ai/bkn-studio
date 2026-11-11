@@ -6,24 +6,17 @@
  */
 
 import {
-  ApiOutlined,
-  ApartmentOutlined,
   AppstoreOutlined,
-  CloudServerOutlined,
-  CodeOutlined,
-  DatabaseOutlined,
+  BranchesOutlined,
+  ExperimentOutlined,
   FileTextOutlined,
-  ForkOutlined,
-  LineChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
   NodeIndexOutlined,
-  ReadOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert } from "antd";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { Fragment, lazy, Suspense, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -35,21 +28,24 @@ import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgra
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import type { CapabilityState } from "@/framework/entitlement/types";
-import { useCapability } from "@/framework/entitlement/use-entitlement";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { extensionWorkspacePage } from "@/framework/extension/registry";
+import { capabilityReportedByEndpoint } from "@/modules/subscription";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
+import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
+import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
-import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/SkillsSparkIcon";
+import { KnowledgeResourceIcon } from "@/modules/knowledge-network/components/shared/KnowledgeResourceIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
-import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceDevelopSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceDevelopSection";
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
-import { WorkspaceResourceSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -57,9 +53,18 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
 import styles from "./KnowledgeNetworkWorkspaceScene.module.css";
 
 // The query page brings its editor and chart; load them only when it is opened.
-const CypherQueryScene = lazy(async () => ({
-  default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryScene"))
-    .CypherQueryScene,
+const CypherQueryPage = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/components/cypher/CypherQueryPage"))
+    .CypherQueryPage,
+}));
+
+// Keep chat and resource editors off the overview's initial dependency path.
+const ExperienceScene = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/scenes/ExperienceScene")).ExperienceScene,
+}));
+const WorkspaceResourceSection = lazy(async () => ({
+  default: (await import("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection"))
+    .WorkspaceResourceSection,
 }));
 
 type WorkspaceNavItem = {
@@ -83,6 +88,7 @@ function formatNavCount(count?: number) {
 
 export function KnowledgeNetworkWorkspaceScene({
   extensionKey,
+  children,
   networkId,
   section,
 }: KnowledgeNetworkWorkspaceSceneProps) {
@@ -93,9 +99,27 @@ export function KnowledgeNetworkWorkspaceScene({
   const { hiddenNavigation } = useRuntimeConfig();
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
+  const { snapshot } = useEntitlementContext();
+  // Use the same capability catalog as the route and badge license rule;
+  // network admission belongs to the Eval page, not sidebar discovery.
+  const evalLicensed = capabilitySatisfied(
+    CAPABILITIES.EVAL,
+    snapshot,
+    "professional",
+    capabilityReportedByEndpoint(CAPABILITIES.EVAL),
+  );
+  const evalCapabilityState: CapabilityState = !snapshot
+    ? "unknown"
+    : evalLicensed
+      ? "available"
+      : "not-licensed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const kbMode = useBknProjectKbMode();
-  const workspaceData = useWorkspaceData(activeNetworkId, section);
+  const [versionView, setVersionView] = useKnVersionView(activeNetworkId);
+  // Bumped when a publish, switch or reset changed what every page of the workspace reads.
+  const [reloadTick, setReloadTick] = useState(0);
+  const reloadKey = `${versionView}:${reloadTick}`;
+  const workspaceData = useWorkspaceData(activeNetworkId, section, reloadKey);
   const {
     detail,
     detailError,
@@ -112,8 +136,18 @@ export function KnowledgeNetworkWorkspaceScene({
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const childMetricDetailHandlesLoadState =
     section === "metrics" && /\/metrics\/[^/]+\/detail\/?$/.test(location.pathname);
-  const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
-  const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
+  const versioning = detail?.versioning;
+  const mayModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
+  const mayDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
+  // Only the draft of a versioned network can be edited; every other version is read-only.
+  const editable = !versioning || versionView === "draft";
+  const canModify = mayModify && editable;
+  const canDelete = mayDelete && editable;
+  const hasCapabilities =
+    (detail?.statistics.functionsTotal ?? 0) +
+      (detail?.statistics.apisTotal ?? 0) +
+      (detail?.statistics.skillsTotal ?? 0) >
+    0;
   const experienceNetwork = useMemo(
     () => (detail ? { id: detail.id, name: detail.name, slug: detail.identifier } : null),
     [detail],
@@ -132,6 +166,11 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <AppstoreOutlined />,
       },
       {
+        key: "versions",
+        label: t("knowledgeNetwork.versions.nav"),
+        icon: <BranchesOutlined />,
+      },
+      {
         key: "experience-agent",
         label: t("knowledgeNetwork.workspaceExperienceAgent"),
         icon: <MessageOutlined />,
@@ -144,62 +183,51 @@ export function KnowledgeNetworkWorkspaceScene({
         path: `/knowledge-network/workspace/${activeNetworkId}/experience/cypher`,
       },
       {
+        key: "evals",
+        label: t("knowledgeNetwork.eval.title"),
+        icon: <ExperimentOutlined />,
+        path: `/knowledge-network/workspace/${activeNetworkId}/evals`,
+        paidCapability: CAPABILITIES.EVAL,
+        paidCapabilityState: evalCapabilityState,
+        paidEdition: "professional",
+      },
+      {
         key: "concept-groups",
         label: t("knowledgeNetwork.workspaceConceptGroups"),
-        icon: <ApartmentOutlined />,
+        icon: <KnowledgeResourceIcon kind="conceptGroup" />,
         count: detail?.statistics.conceptGroupsTotal ?? 0,
       },
       {
         key: "object-types",
         label: t("knowledgeNetwork.workspaceObjectTypes"),
-        icon: <DatabaseOutlined />,
+        icon: <KnowledgeResourceIcon kind="objectType" />,
         count: detail?.statistics.objectTypesTotal ?? 0,
       },
       {
         key: "relation-types",
         label: t("knowledgeNetwork.workspaceRelationTypes"),
-        icon: <ApiOutlined />,
+        icon: <KnowledgeResourceIcon kind="relationType" />,
         count: detail?.statistics.relationTypesTotal ?? 0,
       },
       {
         key: "action-types",
         label: t("knowledgeNetwork.workspaceActionTypes"),
-        icon: <ThunderboltOutlined />,
+        icon: <KnowledgeResourceIcon kind="action" />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
       {
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
-        icon: <LineChartOutlined />,
+        icon: <KnowledgeResourceIcon kind="metric" />,
         count: detail?.statistics.metricsTotal ?? 0,
         paidCapability: CAPABILITIES.OBJECT_METRICS,
         paidCapabilityState: objectMetricsCapability,
         paidEdition: "professional",
       },
       {
-        key: "functions",
-        label: t("knowledgeNetwork.workspaceFunctions"),
-        icon: <CodeOutlined />,
-        count: detail?.statistics.functionsTotal ?? 0,
-      },
-      {
-        key: "apis",
-        // Not ApiOutlined: relation types already own that icon in the group above.
-        label: t("knowledgeNetwork.workspaceApis"),
-        icon: <CloudServerOutlined />,
-        count: detail?.statistics.apisTotal ?? 0,
-      },
-      {
-        key: "mcp",
-        label: t("knowledgeNetwork.workspaceMcpTools"),
-        icon: <ForkOutlined />,
-        // Backend counts these on its own: mcp_tool is a capability type of its own, so no split.
-        count: detail?.statistics.mcpToolsTotal ?? 0,
-      },
-      {
         key: "skills",
         label: t("knowledgeNetwork.workspaceSkills"),
-        icon: <SkillsSparkIcon />,
+        icon: <KnowledgeResourceIcon kind="skill" />,
         count: detail?.statistics.skillsTotal ?? 0,
       },
       // Professional edition. Not in the community image at all; without the license the section
@@ -210,23 +238,30 @@ export function KnowledgeNetworkWorkspaceScene({
             {
               key: "knowledge-bases" as const,
               label: t("knowledgeNetwork.workspaceKnowledgeBases"),
-              icon: <ReadOutlined />,
+              icon: <KnowledgeResourceIcon kind="knowledgeBase" />,
               paidEdition: "professional" as const,
             },
           ]),
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
-    return hiddenNavigation.length > 0
-      ? items.filter((item) => !hiddenNavigation.includes(item.key))
-      : items;
-  }, [activeNetworkId, detail, hiddenNavigation, kbMode, objectMetricsCapability, t]);
+    return items.filter((item) => !hiddenNavigation.includes(item.key));
+  }, [
+    activeNetworkId,
+    detail,
+    evalCapabilityState,
+    hiddenNavigation,
+    kbMode,
+    objectMetricsCapability,
+    t,
+  ]);
 
   const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview" || item.key === "develop",
+    (item) => item.key === "overview" || item.key === "develop" || item.key === "versions",
   );
   const experienceNavItems = navigationItems.filter(
-    (item) => item.key === "experience-agent" || item.key === "experience-cypher",
+    (item) =>
+      item.key === "experience-agent" || item.key === "experience-cypher" || item.key === "evals",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -235,16 +270,10 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "relation-types" ||
       item.key === "action-types",
   );
-  // Metrics, functions and SKILLs are one group: they are what the network can compute and call,
-  // as opposed to the concept model that describes what it knows.
+  // Metrics and SKILLs remain network-level capabilities. Function, API and MCP tools are chosen
+  // inside an action and their action reference creates the capability binding automatically.
   const dynamicNavItems = navigationItems.filter(
-    (item) =>
-      item.key === "metrics" ||
-      item.key === "functions" ||
-      item.key === "apis" ||
-      item.key === "mcp" ||
-      item.key === "skills" ||
-      item.key === "knowledge-bases",
+    (item) => item.key === "metrics" || item.key === "skills" || item.key === "knowledge-bases",
   );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
@@ -326,15 +355,37 @@ export function KnowledgeNetworkWorkspaceScene({
       ) : null;
     }
 
+    if (section === "versions") {
+      return (
+        <KnVersionsPanel
+          canDelete={mayDelete}
+          canModify={mayModify}
+          hasCapabilities={hasCapabilities}
+          networkId={activeNetworkId}
+          onChanged={() => setReloadTick((tick) => tick + 1)}
+          onViewChange={setVersionView}
+          versioning={versioning}
+        />
+      );
+    }
+
     if (section === "experience-agent" || section === "experience-mcp") {
       const initialMode = section === "experience-mcp" ? "mcp" : "agent";
 
       return (
-        <ExperienceScene embedded initialMode={initialMode} lockMode network={experienceNetwork} />
+        <Suspense fallback={null}>
+          <ExperienceScene
+            embedded
+            initialMode={initialMode}
+            lockMode
+            network={experienceNetwork}
+          />
+        </Suspense>
       );
     }
 
     if (section === "extension") {
+      if (children !== undefined) return children;
       const ExtensionPage = extensionKey
         ? extensionWorkspacePage(extensionKey)?.page.component
         : undefined;
@@ -348,7 +399,7 @@ export function KnowledgeNetworkWorkspaceScene({
     if (section === "experience-cypher") {
       return detail ? (
         <Suspense fallback={null}>
-          <CypherQueryScene
+          <CypherQueryPage
             key={detail.identifier || detail.id}
             knId={detail.identifier || detail.id}
             networkId={activeNetworkId}
@@ -358,14 +409,16 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     return (
-      <WorkspaceResourceSection
-        canDelete={canDelete}
-        canModify={canModify}
-        data={workspaceData}
-        networkId={activeNetworkId}
-        networkName={detail?.name ?? activeNetworkId}
-        section={section}
-      />
+      <Suspense fallback={null}>
+        <WorkspaceResourceSection
+          canDelete={canDelete}
+          canModify={canModify}
+          data={workspaceData}
+          networkId={activeNetworkId}
+          networkName={detail?.name ?? activeNetworkId}
+          section={section}
+        />
+      </Suspense>
     );
   };
   return (
@@ -384,13 +437,18 @@ export function KnowledgeNetworkWorkspaceScene({
                     {t("knowledgeNetwork.workspaceAbilityVerification")}
                   </div>
                 )}
-                {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+                {experienceNavItems
+                  .filter((item) => item.key !== "evals")
+                  .map((item) => renderSideNavItem(item, { showCount: false }))}
                 <WorkspaceExtensionNavItems
                   activeKey={activeExtensionKey}
                   collapsed={sideCollapsed}
                   hiddenKeys={hiddenNavigation}
                   networkId={activeNetworkId}
                 />
+                {experienceNavItems
+                  .filter((item) => item.key === "evals")
+                  .map((item) => renderSideNavItem(item, { showCount: false }))}
               </>
             ) : null}
             {/* Shown only while another build lists an entry there. */}
@@ -451,6 +509,17 @@ export function KnowledgeNetworkWorkspaceScene({
               : styles.workspaceContent
           }
         >
+          {versioning && section !== "versions" ? (
+            <KnVersionBar
+              canModify={mayModify}
+              hasCapabilities={hasCapabilities}
+              networkId={activeNetworkId}
+              onChanged={() => setReloadTick((tick) => tick + 1)}
+              onViewChange={setVersionView}
+              versioning={versioning}
+              view={versionView}
+            />
+          ) : null}
           {detailError && !childMetricDetailHandlesLoadState ? (
             <Alert className={styles.workspaceAlert} message={detailError} showIcon type="error" />
           ) : null}
@@ -462,10 +531,12 @@ export function KnowledgeNetworkWorkspaceScene({
               type="warning"
             />
           ) : null}
-          {section === "overview" ? (
-            renderSectionContent()
+          {section === "overview" || (section === "extension" && children !== undefined) ? (
+            <Fragment key={reloadKey}>{renderSectionContent()}</Fragment>
           ) : (
             <div
+              // The versions page reloads itself; remounting it would close its open dialogs.
+              key={section === "versions" ? section : reloadKey}
               className={
                 section === "experience-agent" ||
                 section === "experience-cypher" ||

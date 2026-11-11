@@ -1,0 +1,148 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.details,
+.rawGroups,
+.trace,
+.recordBody,
+.fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.details :global(.ant-typography) {
+  overflow-wrap: anywhere;
+}
+.details :global(h5.ant-typography),
+.trace :global(h5.ant-typography) {
+  margin: 0 0 12px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.heading :global(.ant-tag) {
+  margin: 0;
+}
+.heading :global(h5.ant-typography) {
+  margin: 0;
+}
+.heading > :last-child {
+  margin-inline-start: auto;
+}
+.details {
+  overflow-wrap: anywhere;
+  container: eval-execution-details / inline-size;
+}
+.overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--color-border-secondary);
+  border-left: 1px solid var(--color-border-secondary);
+}
+.overview > div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  border-bottom: 1px solid var(--color-border-secondary);
+  border-right: 1px solid var(--color-border-secondary);
+  min-width: 0;
+}
+.overview > div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.overview dt,
+.overview dd {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+}
+.overview dt {
+  background: var(--color-bg-layout);
+  color: var(--color-text-secondary);
+}
+.overview dd {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.metadata:global(.ant-descriptions.ant-descriptions-bordered)
+  :global(.ant-descriptions-view > table) {
+  table-layout: fixed;
+  width: 100%;
+}
+.metadata:global(.ant-descriptions.ant-descriptions-bordered)
+  :global(.ant-descriptions-item-label) {
+  box-sizing: border-box;
+  width: 160px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  word-break: normal;
+}
+.metadata:global(.ant-descriptions.ant-descriptions-bordered)
+  :global(.ant-descriptions-item-content) {
+  padding: 8px 12px;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+@container eval-execution-details (max-width:640px) {
+  .overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.materials :global(.ant-collapse-content-box) {
+  min-width: 0;
+}
+.recordLabel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  min-width: 0;
+}
+.recordLabel > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.recordMeta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.payloadTitle {
+  margin: 0 0 8px !important;
+  font-size: 14px !important;
+}
+.recordBody {
+  gap: 12px;
+}
+.helpIcon {
+  color: var(--color-text-secondary);
+  cursor: help;
+}
+.trace :global(.ant-collapse-content-box) {
+  min-width: 0;
+}
+.fallback :global(.ant-typography) {
+  margin: 0;
+}
+
+.evidence {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-block: 16px 0;
+  padding: 12px;
+  background: var(--color-fill-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 6px;
+}

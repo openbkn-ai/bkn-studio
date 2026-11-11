@@ -216,16 +216,6 @@
   flex-wrap: wrap;
 }
 
-/* 语言徽标与 HTTP 动词徽标同一位置、同一尺寸，两个列表的第一行才对得齐。 */
-.langBadge {
-  padding: 0 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-fill-quaternary);
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 18px;
-}
-
 /* ---------- 中间 ---------- */
 .main {
   display: flex;

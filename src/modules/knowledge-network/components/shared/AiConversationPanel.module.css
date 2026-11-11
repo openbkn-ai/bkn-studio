@@ -1,0 +1,250 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+  background: var(--color-bg-surface);
+}
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.headerActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerActions > button {
+  flex: 0 0 auto;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.titleIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
+  font-size: 17px;
+}
+
+.title > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.title strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title span:last-child {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.contentEmpty {
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+
+.description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary-bg) 22%, var(--color-bg-layout)) 0%,
+    var(--color-bg-layout) 70%
+  );
+  animation: ai-conversation-enter 180ms ease-out;
+}
+
+@keyframes ai-conversation-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message {
+  width: fit-content;
+  max-width: 84%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.assistantMessage {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-top-left-radius: 2px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.userMessage {
+  align-self: flex-end;
+  border: 1px solid var(--color-primary-border);
+  border-top-right-radius: 2px;
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
+}
+
+.errorMessage {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.thinking {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+
+.thinking i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-action-primary);
+  animation: ai-thinking 1.1s ease-in-out infinite;
+}
+
+.thinking i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.thinking i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes ai-thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.examples > span {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.examples button {
+  overflow: hidden;
+  padding: 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.examples button:hover,
+.examples button:focus-visible {
+  border-color: var(--color-action-primary);
+  color: var(--color-action-primary);
+  outline: none;
+}
+
+.composer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+@media (max-width: 480px) {
+  .frame {
+    padding: 14px;
+  }
+
+  .examples {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

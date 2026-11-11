@@ -30,7 +30,11 @@ vi.mock("@/modules/knowledge-network/components/preview/OverviewOntologyBlock", 
 }));
 
 vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
-  ObjectAuthorizeDrawer: () => null,
+  ObjectAuthorizeDrawer: ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+    <div data-testid="authorization-drawer" data-open={String(open)}>
+      <button onClick={onClose}>close authorization</button>
+    </div>
+  ),
 }));
 
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
@@ -80,12 +84,12 @@ function installHttpClipboardFallback(result: boolean) {
   return copiedTexts;
 }
 
-function renderOverview(basename?: string) {
+function renderOverview(basename?: string, record = detail) {
   render(
     <MemoryRouter basename={basename} initialEntries={[`${basename ?? ""}/`]}>
       <WorkspaceOverviewSection
         canModify={false}
-        detail={detail}
+        detail={record}
         loadRecentObjects={vi.fn().mockResolvedValue(undefined)}
         networkId="network-1"
         onEdit={vi.fn()}
@@ -199,4 +203,14 @@ describe("WorkspaceOverviewSection extension actions", () => {
       "noopener,noreferrer",
     );
   });
+});
+
+it("loads authorization management on demand and preserves drawer close behavior", async () => {
+  renderOverview(undefined, { ...detail, operations: ["view_detail", "authorize"] });
+  expect(screen.queryByTestId("authorization-drawer")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.authorizeAction/ }));
+  const drawer = await screen.findByTestId("authorization-drawer");
+  expect(drawer).toHaveAttribute("data-open", "true");
+  fireEvent.click(screen.getByRole("button", { name: "close authorization" }));
+  expect(drawer).toHaveAttribute("data-open", "false");
 });

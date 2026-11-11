@@ -6,13 +6,14 @@
  */
 
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import type { PropsWithChildren, ReactNode } from "react";
+import { type PropsWithChildren, type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 type StepAction = { onClick: () => void; text: string };
 
 const mocks = vi.hoisted(() => {
   const locationState: { current: unknown } = { current: null };
+  const locationSearch = { current: "" };
   const executionValue: { current: unknown } = { current: undefined };
   const routeParams: { current: Record<string, string> } = {
     current: { networkId: "network-1" },
@@ -23,13 +24,35 @@ const mocks = vi.hoisted(() => {
     executionValue,
     getActionTypeDetail: vi.fn(),
     getObjectType: vi.fn(),
+    getObjectTypeDetail: vi.fn(),
+    listRelations: vi.fn(),
+    getRelation: vi.fn(),
     listObjectTypePage: vi.fn(),
     locationState,
+    locationSearch,
     navigate: vi.fn(),
     // Stable, as the real one is: the form reads again when it changes.
-    translate: (key: string) => key,
+    translate: (key: string, options?: { objectTypeName?: string; role?: string }) => {
+      if (key === "knowledgeNetwork.actionRelationObjectWithRole") {
+        return `${options?.objectTypeName} (${options?.role})`;
+      }
+      if (
+        (key === "knowledgeNetwork.actionRelationCurrentCondition" ||
+          key === "knowledgeNetwork.actionRelationOtherCondition" ||
+          key === "knowledgeNetwork.actionTypeApplicableConditionHint" ||
+          key === "knowledgeNetwork.actionTypeExecutionCreateHint" ||
+          key === "knowledgeNetwork.actionTypeExecutionUpdateHint" ||
+          key === "knowledgeNetwork.actionTypeExecutionDeleteHint" ||
+          key === "knowledgeNetwork.actionTypeImpactStaticHint") &&
+        options?.objectTypeName
+      ) {
+        return `${key}:${options.objectTypeName}`;
+      }
+      return key;
+    },
     routeParams,
     updateActionType: vi.fn(),
+    validateExecution: vi.fn<(...args: unknown[]) => string | null>(() => null),
   };
 });
 
@@ -40,7 +63,11 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
-  useLocation: () => ({ state: mocks.locationState.current }),
+  useLocation: () => ({
+    state: mocks.locationState.current,
+    search: mocks.locationSearch.current,
+    pathname: "/knowledge-network/workspace/network-1/action-types/create",
+  }),
   useNavigate: () => mocks.navigate,
   useParams: () => mocks.routeParams.current,
 }));
@@ -56,25 +83,67 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   createKnowledgeNetworkActionType: mocks.createActionType,
   getKnowledgeNetworkActionTypeDetail: mocks.getActionTypeDetail,
   getKnowledgeNetworkObjectType: mocks.getObjectType,
-  getKnowledgeNetworkObjectTypeDetail: vi.fn().mockResolvedValue({ dataProperties: [] }),
+  getKnowledgeNetworkObjectTypeDetail: mocks.getObjectTypeDetail,
   listKnowledgeNetworkObjectTypePage: mocks.listObjectTypePage,
   updateKnowledgeNetworkActionType: mocks.updateActionType,
 }));
 
+vi.mock("@/modules/knowledge-network/services/relation-type.service", () => ({
+  listKnowledgeNetworkRelationTypePage: mocks.listRelations,
+  getKnowledgeNetworkRelationTypeDetail: mocks.getRelation,
+}));
 // The execution and condition editors are tested on their own; here they accept anything.
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor", () => ({
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY: "tool-required",
-  ActionTypeExecutionEditor: ({ value }: { value: unknown }) => {
+  ActionTypeExecutionEditor: ({
+    onChange,
+    onParameterSchemaStateChange,
+    value,
+  }: {
+    onChange?: (value: unknown) => void;
+    onParameterSchemaStateChange?: (state: { loaded: boolean; parameterCount: number }) => void;
+    value: unknown;
+  }) => {
     mocks.executionValue.current = value;
-    return null;
+    // A tool without parameters, as the real editor reports once it has read the tool.
+    useEffect(
+      () => onParameterSchemaStateChange?.({ loaded: true, parameterCount: 0 }),
+      [onParameterSchemaStateChange],
+    );
+    return (
+      <div data-testid="action-execution-editor">
+        <button
+          onClick={() =>
+            onChange?.({ sourceName: "Update tool", sourceType: "tool", parameters: [] })
+          }
+          type="button"
+        >
+          configure test tool
+        </button>
+      </div>
+    );
   },
   createDefaultActionTypeExecutionConfig: () => ({}),
   normalizeActionTypeExecutionConfig: (value: unknown) => value,
-  validateActionTypeExecutionConfig: () => null,
+  validateActionTypeExecutionConfig: (...args: unknown[]) => mocks.validateExecution(...args),
 }));
 
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor", () => ({
-  ActionTypeConditionEditor: () => null,
+  ActionTypeConditionEditor: ({
+    onChange,
+    value,
+  }: {
+    onChange?: (value: { field: string; operation: string; value: string }) => void;
+    value?: { field?: string; value?: string } | null;
+  }) => (
+    <button
+      data-testid="action-condition-editor"
+      onClick={() => onChange?.({ field: "status", operation: "==", value: "active" })}
+      type="button"
+    >
+      {value?.field ? `${value.field}:${value.value}` : "empty condition"}
+    </button>
+  ),
 }));
 
 vi.mock(
@@ -176,9 +245,20 @@ beforeAll(() => {
 
 beforeEach(() => {
   mocks.locationState.current = null;
+  mocks.locationSearch.current = "";
   mocks.routeParams.current = { networkId: "network-1" };
   mocks.listObjectTypePage.mockResolvedValue({ entries: firstPage, totalCount: 30 });
   mocks.getObjectType.mockResolvedValue({ id: "late", name: "Late orders" });
+  mocks.getObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+  mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
+  mocks.getRelation.mockResolvedValue({
+    id: "order_supplier",
+    name: "Supplied by",
+    sourceObjectTypeId: "orders",
+    sourceObjectTypeName: "Order",
+    targetObjectTypeId: "suppliers",
+    targetObjectTypeName: "Supplier",
+  });
   mocks.confirm.mockImplementation(({ onOk }: { onOk: () => void }) => onOk());
 });
 
@@ -187,13 +267,337 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-/** Opens the trigger rule, where the object type is chosen. */
-async function openTrigger() {
-  fireEvent.click(await screen.findByText("knowledgeNetwork.actionTypeTriggerRule"));
-  return screen.findByLabelText("object type");
+/** The target object stays visible while the operation changes. */
+async function getTargetObjectSelect() {
+  return (await screen.findAllByLabelText("object type"))[0];
 }
 
 describe("ActionTypeFormScene navigation context", () => {
+  it("keeps the chosen creation entry without offering an in-form type switch", async () => {
+    mocks.locationState.current = { actionTypeContext: context };
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    expect(await screen.findByDisplayValue("Reschedule order")).toBeInTheDocument();
+    await waitFor(async () => expect(await getTargetObjectSelect()).toHaveValue("late"));
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.actionOperationChange" }),
+    ).toBeNull();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("opens a legacy relationship route in the shared object form with five operations", async () => {
+    mocks.locationSearch.current = "?operation=relation";
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    expect(await screen.findByLabelText("knowledgeNetwork.actionRelationType")).toBeInTheDocument();
+    expect(screen.queryByLabelText("knowledgeNetwork.actionRelationSourceParameter")).toBeNull();
+    expect(screen.queryByLabelText("knowledgeNetwork.actionRelationTargetParameter")).toBeNull();
+    expect(
+      screen
+        .getByLabelText("knowledgeNetwork.actionRelationType")
+        .compareDocumentPosition(screen.getByTestId("action-execution-editor")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "knowledgeNetwork.actionRelationCreate" }),
+    ).toBeChecked();
+    expect(screen.getByLabelText("object type")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "knowledgeNetwork.actionRelationType" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationCreate/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows relationship selection after choosing a relationship operation and hides it for instance operations", async () => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+    expect(screen.queryByLabelText("knowledgeNetwork.actionRelationType")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "knowledgeNetwork.actionRelationCreate" }));
+    expect(
+      screen.getByRole("combobox", { name: "knowledgeNetwork.actionRelationType" }),
+    ).toBeEnabled();
+    await waitFor(() =>
+      expect(mocks.listRelations).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({ boundObjectTypeId: "orders" }),
+      ),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    expect(screen.queryByLabelText("knowledgeNetwork.actionRelationType")).toBeNull();
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+  });
+
+  it("keeps the chosen object, inferred endpoint role and both condition scopes when editing a relationship", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-rel", networkId: "network-1" };
+    mocks.listObjectTypePage.mockResolvedValue({
+      entries: [...firstPage, { id: "suppliers", name: "Supplier" }],
+      totalCount: 2,
+    });
+    const condition = {
+      objectTypeId: "suppliers",
+      field: "status",
+      operation: "==",
+      value: "active",
+    };
+    const otherCondition = {
+      objectTypeId: "orders",
+      field: "status",
+      operation: "==",
+      value: "open",
+    };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      id: "a-rel",
+      name: "Unlink supplier",
+      actionKind: "create",
+      objectTypeId: "suppliers",
+      color: "#1677ff",
+      description: "",
+      tags: [],
+      condition,
+      operationConfig: {
+        type: "relation",
+        relationTypeId: "order_supplier",
+        relationOperation: "delete",
+        anchorRole: "target",
+        otherObjectCondition: otherCondition,
+      },
+      executionConfig: {
+        sourceType: "tool",
+        sourceName: "Unlink",
+        parameters: [
+          { name: "order_id", valueFrom: "source_identity" },
+          { name: "supplier_id", valueFrom: "target_identity" },
+        ],
+      },
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+    expect(await screen.findByDisplayValue("Unlink supplier")).toBeInTheDocument();
+    expect(
+      (await screen.findByText("Supplier", { selector: "strong" })).closest("label"),
+    ).toHaveTextContent("knowledgeNetwork.actionRelationCurrentCondition:Supplier");
+    expect(
+      (await screen.findByText("Orders", { selector: "strong" })).closest("label"),
+    ).toHaveTextContent("knowledgeNetwork.actionRelationOtherCondition:Orders");
+    expect(
+      screen.getByRole("radio", { name: "knowledgeNetwork.actionRelationDelete" }),
+    ).toBeChecked();
+    expect(screen.getByLabelText("object type")).toHaveValue("suppliers");
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-rel",
+        expect.objectContaining({
+          objectTypeId: "suppliers",
+          condition: expect.objectContaining({
+            objectTypeId: "suppliers",
+            value: "active",
+          }) as unknown,
+          operationConfig: expect.objectContaining({
+            type: "relation",
+            relationOperation: "delete",
+            anchorRole: "target",
+            otherObjectCondition: expect.objectContaining({
+              objectTypeId: "orders",
+              value: "open",
+            }) as unknown,
+          }) as unknown,
+        }),
+      ),
+    );
+    fireEvent.change(screen.getByLabelText("object type"), { target: { value: "orders" } });
+    expect(screen.queryByText(/knowledgeNetwork.actionRelationOtherCondition:/)).toBeNull();
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    expect(screen.queryByLabelText("knowledgeNetwork.actionRelationType")).toBeNull();
+    expect(screen.queryByText(/knowledgeNetwork.actionRelationOtherCondition:/)).toBeNull();
+    expect(mocks.executionValue.current).toEqual({});
+    mocks.updateActionType.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-rel",
+        expect.objectContaining({
+          objectTypeId: "orders",
+          actionKind: "update",
+          condition: undefined,
+          operationConfig: { type: "object" },
+        }),
+      ),
+    );
+  });
+
+  it("keeps conditions and execution settings separate for each instance operation", async () => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    fireEvent.click(screen.getByTestId("action-condition-editor"));
+    fireEvent.click(screen.getByRole("button", { name: "configure test tool" }));
+    expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:active");
+    expect(mocks.executionValue.current).toMatchObject({ sourceName: "Update tool" });
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationCreate/ }),
+    );
+    expect(screen.queryByTestId("action-condition-editor")).toBeNull();
+    expect(
+      screen.queryByText("knowledgeNetwork.actionTypeApplicableConditionCreateHint"),
+    ).toBeNull();
+    expect(mocks.executionValue.current).toEqual({});
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:active");
+    expect(mocks.executionValue.current).toMatchObject({ sourceName: "Update tool" });
+  });
+
+  it("places the single aliases field below the action name and above tags", async () => {
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    const name = await screen.findByLabelText("knowledgeNetwork.actionTypeName");
+    const aliases = screen.getByRole("combobox", {
+      name: "knowledgeNetwork.definitionDeclarations.aliases",
+    });
+    const tags = screen.getByText("common.tag");
+
+    expect(name.compareDocumentPosition(aliases) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(aliases.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      screen.getAllByRole("combobox", { name: "knowledgeNetwork.definitionDeclarations.aliases" }),
+    ).toHaveLength(1);
+  });
+
+  it("prefills the selected graph object when creating an object action", async () => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "late" };
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    await waitFor(() => expect(mocks.getObjectType).toHaveBeenCalledWith("network-1", "late"));
+    expect((await screen.findAllByLabelText("object type"))[0]).toHaveValue("late");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it.each([
+    ["create", "knowledgeNetwork.actionTypeInstanceOperationCreate"],
+    ["update", "knowledgeNetwork.actionTypeInstanceOperationUpdate"],
+    ["delete", "knowledgeNetwork.actionTypeInstanceOperationDelete"],
+  ])("creates a %s action for the selected object type", async (kind, label) => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
+    mocks.createActionType.mockResolvedValue({ id: "action-new" });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    fireEvent.click(await screen.findByRole("radio", { name: new RegExp(label) }));
+    fireEvent.change(screen.getAllByPlaceholderText("knowledgeNetwork.pleaseInput")[0], {
+      target: { value: "Manage order" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.createActionType).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({ actionKind: kind, objectTypeId: "orders" }),
+      ),
+    );
+  });
+
+  it("creates an independent action without object-only rules", async () => {
+    mocks.locationState.current = {
+      actionTypeCreateMode: "independent",
+      actionTypeInitialObjectTypeId: "orders",
+    };
+    mocks.createActionType.mockResolvedValue({ id: "action-independent" });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "knowledgeNetwork.actionTypeCreateTitle · knowledgeNetwork.actionOperationTool",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("object type")).toBeNull();
+    expect(
+      screen.queryByRole("radio", {
+        name: /knowledgeNetwork.actionTypeInstanceOperationCreate/,
+      }),
+    ).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeApplicableCondition")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeAdditionalImpact")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionOperationToolExecutionHint")).toBeNull();
+
+    fireEvent.change(screen.getAllByPlaceholderText("knowledgeNetwork.pleaseInput")[0], {
+      target: { value: "Send notification" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.createActionType).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          actionKind: "create",
+          affect: undefined,
+          condition: undefined,
+          name: "Send notification",
+          objectTypeId: "",
+        }),
+      ),
+    );
+  });
+
+  it("connects each instance operation to its applicable rules and tool guidance", async () => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+    expect(screen.queryByText("knowledgeNetwork.actionTypeApplicableCondition")).toBeNull();
+    expect(
+      screen.getByText(/knowledgeNetwork.actionTypeExecutionCreateHint:/).querySelector("strong"),
+    ).toHaveTextContent("Orders");
+    expect(
+      screen.getByText(/knowledgeNetwork.actionTypeImpactStaticHint:/).querySelector("strong"),
+    ).toHaveTextContent("Orders");
+    expect(screen.queryByText("knowledgeNetwork.actionTypeFlowExpectedCreate")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/,
+      }),
+    );
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeApplicableCondition"),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByText(/knowledgeNetwork.actionTypeApplicableConditionHint:/)
+        .querySelector("strong"),
+    ).toHaveTextContent("Orders");
+    expect(
+      screen.getByText(/knowledgeNetwork.actionTypeExecutionUpdateHint:/).querySelector("strong"),
+    ).toHaveTextContent("Orders");
+
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: /knowledgeNetwork.actionTypeInstanceOperationDelete/,
+      }),
+    );
+    expect(
+      screen.getByText(/knowledgeNetwork.actionTypeExecutionDeleteHint:/).querySelector("strong"),
+    ).toHaveTextContent("Orders");
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+  });
+
   it("states the need and fills the form, fetching an object type past the first page", async () => {
     mocks.locationState.current = { actionTypeContext: context };
 
@@ -206,7 +610,7 @@ describe("ActionTypeFormScene navigation context", () => {
     expect(screen.getByDisplayValue("Reschedule order")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Moves the promised date")).toBeInTheDocument();
     await waitFor(() => expect(mocks.getObjectType).toHaveBeenCalledWith("network-1", "late"));
-    expect(await openTrigger()).toHaveValue("late");
+    expect(await getTargetObjectSelect()).toHaveValue("late");
     expect(screen.getByRole("option", { name: "Late orders" })).toBeInTheDocument();
   });
 
@@ -261,7 +665,7 @@ describe("ActionTypeFormScene navigation context", () => {
     mocks.createActionType.mockResolvedValue({ id: "a-7" });
 
     renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
-    await openTrigger();
+    await getTargetObjectSelect();
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
 
     await waitFor(() =>
@@ -286,7 +690,7 @@ describe("ActionTypeFormScene navigation context", () => {
 
     renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
 
-    const select = await openTrigger();
+    const select = await getTargetObjectSelect();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(select).toHaveValue("");
     expect(mocks.getObjectType).not.toHaveBeenCalled();
@@ -304,7 +708,7 @@ describe("ActionTypeFormScene navigation context", () => {
     mocks.locationState.current = { actionTypeContext: context };
     mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
     mocks.getActionTypeDetail.mockResolvedValue({
-      actionKind: "modify",
+      actionKind: "update",
       color: "#1677ff",
       condition: null,
       description: "Existing",
@@ -331,5 +735,150 @@ describe("ActionTypeFormScene navigation context", () => {
       ),
     );
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith(listPath));
+  });
+
+  it("recognizes an existing object-free action as independent when editing", async () => {
+    mocks.routeParams.current = { actionTypeId: "independent-1", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      condition: null,
+      description: "Runs nightly reconciliation",
+      executionConfig: {},
+      id: "independent-1",
+      name: "Reconcile accounts",
+      objectTypeId: "",
+      tags: [],
+    });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Reconcile accounts")).toBeInTheDocument();
+    expect(screen.queryByLabelText("object type")).toBeNull();
+    expect(screen.getByText("knowledgeNetwork.actionOperationConfiguration")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "independent-1",
+        expect.objectContaining({
+          affect: undefined,
+          condition: undefined,
+          objectTypeId: "",
+        }),
+      ),
+    );
+  });
+});
+
+describe("ActionTypeFormScene rule panels", () => {
+  it("drops a legacy condition when editing a create action", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    const condition = { field: "status", objectTypeId: "orders", operation: "==", value: "open" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      condition,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing create action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing create action")).toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeApplicableCondition")).toBeNull();
+    expect(screen.queryByTestId("action-condition-editor")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-1",
+        expect.objectContaining({
+          condition: undefined,
+        }),
+      ),
+    );
+  });
+
+  it("keeps what the collapsed rule panels hold when saving without opening them", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    const condition = { field: "status", objectTypeId: "orders", operation: "==", value: "open" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "update",
+      affect: { comment: "Closes the order", objectTypeId: "orders" },
+      color: "#1677ff",
+      condition,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing action")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "a-1",
+        expect.objectContaining({
+          actionKind: "update",
+          affect: { comment: "Closes the order", objectTypeId: "orders" },
+          condition: expect.objectContaining({ field: "status", value: "open" }) as unknown,
+          objectTypeId: "orders",
+        }),
+      ),
+    );
+  });
+
+  it("knows the tool takes no parameters when saving without opening the execution unit", async () => {
+    mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "update",
+      color: "#1677ff",
+      condition: null,
+      description: "Existing",
+      executionConfig: {},
+      id: "a-1",
+      name: "Existing action",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    expect(await screen.findByDisplayValue("Existing action")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    await waitFor(() => expect(mocks.updateActionType).toHaveBeenCalled());
+    expect(mocks.validateExecution).toHaveBeenCalledWith(expect.anything(), {
+      allowEmptyParameters: true,
+    });
+  });
+
+  it("shows the visible target object error when none is selected", async () => {
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    fireEvent.change((await screen.findAllByPlaceholderText("knowledgeNetwork.pleaseInput"))[0], {
+      target: { value: "Cancel order" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+    expect(await screen.findByText("knowledgeNetwork.actionTypeObjectRequired")).toBeVisible();
+    expect(await getTargetObjectSelect()).toHaveValue("");
+    expect(mocks.createActionType).not.toHaveBeenCalled();
   });
 });

@@ -18,6 +18,15 @@
 export const subscriptionZhCN = {
   subscription: {
     capabilities: {
+      sso: {
+        name: "单点登录",
+        description: "管理第三方身份源、浏览器登录和接口令牌换发。",
+        bullets: { b1: "OIDC / Casdoor" },
+      },
+      eval: {
+        description: "基于评测模板管理 Case、执行评测并查看诊断与回归结果。",
+        name: "Eval 质量评测",
+      },
       business_provenance: {
         bullets: {
           b1: "时间链",

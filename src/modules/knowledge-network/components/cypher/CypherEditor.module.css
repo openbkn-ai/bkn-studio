@@ -1,0 +1,16 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * A `$name` parameter: the accent color, which none of Monaco's Cypher tokens use, so it reads as
+ * a slot; the token follows the theme. The editor scope outranks the token color classes Monaco
+ * injects after this sheet.
+ */
+:global(.monaco-editor) .parameter {
+  color: var(--color-text-accent);
+  font-weight: 600;
+}

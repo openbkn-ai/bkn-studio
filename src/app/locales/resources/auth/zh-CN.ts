@@ -7,6 +7,13 @@
 
 export const authZhCN = {
   auth: {
+    popup: {
+      disconnected: "授权窗口已失去连接，请返回原页面重试。",
+      blocked: "请允许授权弹窗后重试。",
+      incomplete: "授权未完成，请由计划创建者使用原账号重试。",
+      cancelled: "已取消授权。",
+      timeout: "授权已超时，请重试。",
+    },
     signInSubtitle: "登录后访问业务知识网络控制台",
     signInButton: "登录",
     devTokenToggle: "使用 Token 登录（开发模式）",

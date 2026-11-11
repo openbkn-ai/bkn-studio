@@ -58,7 +58,7 @@ export const agentChatPart = {
         failed: "Smart Q&A failed. Try again.",
         timeout: "Smart Q&A timed out. Narrow the question and try again.",
         unavailable: "A service Smart Q&A depends on is temporarily unavailable. Try again later.",
-        forbidden: "Your account cannot use Smart Q&A or this knowledge network.",
+        forbidden: "Your account has no access to this knowledge network.",
         agentNotReady:
           "The Smart Q&A Agent is not published yet. Ask an administrator to configure and publish it.",
         threadBusy: "The previous turn is still running. Try again shortly.",

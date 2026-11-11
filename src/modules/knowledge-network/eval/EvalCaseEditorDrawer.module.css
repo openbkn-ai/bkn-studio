@@ -1,0 +1,126 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.sectionTitle {
+  margin: 4px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.resourceGrid {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.resourceGrid > :global(.ant-form-item) {
+  min-width: 0;
+}
+
+.caseEditorDrawer :global(.ant-drawer-footer) {
+  border-top: 0;
+}
+
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 32px;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footerActions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .resourceGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+.criterion {
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.criterionControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 600px) {
+  .criterionControls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.criteriaValues {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .criteriaValues {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.argumentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.argumentGroup {
+  grid-column: 1 / -1;
+}
+.fieldLabel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.fieldHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.conditionHelp {
+  margin-bottom: 12px !important;
+  font-size: 12px;
+}
+.valueTypeControl {
+  margin-bottom: 12px;
+}
+.criterionRemove {
+  align-self: start;
+  margin-top: 22px;
+}
+@media (max-width: 600px) {
+  .argumentGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .criterionRemove {
+    margin-top: 0;
+    justify-self: end;
+  }
+}

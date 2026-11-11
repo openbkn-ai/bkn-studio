@@ -71,6 +71,7 @@ import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/obj
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
+import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
@@ -521,7 +522,9 @@ export function ObjectTypeListPanel({
           >
             {renderResourceIcon(record.icon)}
           </span>
-          <span className={styles.objectName}>{value}</span>
+          <DeprecatedName declarations={record.declarations}>
+            <span className={styles.objectName}>{value}</span>
+          </DeprecatedName>
         </div>
       ),
     },

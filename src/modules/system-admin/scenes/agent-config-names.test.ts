@@ -33,6 +33,13 @@ it("recognizes a shipped English name without treating it as a custom rename", (
   ).toBe("Studio智能问答");
 });
 
+it("localizes the dedicated Eval assistant and describes its controlled scope", () => {
+  const agent = { agent_id: "eval_assistant", name: "质量评测助手" };
+  expect(agentDisplayName(agent, i18n.getFixedT("en-US"))).toBe("Quality Evaluation Assistant");
+  expect(agentDescription(agent, i18n.getFixedT("zh-CN"))).toContain("测试集");
+  expect(agentDescription(agent, i18n.getFixedT("en-US"))).toContain("controlled actions");
+});
+
 it.each([
   ["zh-CN", "Graph Explorer", "图探索"],
   ["en-US", "图探索", "Graph Explorer"],

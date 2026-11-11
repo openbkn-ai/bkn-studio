@@ -13,20 +13,22 @@ export const contextLoaderPanelPart = {
         description: "Knowledge network list and current network details",
       },
       lifecycle: {
-        label: "Interaction lifecycle",
-        description: "Managed sessions, interactions, and operation status",
+        label: "Session management",
+        description: "Manage conversation context and start or finish each turn.",
       },
       discovery: {
-        label: "Networks and schema",
-        description: "Knowledge network lists, structure, schema discovery, and type details",
+        label: "Knowledge network concept search",
+        description:
+          "Find knowledge networks and inspect their structure, object types, relation types, and properties.",
       },
       model: {
         label: "Knowledge model search",
         description: "Semantic search, object types, relation types, action types, and metrics",
       },
       query: {
-        label: "Object instances and subgraphs",
-        description: "Object instance queries and relation subgraph queries",
+        label: "Knowledge network data queries",
+        description:
+          "Query business instances, relationships, metrics, and logical property calculation results.",
       },
       data: {
         label: "Data resources and SQL",
@@ -41,17 +43,26 @@ export const contextLoaderPanelPart = {
         description: "Data resource inspection, skill recall, and execution",
       },
       action: {
-        label: "Actions",
-        description: "Action tool recall, execution, and execution history",
+        label: "Action execution",
+        description:
+          "Inspect action types, execute business actions, and view results and history.",
       },
       execution: {
-        label: "Code execution",
-        description:
-          "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
+        label: "Code and command execution",
+        description: "Run code and commands to process data and call tools.",
       },
       skill: {
-        label: "Skills and dynamic tools",
-        description: "Skill retrieval and online dynamic tools",
+        label: "Skills",
+        description: "Find available skills and read their instructions, usage, and related files.",
+      },
+      tool: {
+        label: "Tools",
+        description: "Find available capabilities and call functions, APIs, MCP tools, and more.",
+      },
+      evaluation: {
+        label: "Quality evaluation",
+        description:
+          "Find test suites, start evaluations, claim cases, submit results, and track progress.",
       },
       other: { label: "Other capabilities", description: "Uncategorized MCP capabilities" },
     },
@@ -94,6 +105,11 @@ export const contextLoaderPanelPart = {
       bkn_retry_operation: "Retry operation",
       bkn_get_receipt: "View call receipt",
       execute_skill: "Execute skill",
+      bkn_eval_list_suites: "List evaluation suites",
+      bkn_eval_start_run: "Start evaluation run",
+      bkn_eval_next_case: "Get next evaluation case",
+      bkn_eval_submit_result: "Submit case result",
+      bkn_eval_get_progress: "View evaluation progress",
       fallbackLifecycle: "Interaction lifecycle tool",
       fallbackModel: "Knowledge model tool",
       fallbackData: "Data resource tool",
@@ -305,17 +321,30 @@ export const contextLoaderPanelPart = {
         "Only for a trusted self-signed certificate. Quit the client fully, then restart it with certificate checks off.",
       launchTipsTrigger: "How to start it on each system",
       launchTipsIntro:
-        "Using WorkBuddy as an example. Quit the client fully (including the tray or menu bar), then start it with:",
+        "Quit {{client}} fully (including the tray or menu bar), then start it with:",
+      launchTipsIntroGeneric:
+        "Quit the client fully (including the tray or menu bar), then start it with:",
+      launchTipsIntroClaude: "Exit any running Claude Code, then start it from a terminal with:",
       launchTipsMac: "macOS (terminal)",
       launchTipsWindows: "Windows (PowerShell)",
       launchTipsLinux: "Linux (terminal)",
-      launchCommandMac: "open -a WorkBuddy --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchTipsUnix: "macOS / Linux (terminal)",
+      launchCommandMac: "open -a {{client}} --env NODE_TLS_REJECT_UNAUTHORIZED=0",
+      launchCommandMacGeneric: 'open -a "<client app name>" --env NODE_TLS_REJECT_UNAUTHORIZED=0',
       launchCommandWindows:
-        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to WorkBuddy.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to {{client}}.exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
+      launchCommandWindowsGeneric:
+        '$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"\nStart-Process -FilePath "<full path to the client exe>"\nRemove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED',
       launchCommandLinux:
-        'WORKBUDDY="<WorkBuddy command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$WORKBUDDY" >/dev/null 2>&1 &',
+        'APP="<{{client}} command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
+      launchCommandLinuxGeneric:
+        'APP="<client command or path>"\nNODE_TLS_REJECT_UNAUTHORIZED=0 nohup "$APP" >/dev/null 2>&1 &',
       launchTipsNote:
-        "Replace the <> part with the actual WorkBuddy path or command. On Windows, use the full path with the drive letter, e.g. C:\\Program Files\\WorkBuddy\\WorkBuddy.exe. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+        "Replace the <> part with the actual {{client}} path or command. On Windows, use the full path, e.g. {{examplePath}}. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+      launchTipsNoteGeneric:
+        "Replace the <> part with the client's actual name, path or command. On Windows, use the full path with the drive letter. For a command-line client, put the variable in front of its start command. On Windows and Linux, set the variable and start the client in the same window so the client inherits it. Avoid setting it globally, e.g. with setx.",
+      launchTipsNoteClaude:
+        "The variable applies to this start only, so start each new Claude Code session the same way. Avoid setting it globally, e.g. with setx or in your shell profile.",
       selfSignedApiKeyDescription:
         "With certificate checks on, clients will fail to connect. Tick the option on the right to skip the check (trusted environments only), or give the platform a proper certificate.",
       selfSignedTitle: "This address may use a self-signed certificate",

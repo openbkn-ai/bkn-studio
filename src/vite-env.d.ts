@@ -20,7 +20,9 @@ interface ImportMetaEnv {
   readonly VITE_KNOWLEDGE_NETWORK_IMPORT_MAX_FILE_SIZE_BYTES?: string;
   readonly VITE_KNOWLEDGE_NETWORK_IMPORT_TIMEOUT_MS?: string;
   readonly VITE_MOCK_EDITION?: "community" | "professional" | "enterprise" | "industry";
+  readonly VITE_MOCK_USER?: "admin" | "viewer";
   readonly VITE_USE_MOCK?: "true" | "false";
+  readonly VITE_ACTION_TYPE_OPERATION_CONFIG_ENABLED?: "true" | "false";
   readonly VITE_CAPABILITY_UX_V2?: "true" | "false";
 }
 

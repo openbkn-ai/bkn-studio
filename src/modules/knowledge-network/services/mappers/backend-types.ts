@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
+
 export type BackendAccountInfo = {
   id?: string | null;
   name?: string | null;
@@ -25,6 +27,8 @@ export type BackendKnowledgeNetwork = {
   id: string;
   name: string;
   operations?: string[];
+  /** Present only on a network with versioning. */
+  versioning?: KnVersioning;
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;
@@ -114,27 +118,28 @@ export type BackendLogicProperty = {
   type?: string;
 };
 
-export type BackendObjectTypeMutation = {
-  branch?: string;
-  color?: string;
-  comment?: string;
-  concept_groups?: Array<{
-    id: string;
-    name?: string;
-  }>;
-  data_properties?: BackendDataProperty[];
-  data_source?: BackendDataSource;
-  display_key?: string;
-  icon?: string;
-  id?: string;
-  incremental_key?: string;
-  logic_properties?: BackendLogicProperty[];
-  name: string;
-  primary_keys?: string[];
-  tags?: string[];
-};
+export type BackendObjectTypeMutation =
+  import("./declarations").BackendDefinitionDeclarationFields & {
+    branch?: string;
+    color?: string;
+    comment?: string;
+    concept_groups?: Array<{
+      id: string;
+      name?: string;
+    }>;
+    data_properties?: BackendDataProperty[];
+    data_source?: BackendDataSource;
+    display_key?: string;
+    icon?: string;
+    id?: string;
+    incremental_key?: string;
+    logic_properties?: BackendLogicProperty[];
+    name: string;
+    primary_keys?: string[];
+    tags?: string[];
+  };
 
-export type BackendObjectType = {
+export type BackendObjectType = import("./declarations").BackendDefinitionDeclarationFields & {
   color?: string;
   comment?: string;
   concept_groups?: Array<{
@@ -198,34 +203,38 @@ export type BackendConceptGroup = {
   updater_name?: string;
 };
 
-export type BackendRelationType = {
-  color?: string;
-  comment?: string;
-  id: string;
-  mapping_mode?: "direct" | "indirect";
-  mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
-  name: string;
-  operations?: string[];
-  source_object_type?: {
-    id?: string;
-    name?: string;
+export type BackendRelationType = import("./declarations").BackendRelationDeclarationFields &
+  import("./declarations").BackendDefinitionDeclarationFields & {
+    color?: string;
+    comment?: string;
+    id: string;
+    mapping_mode?: "direct" | "indirect";
+    mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
+    name: string;
+    operations?: string[];
+    source_object_type?: {
+      id?: string;
+      name?: string;
+    };
+    source_object_type_id?: string;
+    tags?: string[];
+    target_object_type?: {
+      id?: string;
+      name?: string;
+    };
+    target_object_type_id?: string;
+    type?: "direct" | "indirect";
+    update_time?: number;
+    updater?: BackendAccountInfo;
   };
-  source_object_type_id?: string;
-  tags?: string[];
-  target_object_type?: {
-    id?: string;
-    name?: string;
-  };
-  target_object_type_id?: string;
-  type?: "direct" | "indirect";
-  update_time?: number;
-  updater?: BackendAccountInfo;
-};
 
-export type BackendActionType = {
+export type BackendActionType = import("./declarations").BackendDefinitionDeclarationFields & {
+  operation_config?: import("../../utils/action-type-operation").BackendActionOperationConfig;
   action_source?: {
     box_id?: string;
+    box_name?: string;
     mcp_id?: string;
+    mcp_name?: string;
     tool_id?: string;
     tool_name?: string;
     type?: "manual" | "mcp" | "tool";
@@ -243,7 +252,7 @@ export type BackendActionType = {
     operation?: string;
     sub_conditions?: BackendActionType["condition"][];
     value?: string | string[];
-    value_from?: "const";
+    value_from?: "const" | "property" | "input";
   };
   id: string;
   name: string;
@@ -255,8 +264,9 @@ export type BackendActionType = {
   object_type_id?: string;
   parameters?: Array<{
     name: string;
-    value?: string;
-    value_from?: "property" | "input" | "const";
+    type?: string;
+    value?: unknown;
+    value_from?: "property" | "input" | "const" | "source_identity" | "target_identity";
   }>;
   tags?: string[];
   update_time?: number;

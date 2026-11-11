@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { DefinitionDeclarations } from "./declarations";
+import type { KnVersioning } from "./kn-version";
 import type { ObjectTypeIndexStatus } from "./object-type";
 
 export type KnowledgeNetworkListQuery = {
@@ -45,6 +47,8 @@ export type KnowledgeNetworkRecord = {
   tags: string[];
   updateTime: string;
   updaterName: string;
+  /** Version state; present only when the network has versioning. */
+  versioning?: KnVersioning;
   /** Embedding model locked at creation time (immutable). */
   embeddingModelId?: string;
   /** Embedding dimension of the locked model. */
@@ -62,6 +66,8 @@ export type KnowledgeNetworkMutationPayload = {
   identifier: string;
   name: string;
   tags: string[];
+  /** Create only: start the network with versioning (edits go to a draft). */
+  versioning?: boolean;
 };
 
 export type KnowledgeNetworkRecentObject = {
@@ -79,6 +85,8 @@ export type KnowledgeNetworkRecentObject = {
 export type KnowledgeNetworkPreviewNode = {
   color: string;
   conceptGroups?: Array<{ id: string; name: string }>;
+  /** Its aliases and lifecycle; a deprecated type is drawn faint. */
+  declarations?: DefinitionDeclarations;
   /** Drawn faint: a type shown for context that is not part of the model, such as a draft's. */
   faded?: boolean;
   icon?: string;
@@ -93,6 +101,8 @@ export type KnowledgeNetworkPreviewEdge = {
    * absent or 0 draws it straight.
    */
   curveOffset?: number;
+  /** Its aliases and lifecycle; a deprecated relation is drawn dashed and faint. */
+  declarations?: DefinitionDeclarations;
   /** Drawn dashed and faint, as a faded node is. */
   faded?: boolean;
   id: string;

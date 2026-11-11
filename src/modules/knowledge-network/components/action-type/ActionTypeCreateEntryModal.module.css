@@ -1,0 +1,88 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.choices {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.choice {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 196px;
+  padding: 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.choice:not(:disabled):hover,
+.choice:not(:disabled):focus-visible {
+  border-color: var(--color-text-link);
+  box-shadow: 0 0 0 2px var(--color-primary-bg);
+}
+
+.choice:disabled {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.choiceTop {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.choiceTop :global(.ant-tag) {
+  margin: 0;
+}
+
+.icon {
+  align-items: center;
+  background: var(--color-primary-bg);
+  border-radius: 8px;
+  color: var(--color-primary, #1677ff);
+  display: inline-flex;
+  font-size: 20px;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.choice strong {
+  font-size: 16px;
+}
+
+.choice > span:not(.choiceTop) {
+  line-height: 1.5;
+}
+
+.examples {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.choiceAction {
+  color: var(--color-text-link);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: auto;
+}
+
+@media (max-width: 640px) {
+  .choices {
+    grid-template-columns: 1fr;
+  }
+}

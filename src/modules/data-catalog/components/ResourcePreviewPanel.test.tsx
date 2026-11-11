@@ -140,6 +140,127 @@ describe("ResourcePreviewPanel", () => {
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
   });
 
+  it.each([
+    { category: "table", status: "available", type: "string", fulltext: true, allowed: true },
+    { category: "table", status: "available", type: "text", fulltext: false, allowed: true },
+    { category: "table", status: "available", type: "string", fulltext: false, allowed: false },
+    { category: "table", status: "stale", type: "string", fulltext: true, allowed: false },
+    { category: "table", status: "unavailable", type: "string", fulltext: true, allowed: false },
+    { category: "index", status: "available", type: "text", fulltext: true, allowed: false },
+    { category: "dataset", status: "available", type: "text", fulltext: false, allowed: true },
+    { category: "logical_view", status: "available", type: "text", fulltext: true, allowed: true },
+    {
+      category: "logical_view",
+      status: "available",
+      type: "text",
+      fulltext: false,
+      allowed: true,
+    },
+    {
+      category: "logical_view",
+      status: "available",
+      type: "string",
+      fulltext: false,
+      allowed: false,
+    },
+  ] as const)(
+    "keeps source filterability separate from $category $status $type fulltext=$fulltext (allowed=$allowed)",
+    async ({ category, status, type, fulltext, allowed }) => {
+      Object.assign(testFilterRule, {
+        field: "body",
+        operation: "match",
+        value: "invoice",
+        valueFrom: "const",
+      });
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [],
+        total: 0,
+        querySource: "local_index",
+      });
+      const sample: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        category,
+        localIndexName: "idx_body",
+        localIndexStatus: status,
+        schema: [
+          {
+            name: "body",
+            type,
+            filterable: false,
+            features: fulltext ? [{ featureType: "fulltext" }] : [],
+          },
+        ],
+      };
+      render(<ResourcePreviewPanel active resource={sample} />);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      if (allowed) {
+        await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          filterCondition: {
+            sub_conditions: [{ field: "body", operation: "match", value: "invoice" }],
+          },
+        });
+      } else {
+        expect(
+          await screen.findByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
+
+  it.each([
+    { category: "table", status: "available", allowed: true },
+    { category: "dataset", status: "available", allowed: true },
+    { category: "logical_view", status: "available", allowed: true },
+    { category: "table", status: "stale", allowed: false },
+    { category: "table", status: "unavailable", allowed: false },
+    { category: "index", status: "available", allowed: false },
+  ] as const)(
+    "uses local schema for ordinary filtering in $category $status (allowed=$allowed)",
+    async ({ category, status, allowed }) => {
+      Object.assign(testFilterRule, {
+        field: "id",
+        operation: ">=",
+        value: "10",
+        valueFrom: "const",
+      });
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [],
+        total: 0,
+        querySource: "local_index",
+      });
+      const sample: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        category,
+        localIndexName: "idx_id",
+        localIndexStatus: status,
+        schema: [{ name: "id", type: "integer", filterable: false }],
+      };
+      render(<ResourcePreviewPanel active resource={sample} />);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      if (allowed) {
+        await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          filterCondition: {
+            sub_conditions: [{ field: "id", operation: ">=", value: 10 }],
+          },
+        });
+      } else {
+        expect(
+          await screen.findByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
+
   it("switches a table-derived view between index and source without losing its switch or fixed filter", async () => {
     previewCatalogResourceMock.mockImplementation(
       (_id: string, query: { ignoreLocalIndex?: boolean }) =>
@@ -208,7 +329,7 @@ describe("ResourcePreviewPanel", () => {
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
     const editor = screen.getByRole("button", { name: "set-test-filter" });
-    expect(editor).toHaveAttribute("data-query-path", "local_index");
+    expect(editor).toHaveAttribute("data-query-path", "managed_local_index");
     let rejectSource!: (error: Error) => void;
     const sourcePreview = new Promise((_resolve, reject) => {
       rejectSource = reject;
@@ -227,7 +348,7 @@ describe("ResourcePreviewPanel", () => {
     expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
-    expect(editor).toHaveAttribute("data-query-path", "local_index");
+    expect(editor).toHaveAttribute("data-query-path", "managed_local_index");
   });
 
   it("removes an unsupported additional filter when a view switches to source", async () => {
