@@ -853,7 +853,7 @@ export const executionFactoryZhCN = {
           request: "为一个 Cypher 函数写语句。函数要做的事：{{description}}",
           contract: "这是供调用的函数，不是一次性查询。以下约定优先于你的通用规则：",
           parameters:
-            "调用方传入的值写成 $参数名（例如 $supplier_code），不要写死具体值；参数名用小写英文和下划线，按所比较的属性命名。",
+            "调用方传入的值写成 $参数名（例如 $supplier_code），不要写死具体值；参数名用小写英文和下划线，按所比较的属性命名。描述说某个条件可以不填时，写成 ($参数名 IS NULL OR 条件)，不填就不过滤。",
           trial:
             "用 run_cypher 试跑时，语句保持 $参数名 原样，把示例值放进 parameters 传入；示例值用 search_instance 找真实存在的值。",
           shapeValue:

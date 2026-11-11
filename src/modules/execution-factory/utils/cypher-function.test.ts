@@ -95,6 +95,44 @@ describe("syncCypherInputs", () => {
       { name: "n", type: "string", required: true, description: "kept" },
     ]);
   });
+
+  it("starts an input tested with IS NULL optional and keeps the author's choice", () => {
+    const code =
+      "MATCH (o:po) WHERE ($status IS NULL OR o.status = $status) " +
+      "AND ($since IS NOT NULL AND o.day >= $since) AND o.note <> '$code IS NULL' RETURN count(o)";
+    expect(syncCypherInputs([], code)).toEqual([
+      { name: "status", type: "string", required: false, description: "" },
+      { name: "since", type: "string", required: false, description: "" },
+    ]);
+    expect(
+      syncCypherInputs(
+        [{ name: "status", type: "string", required: true, description: "kept" }],
+        code,
+      ),
+    ).toEqual([
+      { name: "status", type: "string", required: true, description: "kept" },
+      { name: "since", type: "string", required: false, description: "" },
+    ]);
+    // Without the test, nothing makes the input optional.
+    expect(
+      syncCypherInputs(
+        [{ name: "status", type: "string", required: false, description: "" }],
+        "MATCH (o:po) WHERE o.status = $status RETURN count(o)",
+      ),
+    ).toEqual([{ name: "status", type: "string", required: true, description: "" }]);
+  });
+
+  it("types a LIMIT input and makes an IS NULL one optional in the same statement", () => {
+    expect(
+      syncCypherInputs(
+        [],
+        "MATCH (o:po) WHERE ($status IS NULL OR o.status = $status) RETURN o.id LIMIT $n",
+      ),
+    ).toEqual([
+      { name: "status", type: "string", required: false, description: "" },
+      { name: "n", type: "number", required: true, description: "" },
+    ]);
+  });
 });
 
 describe("cypherArguments", () => {
@@ -134,6 +172,20 @@ describe("cypherArguments", () => {
     [[1, 2], { kind: "not-object" }],
   ])("refuses %j", (args, problem) => {
     expect(cypherArguments(args, inputs)).toEqual({ problem });
+  });
+
+  it("leaves out an optional input that is not given", () => {
+    const optional = [
+      { name: "id", type: "string", required: true },
+      { name: "status", type: "string", required: false },
+    ];
+    expect(cypherArguments({ id: "S1" }, optional)).toEqual({ parameters: { id: "S1" } });
+    expect(cypherArguments({ id: "S1", status: null }, optional)).toEqual({
+      parameters: { id: "S1" },
+    });
+    expect(cypherArguments({ status: "open" }, optional)).toEqual({
+      problem: { kind: "missing", names: ["id"] },
+    });
   });
 });
 

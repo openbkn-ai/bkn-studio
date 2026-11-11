@@ -41,6 +41,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
       "IN 后面是列表：a.code IN ['A', 'B']，或用参数 IN $list；列表为空时 IN 不匹配任何行，NOT … IN 匹配所有行。",
       "字符串：STARTS WITH、CONTAINS、ENDS WITH，只用于字符串属性，按字面子串匹配，% 和 _ 不是通配符。",
       "空值：IS NULL、IS NOT NULL；不能写 = null。",
+      "可选条件：($code IS NULL OR a.code = $code)，$code 有值时按它过滤，传 null 或不传时这个条件不生效；可以写在 MATCH、OPTIONAL MATCH 和 WITH 的 WHERE 里，不能只写 WHERE $code IS NULL。",
       "组合：AND、OR、NOT 和括号；不支持 XOR。日期写 date('2026-08-13')；和日期、时间戳属性比较时也可以直接写字符串 '2026-08-13' 或 '2026-08-13T09:30:00'，其他格式（如 '2026/08/13'）会报错。",
     ],
     notes: ["", "", ""],
