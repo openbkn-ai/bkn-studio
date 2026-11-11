@@ -1135,6 +1135,9 @@ describe("ObjectAuthorizeDrawer source records", () => {
     );
     await screen.findByText("systemAdmin.objectGrants.newGrantTitle");
     const bundleButton = screen.getByRole("button", { name: /full_business_access/ });
+    // The form heading renders before the grant list resolves, and the bundle button stays
+    // disabled until it does; a click on a disabled button is silently dropped.
+    await waitFor(() => expect(bundleButton).toBeEnabled());
     fireEvent.click(bundleButton);
     await waitFor(() => expect(bundleButton).toHaveAttribute("aria-pressed", "true"), {
       timeout: 5_000,
