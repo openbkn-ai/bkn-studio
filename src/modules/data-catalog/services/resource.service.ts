@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { findUnsupportedFilterableField } from "@/modules/data-catalog/lib/field-filterability";
 import { http } from "@/framework/request/http";
 import {
@@ -529,6 +530,10 @@ function sortResources(items: CatalogResource[], query: ResourceListQuery) {
   return [...items].sort((left, right) => left.name.localeCompare(right.name) * multiplier);
 }
 
+function projectMockResource(resource: CatalogResource): CatalogResource {
+  return { ...resource, operations: filterMockOperations(resource.operations ?? []) };
+}
+
 export type CatalogResourcePage = {
   items: CatalogResource[];
   total: number;
@@ -545,7 +550,7 @@ export async function listCatalogResourcePage(
     const page = limit === -1 ? filtered.slice(offset) : filtered.slice(offset, offset + limit);
     return wait({
       items: page.map((resource) => ({
-        ...resource,
+        ...projectMockResource(resource),
         columnCount: null,
         indexConfig: undefined,
         rowCount: null,
@@ -599,7 +604,12 @@ export async function getCatalogResources(ids: string[]) {
 
   if (useMock) {
     const byId = new Map(mockResources.map((item) => [item.id, item]));
-    return wait(uniqueIds.map((id) => byId.get(id)).filter(Boolean) as CatalogResource[]);
+    return wait(
+      uniqueIds
+        .map((id) => byId.get(id))
+        .filter((resource): resource is CatalogResource => Boolean(resource))
+        .map(projectMockResource),
+    );
   }
 
   const resources: CatalogResource[] = [];
@@ -669,7 +679,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
     };
     mockResources.unshift(resource);
     emitMockChange();
-    return wait(resource);
+    return wait(projectMockResource(resource));
   }
 
   const response = await http.post<{ id?: string } & BackendResource>(
@@ -758,7 +768,7 @@ export async function updateCatalogResource(
 
     mockResources[index] = nextResource;
     emitMockChange();
-    return wait(nextResource);
+    return wait(projectMockResource(nextResource));
   }
 
   await http.put(
@@ -829,7 +839,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
     };
     mockResources.unshift(resource);
     emitMockChange();
-    return wait(resource);
+    return wait(projectMockResource(resource));
   }
 
   const response = await http.post<{ id?: string } & BackendResource>(
@@ -898,7 +908,7 @@ export async function updateDerivedView(
     };
     mockResources[index] = next;
     emitMockChange();
-    return wait(next);
+    return wait(projectMockResource(next));
   }
 
   await http.put(
@@ -1011,7 +1021,7 @@ export async function setCatalogResourceEnabled(id: string, enabled: boolean) {
     };
     mockResources[index] = updated;
     emitMockChange();
-    return wait(updated);
+    return wait(projectMockResource(updated));
   }
 
   await http.post(`/vega-backend/v1/resources/${id}/${enabled ? "enable" : "disable"}`);

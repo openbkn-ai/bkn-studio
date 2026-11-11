@@ -5,14 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { defaultDevRuntimeUser, getDevRuntimeUser } from "@/framework/runtime/dev-profile";
+
 import type {
   PermissionRequest,
   PermissionRequestFilters,
   PermissionRequestReview,
 } from "./permission-requests.service";
 
-const localUserID = "266c6a42-6131-4d62-8f39-853e7093701c";
+// Existing fixtures stay owned by the administrator when the active mock role changes.
+const localUserID = defaultDevRuntimeUser.id ?? "";
 const localReviewerID = localUserID;
+const localAdminName = defaultDevRuntimeUser.name ?? "";
 
 const requests: PermissionRequest[] = [
   {
@@ -20,7 +24,7 @@ const requests: PermissionRequest[] = [
     requester_id: "mock-user-1",
     requester_name: "Demo User",
     reviewer_id: localReviewerID,
-    reviewer_name: "Local Admin",
+    reviewer_name: localAdminName,
     resource_type: "knowledge_network",
     resource_id: "demo-network",
     resource_name: "示例知识网络",
@@ -36,7 +40,7 @@ const requests: PermissionRequest[] = [
     requester_id: "mock-user-2",
     requester_name: "Alex Chen",
     reviewer_id: localReviewerID,
-    reviewer_name: "Local Admin",
+    reviewer_name: localAdminName,
     resource_type: "object_type",
     resource_id: "demo-network/customer",
     resource_name: "客户",
@@ -51,7 +55,7 @@ const requests: PermissionRequest[] = [
   {
     id: "mock-permission-request-3",
     requester_id: localUserID,
-    requester_name: "Local Admin",
+    requester_name: localAdminName,
     resource_type: "catalog",
     resource_id: "demo-catalog",
     resource_name: "示例数据目录",
@@ -86,11 +90,17 @@ export function listMockPermissionRequests(
   offset: number,
   filters: PermissionRequestFilters,
 ) {
+  const userID = getDevRuntimeUser().id;
   const matching = requests
     .filter((request) => {
-      if (kind === "mine" && request.requester_id !== localUserID) return false;
-      if (kind === "todo" && request.status !== "pending") return false;
-      if (kind === "reviewed" && request.status === "pending") return false;
+      if (kind === "mine" && request.requester_id !== userID) return false;
+      if (kind === "todo" && (request.status !== "pending" || request.reviewer_id !== userID))
+        return false;
+      if (
+        kind === "reviewed" &&
+        !reviews[request.id]?.some((review) => review.reviewer_id === userID)
+      )
+        return false;
       if (
         filters.requester &&
         !request.requester_name.toLowerCase().includes(filters.requester.toLowerCase())
@@ -115,14 +125,23 @@ export function listMockPermissionRequests(
   };
 }
 
-export function getMockPermissionRequest(id: string) {
-  const request = requests.find((entry) => entry.id === id);
+function findVisibleRequest(id: string) {
+  const userID = getDevRuntimeUser().id;
+  const request = requests.find(
+    (entry) => entry.id === id && (entry.requester_id === userID || entry.reviewer_id === userID),
+  );
   if (!request) throw new Error("Permission request not found");
+  return request;
+}
+
+export function getMockPermissionRequest(id: string) {
+  const request = findVisibleRequest(id);
   return { ...request, operations: [...request.operations] };
 }
 
 export function listMockPermissionRequestReviews(id: string) {
-  return [...(reviews[id] ?? [])];
+  findVisibleRequest(id);
+  return (reviews[id] ?? []).map((review) => ({ ...review }));
 }
 
 export function decideMockPermissionRequest(
@@ -130,18 +149,21 @@ export function decideMockPermissionRequest(
   decision: "approve" | "reject",
   comment: string,
 ) {
-  const request = requests.find((entry) => entry.id === id);
-  if (!request) throw new Error("Permission request not found");
+  const request = findVisibleRequest(id);
+  const user = getDevRuntimeUser();
+  if (request.reviewer_id !== user.id || request.status !== "pending") {
+    throw new Error("Permission request cannot be reviewed");
+  }
   const now = new Date().toISOString();
   request.status = decision === "approve" ? "granted" : "rejected";
-  request.reviewer_id = localReviewerID;
-  request.reviewer_name = "Local Admin";
+  request.reviewer_id = user.id ?? "";
+  request.reviewer_name = user.name ?? "";
   request.reviewed_at = now;
   reviews[id] ??= [];
   reviews[id].push({
     id: `mock-review-${Date.now()}`,
-    reviewer_id: localReviewerID,
-    reviewer_name: "Local Admin",
+    reviewer_id: user.id ?? "",
+    reviewer_name: user.name ?? "",
     decision,
     comment,
     created_at: now,
@@ -150,8 +172,10 @@ export function decideMockPermissionRequest(
 }
 
 export function cancelMockPermissionRequest(id: string) {
-  const request = requests.find((entry) => entry.id === id);
-  if (!request) throw new Error("Permission request not found");
+  const request = findVisibleRequest(id);
+  if (request.requester_id !== getDevRuntimeUser().id) {
+    throw new Error("Permission request cannot be cancelled");
+  }
   request.status = "cancelled";
 }
 
@@ -163,16 +187,19 @@ export function createMockPermissionRequest(payload: {
   proposal?: { kind: "row_filter" | "property_grants"; payload: unknown };
   reason: string;
 }) {
-  const id = `mock-permission-request-${Date.now()}`;
+  const id = `mock-permission-request-${Date.now()}-${requests.length}`;
+  const user = getDevRuntimeUser();
   const request: PermissionRequest = {
     id,
-    requester_id: localUserID,
-    requester_name: "Local Admin",
+    requester_id: user.id ?? "",
+    requester_name: user.name ?? "",
+    reviewer_id: localReviewerID,
+    reviewer_name: localAdminName,
     resource_type: payload.resourceType,
     resource_id: payload.resourceID,
     resource_name: payload.resourceName,
     operation: payload.operations?.[0] ?? "view",
-    operations: payload.operations ?? ["view"],
+    operations: [...(payload.operations ?? ["view"])],
     proposal_kind: payload.proposal?.kind ?? "grant",
     proposal_payload: payload.proposal ? JSON.stringify(payload.proposal.payload) : undefined,
     reason: payload.reason,
@@ -180,11 +207,16 @@ export function createMockPermissionRequest(payload: {
     created_at: new Date().toISOString(),
   };
   requests.unshift(request);
-  return request;
+  return { ...request, operations: [...request.operations] };
 }
 
 export function getMockPermissionRequestTodoSummary() {
-  return { pending_count: requests.filter((request) => request.status === "pending").length };
+  const userID = getDevRuntimeUser().id;
+  return {
+    pending_count: requests.filter(
+      (request) => request.status === "pending" && request.reviewer_id === userID,
+    ).length,
+  };
 }
 
 export function getMockPermissionRequestProposalPreview() {

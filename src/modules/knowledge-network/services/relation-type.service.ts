@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { http } from "@/framework/request/http";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
@@ -125,7 +126,7 @@ export async function listKnowledgeNetworkRelationTypes(networkId: string) {
     return wait(
       (mockRelationTypes[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -198,7 +199,10 @@ export async function listKnowledgeNetworkRelationTypePage(
       entries: (query.limit < 0
         ? sorted
         : sorted.slice(query.offset, query.offset + query.limit)
-      ).map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      ).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
@@ -236,7 +240,9 @@ export async function getKnowledgeNetworkRelationType(
         const record = (mockRelationTypes[networkId] ?? []).find(
           (item) => item.id === relationTypeId,
         );
-        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+        return record
+          ? { ...record, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+          : null;
       })(),
     );
   }

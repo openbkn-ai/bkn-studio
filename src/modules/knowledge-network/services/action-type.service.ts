@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { getActionTypeOperationKind } from "../utils/action-type-operation";
 import { getActionTypeToolboxMetadataType } from "./action-type-tool.service";
 import type { ActionTypeOperationKind } from "../types/action-type";
@@ -120,7 +121,7 @@ export async function listKnowledgeNetworkActionTypes(
     return wait(
       (mockActionTypes[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -228,9 +229,10 @@ export async function listKnowledgeNetworkActionTypePage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: sorted.slice(query.offset, query.offset + query.limit).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
@@ -283,7 +285,9 @@ export async function getKnowledgeNetworkActionType(
     return wait(
       (() => {
         const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
-        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+        return record
+          ? { ...record, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+          : null;
       })(),
     );
   }

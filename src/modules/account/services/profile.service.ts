@@ -6,6 +6,8 @@
  */
 
 import { http } from "@/framework/request/http";
+import { getDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import { getMockUserRole } from "@/framework/runtime/mock-user";
 
 /** Current user profile from GET /api/safe/v1/me. Users may update name, email, and telephone; all other fields are read-only. */
 export type MyProfile = {
@@ -43,18 +45,9 @@ type BackendMe = {
   updated_at?: string;
 };
 
-let mockProfile: MyProfile = {
-  id: "local-admin",
-  account: "local-admin",
-  name: "Local Admin",
-  email: "admin@bkn.local",
-  telephone: "",
-  accountType: "user",
-  enabled: true,
-  departments: ["bkn-platform"],
-  roles: ["super_admin"],
-  updatedAt: "2026-01-01T00:00:00Z",
-};
+const mockProfileUpdates: Partial<
+  Record<"admin" | "viewer", ProfileUpdatePayload & { updatedAt: string }>
+> = {};
 
 function mapMe(data: BackendMe): MyProfile {
   return {
@@ -73,7 +66,21 @@ function mapMe(data: BackendMe): MyProfile {
 
 export async function getMyProfile(): Promise<MyProfile> {
   if (useMock) {
-    return mockProfile;
+    const role = getMockUserRole();
+    const user = getDevRuntimeUser();
+    return {
+      id: user.id ?? `local-${role}`,
+      account: `local-${role}`,
+      name: user.name ?? "",
+      email: `${role}@bkn.local`,
+      telephone: "",
+      accountType: "user",
+      enabled: true,
+      departments: ["bkn-platform"],
+      roles: user.roles,
+      updatedAt: "2026-01-01T00:00:00Z",
+      ...mockProfileUpdates[role],
+    };
   }
   const response = await http.get<BackendMe>("/safe/v1/me");
   return mapMe(response.data);
@@ -86,12 +93,13 @@ export async function getMyProfile(): Promise<MyProfile> {
  */
 export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<MyProfile> {
   if (useMock) {
-    mockProfile = {
-      ...mockProfile,
+    const role = getMockUserRole();
+    mockProfileUpdates[role] = {
+      ...mockProfileUpdates[role],
       ...payload,
       updatedAt: new Date().toISOString(),
     };
-    return mockProfile;
+    return getMyProfile();
   }
   // PUT response shape is not guaranteed; it may be 204 or return only changed fields, so GET again for the authoritative complete profile.
   await http.put("/safe/v1/me", payload, { skipErrorToast: true });
