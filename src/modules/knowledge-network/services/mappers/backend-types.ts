@@ -232,7 +232,9 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
   operation_config?: import("../../utils/action-type-operation").BackendActionOperationConfig;
   action_source?: {
     box_id?: string;
+    box_name?: string;
     mcp_id?: string;
+    mcp_name?: string;
     tool_id?: string;
     tool_name?: string;
     type?: "manual" | "mcp" | "tool";

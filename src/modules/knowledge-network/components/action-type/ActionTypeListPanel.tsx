@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -26,6 +26,11 @@ import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ActionTypeCreateEntryModal } from "@/modules/knowledge-network/components/action-type/ActionTypeCreateEntryModal";
+import {
+  getActionTypeToolboxMetadataType,
+  needsActionTypeActionSourceDisplayResolution,
+  resolveActionTypeActionSourceDisplayWithTimeout,
+} from "@/modules/knowledge-network/services/action-type-tool.service";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import {
   ObjectTypeResourceGraph,
@@ -52,17 +57,28 @@ import {
 } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   actionTypeOperationLabelKey,
+  actionTypeSpecificOperationLabelKey,
   getActionTypeOperationKind,
   readActionTypeOperationKind,
 } from "@/modules/knowledge-network/utils/action-type-operation";
-import type { ActionTypeOperationKind } from "@/modules/knowledge-network/types/action-type";
+import type {
+  ActionTypeActionSource,
+  ActionTypeExecutionToolCategory,
+  ActionTypeOperationKind,
+} from "@/modules/knowledge-network/types/action-type";
 import type {
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { listKnowledgeNetworkActionTypePage } from "@/modules/knowledge-network/services/action-type.service";
+import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/relation-type.service";
+import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
+import {
+  getActionSourceDisplayName,
+  getReadableActionSourceDisplayName,
+} from "@/modules/knowledge-network/utils/action-type-execution";
 
 import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -76,23 +92,6 @@ type ActionTypeListPanelProps = {
   onDelete: (records: KnowledgeNetworkActionTypeRecord[]) => Promise<void>;
 };
 
-function getActionKindLabel(
-  actionKind: KnowledgeNetworkActionTypeKind,
-  t: (key: string) => string,
-) {
-  switch (actionKind) {
-    case "update":
-      return t("knowledgeNetwork.actionTypeKindUpdate");
-    case "delete":
-      return t("knowledgeNetwork.actionTypeKindDelete");
-    case "notify":
-      return t("knowledgeNetwork.actionTypeKindNotify");
-    case "create":
-    default:
-      return t("knowledgeNetwork.actionTypeKindCreate");
-  }
-}
-
 function readActionKind(value: string | null): "all" | KnowledgeNetworkActionTypeKind {
   return value === "create" || value === "delete" || value === "notify" || value === "update"
     ? value
@@ -105,6 +104,18 @@ function readSortBy(value: string | null): "name" | "updateTime" {
 
 function readSortDirection(value: string | null): "asc" | "desc" {
   return value === "asc" ? "asc" : "desc";
+}
+
+function readExecutionToolCategory(value: string | null): ActionTypeExecutionToolCategory | "all" {
+  return value === "openapi" || value === "function" || value === "mcp" ? value : "all";
+}
+
+function actionSourceKey(source: ActionTypeActionSource): string {
+  return [
+    source.type,
+    source.boxId || source.mcpId || "",
+    source.toolId || source.toolName || "",
+  ].join(":");
 }
 
 export function ActionTypeListPanel({
@@ -127,8 +138,17 @@ export function ActionTypeListPanel({
   const [operationFilter, setOperationFilter] = useState<ActionTypeOperationKind | "all">(
     () => readActionTypeOperationKind(searchParams.get("operation")) ?? "all",
   );
+  const [relationOperationFilter, setRelationOperationFilter] = useState<
+    "all" | "create" | "delete"
+  >(() => {
+    const value = searchParams.get("relationOperation");
+    return value === "create" || value === "delete" ? value : "all";
+  });
   const [objectTypeFilter, setObjectTypeFilter] = useState(
     () => searchParams.get("objectType") ?? "all",
+  );
+  const executionToolCategory = readExecutionToolCategory(
+    searchParams.get("executionToolCategory"),
   );
   const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
     readSortBy(searchParams.get("sort")),
@@ -151,6 +171,16 @@ export function ActionTypeListPanel({
   const [authorizingRecord, setAuthorizingRecord] =
     useState<KnowledgeNetworkActionTypeRecord | null>(null);
   const [items, setItems] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
+  const resolvedActionSources = useRef(new Map<string, ActionTypeActionSource>());
+  const resolvingActionSources = useRef(new Set<string>());
+  const [, updateActionSourceDisplays] = useState(0);
+  const toolboxCategories = useRef(new Map<string, ActionTypeExecutionToolCategory | null>());
+  const resolvingToolboxCategories = useRef(new Set<string>());
+  const [, updateToolboxCategories] = useState(0);
+  const relationCache = useRef(new Map<string, KnowledgeNetworkRelationTypeRecord | null>());
+  const [relationTypes, setRelationTypes] = useState<
+    Record<string, KnowledgeNetworkRelationTypeRecord | null>
+  >({});
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -173,6 +203,41 @@ export function ActionTypeListPanel({
   }, [keyword]);
 
   useEffect(() => {
+    const visible = viewMode === "list" ? items : [];
+    for (const record of visible) {
+      const source = record.actionSource;
+      if (
+        source?.type === "tool" &&
+        source.boxId &&
+        !toolboxCategories.current.has(source.boxId) &&
+        !resolvingToolboxCategories.current.has(source.boxId)
+      ) {
+        const boxId = source.boxId;
+        resolvingToolboxCategories.current.add(boxId);
+        void getActionTypeToolboxMetadataType(boxId)
+          .then((category) => toolboxCategories.current.set(boxId, category ?? null))
+          .catch(() => toolboxCategories.current.set(boxId, null))
+          .finally(() => {
+            resolvingToolboxCategories.current.delete(boxId);
+            updateToolboxCategories((current) => current + 1);
+          });
+      }
+      if (!source || !needsActionTypeActionSourceDisplayResolution(source)) continue;
+      const key = actionSourceKey(source);
+      if (resolvedActionSources.current.has(key) || resolvingActionSources.current.has(key))
+        continue;
+      resolvingActionSources.current.add(key);
+      void resolveActionTypeActionSourceDisplayWithTimeout(source)
+        .then((resolved) => resolvedActionSources.current.set(key, resolved))
+        .catch(() => resolvedActionSources.current.set(key, source))
+        .finally(() => {
+          resolvingActionSources.current.delete(key);
+          updateActionSourceDisplays((current) => current + 1);
+        });
+    }
+  }, [items, viewMode]);
+
+  useEffect(() => {
     if (viewMode !== "list") {
       setIsLoading(false);
       return;
@@ -181,11 +246,16 @@ export function ActionTypeListPanel({
     setIsLoading(true);
     void listKnowledgeNetworkActionTypePage(networkId, {
       actionKind: actionKindFilter === "all" ? undefined : actionKindFilter,
+      executionToolCategory: executionToolCategory === "all" ? undefined : executionToolCategory,
       direction: sortDirection,
       limit: pageSize,
       namePattern: debouncedKeyword,
       objectTypeId: objectTypeFilter === "all" ? undefined : objectTypeFilter,
       operationKind: operationFilter === "all" ? undefined : operationFilter,
+      relationOperation:
+        operationFilter === "relation" && relationOperationFilter !== "all"
+          ? relationOperationFilter
+          : undefined,
       offset: (page - 1) * pageSize,
       sort: sortBy === "name" ? "name" : "update_time",
     })
@@ -221,9 +291,11 @@ export function ActionTypeListPanel({
   }, [
     actionKindFilter,
     debouncedKeyword,
+    executionToolCategory,
     networkId,
     objectTypeFilter,
     operationFilter,
+    relationOperationFilter,
     page,
     pageSize,
     refreshVersion,
@@ -233,10 +305,53 @@ export function ActionTypeListPanel({
   ]);
 
   useEffect(() => {
+    const relationIds = items
+      .filter((item) => item.operationConfig?.type === "relation")
+      .map((item) => item.operationConfig)
+      .filter(
+        (config): config is Extract<typeof config, { type: "relation" }> =>
+          config?.type === "relation",
+      )
+      .map((config) => config.relationTypeId);
+    const missingIds = [...new Set(relationIds)].filter(
+      (id) => !relationCache.current.has(`${networkId}:${refreshVersion}:${id}`),
+    );
+    if (!missingIds.length) return;
+    let cancelled = false;
+    void Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          return [id, await getKnowledgeNetworkRelationTypeDetail(networkId, id)] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, KnowledgeNetworkRelationTypeRecord | null> = {};
+      results.forEach(([id, relation]) => {
+        const key = `${networkId}:${refreshVersion}:${id}`;
+        relationCache.current.set(key, relation);
+        next[key] = relation;
+      });
+      setRelationTypes((current) => ({ ...current, ...next }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, networkId, refreshVersion]);
+
+  useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextActionKind = readActionKind(searchParams.get("actionKind"));
+    const nextRelationOperation = searchParams.get("relationOperation");
     const nextObjectType = searchParams.get("objectType") ?? "all";
     setOperationFilter(readActionTypeOperationKind(searchParams.get("operation")) ?? "all");
+    setRelationOperationFilter(
+      nextRelationOperation === "create" || nextRelationOperation === "delete"
+        ? nextRelationOperation
+        : "all",
+    );
     const nextSortBy = readSortBy(searchParams.get("sort"));
     const nextSortDirection = readSortDirection(searchParams.get("order"));
     const nextPage = readPositiveInteger(searchParams.get("page"), 1);
@@ -263,18 +378,22 @@ export function ActionTypeListPanel({
     setOrDelete("q", keyword.trim(), "");
     setOrDelete("actionKind", actionKindFilter, "all");
     setOrDelete("objectType", objectTypeFilter, "all");
+    setOrDelete("executionToolCategory", executionToolCategory, "all");
     setOrDelete("operation", operationFilter, "all");
+    setOrDelete("relationOperation", relationOperationFilter, "all");
     setOrDelete("sort", sortBy, "updateTime");
     setOrDelete("order", sortDirection, "desc");
     setOrDelete("page", String(page), "1");
     setOrDelete("pageSize", String(pageSize), "10");
     if (viewMode === "graph") {
       nextParams.delete("view");
+      nextParams.delete("graphScope");
       nextParams.delete("actionTypeId");
       if (selectedGraphObjectTypeId) nextParams.set("objectTypeId", selectedGraphObjectTypeId);
       else nextParams.delete("objectTypeId");
     } else {
       nextParams.set("view", "list");
+      nextParams.delete("graphScope");
       nextParams.delete("objectTypeId");
       nextParams.delete("actionTypeId");
       writeKnowledgeNetworkGraphSelection(nextParams);
@@ -284,9 +403,11 @@ export function ActionTypeListPanel({
     }
   }, [
     actionKindFilter,
+    executionToolCategory,
     keyword,
     objectTypeFilter,
     operationFilter,
+    relationOperationFilter,
     page,
     pageSize,
     searchParams,
@@ -301,9 +422,10 @@ export function ActionTypeListPanel({
     () =>
       Boolean(keyword.trim()) ||
       actionKindFilter !== "all" ||
+      executionToolCategory !== "all" ||
       objectTypeFilter !== "all" ||
       operationFilter !== "all",
-    [actionKindFilter, keyword, objectTypeFilter, operationFilter],
+    [actionKindFilter, executionToolCategory, keyword, objectTypeFilter, operationFilter],
   );
 
   const selectedRows = useMemo(
@@ -396,7 +518,7 @@ export function ActionTypeListPanel({
     }
   };
 
-  const columns: TableProps<KnowledgeNetworkActionTypeRecord>["columns"] = [
+  const columns: NonNullable<TableProps<KnowledgeNetworkActionTypeRecord>["columns"]> = [
     {
       dataIndex: "name",
       fixed: "left",
@@ -499,23 +621,78 @@ export function ActionTypeListPanel({
       },
     },
     {
-      dataIndex: "actionKind",
-      key: "actionKind",
-      title: t("knowledgeNetwork.actionOperationType"),
-      width: 180,
-      render: (value: KnowledgeNetworkActionTypeKind, record) => {
-        const kind = getActionTypeOperationKind(record);
-        return kind === "object"
-          ? `${t(actionTypeOperationLabelKey(kind))} · ${getActionKindLabel(value, t)}`
-          : t(actionTypeOperationLabelKey(kind));
+      key: "category",
+      title: t("knowledgeNetwork.actionOperationCategory"),
+      width: 150,
+      render: (_value, record) =>
+        t(actionTypeOperationLabelKey(getActionTypeOperationKind(record))),
+    },
+    {
+      key: "specificOperation",
+      title: t("knowledgeNetwork.actionOperationSpecific"),
+      width: 150,
+      render: (_value, record) => t(actionTypeSpecificOperationLabelKey(record)),
+    },
+    {
+      key: "scope",
+      title: t("knowledgeNetwork.actionOperationScope"),
+      width: 270,
+      render: (_value, record) => {
+        if (getActionTypeOperationKind(record) === "tool") {
+          return t("knowledgeNetwork.actionIndependentScope");
+        }
+        if (record.operationConfig?.type !== "relation") {
+          return record.objectTypeName || "--";
+        }
+        const relation =
+          relationTypes[`${networkId}:${refreshVersion}:${record.operationConfig.relationTypeId}`];
+        if (!relation) return record.operationConfig.relationTypeId || "--";
+        return t("knowledgeNetwork.actionRelationScope", {
+          source: relation.sourceObjectTypeName,
+          relation: relation.name,
+          target: relation.targetObjectTypeName,
+        });
       },
     },
     {
-      dataIndex: "objectTypeName",
-      key: "objectTypeName",
-      title: t("knowledgeNetwork.actionTypeObject"),
-      width: 180,
-      render: (value: string, record) => (record.objectTypeId ? value || "--" : "--"),
+      key: "toolCategory",
+      title: t("knowledgeNetwork.actionTypeExecutionToolCategory"),
+      width: 130,
+      render: (_value, record) => {
+        const source = record.actionSource;
+        if (source?.type === "mcp") {
+          return t("executionFactory.executionUnitTabsV2.mcp");
+        }
+        if (source?.type !== "tool" || !source.boxId) return "--";
+        const category = toolboxCategories.current.get(source.boxId);
+        if (category === undefined) {
+          return t("knowledgeNetwork.actionTypeExecutionSourceResolving");
+        }
+        if (category === "openapi") return t("executionFactory.openapiToolboxTab");
+        if (category === "function") return t("executionFactory.functionToolboxTab");
+        return "--";
+      },
+    },
+    {
+      key: "executionTool",
+      title: t("knowledgeNetwork.actionTypeExecutionToolFilter"),
+      width: 220,
+      render: (_value, record) => {
+        const source = record.actionSource;
+        const resolved = source && resolvedActionSources.current.get(actionSourceKey(source));
+        if (source && needsActionTypeActionSourceDisplayResolution(source) && !resolved) {
+          return t("knowledgeNetwork.actionTypeExecutionSourceResolving");
+        }
+        const name = getReadableActionSourceDisplayName(resolved || source);
+        if (name) return <span title={name}>{name}</span>;
+        return source ? (
+          <span title={getActionSourceDisplayName(source)}>
+            {t("knowledgeNetwork.actionTypeExecutionSourceUnavailable")}
+          </span>
+        ) : (
+          "--"
+        );
+      },
     },
     {
       dataIndex: "tags",
@@ -540,7 +717,6 @@ export function ActionTypeListPanel({
       render: (value: string) => value || "--",
     },
   ];
-
   const openCreate = () => setCreateEntryOpen(true);
 
   const renderEmptyContent = () => {
@@ -577,6 +753,7 @@ export function ActionTypeListPanel({
   const selectGraphObject = (record: KnowledgeNetworkObjectTypeRecord) => {
     const nextParams = new URLSearchParams(searchParams);
     writeKnowledgeNetworkGraphSelection(nextParams);
+    nextParams.delete("graphScope");
     nextParams.set("objectTypeId", record.id);
     setSearchParams(nextParams, { replace: true });
     setSelectedGraphObjectTypeId(record.id);
@@ -643,7 +820,7 @@ export function ActionTypeListPanel({
               />
             </div>
           </div>
-          <div className={graphStyles.operationRow}>
+          <div className={`${graphStyles.operationRow} ${styles.actionTypeOperationRow}`}>
             <div className={styles.toolbarLeft}>
               {canModify ? (
                 <AppButton
@@ -681,24 +858,28 @@ export function ActionTypeListPanel({
               />
               {viewMode === "list" ? (
                 <>
-                  <ObjectTypeRemoteFilter
-                    label={t("knowledgeNetwork.actionTypeObject")}
-                    networkId={networkId}
-                    onChange={(value) => {
-                      setObjectTypeFilter(value);
-                      setPage(1);
-                    }}
-                    value={objectTypeFilter}
-                  />
+                  {operationFilter !== "tool" ? (
+                    <ObjectTypeRemoteFilter
+                      label={t("knowledgeNetwork.actionTypeObject")}
+                      networkId={networkId}
+                      onChange={(value) => {
+                        setObjectTypeFilter(value);
+                        setPage(1);
+                      }}
+                      value={objectTypeFilter}
+                    />
+                  ) : null}
                   <div className={styles.filterGroup}>
                     <span className={styles.filterLabel}>
-                      {t("knowledgeNetwork.actionOperationType")}
+                      {t("knowledgeNetwork.actionOperationCategory")}
                     </span>
                     <Select
                       className={styles.filterSelect}
                       onChange={(value) => {
                         setOperationFilter(value);
                         setActionKindFilter("all");
+                        setRelationOperationFilter("all");
+                        if (value === "tool") setObjectTypeFilter("all");
                         setPage(1);
                       }}
                       options={[
@@ -711,41 +892,108 @@ export function ActionTypeListPanel({
                       value={operationFilter}
                     />
                   </div>
+                  <div className={styles.filterGroup}>
+                    <span className={styles.filterLabel}>
+                      {t("knowledgeNetwork.actionTypeExecutionToolCategory")}
+                    </span>
+                    <Select
+                      aria-label={t("knowledgeNetwork.actionTypeExecutionToolCategory")}
+                      className={styles.filterSelect}
+                      onChange={(value: ActionTypeExecutionToolCategory | "all") => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        if (value === "all") nextParams.delete("executionToolCategory");
+                        else nextParams.set("executionToolCategory", value);
+                        setSearchParams(nextParams, { replace: true });
+                        setPage(1);
+                      }}
+                      options={[
+                        { label: t("common.all"), value: "all" },
+                        { label: t("executionFactory.openapiToolboxTab"), value: "openapi" },
+                        { label: t("executionFactory.functionToolboxTab"), value: "function" },
+                        { label: t("executionFactory.executionUnitTabsV2.mcp"), value: "mcp" },
+                      ]}
+                      value={executionToolCategory}
+                    />
+                  </div>
+                  {operationFilter === "object" || operationFilter === "relation" ? (
+                    <div className={styles.filterGroup}>
+                      <span className={styles.filterLabel}>
+                        {t("knowledgeNetwork.actionOperationSpecific")}
+                      </span>
+                      <Select
+                        className={styles.filterSelect}
+                        onChange={(value: "all" | KnowledgeNetworkActionTypeKind) => {
+                          if (operationFilter === "object") setActionKindFilter(value);
+                          else
+                            setRelationOperationFilter(
+                              value === "create" || value === "delete" ? value : "all",
+                            );
+                          setPage(1);
+                        }}
+                        options={[
+                          { label: t("common.all"), value: "all" },
+                          ...(operationFilter === "object"
+                            ? (["create", "update", "delete", "notify"] as const).map((kind) => ({
+                                label: t(
+                                  actionTypeSpecificOperationLabelKey({
+                                    actionKind: kind,
+                                    objectTypeId: "object",
+                                  }),
+                                ),
+                                value: kind,
+                              }))
+                            : (["create", "delete"] as const).map((kind) => ({
+                                label: t(
+                                  kind === "create"
+                                    ? "knowledgeNetwork.actionRelationCreate"
+                                    : "knowledgeNetwork.actionRelationDelete",
+                                ),
+                                value: kind,
+                              }))),
+                        ]}
+                        value={
+                          operationFilter === "object" ? actionKindFilter : relationOperationFilter
+                        }
+                      />
+                    </div>
+                  ) : null}
                 </>
               ) : null}
-              <Dropdown
-                menu={{
-                  items: [
-                    { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
-                    { key: "name", label: t("knowledgeNetwork.sortByName") },
-                  ],
-                  onClick: ({ key }) => {
-                    const nextSortBy = key as "name" | "updateTime";
-                    setSortDirection((current) =>
-                      nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
-                    );
-                    setSortBy(nextSortBy);
-                    setPage(1);
-                  },
-                }}
-                trigger={["click"]}
-              >
+              <div className={styles.actionTypeToolbarActions}>
+                <Dropdown
+                  menu={{
+                    items: [
+                      { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
+                      { key: "name", label: t("knowledgeNetwork.sortByName") },
+                    ],
+                    onClick: ({ key }) => {
+                      const nextSortBy = key as "name" | "updateTime";
+                      setSortDirection((current) =>
+                        nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
+                      );
+                      setSortBy(nextSortBy);
+                      setPage(1);
+                    },
+                  }}
+                  trigger={["click"]}
+                >
+                  <button
+                    aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                    className={styles.iconButton}
+                    type="button"
+                  >
+                    <SortAscendingOutlined />
+                  </button>
+                </Dropdown>
                 <button
-                  aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                  aria-label={t("common.refresh")}
                   className={styles.iconButton}
+                  onClick={() => setRefreshVersion((current) => current + 1)}
                   type="button"
                 >
-                  <SortAscendingOutlined />
+                  <ReloadOutlined />
                 </button>
-              </Dropdown>
-              <button
-                aria-label={t("common.refresh")}
-                className={styles.iconButton}
-                onClick={() => setRefreshVersion((current) => current + 1)}
-                type="button"
-              >
-                <ReloadOutlined />
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -772,7 +1020,7 @@ export function ActionTypeListPanel({
                     }
                   : undefined
               }
-              scroll={{ x: 1180 }}
+              scroll={{ x: 1600 }}
               size="middle"
             />
           </div>

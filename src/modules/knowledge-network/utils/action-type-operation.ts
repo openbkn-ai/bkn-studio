@@ -144,6 +144,24 @@ export function actionTypeOperationLabelKey(kind: ActionTypeOperationKind): stri
   }[kind];
 }
 
+export function actionTypeSpecificOperationLabelKey(
+  record: Pick<KnowledgeNetworkActionTypeRecord, "actionKind" | "objectTypeId" | "operationConfig">,
+): string {
+  const kind = getActionTypeOperationKind(record);
+  if (kind === "tool") return "knowledgeNetwork.actionOperationExecuteTool";
+  if (record.operationConfig?.type === "relation") {
+    return record.operationConfig.relationOperation === "create"
+      ? "knowledgeNetwork.actionRelationCreate"
+      : "knowledgeNetwork.actionRelationDelete";
+  }
+  return {
+    create: "knowledgeNetwork.actionObjectCreateInstance",
+    update: "knowledgeNetwork.actionObjectUpdateInstance",
+    delete: "knowledgeNetwork.actionObjectDeleteInstance",
+    notify: "knowledgeNetwork.actionTypeKindNotify",
+  }[record.actionKind];
+}
+
 export type BackendActionOperationConfig =
   | { type: "object" | "tool" }
   | {

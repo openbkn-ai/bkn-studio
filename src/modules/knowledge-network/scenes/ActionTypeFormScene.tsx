@@ -118,6 +118,19 @@ type BasicFormValues = DefinitionDeclarationFormValues & {
   tags: string[];
 };
 
+type ActionOperationDraft = {
+  affectComment?: string;
+  affectObjectTypeId?: string;
+  condition: ActionTypeCondition | null;
+  executionValue: ActionTypeExecutionConfig;
+  hasSavedCondition: boolean;
+  openRulePanels: string[];
+  otherObjectCondition: ActionTypeCondition | null;
+  relationAnchor?: "source" | "target";
+  relationTypeId?: string;
+  selectedRelation: KnowledgeNetworkRelationTypeRecord | null;
+};
+
 type ActionTypeFormSceneProps = {
   mode: "create" | "edit";
 };
@@ -196,6 +209,12 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const isObjectOperation = operationKind === "object";
   const isObjectBoundOperation = operationKind !== "tool";
   const [basicForm] = Form.useForm<BasicFormValues>();
+  const activeActionKind = useRef<BasicFormValues["actionKind"]>(
+    requestedOperation === "relation" ? "link" : "create",
+  );
+  const operationDrafts = useRef<
+    Partial<Record<BasicFormValues["actionKind"], ActionOperationDraft>>
+  >({});
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -354,6 +373,67 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined)
       ? true
       : isObjectOperation && (hasSavedCondition || !isActionConditionEmpty(watchedCondition));
+
+  const switchActionKind = (nextKind: BasicFormValues["actionKind"]) => {
+    const previousKind = activeActionKind.current;
+    if (previousKind === nextKind) return;
+
+    const condition = basicForm.getFieldValue("condition") as
+      ActionTypeCondition | null | undefined;
+    const otherObjectCondition = basicForm.getFieldValue("otherObjectCondition") as
+      ActionTypeCondition | null | undefined;
+    operationDrafts.current[previousKind] = {
+      affectComment: basicForm.getFieldValue("affectComment") as string | undefined,
+      affectObjectTypeId: basicForm.getFieldValue("affectObjectTypeId") as string | undefined,
+      condition: condition ? structuredClone(condition) : null,
+      executionValue: structuredClone(executionValue),
+      hasSavedCondition,
+      openRulePanels: [...openRulePanels],
+      otherObjectCondition: otherObjectCondition ? structuredClone(otherObjectCondition) : null,
+      relationAnchor: basicForm.getFieldValue("relationAnchor") as "source" | "target" | undefined,
+      relationTypeId: basicForm.getFieldValue("relationTypeId") as string | undefined,
+      selectedRelation,
+    };
+
+    const nextDraft = operationDrafts.current[nextKind];
+    basicForm.setFieldsValue({
+      actionKind: nextKind,
+      affectComment: nextDraft?.affectComment ?? "",
+      affectObjectTypeId: nextDraft?.affectObjectTypeId,
+      condition: nextDraft?.condition ? structuredClone(nextDraft.condition) : null,
+      otherObjectCondition: nextDraft?.otherObjectCondition
+        ? structuredClone(nextDraft.otherObjectCondition)
+        : null,
+      relationAnchor: nextDraft?.relationAnchor,
+      relationTypeId: nextDraft?.relationTypeId,
+    });
+    basicForm.setFields(
+      (
+        [
+          "condition",
+          "otherObjectCondition",
+          "relationTypeId",
+          "relationAnchor",
+          "affectComment",
+          "affectObjectTypeId",
+        ] as const
+      ).map((name) => ({ name, errors: [] })),
+    );
+    activeActionKind.current = nextKind;
+    setOperationKind(nextKind === "link" || nextKind === "unlink" ? "relation" : "object");
+    setSelectedRelation(nextDraft?.selectedRelation ?? null);
+    setExecutionValue(
+      nextDraft
+        ? structuredClone(nextDraft.executionValue)
+        : createDefaultActionTypeExecutionConfig(),
+    );
+    setExecutionSchemaState({ loaded: false, parameterCount: 0 });
+    setHasSavedCondition(nextDraft?.hasSavedCondition ?? false);
+    setOpenRulePanels(nextDraft?.openRulePanels ?? ["execution"]);
+    setExecutionSourceError(null);
+    setRelationBindingError(null);
+    setRelationIdentityError(null);
+  };
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -514,6 +594,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
 
           setExecutionValue(detail.executionConfig);
           setOperationKind(getActionTypeOperationKind(detail));
+          activeActionKind.current = nextBasic.actionKind;
+          operationDrafts.current = {};
           setHasSavedCondition(!isActionConditionEmpty(detail.condition));
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
@@ -846,11 +928,14 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                     onResolvedOptionsChange={mergeResolvedObjectTypes}
                     onChange={(nextId) => {
                       if (nextId !== watchedObjectTypeId) {
+                        operationDrafts.current = {};
                         basicForm.setFieldsValue({
                           condition: null,
                           otherObjectCondition: null,
                           relationTypeId: undefined,
                           relationAnchor: undefined,
+                          affectObjectTypeId: undefined,
+                          affectComment: "",
                         });
                         setSelectedRelation(null);
                         setHasSavedCondition(false);
@@ -883,35 +968,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 >
                   <Radio.Group
                     onChange={(event) => {
-                      const nextKind =
-                        event.target.value === "link" || event.target.value === "unlink"
-                          ? "relation"
-                          : "object";
-                      if (nextKind !== operationKind) {
-                        basicForm.setFieldsValue({
-                          relationTypeId: undefined,
-                          relationAnchor: undefined,
-                          otherObjectCondition: null,
-                        });
-                        setSelectedRelation(null);
-                        setRelationBindingError(null);
-                        setExecutionValue((current) => ({
-                          ...current,
-                          parameters: (current.parameters ?? []).map((parameter) =>
-                            parameter.valueFrom === "property" ||
-                            parameter.valueFrom === "source_identity" ||
-                            parameter.valueFrom === "target_identity"
-                              ? {
-                                  ...parameter,
-                                  valueFrom: "input",
-                                  value: undefined,
-                                  sourcePropertyName: undefined,
-                                }
-                              : parameter,
-                          ),
-                        }));
-                      }
-                      setOperationKind(nextKind);
+                      switchActionKind(event.target.value as BasicFormValues["actionKind"]);
                     }}
                     options={INSTANCE_OPERATIONS.map(({ kind, titleKey }) => ({
                       label: t(titleKey),
@@ -1098,6 +1155,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                         </p>
                       ) : null}
                       <ActionTypeExecutionEditor
+                        key={watchedActionKind ?? "create"}
                         networkId={networkId}
                         objectTypeId={
                           operationKind === "tool"

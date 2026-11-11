@@ -104,9 +104,11 @@ vi.mock("@/modules/knowledge-network/services/action-type.service", async (impor
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor", () => ({
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY: "tool-required",
   ActionTypeExecutionEditor: ({
+    onChange,
     onParameterSchemaStateChange,
     value,
   }: {
+    onChange?: (value: unknown) => void;
     onParameterSchemaStateChange?: (state: { loaded: boolean; parameterCount: number }) => void;
     value: unknown;
   }) => {
@@ -116,7 +118,18 @@ vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionE
       () => onParameterSchemaStateChange?.({ loaded: true, parameterCount: 0 }),
       [onParameterSchemaStateChange],
     );
-    return <div data-testid="action-execution-editor" />;
+    return (
+      <div data-testid="action-execution-editor">
+        <button
+          onClick={() =>
+            onChange?.({ sourceName: "Update tool", sourceType: "tool", parameters: [] })
+          }
+          type="button"
+        >
+          configure test tool
+        </button>
+      </div>
+    );
   },
   createDefaultActionTypeExecutionConfig: () => ({}),
   normalizeActionTypeExecutionConfig: (value: unknown) => value,
@@ -124,7 +137,21 @@ vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionE
 }));
 
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor", () => ({
-  ActionTypeConditionEditor: () => null,
+  ActionTypeConditionEditor: ({
+    onChange,
+    value,
+  }: {
+    onChange?: (value: { field: string; operation: string; value: string }) => void;
+    value?: { field?: string; value?: string } | null;
+  }) => (
+    <button
+      data-testid="action-condition-editor"
+      onClick={() => onChange?.({ field: "status", operation: "==", value: "active" })}
+      type="button"
+    >
+      {value?.field ? `${value.field}:${value.value}` : "empty condition"}
+    </button>
+  ),
 }));
 
 vi.mock(
@@ -397,12 +424,7 @@ describe("ActionTypeFormScene navigation context", () => {
     );
     expect(screen.queryByLabelText("knowledgeNetwork.actionRelationType")).toBeNull();
     expect(screen.queryByText(/knowledgeNetwork.actionRelationOtherCondition:/)).toBeNull();
-    expect(mocks.executionValue.current).toMatchObject({
-      parameters: [
-        expect.objectContaining({ valueFrom: "input" }),
-        expect.objectContaining({ valueFrom: "input" }),
-      ],
-    });
+    expect(mocks.executionValue.current).toEqual({});
     mocks.updateActionType.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
     await waitFor(() =>
@@ -417,6 +439,35 @@ describe("ActionTypeFormScene navigation context", () => {
         }),
       ),
     );
+  });
+
+  it("keeps conditions and execution settings separate for each instance operation", async () => {
+    mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    expect(await getTargetObjectSelect()).toHaveValue("orders");
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    fireEvent.click(screen.getByTestId("action-condition-editor"));
+    fireEvent.click(screen.getByRole("button", { name: "configure test tool" }));
+    expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:active");
+    expect(mocks.executionValue.current).toMatchObject({ sourceName: "Update tool" });
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationCreate/ }),
+    );
+    expect(screen.queryByTestId("action-condition-editor")).toBeNull();
+    expect(
+      screen.queryByText("knowledgeNetwork.actionTypeApplicableConditionCreateHint"),
+    ).toBeNull();
+    expect(mocks.executionValue.current).toEqual({});
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: /knowledgeNetwork.actionTypeInstanceOperationUpdate/ }),
+    );
+    expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:active");
+    expect(mocks.executionValue.current).toMatchObject({ sourceName: "Update tool" });
   });
 
   it("places the single aliases field below the action name and above tags", async () => {

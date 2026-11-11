@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getActionTypeOperationKind,
+  actionTypeSpecificOperationLabelKey,
   mapActionOperationConfig,
   toBackendActionOperationConfig,
   inferActionRelationBindings,
@@ -24,6 +25,25 @@ import {
 import type { ActionTypeExecutionParameter } from "../types/action-type";
 
 describe("action operation compatibility", () => {
+  it("labels object, relationship, and independent tool actions by their actual operation", () => {
+    expect(
+      actionTypeSpecificOperationLabelKey({ actionKind: "create", objectTypeId: "orders" }),
+    ).toBe("knowledgeNetwork.actionObjectCreateInstance");
+    expect(
+      actionTypeSpecificOperationLabelKey({
+        actionKind: "create",
+        objectTypeId: "orders",
+        operationConfig: {
+          type: "relation",
+          relationTypeId: "order_supplier",
+          relationOperation: "delete",
+        },
+      }),
+    ).toBe("knowledgeNetwork.actionRelationDelete");
+    expect(actionTypeSpecificOperationLabelKey({ actionKind: "notify", objectTypeId: "" })).toBe(
+      "knowledgeNetwork.actionOperationExecuteTool",
+    );
+  });
   it("infers the selected object's role for both directions and leaves self relations explicit", () => {
     const relation = { sourceObjectTypeId: "orders", targetObjectTypeId: "suppliers" };
     expect(getActionRelationAnchor(relation, "orders")).toBe("source");

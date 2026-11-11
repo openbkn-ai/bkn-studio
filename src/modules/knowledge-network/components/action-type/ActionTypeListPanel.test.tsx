@@ -5,18 +5,26 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigate = vi.hoisted(() => vi.fn());
 const listActionTypePage = vi.hoisted(() => vi.fn());
 const getObjectTypeDetail = vi.hoisted(() => vi.fn());
 const listObjectTypePage = vi.hoisted(() => vi.fn());
+const getRelationTypeDetail = vi.hoisted(() => vi.fn());
+const resolveActionSource = vi.hoisted(() => vi.fn());
+const getToolboxMetadata = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, string>) =>
+      key === "knowledgeNetwork.actionRelationScope"
+        ? `${values?.source} → ${values?.relation} → ${values?.target}`
+        : key,
+  }),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => ({
@@ -58,6 +66,20 @@ vi.mock("@/modules/knowledge-network/services/object-type.service", async (impor
   >()),
   getKnowledgeNetworkObjectTypeDetail: getObjectTypeDetail,
   listKnowledgeNetworkObjectTypePage: listObjectTypePage,
+}));
+
+vi.mock("@/modules/knowledge-network/services/relation-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/relation-type.service")
+  >()),
+  getKnowledgeNetworkRelationTypeDetail: getRelationTypeDetail,
+}));
+
+vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
+  getActionTypeToolboxMetadataType: getToolboxMetadata,
+  needsActionTypeActionSourceDisplayResolution: (source: { type: string; toolName?: string }) =>
+    source.type === "tool" && !source.toolName,
+  resolveActionTypeActionSourceDisplayWithTimeout: resolveActionSource,
 }));
 
 vi.mock("@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter", () => ({
@@ -139,16 +161,207 @@ beforeAll(() => {
 afterAll(() => {
   window.matchMedia = originalMatchMedia;
 });
+
+beforeEach(() => {
+  listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
+  resolveActionSource.mockImplementation((source) => Promise.resolve(source));
+  getToolboxMetadata.mockResolvedValue("openapi");
+});
+
 afterEach(() => {
   cleanup();
   navigate.mockReset();
   listActionTypePage.mockReset();
   getObjectTypeDetail.mockReset();
   listObjectTypePage.mockReset();
+  getRelationTypeDetail.mockReset();
+  resolveActionSource.mockReset();
+  getToolboxMetadata.mockReset();
   listObjectTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
 });
 
 describe("ActionTypeListPanel menu access", () => {
+  it("filters the list by the execution tool category", async () => {
+    renderPanel("/?view=list");
+
+    const category = screen.getByRole("combobox", {
+      name: "knowledgeNetwork.actionTypeExecutionToolCategory",
+    });
+    fireEvent.mouseDown(category);
+    expect(screen.getByText("executionFactory.functionToolboxTab")).toBeInTheDocument();
+    expect(screen.getByText("executionFactory.executionUnitTabsV2.mcp")).toBeInTheDocument();
+    fireEvent.click(await screen.findByText("executionFactory.openapiToolboxTab"));
+
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          executionToolCategory: "openapi",
+        }) as unknown,
+      ),
+    );
+    expect(
+      screen
+        .getByRole("columnheader", { name: /knowledgeNetwork.actionTypeExecutionToolFilter/ })
+        .querySelector(".ant-table-filter-trigger"),
+    ).toBeNull();
+
+    fireEvent.mouseDown(category);
+    fireEvent.click(screen.getAllByText("common.all").at(-1)!);
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenLastCalledWith(
+        "network-1",
+        expect.objectContaining({ executionToolCategory: undefined }) as unknown,
+      ),
+    );
+  });
+
+  it("resolves the execution tool name for a list row before displaying it", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "create",
+          actionSource: {
+            boxId: "box-uuid",
+            toolId: "tool-uuid",
+            type: "tool",
+          },
+          color: "#1677ff",
+          description: "",
+          id: "create-order",
+          name: "Create order",
+          objectTypeId: "orders",
+          objectTypeName: "Orders",
+          tags: [],
+          updateTime: "",
+          updaterName: "",
+        },
+      ],
+      totalCount: 1,
+    });
+    resolveActionSource.mockResolvedValue({
+      boxId: "box-uuid",
+      boxName: "Orders API",
+      toolId: "tool-uuid",
+      toolName: "Create order",
+      type: "tool",
+    });
+
+    renderPanel("/?view=list");
+    expect(await screen.findByText("Orders API/Create order")).toBeInTheDocument();
+    expect(await screen.findByText("executionFactory.openapiToolboxTab")).toBeInTheDocument();
+    expect(screen.queryByText("box-uuid/tool-uuid")).toBeNull();
+    expect(resolveActionSource).toHaveBeenCalledWith(
+      expect.objectContaining({ boxId: "box-uuid", toolId: "tool-uuid" }),
+    );
+  });
+
+  it("shows distinct operation and relationship scope in the complete list", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "create",
+          color: "#1677ff",
+          description: "",
+          id: "create-order",
+          name: "Create order",
+          actionSource: {
+            boxId: "api-box",
+            boxName: "API toolset",
+            toolId: "send",
+            toolName: "Send API",
+            type: "tool",
+          },
+          objectTypeId: "orders",
+          objectTypeName: "Orders",
+          tags: [],
+          updateTime: "",
+          updaterName: "",
+        },
+        {
+          actionKind: "create",
+          color: "#1677ff",
+          description: "",
+          id: "link-order",
+          name: "Link order",
+          objectTypeId: "orders",
+          objectTypeName: "Orders",
+          operationConfig: {
+            type: "relation",
+            relationTypeId: "order_supplier",
+            relationOperation: "create",
+          },
+          tags: [],
+          updateTime: "",
+          updaterName: "",
+        },
+        {
+          actionKind: "notify",
+          color: "#1677ff",
+          description: "",
+          id: "send-alert",
+          name: "Send alert",
+          objectTypeId: "",
+          objectTypeName: "",
+          operationConfig: { type: "tool" },
+          tags: [],
+          updateTime: "",
+          updaterName: "",
+        },
+      ],
+      totalCount: 3,
+    });
+    getRelationTypeDetail.mockResolvedValue({
+      id: "order_supplier",
+      name: "Supplied by",
+      sourceObjectTypeName: "Orders",
+      targetObjectTypeName: "Suppliers",
+    });
+
+    renderPanel();
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionObjectCreateInstance"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("knowledgeNetwork.actionRelationCreate")).toBeInTheDocument();
+    expect(screen.getByText("knowledgeNetwork.actionOperationExecuteTool")).toBeInTheDocument();
+    expect(screen.getByText("API toolset/Send API")).toBeInTheDocument();
+    expect(await screen.findByText("Orders → Supplied by → Suppliers")).toBeInTheDocument();
+    expect(getRelationTypeDetail).toHaveBeenCalledWith("network-1", "order_supplier");
+  });
+
+  it("passes the selected relationship operation through the list query", async () => {
+    listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    renderPanel("/?view=list&operation=relation&relationOperation=delete");
+
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          operationKind: "relation",
+          relationOperation: "delete",
+        }) as unknown,
+      ),
+    );
+  });
+
+  it("keeps the graph scoped to object-associated action types", async () => {
+    listObjectTypePage.mockResolvedValue({
+      entries: [{ id: "orders", name: "Orders", color: "#1677ff" }],
+      totalCount: 1,
+    });
+    renderPanel("/?graphScope=tool");
+
+    expect(await screen.findByTestId("action-type-graph")).toHaveTextContent("Orders");
+    expect(screen.queryByText("knowledgeNetwork.actionIndependentActions")).toBeNull();
+    expect(listActionTypePage).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({ objectTypeId: "orders" }) as unknown,
+    );
+    const requests = listActionTypePage.mock.calls as Array<[string, { objectTypeId?: string }]>;
+    expect(requests.every(([, query]) => query.objectTypeId === "orders")).toBe(true);
+  });
   it("opens object and tool entries and routes them into the shared editor", async () => {
     listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
     renderPanel("/?view=list", false, true);

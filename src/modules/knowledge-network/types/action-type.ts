@@ -54,6 +54,8 @@ export type ActionTypeAffect = {
 
 export type ActionTypeSourceKind = "manual" | "mcp" | "tool";
 
+export type ActionTypeExecutionToolCategory = "openapi" | "function" | "mcp";
+
 export type ActionTypeActionSource = {
   boxId?: string;
   boxName?: string;
@@ -85,6 +87,7 @@ export type ActionTypeExecutionConfig = {
 };
 
 export type KnowledgeNetworkActionTypeRecord = {
+  actionSource?: ActionTypeActionSource;
   operationConfig?: ActionTypeOperationConfig;
   actionKind: KnowledgeNetworkActionTypeKind;
   color: string;

@@ -187,7 +187,7 @@ function mapActionSourceKind(type?: BackendActionSource["type"]): ActionTypeSour
   }
 }
 
-function mapActionTypeActionSourceFromBackend(
+export function mapActionTypeActionSourceFromBackend(
   actionSource?: BackendActionSource,
 ): ActionTypeActionSource | undefined {
   if (!actionSource) {

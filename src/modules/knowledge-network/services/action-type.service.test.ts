@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const postMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
 const putMock = vi.hoisted(() => vi.fn());
+const getToolboxMetadata = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock, put: putMock },
@@ -25,12 +26,18 @@ vi.mock(
     resolveKnReadParams: () => Promise.resolve({ kn_version: "draft" }),
   }),
 );
+vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
+  getActionTypeToolboxMetadataType: getToolboxMetadata,
+}));
 
 describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "false");
     getMock.mockReset();
+    getToolboxMetadata.mockImplementation((boxId: string) =>
+      Promise.resolve(boxId === "api-box" ? "openapi" : "function"),
+    );
   });
 
   afterEach(() => {
@@ -107,6 +114,146 @@ describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
     );
     expect(result.totalCount).toBe(2);
     expect(result.entries.map((entry) => entry.id)).toEqual(["independent-2"]);
+  });
+
+  it("filters relationship operations before pagination", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            action_type: "add",
+            id: "link-1",
+            name: "Link order",
+            object_type_id: "orders",
+            operation_config: {
+              type: "relation",
+              relation_type_id: "order_supplier",
+              relation_operation: "create",
+            },
+          },
+          {
+            action_type: "delete",
+            id: "unlink-1",
+            name: "Unlink order",
+            object_type_id: "orders",
+            operation_config: {
+              type: "relation",
+              relation_type_id: "order_supplier",
+              relation_operation: "delete",
+            },
+          },
+        ],
+        total_count: 2,
+      },
+    });
+    const { listKnowledgeNetworkActionTypePage } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const result = await listKnowledgeNetworkActionTypePage("kn-1", {
+      limit: 1,
+      offset: 0,
+      operationKind: "relation",
+      relationOperation: "delete",
+    });
+
+    expect(result.totalCount).toBe(1);
+    expect(result.entries.map((entry) => entry.id)).toEqual(["unlink-1"]);
+  });
+
+  it("filters API toolsets, function sets and MCP services before pagination", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "api-1",
+            name: "First",
+            action_source: { type: "tool", box_id: "api-box", tool_id: "send" },
+          },
+          {
+            id: "other",
+            name: "Other",
+            action_source: { type: "tool", box_id: "other-box", tool_id: "send" },
+          },
+          {
+            id: "api-2",
+            name: "Second",
+            action_source: { type: "tool", box_id: "api-box", tool_id: "send" },
+          },
+          {
+            id: "mcp-1",
+            name: "MCP",
+            action_source: { type: "mcp", mcp_id: "service-1", tool_name: "send" },
+          },
+        ],
+        total_count: 4,
+      },
+    });
+    const { listKnowledgeNetworkActionTypePage } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const toolPage = await listKnowledgeNetworkActionTypePage("kn-1", {
+      executionToolCategory: "openapi",
+      limit: 1,
+      offset: 1,
+    });
+    expect(getMock).toHaveBeenCalledWith(
+      "/bkn-backend/v1/knowledge-networks/kn-1/action-types",
+      expect.objectContaining({
+        params: expect.objectContaining({ limit: -1, offset: 0 }) as unknown,
+      }),
+    );
+    expect(toolPage.totalCount).toBe(2);
+    expect(toolPage.entries.map((entry) => entry.id)).toEqual(["api-2"]);
+
+    const functionPage = await listKnowledgeNetworkActionTypePage("kn-1", {
+      executionToolCategory: "function",
+      limit: 10,
+      offset: 0,
+    });
+    expect(functionPage.entries.map((entry) => entry.id)).toEqual(["other"]);
+
+    const mcpPage = await listKnowledgeNetworkActionTypePage("kn-1", {
+      executionToolCategory: "mcp",
+      limit: 10,
+      offset: 0,
+    });
+    expect(mcpPage.entries.map((entry) => entry.id)).toEqual(["mcp-1"]);
+  });
+
+  it("keeps object-context tool actions out of the independent graph group", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            action_type: "add",
+            id: "context-tool",
+            name: "Notify customer",
+            object_type_id: "customer",
+            operation_config: { type: "tool" },
+          },
+          {
+            action_type: "add",
+            id: "independent-tool",
+            name: "Run reconciliation",
+            object_type_id: "",
+            operation_config: { type: "tool" },
+          },
+        ],
+        total_count: 2,
+      },
+    });
+    const { listKnowledgeNetworkActionTypePage } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const result = await listKnowledgeNetworkActionTypePage("kn-1", {
+      independentOnly: true,
+      limit: 10,
+      offset: 0,
+      operationKind: "tool",
+    });
+
+    expect(result.totalCount).toBe(1);
+    expect(result.entries.map((entry) => entry.id)).toEqual(["independent-tool"]);
   });
 });
 
@@ -216,6 +363,96 @@ describe("action-type.service - operation configuration compatibility", () => {
     const payload = postMock.mock.calls[0]?.[1] as { entries: Record<string, unknown>[] };
     expect(payload.entries[0]).not.toHaveProperty("operation_config");
     expect(payload.entries[0].object_type_id).toBe("");
+  });
+});
+
+describe("action-type.service - deployed operation contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    vi.stubEnv("VITE_ACTION_TYPE_OPERATION_CONFIG_ENABLED", "true");
+    postMock.mockReset();
+    putMock.mockReset();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("persists relationship metadata, endpoint identities and referenced conditions", async () => {
+    postMock.mockResolvedValue({ data: { entries: [{ id: "a-1", name: "Link supplier" }] } });
+    putMock.mockResolvedValue({ data: { entries: [{ id: "a-1", name: "Link supplier" }] } });
+    const service = await import("./action-type.service");
+    const input = {
+      actionKind: "create" as const,
+      color: "#1677ff",
+      description: "",
+      name: "Link supplier",
+      objectTypeId: "orders",
+      tags: [],
+      operationConfig: {
+        type: "relation" as const,
+        relationTypeId: "order_supplier",
+        relationOperation: "create" as const,
+        anchorRole: "source" as const,
+        otherObjectCondition: {
+          field: "status",
+          operation: "==" as const,
+          valueFrom: "property" as const,
+          value: "required_status",
+        },
+      },
+      condition: {
+        field: "amount",
+        operation: ">=" as const,
+        valueFrom: "input" as const,
+        value: "minimum_amount",
+      },
+      executionConfig: {
+        sourceType: "tool" as const,
+        sourceName: "Link supplier",
+        parameters: [
+          { name: "order_id", valueFrom: "source_identity" as const },
+          { name: "supplier_id", valueFrom: "target_identity" as const },
+          { name: "minimum_amount", valueFrom: "input" as const },
+        ],
+      },
+    };
+
+    expect(service.canPersistActionTypeOperation(input)).toBe(true);
+    expect(service.canPersistActionTypeCondition(input.condition)).toBe(true);
+    await service.createKnowledgeNetworkActionType("kn-1", input);
+    await service.updateKnowledgeNetworkActionType("kn-1", "a-1", input);
+
+    const created = (postMock.mock.calls[0]?.[1] as { entries: Record<string, unknown>[] })
+      .entries[0];
+    const updated = putMock.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(created.operation_config).toMatchObject({
+      type: "relation",
+      relation_type_id: "order_supplier",
+      relation_operation: "create",
+      anchor_role: "source",
+      other_object_condition: { value_from: "property", value: "required_status" },
+    });
+    expect(created.condition).toMatchObject({ value_from: "input", value: "minimum_amount" });
+    expect(created.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "order_id", value_from: "source_identity" }),
+        expect.objectContaining({ name: "supplier_id", value_from: "target_identity" }),
+      ]),
+    );
+    expect(updated.operation_config).toEqual(created.operation_config);
+  });
+
+  it("sends an inferred operation for an older definition being edited", async () => {
+    putMock.mockResolvedValue({ data: { entries: [{ id: "a-1", name: "Update" }] } });
+    const service = await import("./action-type.service");
+    await service.updateKnowledgeNetworkActionType("kn-1", "a-1", {
+      actionKind: "update",
+      color: "#1677ff",
+      description: "",
+      name: "Update",
+      objectTypeId: "orders",
+      tags: [],
+    });
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({ operation_config: { type: "object" } });
   });
 });
 
