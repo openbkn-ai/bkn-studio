@@ -402,16 +402,6 @@ export function KnVersionsPanel({
               {t("knowledgeNetwork.versions.diff.title")}
             </Button>
           ) : null}
-          {canModify && draft?.has_changes ? (
-            <Button danger onClick={() => confirmResetDraft(actionContext)}>
-              {t("knowledgeNetwork.versions.discard")}
-            </Button>
-          ) : null}
-          {canModify && previous > 0 && running > 0 ? (
-            <Button onClick={() => confirmActivate(actionContext, previous, true)}>
-              {t("knowledgeNetwork.versions.rollback")}
-            </Button>
-          ) : null}
         </Space>
       </Card>
       {error ? <Alert message={error} showIcon type="error" /> : null}
@@ -451,6 +441,63 @@ export function KnVersionsPanel({
           ]}
         />
       </Card>
+      {canModify ? (
+        // Operations that throw work away or change what readers see, apart from the daily ones.
+        <section aria-labelledby="kn-version-danger" className={styles.dangerZone}>
+          <h3 className={styles.dangerTitle} id="kn-version-danger">
+            {t("knowledgeNetwork.versions.danger.title")}
+          </h3>
+          <div className={styles.dangerBox}>
+            <div className={styles.dangerRow}>
+              <div>
+                <div className={styles.dangerRowTitle}>
+                  {t("knowledgeNetwork.versions.danger.discardTitle")}
+                </div>
+                <div className={styles.dangerRowBody}>
+                  {draft?.has_changes
+                    ? t("knowledgeNetwork.versions.danger.discardBody", {
+                        version: knVersionName(running),
+                      })
+                    : t("knowledgeNetwork.versions.danger.discardNone")}
+                </div>
+              </div>
+              <Button
+                danger
+                disabled={!draft?.has_changes}
+                onClick={() => confirmResetDraft(actionContext)}
+              >
+                {t("knowledgeNetwork.versions.discard")}
+              </Button>
+            </div>
+            <div className={styles.dangerRow}>
+              <div>
+                <div className={styles.dangerRowTitle}>
+                  {t("knowledgeNetwork.versions.danger.rollbackTitle")}
+                </div>
+                <div className={styles.dangerRowBody}>
+                  {previous > 0 && running > 0
+                    ? t("knowledgeNetwork.versions.danger.rollbackBody", {
+                        previous: knVersionName(previous),
+                        running: knVersionName(running),
+                      })
+                    : t("knowledgeNetwork.versions.danger.rollbackNone")}
+                </div>
+              </div>
+              <Button
+                danger
+                disabled={!(previous > 0 && running > 0)}
+                onClick={() => confirmActivate(actionContext, previous, true)}
+              >
+                {previous > 0
+                  ? t("knowledgeNetwork.versions.danger.rollbackAction", {
+                      version: knVersionName(previous),
+                    })
+                  : t("knowledgeNetwork.versions.rollback")}
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : null}
       <PublishVersionModal
         hasCapabilities={hasCapabilities}
         networkId={networkId}

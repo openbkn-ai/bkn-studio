@@ -24,6 +24,17 @@ export const versionsPart = {
     viewChanges: "查看差异",
     discard: "放弃修改",
     rollback: "回退到上一版",
+    danger: {
+      title: "危险操作",
+      discardTitle: "放弃草稿的修改",
+      discardBody: "草稿回到运行版本 {{version}} 的内容，未发布的修改无法找回。",
+      discardNone: "草稿没有未发布的修改。",
+      rollbackTitle: "回退到上一版",
+      rollbackBody:
+        "把 {{previous}} 设为运行版本，替换当前的 {{running}}；读取和查询立即改用它，草稿不变。",
+      rollbackNone: "还没有上一版可以回退。",
+      rollbackAction: "回退到 {{version}}",
+    },
     copyToDraft: "复制为草稿",
     view: "查看",
     compare: "比较",

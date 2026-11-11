@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
@@ -100,6 +100,28 @@ describe("KnVersionsPanel", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it("keeps discarding the draft and rolling back in the danger zone", () => {
+    renderPanel({});
+    const zone = screen.getByRole("region", { name: "knowledgeNetwork.versions.danger.title" });
+    expect(
+      within(zone).getByRole("button", { name: "knowledgeNetwork.versions.discard" }),
+    ).toBeTruthy();
+    expect(
+      within(zone).getByRole("button", { name: "knowledgeNetwork.versions.danger.rollbackAction" }),
+    ).toBeTruthy();
+    // The daily actions stay where they were, without the destructive ones.
+    expect(
+      screen.getAllByRole("button", { name: "knowledgeNetwork.versions.discard" }),
+    ).toHaveLength(1);
+  });
+
+  it("shows no danger zone to a reader", () => {
+    renderPanel({ canModify: false });
+    expect(
+      screen.queryByRole("region", { name: "knowledgeNetwork.versions.danger.title" }),
+    ).toBeNull();
   });
 
   it("offers to enable versioning on a network without it", () => {

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { BranchesOutlined } from "@ant-design/icons";
+import { BranchesOutlined, CloudUploadOutlined } from "@ant-design/icons";
 import { Alert, Button, Select } from "antd";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -13,11 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
-import { useAppServices } from "@/framework/context/use-app-services";
 import { KnVersionSlotPortal } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
-import { KnDiffModal } from "@/modules/knowledge-network/components/versions/KnDiffModal";
 import { PublishVersionModal } from "@/modules/knowledge-network/components/versions/PublishVersionModal";
-import { confirmResetDraft } from "@/modules/knowledge-network/components/versions/kn-version-actions";
 import {
   useReadableKnVersions,
   versionOptionLabel,
@@ -58,9 +55,7 @@ export function KnVersionBar({
 }: KnVersionBarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
   const [publishOpen, setPublishOpen] = useState(false);
-  const [diffOpen, setDiffOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const versions = useReadableKnVersions(networkId, versioning.running_version);
   const draft = versioning.draft;
@@ -98,62 +93,22 @@ export function KnVersionBar({
     );
   };
 
-  const actionContext = {
-    modal,
-    networkId,
-    notify: message,
-    onChanged,
-    t,
-    versioning,
-  };
-
-  // What used to sit in a separate menu goes under the version list, as GitHub does for branches.
-  const actions = [
-    ...(canModify && isDraft && running > 0 && hasChanges
-      ? [
-          {
-            key: "diff",
-            label: t("knowledgeNetwork.versions.viewChanges"),
-            run: () => setDiffOpen(true),
-          },
-        ]
-      : []),
-    ...(canModify && isDraft && hasChanges
-      ? [
-          {
-            danger: true,
-            key: "discard",
-            label: t("knowledgeNetwork.versions.discard"),
-            run: () => confirmResetDraft(actionContext),
-          },
-        ]
-      : []),
-    {
-      key: "history",
-      label: t("knowledgeNetwork.versions.history"),
-      run: () => void navigate(`/knowledge-network/workspace/${networkId}/versions`),
-    },
-  ];
-
+  // One way out to everything else about versions, under the list, as GitHub does for branches.
   const popupRender = (menu: ReactElement) => (
     <>
       {menu}
       <div className={styles.pickerActions}>
-        {actions.map((action) => (
-          <Button
-            block
-            danger={action.danger}
-            key={action.key}
-            onClick={() => {
-              setPickerOpen(false);
-              action.run();
-            }}
-            size="small"
-            type="text"
-          >
-            {action.label}
-          </Button>
-        ))}
+        <Button
+          block
+          onClick={() => {
+            setPickerOpen(false);
+            void navigate(`/knowledge-network/workspace/${networkId}/versions`);
+          }}
+          size="small"
+          type="text"
+        >
+          {t("knowledgeNetwork.versions.title")}
+        </Button>
       </div>
     </>
   );
@@ -175,7 +130,7 @@ export function KnVersionBar({
         variant="borderless"
       />
       {canPublish ? (
-        <Button onClick={() => setPublishOpen(true)} size="small" type="primary">
+        <Button icon={<CloudUploadOutlined />} onClick={() => setPublishOpen(true)} type="primary">
           {t("knowledgeNetwork.versions.publish.action")}
         </Button>
       ) : null}
@@ -213,13 +168,6 @@ export function KnVersionBar({
         onChanged={onChanged}
         onClose={() => setPublishOpen(false)}
         open={publishOpen}
-        versioning={versioning}
-      />
-      <KnDiffModal
-        canDraft={canModify}
-        networkId={networkId}
-        onClose={() => setDiffOpen(false)}
-        open={diffOpen}
         versioning={versioning}
       />
     </>

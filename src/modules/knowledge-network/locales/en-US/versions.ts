@@ -24,6 +24,18 @@ export const versionsPart = {
     viewChanges: "View changes",
     discard: "Discard changes",
     rollback: "Roll back to the previous version",
+    danger: {
+      title: "Danger zone",
+      discardTitle: "Discard the draft's changes",
+      discardBody:
+        "The draft goes back to the running version {{version}}. Unpublished changes cannot be recovered.",
+      discardNone: "The draft has no unpublished changes.",
+      rollbackTitle: "Roll back to the previous version",
+      rollbackBody:
+        "{{previous}} becomes the running version in place of {{running}}. Reads and queries use it at once; the draft is not changed.",
+      rollbackNone: "There is no previous version to roll back to.",
+      rollbackAction: "Roll back to {{version}}",
+    },
     copyToDraft: "Copy to draft",
     view: "View",
     compare: "Compare",

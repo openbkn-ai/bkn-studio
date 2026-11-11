@@ -23,10 +23,6 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useNavigate: () => vi.fn(),
 }));
 
-vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() }, modal: {} }),
-}));
-
 vi.mock("@/modules/knowledge-network/components/versions/useReadableKnVersions", () => ({
   useReadableKnVersions: () => [],
   versionOptionLabel: (version: { version: number }) => `v${version.version}`,
@@ -100,7 +96,7 @@ describe("KnVersionBar", () => {
     // Publishing is the one thing to do with a changed draft, so it stands out.
     expect(
       screen
-        .getByRole("button", { name: "knowledgeNetwork.versions.publish.action" })
+        .getByRole("button", { name: /knowledgeNetwork\.versions\.publish\.action/ })
         .classList.contains("ant-btn-variant-solid"),
     ).toBe(true);
   });
@@ -113,16 +109,15 @@ describe("KnVersionBar", () => {
     expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
   });
 
-  it("keeps the version actions in the picker instead of a separate menu", () => {
+  it("leaves only the way to version management under the version list", () => {
     renderBar(versioning(2, true));
-    expect(screen.queryByRole("button", { name: "knowledgeNetwork.versions.more" })).toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.versions.history")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.versions.title")).toBeNull();
 
     fireEvent.mouseDown(screen.getByRole("combobox"));
 
-    expect(screen.getByText("knowledgeNetwork.versions.history")).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.versions.viewChanges")).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.versions.discard")).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.versions.title")).toBeTruthy();
+    expect(screen.queryByText("knowledgeNetwork.versions.viewChanges")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.versions.discard")).toBeNull();
   });
 
   it("sits beside the network's title when the section shows one", () => {
