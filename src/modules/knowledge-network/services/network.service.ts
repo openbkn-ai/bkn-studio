@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import {
   parseContentDispositionFilename,
   triggerBrowserDownload,
@@ -104,6 +105,10 @@ const KNOWLEDGE_NETWORK_IMPORT_CONFLICT_ERROR_CODES = new Set([
 const KNOWLEDGE_NETWORK_IMPORT_BINDING_ERROR_CODE =
   "BknBackend.KnowledgeNetwork.Proxy.TargetInvalid";
 
+function projectMockKnowledgeNetwork(record: KnowledgeNetworkRecord): KnowledgeNetworkRecord {
+  return { ...record, operations: filterMockOperations(record.operations ?? []) };
+}
+
 export async function listKnowledgeNetworks(
   query: KnowledgeNetworkListQuery,
 ): Promise<KnowledgeNetworkListResult> {
@@ -112,7 +117,9 @@ export async function listKnowledgeNetworks(
     const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize),
+      items: filtered
+        .slice(startIndex, startIndex + query.pageSize)
+        .map(projectMockKnowledgeNetwork),
       total: filtered.length,
     });
   }
@@ -178,7 +185,8 @@ export async function getKnowledgeNetwork(
   options: { skipErrorToast?: boolean } = {},
 ) {
   if (useMock) {
-    return wait(mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null);
+    const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
+    return wait(record ? projectMockKnowledgeNetwork(record) : null);
   }
 
   return pendingNetwork(JSON.stringify([networkId, Boolean(options.skipErrorToast)]), async () => {
@@ -240,7 +248,7 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
     mockActionTypes[nextRecord.id] = [];
 
     await wait(undefined);
-    return nextRecord;
+    return projectMockKnowledgeNetwork(nextRecord);
   }
 
   const response = await http.post<{ id: string }>(
@@ -279,7 +287,8 @@ export async function updateKnowledgeNetwork(
     );
 
     await wait(undefined);
-    return mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null;
+    const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
+    return record ? projectMockKnowledgeNetwork(record) : null;
   }
 
   await http.put(

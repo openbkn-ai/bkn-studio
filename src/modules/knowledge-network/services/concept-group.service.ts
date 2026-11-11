@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
@@ -58,7 +59,7 @@ export async function listKnowledgeNetworkConceptGroups(networkId: string) {
     return wait(
       (mockConceptGroups[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -128,9 +129,10 @@ export async function listKnowledgeNetworkConceptGroupPage(
       availableTags: [
         ...new Set((mockConceptGroups[networkId] ?? []).flatMap((item) => item.tags ?? [])),
       ].sort((left, right) => left.localeCompare(right)),
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: sorted.slice(query.offset, query.offset + query.limit).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
@@ -163,7 +165,7 @@ export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId
       group
         ? {
             ...enrichConceptGroupDetail(networkId, group),
-            operations: mockKnowledgeNetworkChildOperations,
+            operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
           }
         : null,
     );

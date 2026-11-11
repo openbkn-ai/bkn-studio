@@ -226,6 +226,7 @@
 
 .tableTags :global(.ant-tag) {
   flex-shrink: 0;
+  margin-inline-end: 0;
   max-width: 64px;
   overflow: hidden;
   text-overflow: ellipsis;

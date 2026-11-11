@@ -22,12 +22,16 @@
 }
 
 .searchInput {
-  flex: 1;
+  flex: 0 1 280px;
   min-width: 220px;
 }
 
 .filterSelect {
-  min-width: 140px;
+  width: 176px;
+}
+
+.refreshButton {
+  margin-left: auto;
 }
 
 .resultSummary {

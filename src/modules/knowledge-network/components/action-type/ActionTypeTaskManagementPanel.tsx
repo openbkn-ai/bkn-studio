@@ -456,7 +456,11 @@ export function ActionTypeTaskManagementPanel({
           options={triggerOptions}
           value={triggerFilter}
         />
-        <AppButton icon={<ReloadOutlined />} onClick={() => void loadLogs()}>
+        <AppButton
+          className={styles.refreshButton}
+          icon={<ReloadOutlined />}
+          onClick={() => void loadLogs()}
+        >
           {t("common.refresh")}
         </AppButton>
       </div>

@@ -133,7 +133,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     ]);
   });
 
-  it("数据资源知识网络入口不依赖菜单权限", () => {
+  it("数据资源入口不依赖菜单权限，知识库位于任务管理之后", () => {
     const filtered = filterNavByPermission(consoleNavigation, []);
     const businessGroup = filtered.find(
       (item) => item.key === "general-business-knowledge-network",
@@ -143,8 +143,8 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(businessGroup?.children ?? [])).toEqual([
       "data-connection",
       "data-catalog",
-      "knowledge-base",
       "task-management",
+      "knowledge-base",
     ]);
   });
 

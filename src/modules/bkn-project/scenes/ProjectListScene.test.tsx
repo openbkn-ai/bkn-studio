@@ -7,7 +7,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/modules/bkn-project/types/project";
 
@@ -19,6 +19,7 @@ const listCatalogsMock = vi.hoisted(() => vi.fn());
 const getNetworkInUseMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const confirmMock = vi.hoisted(() => vi.fn());
+const newProjectModalRenderMock = vi.hoisted(() => vi.fn());
 // Stable like the real `t`; options are appended so counts can be asserted.
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
@@ -53,6 +54,18 @@ vi.mock("@/shared/catalog", () => ({
   catalogListAllQuery: (overrides: object) => overrides,
   listCatalogs: listCatalogsMock,
 }));
+
+vi.mock("@/modules/bkn-project/components/NewProjectModal", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@/modules/bkn-project/components/NewProjectModal")>();
+  return {
+    ...original,
+    NewProjectModal: (props: Parameters<typeof original.NewProjectModal>[0]) => {
+      newProjectModalRenderMock(props);
+      return <original.NewProjectModal {...props} />;
+    },
+  };
+});
 
 import { ProjectListScene } from "./ProjectListScene";
 
@@ -99,6 +112,9 @@ function axiosError(code: string) {
 describe("ProjectListScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_USER", "admin");
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
@@ -114,6 +130,37 @@ describe("ProjectListScene", () => {
     );
     listNetworksMock.mockResolvedValue([{ id: "orders", name: "Orders network" }]);
     listCatalogsMock.mockResolvedValue({ items: [{ id: "c1", name: "ERP" }], total: 1 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("hides project creation and does not mount its modal for a mock viewer", async () => {
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
+    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
+    renderScene();
+
+    expect(await screen.findByText("Orders")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /bknProject\.list\.create/ })).toBeNull();
+    expect(newProjectModalRenderMock).not.toHaveBeenCalled();
+    expect(createProjectMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "mock admin", useMock: "true", role: "admin", dev: true },
+    { name: "real-backend viewer selector", useMock: "false", role: "viewer", dev: true },
+    { name: "production viewer selector", useMock: "true", role: "viewer", dev: false },
+  ])("preserves project creation for $name", async ({ useMock, role, dev }) => {
+    vi.stubEnv("DEV", dev);
+    vi.stubEnv("VITE_USE_MOCK", useMock);
+    vi.stubEnv("VITE_MOCK_USER", role);
+    listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
+    renderScene();
+
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.list\.create/ }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(newProjectModalRenderMock).toHaveBeenCalledWith(expect.objectContaining({ open: true }));
   });
 
   it("shows network and catalog names, the same-network tag, and archive for the owner only", async () => {

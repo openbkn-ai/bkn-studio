@@ -53,8 +53,7 @@ export const actiontypePart = {
   actionTypeEditTitle: "Edit action type",
   actionTypeEmptyNoSearchResult: "No matching action types found.",
   actionTypeExecutionAddParameter: "Add parameter",
-  actionTypeExecutionDescription:
-    "Manage action execution, execution configuration, and run records.",
+  actionTypeExecutionDescription: "Run action types and review execution records.",
   actionTypeExecutionEntry: "Execution management",
   actionTypeExecutionItemLogs: "Execution logs and cancellation",
   actionTypeExecutionItemMapping: "Execution mapping and parameters",
@@ -95,13 +94,9 @@ export const actiontypePart = {
   actionTypeExecutionStep: "Execution mapping",
   actionTypeExecutionSubtitle:
     "Maintain execution mapping, schedules, and execution log entry points.",
-  actionTypeExecutionConfigSubtitle: "Maintain the action execution source and parameter mappings.",
   actionTypeExecutionTitle: "Action type execution management",
   actionTypeExecutionRun: "Execute now",
   actionTypeExecutionRunTitle: "Manual execution",
-  actionTypeExecutionConfig: "Execution config",
-  actionTypeExecutionConfigReadonly:
-    "The current account cannot modify this action type. Execution records remain available.",
   actionTypeExecutionParameters: "Execution parameters",
   actionTypeExecutionDynamicParamCount_one: "{{count}} dynamic parameter",
   actionTypeExecutionDynamicParamCount_other: "{{count}} dynamic parameters",
@@ -125,7 +120,7 @@ export const actiontypePart = {
   actionTypesDescription: "Review and maintain action types under the active knowledge network.",
   actionTypesTitle: "Action types",
   actionTypeToolbarHint:
-    "Supports action type list, two-step create/edit, execution config, detail overview, and task management.",
+    "Supports action type list, create and edit, detail overview, and task management.",
   actionTypeTriggerCondition: "Trigger condition",
   actionTypeAffectedObject: "Affected object type",
   actionTypeAffectedObjectPlaceholder: "Select an affected object type (optional)",

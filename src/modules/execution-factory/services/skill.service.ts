@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   parseContentDispositionFilename,
@@ -260,7 +261,10 @@ function buildMockSkillList(query: SkillListQuery): SkillListResult {
   const start = (query.page - 1) * query.pageSize;
 
   return {
-    items: filtered.slice(start, start + query.pageSize),
+    items: filtered.slice(start, start + query.pageSize).map((item) => ({
+      ...item,
+      operations: item.operations && filterMockOperations(item.operations),
+    })),
     total: filtered.length,
     page: query.page,
     pageSize: query.pageSize,
@@ -275,7 +279,10 @@ export async function getSkill(skillId: string): Promise<SkillRecord> {
       throw new Error("Skill not found");
     }
 
-    return record;
+    return {
+      ...record,
+      operations: record.operations && filterMockOperations(record.operations),
+    };
   }
 
   const response = await http.get<BackendSkillSummary>(`${API_PREFIX}/skills/${skillId}`, {});
