@@ -56,7 +56,10 @@ const defaultRuntimeConfig: RuntimeConfig = {
   },
 };
 
-let runtimeConfig = createRuntimeConfig();
+let runtimeConfig = {
+  ...defaultRuntimeConfig,
+  currentUser: getDevRuntimeUser(),
+};
 
 export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeConfig {
   const currentUser = getDevRuntimeUser();

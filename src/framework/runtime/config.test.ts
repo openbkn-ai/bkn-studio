@@ -16,7 +16,25 @@ describe("createRuntimeConfig", () => {
     vi.stubEnv("VITE_MOCK_USER", "admin");
   });
 
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it.each(["admin", "viewer"])(
+    "initializes the %s user without resolving the browser locale before bootstrap",
+    async (role) => {
+      vi.stubEnv("VITE_MOCK_USER", role);
+      vi.spyOn(navigator, "languages", "get").mockReturnValue(["en-US"]);
+      vi.resetModules();
+      const config = await import("@/framework/runtime/config");
+
+      expect(config.getRuntimeConfig().currentUser.roles).toEqual([role]);
+      expect(config.getRuntimeConfig().locale).toBe("zh-CN");
+      expect(config.createRuntimeConfig().locale).toBe("en-US");
+      expect(config.createRuntimeConfig({ locale: "zh-CN" }).locale).toBe("zh-CN");
+    },
+  );
 
   it("selects a viewer independently of the licensed edition", () => {
     vi.stubEnv("VITE_MOCK_USER", "viewer");
