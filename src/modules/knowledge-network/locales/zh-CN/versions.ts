@@ -21,6 +21,7 @@ export const versionsPart = {
     outdatedTag: "已落后",
     readOnlyView: "你正在查看 {{version}}，该版本只读；修改会写入草稿。",
     writeBlocked: "当前版本只读。请切换到草稿后再修改。",
+    stateUnknown: "暂时无法确认这个知识网络的版本状态，请稍后重试。",
     backToDraft: "回到草稿",
     history: "版本历史",
     viewChanges: "查看差异",
@@ -53,10 +54,6 @@ export const versionsPart = {
     communityNote: "社区版只保留运行版本与上一版。废止、恢复与清理需要专业版。",
     metricSaveAndValidate: "保存并校验",
     metricValidated: "指标已保存并校验，随知识网络发布后生效。",
-    create: {
-      versioning: "开启版本管理",
-      versioningHint: "修改会写入草稿，发布版本后才生效。",
-    },
     status: {
       running: "运行中",
       history: "历史",
