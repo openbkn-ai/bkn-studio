@@ -8,6 +8,44 @@
 export const systemAdminEnUS = {
   systemAdmin: {
     sso: {
+      sync: {
+        title: "Directory sync",
+        scopeHint:
+          "Synchronize users and departments from one Casdoor organization. Deleted users are disabled locally. Local administrative disablement and memberships from other sources are preserved. This workflow does not immediately revoke existing tokens.",
+        close: "Close",
+        run: "Sync now",
+        save: "Save sync configuration",
+        saved: "Sync configuration saved. Enabling it schedules an initial full sync.",
+        queued: "Sync queued. Refresh the status to see the result.",
+        enabled: "Enable directory sync",
+        organization: "Casdoor organization name",
+        organizationFormat: "Use up to 100 letters, digits, underscores, dots or hyphens.",
+        interval: "Reconciliation interval (seconds, 60–86400)",
+        secret: "Webhook secret",
+        secretKept: "Configured. Leave blank to keep it, or enter a new value to rotate it.",
+        secretHint:
+          "Set a random 32–256 character secret and use it in Casdoor's X-SSO-Sync-Key header.",
+        generate: "Generate random secret",
+        webhook: "Receiver URL",
+        webhookHint:
+          "Configure POST with application/json and the X-SSO-Sync-Key header. Remove empty header names. Private-network receivers require a global administrator to configure a built-in organization webhook with single-organization filtering disabled; the receiver filters the target organization. Route the URL to bkn-safe. Casdoor may take about 30 seconds to deliver an event.",
+        state: "Job state",
+        running: "Running",
+        idle: "Waiting",
+        lastSuccess: "Last successful sync",
+        lastError: "Last error",
+        unknownError: "Synchronization failed. Check the service logs.",
+        users: "Users scanned",
+        departments: "Departments scanned (including organization root)",
+        disabledUsers: "Disabled or externally blocked users in this run",
+        retainedDepartments: "Deleted departments retained due to local memberships or children",
+        SSO_DIRECTORY_READ_FAILED:
+          "Directory read or commit failed. Check application permissions, network and sync configuration. No partial changes were committed.",
+        SSO_DIRECTORY_CHANGED:
+          "The directory changed during the scan. No changes were committed; a retry is scheduled.",
+        SSO_SYNC_LEASE_LOST:
+          "Configuration or job ownership changed during the run. The job will be rescheduled.",
+      },
       useDatabaseSecret: "Use database secret",
       errors: {
         INVALID_PARAMETER:

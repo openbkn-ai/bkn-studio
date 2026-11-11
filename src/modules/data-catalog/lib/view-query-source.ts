@@ -5,7 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type { FilterQueryPath } from "./filter-tree";
+
 type SourceBlockReason = "indexRequired" | "unknownFilter";
+
+/** Fixed filters use the source resource's effective query channel. */
+export function sourceFilterQueryPath(
+  resource: Pick<CatalogResource, "category" | "localIndexStatus" | "localIndexName"> | null,
+): FilterQueryPath {
+  if (resource?.category === "index") return "local_index";
+  return resource?.category === "table" &&
+    resource.localIndexStatus === "available" &&
+    resource.localIndexName
+    ? "managed_local_index"
+    : "source";
+}
 
 // Keep these in sync with Vega's condition operations and derivedFilterNeedsIndex.
 const INDEX_OPERATIONS = new Set(["match", "match_phrase", "multi_match", "knn_vector"]);

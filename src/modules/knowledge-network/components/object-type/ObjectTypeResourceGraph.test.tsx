@@ -20,6 +20,7 @@ import type { KnowledgeNetworkGraphSelection } from "@/modules/knowledge-network
 const mocks = vi.hoisted(() => ({
   getActionDetail: vi.fn(),
   getObjectType: vi.fn(),
+  getRelationDetail: vi.fn(),
   listActions: vi.fn(),
   listMetrics: vi.fn(),
   listRelations: vi.fn(),
@@ -51,6 +52,13 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   listKnowledgeNetworkActionTypePage: mocks.listActions,
   listKnowledgeNetworkRelationTypePage: mocks.listRelations,
   listObjectMetricsV1: mocks.listMetrics,
+}));
+
+vi.mock("@/modules/knowledge-network/services/relation-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/relation-type.service")
+  >()),
+  getKnowledgeNetworkRelationTypeDetail: mocks.getRelationDetail,
 }));
 
 vi.mock(
@@ -304,6 +312,7 @@ beforeEach(() => {
     },
   });
   mocks.getObjectType.mockResolvedValue(customer);
+  mocks.getRelationDetail.mockResolvedValue(relation);
   mocks.listRelations.mockResolvedValue({ entries: [relation], totalCount: 1 });
   mocks.listMetrics.mockResolvedValue({ entries: [metric], total_count: 1 });
   mocks.listActions.mockResolvedValue({ entries: [action], totalCount: 1 });
@@ -315,6 +324,7 @@ afterEach(() => {
   mocks.listMetrics.mockReset();
   mocks.listRelations.mockReset();
   mocks.getObjectType.mockReset();
+  mocks.getRelationDetail.mockReset();
   mocks.getActionDetail.mockReset();
   mocks.resolveActionSource.mockReset();
 });
@@ -352,6 +362,67 @@ describe("ObjectTypeResourceGraph", () => {
     expect(owner.querySelector("title")?.textContent).toBe("销售订单 · 已弃用");
   });
 
+  it("shows a new-instance action as an operation, tool and expected result", async () => {
+    const createAction = { ...action, actionKind: "create" as const, name: "新建订单" };
+    mocks.listActions.mockResolvedValue({ entries: [createAction], totalCount: 1 });
+    mocks.getActionDetail.mockResolvedValue({
+      ...createAction,
+      affect: undefined,
+      condition: undefined,
+      executionConfig: {
+        actionSource: { toolName: "创建订单", type: "tool" },
+        parameters: [],
+        sourceName: "创建订单",
+        sourceType: "tool",
+      },
+    });
+    renderGraph(false, { resourceScope: "actions" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 新建订单" }));
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    expect(await within(graph).findByText("操作 · 新建对象实例")).toBeInTheDocument();
+    expect(within(graph).getByText("执行工具")).toBeInTheDocument();
+    expect(within(graph).getByText("创建订单", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).getByText("预期结果")).toBeInTheDocument();
+    expect(within(graph).getByText("新增销售订单实例", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).queryByText(/适用：|附加影响：|未声明/)).toBeNull();
+  });
+
+  it("shows relationship actions with their specific operation and both endpoints", async () => {
+    const linkAction = {
+      ...action,
+      actionKind: "create" as const,
+      id: "link-customer",
+      name: "关联客户",
+      operationConfig: {
+        type: "relation" as const,
+        relationTypeId: relation.id,
+        relationOperation: "create" as const,
+      },
+    };
+    mocks.listActions.mockResolvedValue({ entries: [linkAction], totalCount: 1 });
+    mocks.getActionDetail.mockResolvedValue({
+      ...linkAction,
+      executionConfig: { parameters: [], sourceName: "关系工具", sourceType: "tool" },
+    });
+    renderGraph(false, { resourceScope: "actions" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 关联客户" }));
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    expect(await within(graph).findByText("操作 · 建立关系")).toBeInTheDocument();
+    expect(within(graph).getByText("建立客户关系", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).queryByText(/适用：|附加影响：/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
+    const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
+    expect(within(drawer).getByRole("row", { name: "行动类别 对象关系操作" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("row", { name: "具体操作 建立关系" })).toBeInTheDocument();
+    expect(await within(drawer).findByRole("row", { name: "关系类 客户关系" })).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", {
+        name: "作用范围 销售订单 → 客户关系 → 客户",
+      }),
+    ).toBeInTheDocument();
+  });
   it("keeps the current object and shows lightweight category-specific empty hints", async () => {
     mocks.listRelations.mockResolvedValue({ entries: [], totalCount: 0 });
     mocks.listMetrics.mockResolvedValue({ entries: [], total_count: 0 });
@@ -712,7 +783,7 @@ describe("ObjectTypeResourceGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "行动类 更新订单" }));
     expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
-    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
+    expect(await within(graph).findByText("操作 · 修改对象实例")).toBeInTheDocument();
     expect(graph.querySelectorAll("[data-action-semantic]")).toHaveLength(3);
     expect(screen.getByText("已展开 1 条")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
@@ -725,7 +796,8 @@ describe("ObjectTypeResourceGraph", () => {
     expect(descriptions).not.toBeNull();
     expect(description).not.toBeNull();
     expect(within(drawer).getByRole("row", { name: "资源类型 行动类" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "业务动作 编辑" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("row", { name: "行动类别 对象实例操作" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("row", { name: "具体操作 修改对象实例" })).toBeInTheDocument();
     expect(
       within(drawer).getByRole("row", { name: "触发条件 订单金额 大于 100" }),
     ).toBeInTheDocument();
@@ -839,7 +911,7 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
-    expect(await screen.findByText("影响 · 发货单")).toBeInTheDocument();
+    expect(await screen.findByText("附加影响：发货单")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
 
@@ -909,21 +981,29 @@ describe("ObjectTypeResourceGraph", () => {
     const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
 
     expect(screen.queryByRole("dialog", { name: "行动类详情" })).not.toBeInTheDocument();
-    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
-    expect(within(graph).getByText("订单金额 大于 100", { selector: "text" })).toBeInTheDocument();
-    expect(within(graph).getByText("执行 · 工具")).toBeInTheDocument();
+    expect(await within(graph).findByText("操作 · 修改对象实例")).toBeInTheDocument();
+    expect(
+      within(graph).getByText("适用：订单金额 大于 100", { selector: "text" }),
+    ).toBeInTheDocument();
+    expect(within(graph).getByText("执行工具")).toBeInTheDocument();
     expect(within(graph).getByText("订单核对工具", { selector: "text" })).toBeInTheDocument();
-    expect(within(graph).getByText("影响 · 销售订单")).toBeInTheDocument();
-    expect(within(graph).getByText("同步订单核对结果", { selector: "text" })).toBeInTheDocument();
+    expect(within(graph).getByText("预期结果")).toBeInTheDocument();
+    expect(within(graph).getByText("更新销售订单实例")).toBeInTheDocument();
+    expect(
+      within(graph).getByText(/^附加影响：销售订单/, { selector: "text" }),
+    ).toBeInTheDocument();
+    expect(graph.querySelector('[data-action-semantic="result"] title')).toHaveTextContent(
+      "同步订单核对结果",
+    );
     expect(within(graph).getByRole("button", { name: "行动类 短信推送" })).toBeInTheDocument();
     expect(notifyNode).toHaveAttribute("transform", initialNotifyPosition);
     const expandedUpdateNode = within(graph).getByRole("button", { name: "行动类 更新订单" });
     expect(expandedUpdateNode).toHaveAttribute("transform", initialUpdatePosition);
     const nodeX = (node: Element) =>
       Number(node.getAttribute("transform")?.match(/translate\(([-\d.]+)/)?.[1]);
-    const triggerNode = graph.querySelector<SVGGElement>('[data-action-semantic="trigger"]');
+    const triggerNode = graph.querySelector<SVGGElement>('[data-action-semantic="operation"]');
     const executionNode = graph.querySelector<SVGGElement>('[data-action-semantic="execution"]');
-    const impactNode = graph.querySelector<SVGGElement>('[data-action-semantic="impact"]');
+    const impactNode = graph.querySelector<SVGGElement>('[data-action-semantic="result"]');
     expect(triggerNode).not.toBeNull();
     expect(executionNode).not.toBeNull();
     expect(impactNode).not.toBeNull();
@@ -972,14 +1052,16 @@ describe("ObjectTypeResourceGraph", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
-    expect(await within(graph).findByText("触发 · 编辑")).toBeInTheDocument();
+    expect(await within(graph).findByText("操作 · 修改对象实例")).toBeInTheDocument();
 
     fireEvent.click(within(graph).getByRole("button", { name: "行动类 短信推送" }));
     await waitFor(() => {
       expect(graph.querySelectorAll("[data-action-semantic-focus]")).toHaveLength(2);
     });
     expect(screen.getByText("已展开 2 条")).toBeInTheDocument();
-    expect(within(graph).getAllByText("订单金额 大于 100", { selector: "text" })).toHaveLength(2);
+    expect(
+      within(graph).getAllByText("适用：订单金额 大于 100", { selector: "text" }),
+    ).toHaveLength(2);
     expect(graph.querySelectorAll('[data-action-edge-drag-handle="execution"]')).toHaveLength(2);
     expect(executionNode).toHaveAttribute("transform", draggedExecutionPosition);
 

@@ -64,15 +64,18 @@ vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", () => ({
   CypherEditor: ({
     ariaLabel,
     onChange,
+    readOnly,
     value,
   }: {
     ariaLabel: string;
     onChange: (value: string) => void;
+    readOnly?: boolean;
     value: string;
   }) => (
     <textarea
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
+      readOnly={readOnly}
       value={value}
     />
   ),
@@ -445,6 +448,8 @@ describe("FunctionWorkbenchScene Cypher functions", () => {
     render(<FunctionWorkbenchScene boxId="box-1" />);
     await waitFor(() => expect(statementEditor().value).toBe(STATEMENT));
 
+    // The statement shown is the one a run sends: the reader cannot change it.
+    expect(statementEditor().readOnly).toBe(true);
     expect(screen.queryByText("common.save")).toBeNull();
     expect(screen.queryByText("executionFactory.cypherFunction.ai.open")).toBeNull();
     fireEvent.click(screen.getByText("executionFactory.callGuide.open"));

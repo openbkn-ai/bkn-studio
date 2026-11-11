@@ -45,3 +45,42 @@ export async function saveSSOProvider(
 export async function testSSOProvider(input: SSOProviderInput): Promise<void> {
   await http.post(`${base}/test`, input);
 }
+
+export type DirectorySyncConfig = {
+  provider_id: string;
+  organization: string;
+  enabled: boolean;
+  interval_seconds: number;
+  next_run_at: string;
+  last_started_at: string | null;
+  last_finished_at: string | null;
+  last_success_at: string | null;
+  last_error_code: string;
+  users: number;
+  departments: number;
+  disabled_users: number;
+  retained_departments: number;
+};
+export type DirectorySyncView = {
+  config: DirectorySyncConfig;
+  has_webhook_secret: boolean;
+  webhook_path: string;
+  running: boolean;
+};
+export type DirectorySyncInput = Pick<
+  DirectorySyncConfig,
+  "enabled" | "organization" | "interval_seconds"
+> & { webhook_secret?: string };
+const syncBase = (id: string) => `${base}/${encodeURIComponent(id)}/directory-sync`;
+export async function getDirectorySync(id: string): Promise<DirectorySyncView> {
+  return (await http.get<DirectorySyncView>(syncBase(id))).data;
+}
+export async function saveDirectorySync(
+  id: string,
+  input: DirectorySyncInput,
+): Promise<DirectorySyncView> {
+  return (await http.patch<DirectorySyncView>(syncBase(id), input)).data;
+}
+export async function runDirectorySync(id: string): Promise<void> {
+  await http.post(`${syncBase(id)}/run`);
+}

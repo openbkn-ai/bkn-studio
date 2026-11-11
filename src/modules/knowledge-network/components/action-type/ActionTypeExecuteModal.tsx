@@ -5,249 +5,209 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Input, InputNumber, Modal, Select, Spin } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Form, Input, Modal, Select, Spin } from "antd";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { resolveActionTypeToolInputSchema } from "@/modules/knowledge-network/services/action-type-tool.service";
-import type {
-  ActionTypeActionSource,
-  ActionTypeExecutionParameter,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import { getActionTypeExecutionSchema } from "@/modules/knowledge-network/services/action-type.service";
 import {
-  buildActionTypeDynamicParams,
-  indexActionTypeToolInputSchema,
-  parseActionTypeDynamicParamValue,
-} from "@/modules/knowledge-network/utils/action-type-dynamic-params";
-import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
-
+  parseActionExecutionInput,
+  type ActionExecutionInput,
+  type ActionExecutionSchema,
+} from "@/modules/knowledge-network/utils/action-execution-input";
 import styles from "./ActionTypeExecuteModal.module.css";
 
 type ActionTypeExecuteModalProps = {
-  actionSource?: ActionTypeActionSource;
+  networkId: string;
+  actionTypeId: string;
   actionTypeName: string;
   onCancel: () => void;
-  onSubmit: (dynamicParams: Record<string, unknown>) => Promise<boolean>;
+  onSubmit: (input: ActionExecutionInput) => Promise<boolean>;
   open: boolean;
-  parameters: ActionTypeExecutionParameter[];
   submitting?: boolean;
 };
 
-function resolveParameterType(
-  parameter: ActionTypeExecutionParameter,
-  schemaByName: Map<string, ActionTypeToolInputParam>,
-) {
-  return schemaByName.get(parameter.name)?.type ?? parameter.type ?? "string";
+function ExecutionFields({
+  schema,
+  path = [],
+}: {
+  schema: ActionExecutionSchema;
+  path?: (string | number)[];
+}) {
+  const { t } = useTranslation();
+  const labels: Record<string, string> = {
+    dynamic_params: t("knowledgeNetwork.actionExecutionDynamicParams"),
+    _instance_identities: t("knowledgeNetwork.actionExecutionObjects"),
+    relation_target: t("knowledgeNetwork.actionExecutionRelation"),
+    source_identity: t("knowledgeNetwork.actionExecutionSource"),
+    target_identity: t("knowledgeNetwork.actionExecutionTarget"),
+    object_input: t("knowledgeNetwork.actionExecutionObjectInput"),
+  };
+  return Object.entries(schema.properties ?? {}).map(([key, field]) => {
+    const name = [...path, key];
+    const title = field.title || key;
+    const label = labels[key] ? `${labels[key]}${field.title ? ` · ${field.title}` : ""}` : title;
+    if (field.type === "object" && field.properties) {
+      return (
+        <fieldset key={key}>
+          <legend>{label}</legend>
+          <ExecutionFields path={name} schema={field} />
+        </fieldset>
+      );
+    }
+    if (field.type === "array" && field.items?.properties) {
+      return (
+        <fieldset key={key}>
+          <legend>{label}</legend>
+          <Form.List
+            name={name}
+            initialValue={[{}]}
+            rules={[
+              {
+                validator: (_rule: unknown, values: unknown) =>
+                  Array.isArray(values) && values.length > 0
+                    ? Promise.resolve()
+                    : Promise.reject(
+                        new Error(t("knowledgeNetwork.actionExecutionObjectRequired")),
+                      ),
+              },
+            ]}
+          >
+            {(fields, { add, remove }, { errors }) => (
+              <>
+                {fields.map((item) => (
+                  <div key={item.key}>
+                    <ExecutionFields path={[...name, item.name]} schema={field.items!} />
+                    {fields.length > 1 ? (
+                      <Button onClick={() => remove(item.name)}>{t("common.delete")}</Button>
+                    ) : null}
+                  </div>
+                ))}
+                <Button onClick={() => add({})}>
+                  {t("knowledgeNetwork.actionExecutionAddObject")}
+                </Button>
+                <Form.ErrorList errors={errors} />
+              </>
+            )}
+          </Form.List>
+        </fieldset>
+      );
+    }
+    const json = field.type === "array" || field.type === "object";
+    const rules = [
+      {
+        required: schema.required?.includes(key),
+        message: t("knowledgeNetwork.actionTypeExecuteParamRequired", { name: title }),
+      },
+      {
+        validator: (_rule: unknown, value: unknown) => {
+          if (value === undefined || value === "") return Promise.resolve();
+          try {
+            parseActionExecutionInput(field, value);
+            return Promise.resolve();
+          } catch {
+            return Promise.reject(
+              new Error(
+                t("knowledgeNetwork.actionTypeExecuteParamJsonInvalid", { type: field.type }),
+              ),
+            );
+          }
+        },
+      },
+    ];
+    return (
+      <Form.Item key={key} name={name} label={label} extra={field.description} rules={rules}>
+        {field.enum ? (
+          <Select options={field.enum.map((value) => ({ label: String(value), value }))} />
+        ) : field.type === "boolean" ? (
+          <Select
+            options={[
+              { label: "true", value: true },
+              { label: "false", value: false },
+            ]}
+          />
+        ) : json ? (
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} />
+        ) : (
+          <Input
+            inputMode={field.type === "integer" || field.type === "number" ? "decimal" : undefined}
+          />
+        )}
+      </Form.Item>
+    );
+  });
 }
 
 export function ActionTypeExecuteModal({
-  actionSource,
+  networkId,
+  actionTypeId,
   actionTypeName,
   onCancel,
   onSubmit,
   open,
-  parameters,
   submitting = false,
 }: ActionTypeExecuteModalProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm<Record<string, unknown>>();
-  const [schema, setSchema] = useState<ActionTypeToolInputParam[]>([]);
-  const [schemaLoading, setSchemaLoading] = useState(false);
-
+  const [form] = Form.useForm();
+  const [schema, setSchema] = useState<ActionExecutionSchema>();
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
-    if (!open) {
-      form.resetFields();
-      setSchema([]);
-      setSchemaLoading(false);
-      return;
-    }
-
-    if (!actionSource || actionSource.type === "manual") {
-      setSchema([]);
-      setSchemaLoading(false);
-      return;
-    }
-
+    if (!open) return;
     let cancelled = false;
-    setSchemaLoading(true);
-
-    void resolveActionTypeToolInputSchema(actionSource)
-      .then((nextSchema) => {
-        if (!cancelled) {
-          setSchema(nextSchema);
-        }
+    form.resetFields();
+    setSchema(undefined);
+    setFailed(false);
+    setLoading(true);
+    void getActionTypeExecutionSchema(networkId, actionTypeId)
+      .then((value) => {
+        if (!cancelled) setSchema(value);
       })
       .catch(() => {
-        if (!cancelled) {
-          setSchema([]);
-        }
+        if (!cancelled) setFailed(true);
       })
       .finally(() => {
-        if (!cancelled) {
-          setSchemaLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
-  }, [actionSource, form, open]);
-
-  const schemaByName = useMemo(() => indexActionTypeToolInputSchema(schema), [schema]);
-  const resolvedParameters = useMemo(
-    () =>
-      parameters.map((parameter) => ({
-        ...parameter,
-        description: schemaByName.get(parameter.name)?.description ?? parameter.description,
-        type: resolveParameterType(parameter, schemaByName),
-      })),
-    [parameters, schemaByName],
-  );
-
+  }, [networkId, actionTypeId, form, open]);
   const submit = async () => {
-    const values = await form.validateFields();
-    const dynamicParams = buildActionTypeDynamicParams(resolvedParameters, values);
-    await onSubmit(dynamicParams);
+    if (!schema) return;
+    const values: unknown = await form.validateFields();
+    await onSubmit(parseActionExecutionInput(schema, values) ?? {});
   };
-
   return (
     <Modal
-      cancelText={t("common.cancel")}
+      title={t("knowledgeNetwork.actionTypeExecuteParamsTitle")}
+      open={open}
       confirmLoading={submitting}
       destroyOnHidden
       maskClosable={!submitting}
-      okText={t("knowledgeNetwork.actionTypeExecuteImmediately")}
       onCancel={submitting ? undefined : onCancel}
       onOk={() => {
         void submit().catch(() => undefined);
       }}
-      okButtonProps={{ disabled: schemaLoading }}
-      open={open}
+      okButtonProps={{ disabled: loading || failed || !schema }}
+      okText={t("knowledgeNetwork.actionTypeExecuteImmediately")}
+      cancelText={t("common.cancel")}
       rootClassName={styles.modalRoot}
-      title={t("knowledgeNetwork.actionTypeExecuteParamsTitle")}
-      width={560}
+      width={600}
     >
       <p className={styles.summary}>
         {t("knowledgeNetwork.actionTypeExecuteParamsDescription", { name: actionTypeName })}
       </p>
-
-      {schemaLoading ? (
-        <div className={styles.loading}>
-          <Spin size="small" />
-          <span>{t("knowledgeNetwork.actionTypeExecuteParamsLoading")}</span>
-        </div>
-      ) : null}
-
-      {!schemaLoading && schema.length === 0 ? (
+      {loading ? <Spin /> : null}
+      {failed ? (
         <Alert
-          className={styles.schemaAlert}
-          message={t("knowledgeNetwork.actionTypeExecuteParamsSchemaFallback")}
+          type="error"
           showIcon
-          type="info"
+          message={t("knowledgeNetwork.actionExecutionSchemaUnavailable")}
         />
       ) : null}
-
-      <Form className={styles.form} form={form} layout="vertical">
-        {resolvedParameters.map((parameter) => {
-          const type = parameter.type?.toLowerCase() ?? "string";
-          const isJson = type === "array" || type === "object";
-
-          return (
-            <Form.Item
-              extra={parameter.description}
-              key={parameter.name}
-              label={
-                <span className={styles.fieldLabel}>
-                  <span>{parameter.name}</span>
-                  <span className={styles.typeLabel}>{type}</span>
-                </span>
-              }
-              name={parameter.name}
-              rules={[
-                {
-                  required: true,
-                  message: t("knowledgeNetwork.actionTypeExecuteParamRequired", {
-                    name: parameter.name,
-                  }),
-                },
-                ...(type === "string"
-                  ? [
-                      {
-                        validator: (_rule: unknown, value: unknown) =>
-                          typeof value === "string" && value.trim()
-                            ? Promise.resolve()
-                            : Promise.reject(
-                                new Error(
-                                  t("knowledgeNetwork.actionTypeExecuteParamRequired", {
-                                    name: parameter.name,
-                                  }),
-                                ),
-                              ),
-                      },
-                    ]
-                  : []),
-                ...(isJson
-                  ? [
-                      {
-                        validator: (_rule: unknown, value: unknown) => {
-                          if (typeof value !== "string" || !value.trim()) {
-                            return Promise.resolve();
-                          }
-                          try {
-                            const parsed = parseActionTypeDynamicParamValue(type, value);
-                            const valid =
-                              type === "array"
-                                ? Array.isArray(parsed)
-                                : Boolean(
-                                    parsed && typeof parsed === "object" && !Array.isArray(parsed),
-                                  );
-                            return valid
-                              ? Promise.resolve()
-                              : Promise.reject(
-                                  new Error(
-                                    t("knowledgeNetwork.actionTypeExecuteParamJsonInvalid", {
-                                      type,
-                                    }),
-                                  ),
-                                );
-                          } catch {
-                            return Promise.reject(
-                              new Error(
-                                t("knowledgeNetwork.actionTypeExecuteParamJsonInvalid", {
-                                  type,
-                                }),
-                              ),
-                            );
-                          }
-                        },
-                      },
-                    ]
-                  : []),
-              ]}
-            >
-              {type === "integer" || type === "number" ? (
-                <InputNumber
-                  className={styles.fullWidth}
-                  precision={type === "integer" ? 0 : undefined}
-                />
-              ) : type === "boolean" ? (
-                <Select
-                  options={[
-                    { label: "true", value: true },
-                    { label: "false", value: false },
-                  ]}
-                />
-              ) : isJson ? (
-                <Input.TextArea
-                  autoSize={{ maxRows: 8, minRows: 3 }}
-                  placeholder={type === "array" ? "[...]" : "{...}"}
-                />
-              ) : (
-                <Input />
-              )}
-            </Form.Item>
-          );
-        })}
+      <Form form={form} layout="vertical" className={styles.form}>
+        {schema ? <ExecutionFields schema={schema} /> : null}
       </Form>
     </Modal>
   );

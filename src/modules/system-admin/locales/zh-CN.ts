@@ -8,6 +8,41 @@
 export const systemAdminZhCN = {
   systemAdmin: {
     sso: {
+      sync: {
+        title: "目录同步",
+        scopeHint:
+          "同步指定 Casdoor 组织的用户和部门。外部删除将停用本地用户；本地停用账号和其他来源的归属关系会保留。已有 Token 的即时撤销不在此流程内。",
+        close: "关闭",
+        run: "立即同步",
+        save: "保存同步配置",
+        saved: "同步配置已保存。启用后将执行首次全量同步。",
+        queued: "同步请求已排队，请刷新状态查看结果。",
+        enabled: "启用目录同步",
+        organization: "Casdoor 组织名称",
+        organizationFormat: "使用组织标识，可包含字母、数字、下划线、点和连字符，最多 100 位。",
+        interval: "定时对账间隔（秒，60–86400）",
+        secret: "Webhook 专用密钥",
+        secretKept: "已配置；留空保留，输入新值进行轮换。",
+        secretHint: "设置 32–256 字符的随机密钥，并填入 Casdoor 的 X-SSO-Sync-Key 请求头。",
+        generate: "生成随机密钥",
+        webhook: "接收地址",
+        webhookHint:
+          "Casdoor 使用 POST 和 application/json，添加 X-SSO-Sync-Key 请求头。不要添加空名称请求头。内网回调需由全局管理员在 built-in 组织配置 Webhook，并关闭仅限单组织；接收端按目标组织过滤。确认接收地址由网关转发到 bkn-safe。Casdoor 可能约 30 秒后才投递事件。",
+        state: "任务状态",
+        running: "同步中",
+        idle: "等待调度",
+        lastSuccess: "最近成功时间",
+        lastError: "最近错误",
+        unknownError: "同步失败，请查看服务日志。",
+        users: "扫描用户数",
+        departments: "扫描部门数（含组织根节点）",
+        disabledUsers: "本轮停用或上游禁用用户数",
+        retainedDepartments: "因存在本地成员或子部门而保留的已删除部门数",
+        SSO_DIRECTORY_READ_FAILED:
+          "读取目录或提交失败。请检查应用权限、网络及同步配置；本轮没有提交部分数据。",
+        SSO_DIRECTORY_CHANGED: "读取过程中目录发生变化，本轮未提交，稍后重试。",
+        SSO_SYNC_LEASE_LOST: "运行期间配置或任务归属发生变化，任务将重新调度。",
+      },
       useDatabaseSecret: "改用数据库密钥",
       errors: {
         INVALID_PARAMETER: "配置不完整或格式错误，请检查标出的字段。",

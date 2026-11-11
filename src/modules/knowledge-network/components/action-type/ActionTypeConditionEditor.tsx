@@ -16,6 +16,8 @@ import {
   findConditionProperty,
   getConditionOperationLabelKey,
   getConditionOperationsForFieldType,
+  conditionNeedsArray,
+  isConditionReferenceCompatible,
   resolveConditionOperation,
 } from "@/modules/knowledge-network/constants/action-type-condition";
 import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
@@ -23,6 +25,7 @@ import type { RelationTypePropertyOption } from "@/modules/knowledge-network/com
 import type {
   ActionTypeCondition,
   ActionTypeConditionOperation,
+  ActionTypeExecutionParameter,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -72,6 +75,7 @@ type ConditionRowProps = {
   onRemove?: () => void;
   onAddGroup?: () => void;
   propertyOptions: RelationTypePropertyOption[];
+  executionParameters: ActionTypeExecutionParameter[];
   showAddButton?: boolean;
   showAddGroupButton?: boolean;
   onAdd?: () => void;
@@ -87,6 +91,7 @@ function ConditionRow({
   onChange,
   onRemove,
   propertyOptions,
+  executionParameters,
   showAddButton,
   showAddGroupButton,
   value,
@@ -120,13 +125,27 @@ function ConditionRow({
 
   const currentOperation = value.operation;
   const needsValue = currentOperation ? !isValuelessOperation(currentOperation) : true;
+  const valueFrom = value.valueFrom ?? "const";
+  const referenceOptions =
+    valueFrom === "property"
+      ? propertyOptions
+          .filter((item) => isConditionReferenceCompatible(fieldType, item.type, currentOperation))
+          .map((item) => ({ label: item.displayName || item.name, value: item.name }))
+      : executionParameters
+          .filter(
+            (item) =>
+              item.name.trim() &&
+              (item.valueFrom ?? "input") === "input" &&
+              isConditionReferenceCompatible(fieldType, item.type, currentOperation),
+          )
+          .map((item) => ({ label: item.name, value: item.name }));
 
   const updateRow = (patch: Partial<ActionTypeCondition>) => {
     onChange({
       ...value,
       ...patch,
       objectTypeId: patch.objectTypeId ?? objectTypeId,
-      valueFrom: "const",
+      valueFrom: patch.valueFrom ?? value.valueFrom ?? "const",
     });
   };
 
@@ -183,6 +202,7 @@ function ConditionRow({
           updateRow({
             operation: resolveConditionOperation(fieldType, nextOperation ?? undefined),
             value: undefined,
+            valueFrom: isValuelessOperation(nextOperation) ? "const" : valueFrom,
           });
         }}
         options={operationOptions}
@@ -190,15 +210,68 @@ function ConditionRow({
         value={currentOperation}
       />
       {needsValue ? (
-        <Input
-          className={styles.valueInput}
-          disabled={!objectTypeId}
-          onChange={(event) => {
-            updateRow({ value: event.target.value || undefined });
-          }}
-          placeholder={t("knowledgeNetwork.actionTypeConditionValueInputPlaceholder")}
-          value={scalarValue}
-        />
+        <div className={styles.valueEditor}>
+          <Select
+            aria-label={t("knowledgeNetwork.actionTypeConditionValueSource")}
+            className={styles.valueSource}
+            disabled={!objectTypeId || !value.field}
+            onChange={(nextValueFrom: NonNullable<ActionTypeCondition["valueFrom"]>) => {
+              updateRow({ valueFrom: nextValueFrom, value: undefined });
+            }}
+            options={(["const", "property", "input"] as const).map((source) => ({
+              label: t(
+                {
+                  const: "knowledgeNetwork.actionTypeExecutionValueFromConst",
+                  property: "knowledgeNetwork.actionTypeExecutionValueFromProperty",
+                  input: "knowledgeNetwork.actionTypeExecutionValueFromInput",
+                }[source],
+              ),
+              value: source,
+            }))}
+            value={valueFrom}
+          />
+          {valueFrom === "const" ? (
+            <Input
+              className={styles.valueInput}
+              disabled={!objectTypeId}
+              onChange={(event) => {
+                updateRow({ value: event.target.value || undefined });
+              }}
+              placeholder={t(
+                conditionNeedsArray(currentOperation)
+                  ? "knowledgeNetwork.actionTypeConditionArrayPlaceholder"
+                  : "knowledgeNetwork.actionTypeConditionValueInputPlaceholder",
+              )}
+              value={scalarValue}
+            />
+          ) : (
+            <Select
+              allowClear
+              aria-label={t(
+                valueFrom === "property"
+                  ? "knowledgeNetwork.actionTypeConditionPropertyPlaceholder"
+                  : "knowledgeNetwork.actionTypeConditionParameterPlaceholder",
+              )}
+              className={styles.valueInput}
+              disabled={!objectTypeId || !value.field}
+              notFoundContent={t(
+                valueFrom === "property"
+                  ? "knowledgeNetwork.actionTypeConditionNoProperties"
+                  : "knowledgeNetwork.actionTypeConditionNoParameters",
+              )}
+              onChange={(nextValue: string | undefined) => updateRow({ value: nextValue })}
+              optionFilterProp="label"
+              options={referenceOptions}
+              placeholder={t(
+                valueFrom === "property"
+                  ? "knowledgeNetwork.actionTypeConditionPropertyPlaceholder"
+                  : "knowledgeNetwork.actionTypeConditionParameterPlaceholder",
+              )}
+              showSearch
+              value={typeof value.value === "string" ? value.value : undefined}
+            />
+          )}
+        </div>
       ) : null}
       <div className={styles.rowActions}>
         {showAddButton ? (
@@ -234,6 +307,7 @@ type ActionTypeConditionEditorProps = {
   hideObjectTypeSelect?: boolean;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   propertyOptions: RelationTypePropertyOption[];
+  executionParameters?: ActionTypeExecutionParameter[];
   value?: ActionTypeCondition | null;
   onChange?: (value?: ActionTypeCondition | null) => void;
 };
@@ -249,6 +323,7 @@ type ConditionRowsEditorProps = {
   ) => void;
   onRemove?: () => void;
   propertyOptions: RelationTypePropertyOption[];
+  executionParameters: ActionTypeExecutionParameter[];
   rows: ActionTypeCondition[];
   showGroupHeader: boolean;
 };
@@ -261,6 +336,7 @@ function ConditionRowsEditor({
   onChange,
   onRemove,
   propertyOptions,
+  executionParameters,
   rows,
   showGroupHeader,
 }: ConditionRowsEditorProps) {
@@ -312,6 +388,7 @@ function ConditionRowsEditor({
       {visibleRows.map((item, index) =>
         isLogicCondition(item) ? (
           <ConditionRowsEditor
+            executionParameters={executionParameters}
             boundObjectTypeId={boundObjectTypeId}
             groupOperation={item.operation === "or" ? "or" : "and"}
             hideObjectTypeSelect={hideObjectTypeSelect}
@@ -333,6 +410,7 @@ function ConditionRowsEditor({
           />
         ) : (
           <ConditionRow
+            executionParameters={executionParameters}
             boundObjectTypeId={boundObjectTypeId}
             hideObjectTypeSelect={hideObjectTypeSelect}
             key={`condition-${index}`}
@@ -357,6 +435,7 @@ export function ActionTypeConditionEditor({
   hideObjectTypeSelect = false,
   objectTypes,
   propertyOptions,
+  executionParameters = [],
   value,
   onChange,
 }: ActionTypeConditionEditorProps) {
@@ -378,7 +457,9 @@ export function ActionTypeConditionEditor({
       ...item,
       objectTypeId: item.objectTypeId || boundObjectTypeId,
       value: isValuelessOperation(item.operation) ? undefined : item.value,
-      valueFrom: "const" as const,
+      valueFrom: isValuelessOperation(item.operation)
+        ? ("const" as const)
+        : (item.valueFrom ?? "const"),
     }));
     const contentRows = normalizedRows.filter(hasConditionContent);
 
@@ -391,7 +472,6 @@ export function ActionTypeConditionEditor({
       onChange?.({
         ...contentRows[0],
         objectTypeId: contentRows[0].objectTypeId || boundObjectTypeId,
-        valueFrom: "const",
       });
       return;
     }
@@ -406,6 +486,7 @@ export function ActionTypeConditionEditor({
 
   return (
     <ConditionRowsEditor
+      executionParameters={executionParameters}
       boundObjectTypeId={boundObjectTypeId}
       groupOperation={groupOperation}
       hideObjectTypeSelect={hideObjectTypeSelect}

@@ -635,6 +635,14 @@ export function needsActionTypeActionSourceDisplayResolution(
   );
 }
 
+export async function getActionTypeToolboxMetadataType(boxId: string) {
+  try {
+    return (await getToolbox(boxId, { skipErrorToast: true })).metadataType;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function resolveActionTypeActionSourceDisplay(
   actionSource: ActionTypeActionSource,
 ): Promise<ActionTypeActionSource> {

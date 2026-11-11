@@ -63,6 +63,7 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
           "knowledgeNetwork.eval.title": "质量评测",
           "knowledgeNetwork.workspaceFunctions": "函数",
+          "knowledgeNetwork.workspaceIndependentActionTypes": "独立行动类",
           "knowledgeNetwork.workspaceKnowledgeBases": "知识库",
           "knowledgeNetwork.workspaceMcpTools": "MCP 资源",
           "knowledgeNetwork.workspaceMetrics": "对象指标",
@@ -345,12 +346,14 @@ describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
   });
 });
 
-describe("KnowledgeNetworkWorkspaceScene MCP navigation", () => {
-  it("removes the standalone debugger entry while keeping MCP resource management", () => {
+describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
+  it("keeps action tools inside action configuration instead of standalone resource pages", () => {
     renderScene(entitlement());
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
-    expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /MCP 资源/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /函数/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /独立行动类/ })).toBeNull();
   });
 });
 
@@ -360,12 +363,12 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     mocks.hiddenNavigation = [];
   });
 
-  it("shows every workspace entry by default", () => {
+  it("shows workspace entries that remain network-level", () => {
     renderScene(entitlement());
 
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /质量评测/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /函数/ })).toBeNull();
   });
 
   it("leaves out the entries the deployment hides and keeps the rest", () => {
@@ -375,7 +378,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /函数/ })).toBeNull();
     expect(screen.getByRole("button", { name: /数据查询/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /MCP 资源/ })).toBeNull();
   });
 
   it("drops the title of a group whose entries are all hidden", () => {

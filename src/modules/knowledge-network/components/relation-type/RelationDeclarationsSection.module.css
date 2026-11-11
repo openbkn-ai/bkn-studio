@@ -6,8 +6,13 @@
  */
 
 .section {
-  margin: 24px auto 0;
+  margin: 28px auto 0;
   max-width: 1000px;
+}
+
+.note {
+  color: var(--color-text-secondary);
+  font-size: 12px;
 }
 
 .title {
@@ -16,11 +21,6 @@
   gap: 8px;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.undeclared {
-  margin-inline-end: 0;
-  font-weight: 400;
 }
 
 .cleared {

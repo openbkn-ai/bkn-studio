@@ -37,8 +37,11 @@ export function useCypherNetwork(knId: string | undefined) {
     }),
     [runtimeConfig],
   );
-  const [network, setNetwork] = useState<KnowledgeNetworkRecord | null>(null);
+  const [loaded, setNetwork] = useState<KnowledgeNetworkRecord | null>(null);
   const [schema, setSchema] = useState<CypherCompletionSchema>(EMPTY_SCHEMA);
+  // Only the function's own network: while another function's network is still loaded, a run must
+  // not go there and the settings must not name it.
+  const network = knId && loaded?.id === knId ? loaded : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +49,7 @@ export function useCypherNetwork(knId: string | undefined) {
       setNetwork(null);
       return;
     }
-    if (network?.id === knId) return;
+    if (loaded?.id === knId) return;
     void getKnowledgeNetwork(knId, { skipErrorToast: true })
       .then((record) => {
         if (!cancelled) setNetwork(record);
@@ -57,7 +60,7 @@ export function useCypherNetwork(knId: string | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [knId, network?.id]);
+  }, [knId, loaded?.id]);
 
   const env = useMemo<ContextLoaderEnv | null>(
     () =>

@@ -47,9 +47,23 @@ export type FilterRule = {
   valueFrom?: "const" | "field";
 };
 export type FilterGroup = { kind: "group"; operation: "and" | "or"; children: FilterNode[] };
-export type FilterNode = FilterGroup | FilterRule;
-export type FilterQueryPath = "source" | "local_index";
+export type UnsupportedFilterReason =
+  | "invalidNode"
+  | "extraParameters"
+  | "unsupportedOperation"
+  | "invalidValueSource"
+  | "invalidValue"
+  | "legacyCondition";
+export type UnsupportedFilterNode = {
+  kind: "unsupported";
+  raw: unknown;
+  reason: UnsupportedFilterReason;
+};
+export type FilterNode = FilterGroup | FilterRule | UnsupportedFilterNode;
+/** Managed resources and views share search independently of ordinary source filtering. */
+export type FilterQueryPath = "source" | "local_index" | "managed_local_index";
 type FilterError =
+  | "unsupportedCondition"
   | "emptyGroup"
   | "tooMany"
   | "invalidField"
@@ -61,7 +75,7 @@ type FilterError =
   | "incompatibleField"
   | "sameField"
   | "invalidRelativeTime"
-  | "invalidSubstring";
+  | "invalidLikePattern";
 const FILTER_OPERATIONS = new Set<string>([
   ...COMPARISONS,
   ...SETS,
@@ -72,11 +86,30 @@ const FILTER_OPERATIONS = new Set<string>([
   "before",
   "current",
 ]);
-const unescapedLikePercent = /(^|[^\\])(?:\\\\)*%/;
 const numericLiteral = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
 const fieldType = (type: string) => type.trim().toLowerCase();
 const hasOperation = (operations: readonly string[], operation: string) =>
   operations.includes(operation);
+
+export function sqlLikePatternRegex(pattern: string): RegExp | null {
+  let source = "";
+  let escaped = false;
+  for (const character of pattern) {
+    if (!escaped && character === "\\") {
+      escaped = true;
+      continue;
+    }
+    source +=
+      !escaped && character === "%"
+        ? ".*"
+        : !escaped && character === "_"
+          ? "."
+          : character.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    escaped = false;
+  }
+  // Unlike $, this end assertion also requires consuming a final newline.
+  return escaped ? null : new RegExp(`^${source}(?![\\s\\S])`, "su");
+}
 
 export function emptyFilterGroup(): FilterGroup {
   return { kind: "group", operation: "and", children: [] };
@@ -94,63 +127,73 @@ export function filterSupportsFieldValue(operation: FilterOperation) {
   return hasOperation(COMPARISONS, operation);
 }
 
+/** Strict parser for consumers that require an entirely editable condition. */
 export function parseFilterCondition(
   raw: unknown,
   path: FilterQueryPath = "source",
 ): FilterGroup | null {
+  const tree = parseFilterTree(raw, path);
+  return hasUnsupportedFilterNodes(tree) ? null : tree;
+}
+
+export function hasUnsupportedFilterNodes(node: FilterNode): boolean {
+  return (
+    node.kind === "unsupported" ||
+    (node.kind === "group" && node.children.some(hasUnsupportedFilterNodes))
+  );
+}
+
+/** Keep incompatible nodes intact so users can inspect and explicitly remove them. */
+export function parseFilterTree(raw: unknown, path: FilterQueryPath = "source"): FilterGroup {
   if (raw === null || raw === undefined) return emptyFilterGroup();
   const scalar = (value: unknown) =>
     ["string", "number", "boolean"].includes(typeof value) || BigNumber.isBigNumber(value);
-  const parse = (value: unknown): FilterNode | null => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const parse = (value: unknown): FilterNode => {
+    const unsupported = (reason: UnsupportedFilterReason): UnsupportedFilterNode => ({
+      kind: "unsupported",
+      raw: value,
+      reason,
+    });
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      return unsupported("invalidNode");
     const node = value as Record<string, unknown>;
     if (node.operation === "and" || node.operation === "or") {
       if (Object.keys(node).some((key) => !["operation", "sub_conditions"].includes(key)))
-        return null;
-      if (!Array.isArray(node.sub_conditions) || !node.sub_conditions.length) return null;
-      const children = node.sub_conditions.map(parse);
-      if (children.some((child) => child === null)) return null;
-      return { kind: "group", operation: node.operation, children: children as FilterNode[] };
+        return unsupported("extraParameters");
+      if (!Array.isArray(node.sub_conditions) || !node.sub_conditions.length)
+        return unsupported("invalidNode");
+      return { kind: "group", operation: node.operation, children: node.sub_conditions.map(parse) };
     }
+    if (typeof node.operation !== "string") return unsupported("invalidNode");
+    if (!FILTER_OPERATIONS.has(node.operation)) return unsupported("unsupportedOperation");
     if (
-      Object.keys(node).some(
-        (key) => !["field", "operation", "value", "value_from"].includes(key),
-      ) ||
-      typeof node.field !== "string" ||
-      typeof node.operation !== "string" ||
-      !FILTER_OPERATIONS.has(node.operation) ||
-      (node.value_from !== undefined && node.value_from !== "const" && node.value_from !== "field")
+      Object.keys(node).some((key) => !["field", "operation", "value", "value_from"].includes(key))
     )
-      return null;
+      return unsupported("extraParameters");
+    if (typeof node.field !== "string") return unsupported("invalidNode");
+    if (node.value_from !== undefined && node.value_from !== "const" && node.value_from !== "field")
+      return unsupported("invalidValueSource");
     const operation = node.operation as FilterOperation;
     const kind = filterValueKind(operation);
-    // Stored emptiness can change semantics when the query channel changes.
-    // Keep their full original definitions rather than silently rewriting them.
+    // These stored definitions cannot be rewritten without potentially changing semantics.
     if (
       ["empty", "not_empty"].includes(operation) ||
-      (path === "local_index" &&
+      (path !== "source" &&
         operation === "before" &&
         Array.isArray(node.value) &&
         !hasOperation(FILTER_TIME_UNITS, String(node.value[1])))
     )
-      return null;
-
-    // Legacy wildcard definitions cannot be edited under the current literal contract.
-    if (
-      ["like", "not_like"].includes(operation) &&
-      typeof node.value === "string" &&
-      unescapedLikePercent.test(node.value)
-    )
-      return null;
+      return unsupported("legacyCondition");
     if (
       node.value_from === "field" &&
       (!filterSupportsFieldValue(operation) || typeof node.value !== "string")
     )
-      return null;
+      return unsupported("invalidValueSource");
     if (kind !== "none") {
       if (["set", "range", "before"].includes(kind)) {
-        if (!Array.isArray(node.value) || !node.value.every(scalar)) return null;
-      } else if (!scalar(node.value)) return null;
+        if (!Array.isArray(node.value) || !node.value.every(scalar))
+          return unsupported("invalidValue");
+      } else if (!scalar(node.value)) return unsupported("invalidValue");
     }
     return {
       kind: "rule",
@@ -166,27 +209,28 @@ export function parseFilterCondition(
     };
   };
   const parsed = parse(raw);
-  return parsed?.kind === "group"
-    ? parsed
-    : parsed
-      ? { kind: "group", operation: "and", children: [parsed] }
-      : null;
+  return parsed.kind === "group" ? parsed : { kind: "group", operation: "and", children: [parsed] };
 }
 
 function isLargeIntegerType(type: string) {
   return fieldType(type) === "large_integer";
 }
-export function isNumericFilterType(type: string) {
-  return /^(large_integer|integer|unsigned integer|float|decimal|numeric|double|bigint|int)(?:$|\()/i.test(
-    type.trim(),
+export function isNumericFilterType(type: string, standardTypeOnly = false) {
+  const match =
+    /^(large_integer|integer|unsigned integer|float|decimal|numeric|double|bigint|int)(?:$|\()/i.exec(
+      type.trim(),
+    );
+  return (
+    match !== null &&
+    (!standardTypeOnly || (match[1] === type && !/^(numeric|double|bigint|int)$/.test(type)))
   );
 }
 export function isTemporalFilterType(type: string) {
   return ["date", "datetime"].includes(fieldType(type));
 }
-export function isFilterableFieldType(type: string) {
+export function isFilterableFieldType(type: string, standardTypeOnly = false) {
   return (
-    isNumericFilterType(type) ||
+    isNumericFilterType(type, standardTypeOnly) ||
     isTemporalFilterType(type) ||
     ["string", "text", "boolean", "json"].includes(fieldType(type))
   );
@@ -198,22 +242,31 @@ export function filterOperationsForField(
   path: FilterQueryPath = "source",
 ): FilterOperation[] {
   const type = fieldType(field.type);
-  if (!isFilterableFieldType(type)) return [];
+  const { features: propertyFeatures } = field;
+  const fulltext: FilterOperation[] =
+    path !== "source" &&
+    ["string", "text"].includes(type) &&
+    (propertyFeatures?.some((feature) => feature.featureType === "fulltext") ||
+      (type === "text" && path === "managed_local_index"))
+      ? [...FULLTEXT]
+      : [];
+  // Managed-index queries use the local schema's type and feature capabilities.
+  // Source and native Index queries keep their own explicit filtering switch.
+  if (field.filterable === false && path !== "managed_local_index") return [];
+  if (
+    (path === "managed_local_index" && field.type !== type) ||
+    !isFilterableFieldType(type, path === "managed_local_index")
+  )
+    return [];
   if (type === "json") return path === "source" ? ["null", "not_null"] : [];
-  if (/^(decimal|numeric)(?:$|\()/.test(type) && path === "local_index") return [];
+  if (/^(decimal|numeric)(?:$|\()/.test(type) && path !== "source") return [];
   if (type === "boolean") return ["==", "!=", ...PRESENCE];
   if (isTemporalFilterType(type))
     return [...COMPARISONS, ...SETS, ...RANGES, ...PRESENCE, "before", "current"];
-  if (isNumericFilterType(type) && !(isLargeIntegerType(type) && path === "local_index"))
+  if (isNumericFilterType(type) && !(isLargeIntegerType(type) && path !== "source"))
     return [...COMPARISONS, ...SETS, ...RANGES, ...PRESENCE];
-  const { features: propertyFeatures } = field;
-  const fulltext: FilterOperation[] =
-    path === "local_index" &&
-    propertyFeatures?.some((feature) => feature.featureType === "fulltext")
-      ? [...FULLTEXT]
-      : [];
   if (
-    path === "local_index" &&
+    path !== "source" &&
     type === "text" &&
     !propertyFeatures?.some((feature) => feature.featureType === "keyword")
   )
@@ -227,7 +280,11 @@ export function compatibleFilterFields(
   operation: FilterOperation,
   path: FilterQueryPath = "source",
 ) {
-  if (!filterSupportsFieldValue(operation)) return [];
+  if (
+    (field.filterable === false && path !== "managed_local_index") ||
+    !filterSupportsFieldValue(operation)
+  )
+    return [];
   return fields.filter((candidate) => {
     if (candidate.name === field.name) return false;
     if (!filterOperationsForField(candidate, path).includes(operation)) return false;
@@ -246,6 +303,7 @@ export function filterValidationError(
   fields: ResourceSchemaField[],
   path: FilterQueryPath = "source",
 ): FilterError | null {
+  if (hasUnsupportedFilterNodes(group)) return "unsupportedCondition";
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
   const validate = (node: FilterNode, root: boolean): FilterError | null => {
     if (node.kind === "group") {
@@ -257,6 +315,7 @@ export function filterValidationError(
       }
       return null;
     }
+    if (node.kind === "unsupported") return "unsupportedCondition";
     const field = fieldMap.get(node.field);
     if (!field) return "invalidField";
     if (!filterOperationsForField(field, path).includes(node.operation))
@@ -275,9 +334,9 @@ export function filterValidationError(
     if (
       ["like", "not_like"].includes(node.operation) &&
       typeof node.value === "string" &&
-      unescapedLikePercent.test(node.value)
+      sqlLikePatternRegex(node.value) === null
     )
-      return "invalidSubstring";
+      return "invalidLikePattern";
     if (kind === "current")
       return typeof node.value === "string" && hasOperation(FILTER_TIME_UNITS, node.value)
         ? null
@@ -290,7 +349,7 @@ export function filterValidationError(
         /^\d+$/.test(node.value[0]) &&
         new BigNumber(node.value[0]).isGreaterThan(0) &&
         new BigNumber(node.value[0]).isLessThanOrEqualTo(
-          path === "local_index" ? 2147483647 : Number.MAX_SAFE_INTEGER,
+          path !== "source" ? 2147483647 : Number.MAX_SAFE_INTEGER,
         ) &&
         hasOperation(FILTER_TIME_UNITS, node.value[1])
         ? null
@@ -302,13 +361,13 @@ export function filterValidationError(
       return "missingValue";
     const acceptsEmpty =
       ["string", "text"].includes(fieldType(field.type)) ||
-      (isLargeIntegerType(field.type) && path === "local_index");
+      (isLargeIntegerType(field.type) && path !== "source");
     if (!acceptsEmpty && values.some((value) => !value.trim())) return "missingValue";
     if (kind === "range" && values.length !== 2) return "invalidRange";
     for (const value of values) {
       if (
         isNumericFilterType(field.type) &&
-        !(isLargeIntegerType(field.type) && path === "local_index")
+        !(isLargeIntegerType(field.type) && path !== "source")
       ) {
         const number = new BigNumber(value.trim());
         if (
@@ -367,11 +426,15 @@ export function filterToBackend(
   fields: ResourceSchemaField[],
   path: FilterQueryPath = "source",
 ): Record<string, unknown> | null {
+  if (hasUnsupportedFilterNodes(group))
+    throw new Error("Remove incompatible filter conditions before saving.");
   if (!group.children.length) return null;
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
   const serialize = (node: FilterNode): Record<string, unknown> => {
     if (node.kind === "group")
       return { operation: node.operation, sub_conditions: node.children.map(serialize) };
+    if (node.kind === "unsupported")
+      throw new Error("Cannot serialize an incompatible filter condition.");
     const base = { field: node.field, operation: node.operation };
     if (node.operation === "empty" || node.operation === "not_empty") {
       // Equality uses keyword routing for TEXT and keeps NULL separate from empty strings.

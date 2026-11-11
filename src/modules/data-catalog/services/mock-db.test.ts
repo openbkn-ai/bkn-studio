@@ -13,6 +13,8 @@ import { fixedFilterSourceBlockReason } from "@/modules/data-catalog/lib/view-qu
 import {
   filterValidationError,
   parseFilterCondition,
+  parseFilterTree,
+  hasUnsupportedFilterNodes,
 } from "@/modules/data-catalog/lib/filter-tree";
 
 import {
@@ -21,9 +23,74 @@ import {
   mockDiscoverRecords,
   mockResources,
   mockStartScan,
+  withMockFilterability,
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("provides effective filterability for every seeded resource field", () => {
+    for (const resource of mockResources) {
+      for (const field of resource.schema) {
+        expect(typeof field.filterable, `${resource.id}.${field.name}`).toBe("boolean");
+      }
+    }
+
+    const resource = mockResources.find((item) => item.id === "res-index-config-demo");
+    expect(resource).toBeDefined();
+    for (const field of resource!.schema) {
+      expect(field.filterable, field.type).toBe(
+        !["binary", "json", "other", "ip"].includes(field.type),
+      );
+    }
+  });
+
+  it("provides compatible, partially incompatible and root-group filter demos with real source bindings", () => {
+    const source = mockResources.find((item) => item.id === "res-filter-orders")!;
+    for (const [id, incompatible] of [
+      ["res-filter-compatible-view", false],
+      ["res-filter-incompatible-view", true],
+      ["res-filter-incompatible-root-view", true],
+    ] as const) {
+      const view = mockResources.find((item) => item.id === id)!;
+      expect(view.logicalViewDefinition?.sourceResourceId).toBe(source.id);
+      expect(view.schema.map((field) => [field.originalName, field.type])).toEqual(
+        source.schema.map((field) => [field.originalName, field.type]),
+      );
+      const tree = parseFilterTree(view.logicalViewDefinition?.filterCondition);
+      expect(hasUnsupportedFilterNodes(tree)).toBe(incompatible);
+      expect(filterValidationError(tree, source.schema)).toBe(
+        incompatible ? "unsupportedCondition" : null,
+      );
+      if (id === "res-filter-incompatible-view") {
+        expect(tree.children[0]).toMatchObject({ kind: "rule", operation: "not_null" });
+        expect(tree.children[3]).toMatchObject({
+          kind: "group",
+          operation: "or",
+          children: [
+            { kind: "rule" },
+            { kind: "unsupported", reason: "legacyCondition" },
+            { kind: "unsupported", reason: "unsupportedOperation" },
+          ],
+        });
+      }
+    }
+  });
+
+  it("defaults IP filtering to false while preserving explicit flags without changing the input", () => {
+    const schema = [
+      { name: "missing", type: "ip" },
+      { name: "disabled", type: "ip", filterable: false },
+      { name: "historical", type: "ip", filterable: true },
+    ];
+    const before = structuredClone(schema);
+
+    expect(withMockFilterability(schema).map((field) => field.filterable)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect(schema).toEqual(before);
+  });
+
   it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
     const restrictedIds = new Set([
       "res-permission-limited-orders",

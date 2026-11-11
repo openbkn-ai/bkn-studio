@@ -189,16 +189,6 @@ export function RelationTypeMappingScene() {
               saved={{ id: relationTypeId, kind: "relation_type" }}
             />
           ) : null}
-          <RelationTypeMappingEditor
-            confirmRelationPropertyChange={confirmRelationPropertyChange}
-            networkId={networkId}
-            objectTypes={objectTypes}
-            onChange={setMappingValue}
-            relationProperties={
-              mappingValue.mappingMode === "resource" ? detail?.relationProperties : undefined
-            }
-            value={mappingValue}
-          />
           <RelationDeclarationsSection
             ends={mappingValue.mappingRules}
             networkId={networkId}
@@ -209,7 +199,24 @@ export function RelationTypeMappingScene() {
             sourceName={objectTypeName(mappingValue.mappingRules.sourceObjectTypeId)}
             targetName={objectTypeName(mappingValue.mappingRules.targetObjectTypeId)}
             value={declarations}
-          />
+          >
+            {({ advanced, semantics }) => (
+              <>
+                <RelationTypeMappingEditor
+                  confirmRelationPropertyChange={confirmRelationPropertyChange}
+                  networkId={networkId}
+                  objectTypes={objectTypes}
+                  onChange={setMappingValue}
+                  relationProperties={
+                    mappingValue.mappingMode === "resource" ? detail?.relationProperties : undefined
+                  }
+                  semantics={semantics}
+                  value={mappingValue}
+                />
+                {advanced}
+              </>
+            )}
+          </RelationDeclarationsSection>
         </div>
       )}
     </KnowledgeNetworkResourceConfigShell>

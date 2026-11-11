@@ -136,6 +136,19 @@ describe("resource.service · previewCatalogResource", () => {
     expect(postMock.mock.calls[0]?.[1]).toMatchObject({ filter_condition: filterCondition });
   });
 
+  it.each(["like", "not_like"])(
+    "preserves SQL LIKE patterns in real %s requests",
+    async (operation) => {
+      postMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+      const { previewCatalogResource } = await import("./resource.service");
+      for (const value of ["abc", "%abc%", "a_b", "a\\%\\_b", "x\\\\y"]) {
+        const filterCondition = { field: "content", operation, value };
+        await previewCatalogResource("r-1", { filterCondition, limit: 10, offset: 0 });
+        expect(postMock.mock.lastCall?.[1]).toMatchObject({ filter_condition: filterCondition });
+      }
+    },
+  );
+
   it("applies mock preview filters before pagination and total counting", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
@@ -446,12 +459,13 @@ describe("resource.service · previewCatalogResource", () => {
       const updated = await updateDerivedView(created.id, {
         ...input,
         sourceResourceId: "res-customers",
-        schema: [{ name: "id", originalName: "customer_id", type: "integer" }],
+        schema: [{ name: "id", originalName: "customer_id", type: "integer", filterable: true }],
         expectedUpdateTime: created.expectedUpdateTime,
       });
       expect(updated?.sourceMetadata?.sourceCategory).toBe("table");
       const restored = await updateDerivedView(created.id, {
         ...input,
+        schema: created.schema,
         expectedUpdateTime: updated!.expectedUpdateTime,
       });
       expect(restored?.sourceMetadata?.sourceCategory).toBe("index");
@@ -1904,6 +1918,612 @@ describe("resource.service · mock update boundaries", () => {
     expect(updated).toMatchObject({
       description: "updated description",
       sourceIdentifier: current.sourceIdentifier,
+    });
+  });
+});
+
+describe("resource.service · mock SQL LIKE", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it.each(["like", "not_like"])(
+    "uses full SQL LIKE matching for fixed and dynamic %s on both query channels",
+    async (operation) => {
+      const { previewCatalogResource } = await import("./resource.service");
+      const { mockResources, mockQuerySourceRows } = await import("./mock-db");
+      const source = mockResources.find((resource) => resource.id === "res-query-source-table")!;
+      const view = mockResources.find(
+        (resource) => resource.id === "res-query-source-switch-view",
+      )!;
+      const contents = [
+        "abc",
+        "xabcx",
+        "a😀b",
+        "a\nb",
+        "a%_b",
+        "a[.]b",
+        "",
+        "x\\y",
+        "aqb",
+        "abc\n",
+        null,
+      ];
+      mockQuerySourceRows.splice(
+        0,
+        mockQuerySourceRows.length,
+        ...contents.map((content, index) => ({ id: index + 1, content })),
+      );
+      source.rowCount = contents.length;
+      const patterns: [string, number[]][] = [
+        ["abc", [1]],
+        ["%abc%", [1, 2, 10]],
+        ["a_b", [3, 4, 9]],
+        ["a\\%\\_b", [5]],
+        ["a[.]b", [6]],
+        ["", [7]],
+        ["%", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
+        ["x\\\\y", [8]],
+        ["a\\qb", [9]],
+      ];
+      for (const ignoreLocalIndex of [true, false]) {
+        for (const fixed of [true, false]) {
+          for (const [value, matchedIds] of patterns) {
+            const condition = { field: "content", operation, value };
+            view.logicalViewDefinition!.filterCondition = fixed ? condition : undefined;
+            const pending = previewCatalogResource(view.id, {
+              ignoreLocalIndex,
+              ...(fixed ? {} : { filterCondition: condition }),
+              limit: 20,
+              offset: 0,
+            });
+            await vi.runAllTimersAsync();
+            const result = await pending;
+            const expectedIds =
+              operation === "like"
+                ? matchedIds
+                : contents.flatMap((content, index) =>
+                    content !== null && !matchedIds.includes(index + 1) ? [index + 1] : [],
+                  );
+            expect(
+              result.rows.map((row) => row.record_id),
+              `${value} fixed=${fixed}`,
+            ).toEqual(expectedIds);
+            expect(result.total).toBe(expectedIds.length);
+          }
+        }
+      }
+    },
+  );
+
+  it.each(["like", "not_like"])(
+    "rejects invalid fixed and dynamic %s escapes even when there are no rows",
+    async (operation) => {
+      const { previewCatalogResource } = await import("./resource.service");
+      const { mockResources } = await import("./mock-db");
+      const source = mockResources.find((resource) => resource.id === "res-query-source-table")!;
+      const view = mockResources.find(
+        (resource) => resource.id === "res-query-source-switch-view",
+      )!;
+      source.rowCount = 0;
+      for (const fixed of [true, false]) {
+        const condition = { field: "content", operation, value: "abc\\" };
+        view.logicalViewDefinition!.filterCondition = fixed ? condition : undefined;
+        await expect(
+          previewCatalogResource(view.id, {
+            ...(fixed ? {} : { filterCondition: condition }),
+            limit: 10,
+            offset: 0,
+          }),
+        ).rejects.toMatchObject({ response: { status: 400 } });
+      }
+    },
+  );
+});
+
+describe("resource.service · mock filterability", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it.each(
+    ["resource", "view"].flatMap((action) =>
+      [undefined, null, "false", 0].map((filterable) => ({ action, filterable })),
+    ),
+  )(
+    "rejects mock $action updates with filterable=$filterable without writing or emitting",
+    async ({ action, filterable }) => {
+      const service = await import("./resource.service");
+      const { mockResources, subscribeMockDb } = await import("./mock-db");
+      const current = mockResources.find((resource) =>
+        action === "resource" ? resource.category === "table" : resource.logicalType === "derived",
+      )!;
+      const before = structuredClone(mockResources);
+      const changed = vi.fn();
+      const unsubscribe = subscribeMockDb(changed);
+      const input = {
+        ...current,
+        enabled: current.enabled !== false,
+        sourceResourceId: current.logicalViewDefinition?.sourceResourceId ?? "",
+        tags: current.tags ?? [],
+        schema: [
+          { name: "valid", type: "string", filterable: true },
+          { name: "invalid", type: "string", filterable: filterable as unknown as boolean },
+        ],
+      };
+      try {
+        const pending =
+          action === "resource"
+            ? service.updateCatalogResource(current.id, input)
+            : service.updateDerivedView(current.id, input);
+        await Promise.all([
+          expect(pending).rejects.toMatchObject({
+            response: {
+              status: 400,
+              data: { error_code: "VegaBackend.InvalidParameter.RequestBody" },
+            },
+          }),
+          vi.runAllTimersAsync(),
+        ]);
+        expect(mockResources).toEqual(before);
+        expect(changed).not.toHaveBeenCalled();
+      } finally {
+        unsubscribe();
+      }
+    },
+  );
+
+  it.each(["resource", "view"])("preserves explicit false in mock %s updates", async (action) => {
+    const service = await import("./resource.service");
+    const { mockResources, subscribeMockDb } = await import("./mock-db");
+    const current = mockResources.find((resource) =>
+      action === "resource" ? resource.category === "table" : resource.logicalType === "derived",
+    )!;
+    const changed = vi.fn();
+    const unsubscribe = subscribeMockDb(changed);
+    const input = {
+      ...current,
+      enabled: current.enabled !== false,
+      sourceResourceId: current.logicalViewDefinition?.sourceResourceId ?? "",
+      tags: current.tags ?? [],
+      schema: current.schema.map((field) => ({ ...field, filterable: false })),
+    };
+    try {
+      const pending =
+        action === "resource"
+          ? service.updateCatalogResource(current.id, input)
+          : service.updateDerivedView(current.id, input);
+      await vi.runAllTimersAsync();
+      const updated = await pending;
+      expect(updated?.schema).toEqual(input.schema);
+      expect(mockResources.find((resource) => resource.id === current.id)?.schema).toEqual(
+        input.schema,
+      );
+      expect(changed).toHaveBeenCalledOnce();
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("completes create defaults while preserving explicit flags and the input schema", async () => {
+    const { createCatalogResource } = await import("./resource.service");
+    const schema = [
+      { name: "id", type: "integer" },
+      { name: "wide", type: "large_integer" },
+      { name: "body", type: "text" },
+      { name: "embedding", type: "vector" },
+      { name: "hidden", type: "string", filterable: false },
+      { name: "bytes", type: "binary" },
+      { name: "payload", type: "json" },
+      { name: "unknown", type: "future_type" },
+      { name: "explicit", type: "string", filterable: true },
+    ];
+    const original = structuredClone(schema);
+    const pending = createCatalogResource({
+      catalogId: "cat-001",
+      category: "dataset",
+      description: "",
+      name: "mock-filterability",
+      schema,
+      sourceIdentifier: "mock-filterability",
+    });
+    await vi.runAllTimersAsync();
+    const created = await pending;
+
+    expect(created.schema.map((field) => field.filterable)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(schema).toEqual(original);
+  });
+
+  it("defaults mock Dataset IP fields to disabled and preserves false on save", async () => {
+    const { createCatalogResource, updateCatalogResource } = await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const schema = [
+      { name: "address", type: "ip" },
+      { name: "disabled_address", type: "ip", filterable: false },
+    ];
+    const before = structuredClone(schema);
+    const creating = createCatalogResource({
+      catalogId: "cat-001",
+      category: "dataset",
+      description: "",
+      name: "mock-ip-filterability",
+      schema,
+      sourceIdentifier: "mock-ip-filterability",
+    });
+    await vi.runAllTimersAsync();
+    const created = await creating;
+    expect(created.schema.map((field) => field.filterable)).toEqual([false, false]);
+    expect(schema).toEqual(before);
+
+    const saving = updateCatalogResource(created.id, {
+      ...created,
+      description: "Updated description",
+      schema: created.schema,
+    });
+    await vi.runAllTimersAsync();
+    const saved = await saving;
+    expect(saved?.schema.map((field) => field.filterable)).toEqual([false, false]);
+    expect(mockResources.find((resource) => resource.id === created.id)?.schema).toEqual(
+      created.schema,
+    );
+  });
+
+  it.each(["create resource", "update resource", "create view", "update view"])(
+    "rejects unsupported enabled fields during %s without mutating mock state",
+    async (action) => {
+      const service = await import("./resource.service");
+      const { mockResources, subscribeMockDb } = await import("./mock-db");
+      const before = structuredClone(mockResources);
+      const changed = vi.fn();
+      const unsubscribe = subscribeMockDb(changed);
+      const schema = [{ name: "bytes", type: "binary", filterable: true }];
+      const current = mockResources.find((resource) => resource.category === "table")!;
+      const view = mockResources.find((resource) => resource.logicalType === "derived")!;
+      const viewInput = {
+        catalogId: current.catalogId,
+        description: "",
+        enabled: true,
+        name: "invalid-view",
+        schema,
+        sourceResourceId: current.id,
+        tags: [],
+      };
+      try {
+        const pending =
+          action === "create resource"
+            ? service.createCatalogResource({ ...current, schema })
+            : action === "update resource"
+              ? service.updateCatalogResource(current.id, { ...current, schema })
+              : action === "create view"
+                ? service.createDerivedView(viewInput)
+                : service.updateDerivedView(view.id, {
+                    ...viewInput,
+                    expectedUpdateTime: view.expectedUpdateTime,
+                  });
+        await Promise.all([expect(pending).rejects.toThrow(/bytes/), vi.runAllTimersAsync()]);
+        expect(mockResources).toEqual(before);
+        expect(changed).not.toHaveBeenCalled();
+      } finally {
+        unsubscribe();
+      }
+    },
+  );
+
+  it("completes the automatically generated mock schema", async () => {
+    const { createCatalogResource } = await import("./resource.service");
+    const pending = createCatalogResource({
+      catalogId: "cat-001",
+      category: "table",
+      description: "",
+      name: "mock-default-schema",
+      schema: [],
+      sourceIdentifier: "mock-default-schema",
+    });
+    await vi.runAllTimersAsync();
+    const created = await pending;
+
+    expect(created.schema).toEqual([
+      { name: "id", type: "integer", filterable: true },
+      { name: "name", type: "string", filterable: true },
+      { name: "updated_at", type: "datetime", filterable: true },
+    ]);
+  });
+
+  it.each([
+    { sourceFlag: false, requestedFlag: undefined, nativeName: "DATABASE_ID", expected: false },
+    { sourceFlag: true, requestedFlag: undefined, nativeName: "DATABASE_ID", expected: true },
+    { sourceFlag: false, requestedFlag: undefined, nativeName: undefined, expected: false },
+    { sourceFlag: true, requestedFlag: undefined, nativeName: undefined, expected: true },
+    { sourceFlag: false, requestedFlag: true, nativeName: "DATABASE_ID", expected: true },
+    { sourceFlag: true, requestedFlag: false, nativeName: "DATABASE_ID", expected: false },
+    { sourceFlag: undefined, requestedFlag: undefined, nativeName: "DATABASE_ID", expected: true },
+  ])(
+    "inherits mock view source=$sourceFlag request=$requestedFlag native=$nativeName as $expected",
+    async ({ sourceFlag, requestedFlag, nativeName, expected }) => {
+      const { createDerivedView } = await import("./resource.service");
+      const { mockResources } = await import("./mock-db");
+      const source = mockResources.find((resource) => resource.id === "res-query-source-table")!;
+      const sourceSchema = [
+        { name: "source_id", originalName: nativeName, type: "string", filterable: sourceFlag },
+      ];
+      source.schema = sourceSchema;
+      const schema = [
+        {
+          name: "public_id",
+          originalName: nativeName ?? "source_id",
+          type: "string",
+          ...(requestedFlag === undefined ? {} : { filterable: requestedFlag }),
+        },
+      ];
+      const beforeInput = structuredClone(schema);
+      const beforeSource = structuredClone(sourceSchema);
+      const pending = createDerivedView({
+        catalogId: source.catalogId,
+        description: "",
+        enabled: true,
+        name: "source-filterability-view",
+        schema,
+        sourceResourceId: source.id,
+        tags: [],
+      });
+      await vi.runAllTimersAsync();
+      const created = await pending;
+
+      expect(created.schema).toMatchObject([
+        { name: "public_id", originalName: nativeName ?? "source_id", filterable: expected },
+      ]);
+      expect(schema).toEqual(beforeInput);
+      expect(source.schema).toEqual(beforeSource);
+    },
+  );
+
+  it.each(["binary", "future_type"])(
+    "rejects inherited unsupported %s filtering without writing a mock view",
+    async (type) => {
+      const { createDerivedView } = await import("./resource.service");
+      const { mockResources, subscribeMockDb } = await import("./mock-db");
+      const source = mockResources.find((resource) => resource.id === "res-query-source-table")!;
+      source.schema = [
+        { name: "source_field", originalName: "NATIVE_FIELD", type, filterable: true },
+      ];
+      const before = structuredClone(mockResources);
+      const changed = vi.fn();
+      const unsubscribe = subscribeMockDb(changed);
+      try {
+        const pending = createDerivedView({
+          catalogId: source.catalogId,
+          description: "",
+          enabled: true,
+          name: "invalid-inherited-filterability",
+          schema: [{ name: "public_field", originalName: "NATIVE_FIELD", type }],
+          sourceResourceId: source.id,
+          tags: [],
+        });
+        await Promise.all([
+          expect(pending).rejects.toThrow(/public_field/),
+          vi.runAllTimersAsync(),
+        ]);
+        expect(mockResources).toEqual(before);
+        expect(changed).not.toHaveBeenCalled();
+      } finally {
+        unsubscribe();
+      }
+    },
+  );
+
+  it("completes derived view defaults without reopening an explicitly disabled field", async () => {
+    const { createDerivedView } = await import("./resource.service");
+    const pending = createDerivedView({
+      catalogId: "cat-001",
+      description: "",
+      enabled: true,
+      name: "mock-filterability-view",
+      schema: [
+        { name: "record_id", originalName: "id", type: "integer" },
+        { name: "content", originalName: "content", type: "text", filterable: false },
+      ],
+      sourceResourceId: "res-query-source-table",
+      tags: [],
+    });
+    await vi.runAllTimersAsync();
+    const created = await pending;
+
+    expect(created.schema).toMatchObject([
+      { name: "record_id", filterable: true },
+      { name: "content", filterable: false },
+    ]);
+  });
+});
+
+describe("resource.service · field filterability", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    putMock.mockReset();
+    postMock.mockReset();
+    putMock.mockResolvedValue({ data: {} });
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([undefined, false, true])(
+    "preserves real IP filterable=%s without inferring defaults",
+    async (filterable) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              id: "resource-1",
+              category: "table",
+              schema_definition: [
+                {
+                  name: "address",
+                  type: "ip",
+                  ...(filterable === undefined ? {} : { filterable }),
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const { getCatalogResource } = await import("./resource.service");
+      const resource = await getCatalogResource("resource-1");
+      expect(resource.schema[0]?.filterable).toBe(filterable);
+      expect(postMock).not.toHaveBeenCalled();
+      expect(putMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["create resource", "update resource", "create view", "update view"])(
+    "rejects unsupported enabled fields before real requests during %s",
+    async (action) => {
+      const service = await import("./resource.service");
+      const input = {
+        catalogId: "catalog-1",
+        category: "table" as const,
+        description: "",
+        enabled: true,
+        expectedUpdateTime: 42,
+        name: "invalid",
+        schema: [{ name: "bytes", type: "binary", filterable: true }],
+        sourceIdentifier: "invalid",
+        sourceResourceId: "source-1",
+        tags: [],
+      };
+      const pending =
+        action === "create resource"
+          ? service.createCatalogResource(input)
+          : action === "update resource"
+            ? service.updateCatalogResource("resource-1", input)
+            : action === "create view"
+              ? service.createDerivedView(input)
+              : service.updateDerivedView("view-1", input);
+      await expect(pending).rejects.toThrow(/bytes/);
+      expect(postMock).not.toHaveBeenCalled();
+      expect(putMock).not.toHaveBeenCalled();
+      expect(getMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not infer missing flags in real backend responses", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "resource-1",
+            category: "table",
+            schema_definition: [
+              { name: "id", type: "integer" },
+              { name: "bytes", type: "binary" },
+            ],
+          },
+        ],
+      },
+    });
+    const { getCatalogResource } = await import("./resource.service");
+    const resource = await getCatalogResource("resource-1");
+
+    expect(resource?.schema.map((field) => field.filterable)).toEqual([undefined, undefined]);
+  });
+
+  it.each([true, false])(
+    "preserves filterable=%s through reads and unrelated full updates",
+    async (filterable) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              id: "resource-1",
+              catalog_id: "catalog-1",
+              name: "orders",
+              category: "table",
+              source_identifier: "orders",
+              update_time: 123,
+              schema_definition: [{ name: "id", type: "integer", original_name: "ID", filterable }],
+            },
+          ],
+        },
+      });
+      const { getCatalogResource, updateCatalogResource } = await import("./resource.service");
+      const resource = await getCatalogResource("resource-1");
+      expect(resource.schema[0]?.filterable).toBe(filterable);
+      await updateCatalogResource(resource.id, {
+        catalogId: resource.catalogId,
+        category: resource.category,
+        description: "Changed description",
+        expectedUpdateTime: resource.expectedUpdateTime,
+        name: resource.name,
+        schema: resource.schema,
+        sourceIdentifier: resource.sourceIdentifier,
+      });
+      expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+        schema_definition: [{ name: "id", filterable }],
+      });
+    },
+  );
+
+  it("submits a changed switch rather than its original raw metadata", async () => {
+    const { updateCatalogResource } = await import("./resource.service");
+    getMock.mockResolvedValue({ data: { entries: [{ id: "resource-1" }] } });
+    await updateCatalogResource("resource-1", {
+      catalogId: "catalog-1",
+      category: "table",
+      description: "",
+      expectedUpdateTime: 123,
+      name: "orders",
+      sourceIdentifier: "orders",
+      schema: [
+        {
+          name: "id",
+          type: "integer",
+          filterable: false,
+          raw: { name: "id", type: "integer", filterable: true },
+        },
+      ],
+    });
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+      schema_definition: [{ name: "id", filterable: false }],
+    });
+  });
+
+  it("preserves false in derived view schemas", async () => {
+    const { updateDerivedView } = await import("./resource.service");
+    getMock.mockResolvedValue({ data: { entries: [{ id: "view-1", category: "logical_view" }] } });
+    await updateDerivedView("view-1", {
+      catalogId: "catalog-1",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 123,
+      name: "view",
+      sourceResourceId: "source-1",
+      tags: [],
+      schema: [{ name: "public_id", originalName: "id", type: "integer", filterable: false }],
+    });
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+      schema_definition: [{ name: "public_id", original_name: "id", filterable: false }],
     });
   });
 });

@@ -5,8 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CopyOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Input, Space, Tag } from "antd";
+import {
+  CheckCircleOutlined,
+  CopyOutlined,
+  ExclamationCircleOutlined,
+  MinusCircleOutlined,
+} from "@ant-design/icons";
+import { Alert, Input, Space, Switch, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,19 +22,20 @@ import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTime } from "@/framework/i18n/format";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
-import {
-  formatPrecisionSafeJSON,
-  transformPrecisionSafeJSONRequest,
-} from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
-import { parseFilterCondition } from "@/modules/data-catalog/lib/filter-tree";
+import {
+  canEnableFieldFiltering,
+  findUnsupportedFilterableField,
+} from "@/modules/data-catalog/lib/field-filterability";
+import { parseFilterTree } from "@/modules/data-catalog/lib/filter-tree";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
 import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
+import { sourceFilterQueryPath } from "@/modules/data-catalog/lib/view-query-source";
 import {
   getCatalogResource,
   updateCatalogResource,
@@ -72,7 +78,9 @@ export function ResourceDetailPanel({
   const [resource, setResource] = useState(resourceProp);
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
-  const [filterSourceFields, setFilterSourceFields] = useState<ResourceSchemaField[]>([]);
+  const [filterSource, setFilterSource] = useState<CatalogResource | null>(null);
+  const filterSourceFields = filterSource?.schema ?? [];
+  const filterQueryPath = sourceFilterQueryPath(filterSource);
   const resourceIdentityKey = `${resourceProp.id}:${resourceProp.expectedUpdateTime}`;
   const resourceIdentityRef = useRef(resourceIdentityKey);
   resourceIdentityRef.current = resourceIdentityKey;
@@ -82,7 +90,10 @@ export function ResourceDetailPanel({
     isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logical_view";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
-  const fixedFilter = parseFilterCondition(resource.logicalViewDefinition?.filterCondition);
+  const fixedFilter = useMemo(
+    () => parseFilterTree(resource.logicalViewDefinition?.filterCondition, filterQueryPath),
+    [resource.logicalViewDefinition?.filterCondition, filterQueryPath],
+  );
   const rowCountDisplay =
     rowCount === null || rowCount === undefined
       ? "-"
@@ -116,11 +127,11 @@ export function ResourceDetailPanel({
   useEffect(() => {
     const sourceId = resource.logicalViewDefinition?.sourceResourceId;
     let cancelled = false;
-    setFilterSourceFields([]);
+    setFilterSource(null);
     if (resource.category === "logical_view" && sourceId) {
       void getCatalogResource(sourceId)
         .then((source) => {
-          if (!cancelled) setFilterSourceFields(source?.schema ?? []);
+          if (!cancelled) setFilterSource(source);
         })
         .catch(() => {
           // The raw source field name remains visible when source detail is unavailable.
@@ -153,7 +164,13 @@ export function ResourceDetailPanel({
 
         const displayNameChanged = (field.displayName ?? "") !== (origin.displayName ?? "");
         const descriptionChanged = (field.description ?? "") !== (origin.description ?? "");
-        return count + Number(displayNameChanged) + Number(descriptionChanged);
+        const filterableChanged = field.filterable !== origin.filterable;
+        return (
+          count +
+          Number(displayNameChanged) +
+          Number(descriptionChanged) +
+          Number(filterableChanged)
+        );
       }, 0),
     [resource.schema, schemaDraft],
   );
@@ -191,7 +208,7 @@ export function ResourceDetailPanel({
 
   const handleFieldChange = (
     fieldIndex: number,
-    patch: Pick<ResourceSchemaField, "description" | "displayName">,
+    patch: Pick<ResourceSchemaField, "description" | "displayName" | "filterable">,
   ) => {
     setSchemaDraft((current) =>
       current.map((field, index) =>
@@ -222,6 +239,16 @@ export function ResourceDetailPanel({
   };
 
   const handleSave = async () => {
+    const unsupported = findUnsupportedFilterableField(schemaDraft);
+    if (unsupported) {
+      void message.error(
+        t("dataCatalog.resource.unsupportedFilterableField", {
+          name: unsupported.name,
+          type: unsupported.type,
+        }),
+      );
+      return;
+    }
     const submittedResourceId = resource.id;
     const submittedResourceIdentity = resourceIdentityRef.current;
     setSaving(true);
@@ -304,6 +331,40 @@ export function ResourceDetailPanel({
       dataIndex: "type",
       title: t("dataCatalog.resource.fieldType"),
       width: "10%",
+    },
+    {
+      dataIndex: "filterable",
+      title: t("dataCatalog.resource.fieldFilterable"),
+      width: 100,
+      render: (value: boolean | undefined, record, index) =>
+        editing ? (
+          <Tooltip
+            title={
+              !canEnableFieldFiltering(record.type)
+                ? t("dataCatalog.resource.filterableTypeUnsupported", { type: record.type })
+                : undefined
+            }
+          >
+            <span>
+              <Switch
+                aria-label={t("dataCatalog.resource.fieldFilterableLabel", { name: record.name })}
+                checked={value === true}
+                disabled={saving || (!canEnableFieldFiltering(record.type) && value !== true)}
+                onChange={(filterable) => handleFieldChange(schemaOffset + index, { filterable })}
+                size="small"
+              />
+            </span>
+          </Tooltip>
+        ) : value === undefined ? (
+          <span className={styles.fieldStatusUnknown}>—</span>
+        ) : (
+          <Tag
+            className={value ? styles.statusTagSuccess : styles.statusTagNeutral}
+            icon={value ? <CheckCircleOutlined aria-hidden /> : <MinusCircleOutlined aria-hidden />}
+          >
+            {t(`dataCatalog.resource.${value ? "filterableEnabled" : "filterableDisabled"}`)}
+          </Tag>
+        ),
     },
     {
       dataIndex: "description",
@@ -845,24 +906,11 @@ export function ResourceDetailPanel({
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.viewFixedFilter")}</h3>
           {fixedFilter?.children.length ? (
-            <FilterTreeEditor fields={filterSourceFields} readOnly value={fixedFilter} />
-          ) : resource.logicalViewDefinition?.filterCondition ? (
-            <Alert
-              message={t("dataCatalog.resource.filterUnsupported")}
-              description={
-                <Input.TextArea
-                  readOnly
-                  aria-label={t("dataCatalog.resource.viewFixedFilter")}
-                  autoSize={{ minRows: 3, maxRows: 12 }}
-                  value={formatPrecisionSafeJSON(
-                    transformPrecisionSafeJSONRequest(
-                      resource.logicalViewDefinition.filterCondition,
-                    ),
-                  )}
-                />
-              }
-              showIcon
-              type="warning"
+            <FilterTreeEditor
+              fields={filterSourceFields}
+              queryPath={filterQueryPath}
+              readOnly
+              value={fixedFilter}
             />
           ) : (
             <span className={styles.basicInfoValue}>-</span>

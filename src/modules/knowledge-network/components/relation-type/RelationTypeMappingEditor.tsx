@@ -7,6 +7,8 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
+import type { ReactNode } from "react";
+
 import { listObjectTypeResourceFields } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkObjectTypeRecord,
@@ -50,6 +52,8 @@ type RelationTypeMappingEditorProps = {
   readers?: RelationTypeMappingReaders;
   /** The relation properties the relation stores, which Studio does not edit yet. */
   relationProperties?: StoredRelationProperty[];
+  /** What the relation means, placed between its ends and its mapping rules. */
+  semantics?: ReactNode;
   value: RelationTypeMappingFormValues;
   onChange: (value: RelationTypeMappingFormValues) => void;
 };
@@ -68,6 +72,7 @@ export function RelationTypeMappingEditor({
   objectTypes,
   readers,
   relationProperties = [],
+  semantics,
   value,
   onChange,
 }: RelationTypeMappingEditorProps) {
@@ -90,9 +95,14 @@ export function RelationTypeMappingEditor({
       ) {
         return;
       }
+      // The ends are chosen before the mode, so they stay.
       onChange({
         mappingMode: mode,
-        mappingRules: resetMappingRulesForMode(mode),
+        mappingRules: {
+          ...resetMappingRulesForMode(mode),
+          sourceObjectTypeId: value.mappingRules.sourceObjectTypeId,
+          targetObjectTypeId: value.mappingRules.targetObjectTypeId,
+        },
       });
     })();
   };
@@ -131,22 +141,47 @@ export function RelationTypeMappingEditor({
     });
   };
 
+  // A new end leaves the fields chosen on that side, which belonged to the old one.
+  const handleEndChange = (end: "source" | "target", objectTypeId: string) => {
+    const rules = value.mappingRules;
+    const source = end === "source";
+    onChange({
+      ...value,
+      mappingRules: {
+        ...rules,
+        ...(source ? { sourceObjectTypeId: objectTypeId } : { targetObjectTypeId: objectTypeId }),
+        propertyMappings: rules.propertyMappings.map((item) =>
+          source ? { ...item, sourcePropertyName: "" } : { ...item, targetPropertyName: "" },
+        ),
+        resourceMappings: rules.resourceMappings.map((item) =>
+          source
+            ? { ...item, sourceObjectPropertyName: "" }
+            : { ...item, targetObjectPropertyName: "" },
+        ),
+      },
+    });
+  };
+
   return (
     <RelationTypeMappingShell
       mappingMode={value.mappingMode}
       mappingModeField={mappingModeField}
+      // The caller's object types are all listed: nothing is looked up in the network.
+      networkId={readers ? undefined : networkId}
       objectTypes={objectTypes}
       onMappingModeChange={handleMappingModeChange}
+      onSourceChange={(id) => handleEndChange("source", id)}
+      onTargetChange={(id) => handleEndChange("target", id)}
       resourceName={
         value.mappingRules.backingDataSourceName || value.mappingRules.backingDataSourceId
       }
+      semantics={semantics}
       sourceObjectTypeId={value.mappingRules.sourceObjectTypeId}
       targetObjectTypeId={value.mappingRules.targetObjectTypeId}
     >
       {value.mappingMode === "direct" ? (
         <RelationTypeDirectMappingRules
           networkId={networkId}
-          objectTypes={objectTypes}
           readers={readers}
           onChange={handleMappingRulesChange}
           value={value.mappingRules}
@@ -155,7 +190,6 @@ export function RelationTypeMappingEditor({
         <RelationTypeResourceMappingRules
           beforeResourceChange={beforeResourceChange}
           networkId={networkId}
-          objectTypes={objectTypes}
           readers={readers}
           onChange={handleMappingRulesChange}
           value={value.mappingRules}

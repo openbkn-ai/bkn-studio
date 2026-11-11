@@ -37,7 +37,7 @@ export const definitionDeclarationsPart = {
       relation_type: "关系类",
     },
     noAliases: "暂无别名",
-    lifecycle: "状态",
+    lifecycle: "生命周期",
     lifecycleHint: "已弃用的定义照常可以查看、编辑和查询，只是不再被概念召回。",
     lifecycleOption: {
       active: "使用中",

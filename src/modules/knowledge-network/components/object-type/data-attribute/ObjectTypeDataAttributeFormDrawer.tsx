@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { QuestionCircleOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Drawer, Form, Input, InputNumber, Select, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -47,11 +47,18 @@ import {
   DATA_PROPERTY_NAME_PATTERN,
   DATA_PROPERTY_TYPES,
 } from "./constants";
+import {
+  useValueTypeEditor,
+  valueTypeFormTitle,
+} from "@/modules/knowledge-network/components/value-type/useValueTypeEditor";
+import { ValueTypeFormFields } from "@/modules/knowledge-network/components/value-type/ValueTypeForm";
+
 import styles from "./ObjectTypeDataAttributeFormDrawer.module.css";
 import {
   PropertyDeclarationsSection,
   type ClearedByTypeChange,
   type PropertyDeclarationContext,
+  type ValueTypeFormRequest,
 } from "./PropertyDeclarationsSection";
 
 type ObjectTypeDataAttributeFormDrawerProps = {
@@ -87,6 +94,34 @@ export function ObjectTypeDataAttributeFormDrawer({
   const editsDeclarations = Boolean(declarationContext) && !isMaskRuleMode;
   const [declarationsOpen, setDeclarationsOpen] = useState(false);
   const [clearedByTypeChange, setClearedByTypeChange] = useState<ClearedByTypeChange | null>(null);
+  // A value type opened from the declarations: its form takes the drawer until it is saved or left.
+  const [valueTypeView, setValueTypeView] = useState<ValueTypeFormRequest | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const propertyScrollTop = useRef(0);
+  const valueTypeEditor = useValueTypeEditor({
+    active: valueTypeView !== null,
+    defaultBaseType: valueTypeView?.defaultBaseType,
+    networkId: declarationContext?.networkId ?? "",
+    onSaved: (savedId) => {
+      valueTypeView?.onSaved(savedId);
+      leaveValueType();
+    },
+    valueType: valueTypeView?.valueType,
+  });
+
+  const drawerBody = () => bodyRef.current?.closest<HTMLElement>(".ant-drawer-body") ?? null;
+
+  const openValueType = (request: ValueTypeFormRequest) => {
+    propertyScrollTop.current = drawerBody()?.scrollTop ?? 0;
+    setValueTypeView(request);
+    window.setTimeout(() => drawerBody()?.scrollTo({ top: 0 }), 0);
+  };
+
+  // Back to the property where it was left, at the value type field.
+  function leaveValueType() {
+    setValueTypeView(null);
+    window.setTimeout(() => drawerBody()?.scrollTo({ top: propertyScrollTop.current }), 0);
+  }
 
   useEffect(() => {
     if (!open) {
@@ -94,6 +129,7 @@ export function ObjectTypeDataAttributeFormDrawer({
     }
 
     setSubmitting(false);
+    setValueTypeView(null);
     setDeclarationsOpen(hasDeclarations(property?.declarations));
     setClearedByTypeChange(null);
 
@@ -358,37 +394,78 @@ export function ObjectTypeDataAttributeFormDrawer({
     }
   };
 
+  const propertyFooter = (
+    <div className={styles.footer}>
+      <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
+      <AppButton
+        disabled={isMaskRuleMode && Boolean(maskRule && !maskRuleCompatible)}
+        loading={submitting}
+        onClick={() => void handleSubmit()}
+        type="primary"
+      >
+        {t("common.ok")}
+      </AppButton>
+    </div>
+  );
+  const propertyTitle = isMaskRuleMode
+    ? t("knowledgeNetwork.objectTypeMaskRuleDrawerTitle", {
+        name: property?.displayName || property?.name || "",
+      })
+    : property
+      ? t("knowledgeNetwork.objectTypeEditDataProperty")
+      : t("knowledgeNetwork.objectTypeAddDataProperty");
+
+  const valueTypeFooter = valueTypeView ? (
+    <div className={styles.footer}>
+      <AppButton onClick={leaveValueType}>{t("common.back")}</AppButton>
+      {valueTypeView.readOnly ? null : (
+        <AppButton
+          loading={valueTypeEditor.submitting}
+          onClick={() => void valueTypeEditor.submit()}
+          type="primary"
+        >
+          {t("common.save")}
+        </AppButton>
+      )}
+    </div>
+  ) : null;
+  const valueTypeTitle = valueTypeView ? (
+    <span className={styles.valueTypeTitle}>
+      <AppButton
+        aria-label={t("common.back")}
+        icon={<ArrowLeftOutlined />}
+        onClick={leaveValueType}
+        size="small"
+        type="text"
+      />
+      {valueTypeFormTitle(t, valueTypeView.readOnly, valueTypeView.valueType)}
+    </span>
+  ) : null;
+
   return (
     <Drawer
+      // Leaving a value type goes back to the property; the property stays as it was.
+      closable={!valueTypeView}
       destroyOnHidden
-      footer={
-        <div className={styles.footer}>
-          <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
-          <AppButton
-            disabled={isMaskRuleMode && Boolean(maskRule && !maskRuleCompatible)}
-            loading={submitting}
-            onClick={() => void handleSubmit()}
-            type="primary"
-          >
-            {t("common.ok")}
-          </AppButton>
-        </div>
-      }
+      footer={valueTypeView ? valueTypeFooter : propertyFooter}
       maskClosable={false}
-      onClose={onClose}
+      onClose={valueTypeView ? leaveValueType : onClose}
       open={open}
-      title={
-        isMaskRuleMode
-          ? t("knowledgeNetwork.objectTypeMaskRuleDrawerTitle", {
-              name: property?.displayName || property?.name || "",
-            })
-          : property
-            ? t("knowledgeNetwork.objectTypeEditDataProperty")
-            : t("knowledgeNetwork.objectTypeAddDataProperty")
-      }
+      title={valueTypeView ? valueTypeTitle : propertyTitle}
       width={560}
     >
-      <Form colon={false} form={form} layout="vertical">
+      <div hidden={!valueTypeView} ref={bodyRef}>
+        {valueTypeView ? (
+          <ValueTypeFormFields
+            form={valueTypeEditor.form}
+            readOnly={valueTypeView.readOnly}
+            valueType={valueTypeView.valueType}
+          />
+        ) : null}
+        {valueTypeEditor.refusalDialog}
+      </div>
+      {/* Kept mounted while a value type is shown, so nothing typed into the property is lost. */}
+      <Form colon={false} form={form} hidden={Boolean(valueTypeView)} layout="vertical">
         {!isMaskRuleMode ? (
           <>
             <Form.Item
@@ -569,6 +646,7 @@ export function ObjectTypeDataAttributeFormDrawer({
             context={declarationContext}
             form={form}
             onOpenChange={setDeclarationsOpen}
+            onOpenValueType={openValueType}
             open={declarationsOpen}
             primaryKey={Boolean(primaryKey)}
             propertyType={propertyType}
