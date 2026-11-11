@@ -82,7 +82,6 @@ export const evalPart = {
         notConfigured: "需补充执行配置",
         unsupported: "当前对象暂不支持自动运行",
         invalidContract: "运行配置需修正",
-        grantMissing: "缺少只读授权",
         pending: "待检查执行条件",
       },
       comparison: {

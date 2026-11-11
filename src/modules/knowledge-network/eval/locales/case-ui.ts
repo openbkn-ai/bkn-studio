@@ -17,11 +17,10 @@ export const caseUiResources = {
     theOperationFailedCheckTheInputAndService: "操作失败，请检查输入和服务状态后重试。",
     yourSessionHasExpiredSignInAgainBefore: "登录已失效，请重新登录后试运行。",
     yourAccountDoesNotHavePermissionToRun: "当前账号没有运行评测的权限。",
-    readOnlyFunctionAuthorizationHasChangedRefreshAndSelect:
-      "只读函数授权已变化，请刷新后重新选择。",
+    executionBindingChanged: "执行配置或资源绑定已变化，请刷新后重新选择。",
     theFunctionResourceCannotBeVerifiedRightNow: "暂时无法核对函数资源，请稍后重试。",
-    liveTestRunsAreNotAvailableInThis: "当前环境暂未开放真实试运行。",
-    theTestRunFailedCheckTheInputReadOnly: "试运行失败，请核对输入、只读函数和服务状态后重试。",
+    executionDependenciesUnavailable: "执行依赖暂不可用，请稍后重试。",
+    trialFailedCheckInputAndServices: "试运行失败，请核对输入、函数和服务状态后重试。",
     theActualValueDiffersFromTheIndependentExpectation: "实际值与独立预期不一致",
     theActualResultIsMissingTheFieldBeing: "实际结果缺少待比对字段",
     "knowledgeNetwork.eval.m0.findingCategory.EVIDENCE": "执行证据不完整",
@@ -33,7 +32,7 @@ export const caseUiResources = {
     executionEvidenceIsMissing: "执行证据缺失",
     theTargetResourceOrADependentServiceCall: "目标资源或依赖服务调用失败",
     expectedResultComparison: "预期结果比对",
-    readOnlyFunctionCall: "只读函数调用",
+    functionCall: "函数调用",
     multipleExecutionEntriesHaveTheSameNameResolve:
       "存在同名执行入口，无法确认绑定；请先在函数管理中明确名称。",
     thisExecutionEntryWasNotFoundInThe: "当前知识网络找不到这个执行入口，请刷新后重新选择。",
@@ -43,9 +42,9 @@ export const caseUiResources = {
     loadTheCurrentResourceSParameterContractBeforeSaving: "请先读取当前资源的参数合同后再保存。",
     selectTheActualResourceThisCaseWillEvaluate: "请先选择这条用例要评测的真实资源。",
     thisEvaluationTargetDoesNotSupportAutomaticExecution:
-      "当前评测对象暂不支持自动运行。函数需有只读调用授权；对象数据检查请通过规则应用新建。",
+      "当前评测对象暂不支持自动运行。函数需要可读取的实际来源合同；对象数据检查请通过规则应用新建。",
     authorizationForTheSelectedReadOnlyFunctionHasChanged:
-      "所选只读函数授权已变化，请刷新后重新选择。",
+      "所选执行配置或资源绑定已变化，请刷新后重新选择。",
     caseSavedAndEnabled: "用例已保存并启用",
     caseSaved: "用例已保存",
     loadTheCurrentResourceSParameterContractBeforeStarting:
@@ -54,7 +53,7 @@ export const caseUiResources = {
     editCase: "编辑用例",
     "knowledgeNetwork.eval.resourceOverview.createCase": "新建用例",
     runOnceWithTheCurrentIdentityAndCheck: "按当前身份和检查范围试运行一次，不计入正式执行覆盖",
-    liveTestRunsAreNotAvailableInThisEnvironment: "当前环境尚未开放真实试运行",
+    executionDependenciesUnavailableEnvironment: "当前环境尚未开放真实试运行",
     testRun: "试运行",
     deleteThisCase: "删除这条用例？",
     theCaseWillBeRemovedFromTheCurrent:
@@ -92,14 +91,12 @@ export const caseUiResources = {
     noResourcesFound: "未找到资源",
     failedToLoadResourcesCloseAndReopenThis: "资源列表读取失败，请重新打开抽屉后重试。",
     executionEntry: "执行入口",
-    selectAnAuthorizedReadOnlyFunctionThatCanExecute:
-      "选择能执行本场景的已授权只读函数；下方参数会实际传给该入口，场景描述不会自动转成参数。",
+    selectACallableFunctionForTheScenario:
+      "选择能执行本场景且当前用户可访问的函数；下方参数会实际传给该入口，场景描述不会自动转成参数。",
     selectAnExecutionEntryForTheScenario: "请选择场景的执行入口",
     selectAnEntryThatExecutesThisScenario: "选择执行本场景的入口",
-    noAuthorizedScenarioExecutionEntriesAreAvailableConfigure:
-      "当前没有已授权的场景执行入口，请先配置只读函数授权。",
-    readOnlyFunctionAuthorizationIsUnavailableRestoreAuthorizationAccess:
-      "只读函数授权暂不可用，请恢复授权读取后选择执行函数，再保存用例。",
+    noScenarioExecutionEntriesAvailable: "当前没有可用的场景执行入口，请先在知识网络中挂载函数。",
+    functionCatalogueUnavailable: "函数列表读取失败，请重试后选择执行函数，再保存用例。",
     thisEvaluationTargetDoesNotSupportAutomaticExecutionYet: "当前评测对象暂不支持自动运行",
     selectAnotherEvaluationTargetOrConfigureAnObject:
       "请选择其他评测对象，或通过规则配置对象数据检查。",
@@ -117,8 +114,8 @@ export const caseUiResources = {
     parametersFollowTheActualContractTheTestDescription:
       "参数按实际合同传入；测试说明不会自动生成调用参数。",
     checkTheParameters: "请核对参数",
-    readOnlyFunction: "只读函数",
-    selectAnAuthorizedReadOnlyFunction: "请选择已授权的只读函数",
+    targetFunction: "函数",
+    selectACallableFunction: "请选择可访问的函数",
     selectAnAuthorizedFunction: "选择已授权的函数",
     parametersArePassedToTheSelectedFunctionUsing: "参数会以当前用户身份传给所选函数。",
     invalidParameterFormat: "参数格式不正确",
@@ -423,13 +420,13 @@ export const caseUiResources = {
       "Your session has expired. Sign in again before testing.",
     yourAccountDoesNotHavePermissionToRun:
       "Your account does not have permission to run evaluations.",
-    readOnlyFunctionAuthorizationHasChangedRefreshAndSelect:
-      "Read-only function authorization has changed. Refresh and select it again.",
+    executionBindingChanged:
+      "The execution configuration or resource binding has changed. Refresh and select it again.",
     theFunctionResourceCannotBeVerifiedRightNow:
       "The function resource cannot be verified right now. Try again later.",
-    liveTestRunsAreNotAvailableInThis: "Live test runs are not available in this environment yet.",
-    theTestRunFailedCheckTheInputReadOnly:
-      "The test run failed. Check the input, read-only function and service status, then try again.",
+    executionDependenciesUnavailable: "Execution dependencies are unavailable. Try again later.",
+    trialFailedCheckInputAndServices:
+      "The test run failed. Check the input, function and service status, then try again.",
     theActualValueDiffersFromTheIndependentExpectation:
       "The actual value differs from the independent expectation",
     theActualResultIsMissingTheFieldBeing: "The actual result is missing the field being compared",
@@ -445,7 +442,7 @@ export const caseUiResources = {
     theTargetResourceOrADependentServiceCall:
       "The target resource or a dependent service call failed",
     expectedResultComparison: "Expected result comparison",
-    readOnlyFunctionCall: "Read-only function call",
+    functionCall: "Function call",
     multipleExecutionEntriesHaveTheSameNameResolve:
       "Multiple execution entries have the same name. Resolve the names in function management before binding.",
     thisExecutionEntryWasNotFoundInThe:
@@ -458,9 +455,9 @@ export const caseUiResources = {
     selectTheActualResourceThisCaseWillEvaluate:
       "Select the actual resource this case will evaluate first.",
     thisEvaluationTargetDoesNotSupportAutomaticExecution:
-      "This evaluation target does not support automatic execution yet. Functions require read-only call authorization; create object data checks by applying rules.",
+      "This evaluation target does not support automatic execution yet. Functions require an accessible source contract; create object data checks by applying rules.",
     authorizationForTheSelectedReadOnlyFunctionHasChanged:
-      "Authorization for the selected read-only function has changed. Refresh and select it again.",
+      "Authorization for the selected function has changed. Refresh and select it again.",
     caseSavedAndEnabled: "Case saved and enabled",
     caseSaved: "Case saved",
     loadTheCurrentResourceSParameterContractBeforeStarting:
@@ -471,7 +468,7 @@ export const caseUiResources = {
     "knowledgeNetwork.eval.resourceOverview.createCase": "Create case",
     runOnceWithTheCurrentIdentityAndCheck:
       "Run once with the current identity and check scope; this does not count toward execution coverage",
-    liveTestRunsAreNotAvailableInThisEnvironment:
+    executionDependenciesUnavailableEnvironment:
       "Live test runs are not available in this environment",
     testRun: "Test run",
     deleteThisCase: "Delete this case?",
@@ -511,14 +508,14 @@ export const caseUiResources = {
     failedToLoadResourcesCloseAndReopenThis:
       "Failed to load resources. Close and reopen this panel to try again.",
     executionEntry: "Execution entry",
-    selectAnAuthorizedReadOnlyFunctionThatCanExecute:
-      "Select an authorized read-only function that can execute this scenario. The parameters below are passed to that entry; the scenario description is not converted into parameters.",
+    selectACallableFunctionForTheScenario:
+      "Select an accessible function that can execute this scenario. The parameters below are passed to that entry; the scenario description is not converted into parameters.",
     selectAnExecutionEntryForTheScenario: "Select an execution entry for the scenario",
     selectAnEntryThatExecutesThisScenario: "Select an entry that executes this scenario",
-    noAuthorizedScenarioExecutionEntriesAreAvailableConfigure:
-      "No authorized scenario execution entries are available. Configure read-only function authorization first.",
-    readOnlyFunctionAuthorizationIsUnavailableRestoreAuthorizationAccess:
-      "Read-only function authorization is unavailable. Restore authorization access, select an execution function, then save the case.",
+    noScenarioExecutionEntriesAvailable:
+      "No scenario execution entries are available. Mount a function in this knowledge network first.",
+    functionCatalogueUnavailable:
+      "The function catalogue could not be loaded. Retry, select an execution function, then save the case.",
     thisEvaluationTargetDoesNotSupportAutomaticExecutionYet:
       "This evaluation target does not support automatic execution yet",
     selectAnotherEvaluationTargetOrConfigureAnObject:
@@ -539,8 +536,8 @@ export const caseUiResources = {
     parametersFollowTheActualContractTheTestDescription:
       "Parameters follow the actual contract. The test description does not generate call parameters.",
     checkTheParameters: "Check the parameters",
-    readOnlyFunction: "Read-only function",
-    selectAnAuthorizedReadOnlyFunction: "Select an authorized read-only function",
+    targetFunction: "Function",
+    selectACallableFunction: "Select an accessible function",
     selectAnAuthorizedFunction: "Select an authorized function",
     parametersArePassedToTheSelectedFunctionUsing:
       "Parameters are passed to the selected function using the current user's identity.",
