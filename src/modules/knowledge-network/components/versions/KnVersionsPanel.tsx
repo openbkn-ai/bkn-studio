@@ -444,10 +444,12 @@ export function KnVersionsPanel({
       {canModify ? (
         // Operations that throw work away or change what readers see, apart from the daily ones.
         <section aria-labelledby="kn-version-danger" className={styles.dangerZone}>
-          <h3 className={styles.dangerTitle} id="kn-version-danger">
-            {t("knowledgeNetwork.versions.danger.title")}
-          </h3>
-          <div className={styles.dangerBox}>
+          <div className={styles.dangerHeader}>
+            <span className={styles.dangerTitle} id="kn-version-danger">
+              {t("knowledgeNetwork.versions.danger.title")}
+            </span>
+          </div>
+          <div>
             <div className={styles.dangerRow}>
               <div>
                 <div className={styles.dangerRowTitle}>
