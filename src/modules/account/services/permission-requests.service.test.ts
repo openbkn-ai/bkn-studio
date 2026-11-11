@@ -47,6 +47,8 @@ describe("getPermissionRequestTodoSummary", () => {
   });
 
   it("loads the real summary without a background error toast", async () => {
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
     httpState.get = () => Promise.resolve({ data: { pending_count: 3 } });
     const getSummary = await importSummary("false");
 

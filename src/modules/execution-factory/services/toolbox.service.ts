@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import type {
   ToolboxEditInput,
   ToolboxListQuery,
@@ -160,7 +161,10 @@ function buildMockListResult(query: ToolboxListQuery): ToolboxListResult {
   const start = (query.page - 1) * query.pageSize;
 
   return {
-    items: filtered.slice(start, start + query.pageSize),
+    items: filtered.slice(start, start + query.pageSize).map((item) => ({
+      ...item,
+      operations: item.operations && filterMockOperations(item.operations),
+    })),
     total: filtered.length,
     page: query.page,
     pageSize: query.pageSize,
@@ -218,7 +222,10 @@ export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
       throw new Error("Market toolbox not found");
     }
 
-    return record;
+    return {
+      ...record,
+      operations: record.operations && filterMockOperations(record.operations),
+    };
   }
 
   const response = await http.get<BackendToolboxInfo>(`${API_PREFIX}/tool-box/market/${boxId}`, {
@@ -239,7 +246,10 @@ export async function getToolbox(
       throw new Error("Toolbox not found");
     }
 
-    return record;
+    return {
+      ...record,
+      operations: record.operations && filterMockOperations(record.operations),
+    };
   }
 
   const response = await http.get<BackendToolboxInfo>(`${API_PREFIX}/tool-box/${boxId}`, {

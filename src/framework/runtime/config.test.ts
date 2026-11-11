@@ -5,11 +5,50 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRuntimeConfig } from "@/framework/runtime/config";
 
 describe("createRuntimeConfig", () => {
+  beforeEach(() => {
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_USER", "admin");
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("selects a viewer independently of the licensed edition", () => {
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
+    for (const edition of ["community", "professional", "enterprise", "industry"]) {
+      vi.stubEnv("VITE_MOCK_EDITION", edition);
+      const { currentUser } = createRuntimeConfig();
+      expect(currentUser.name).toBe("业务只读用户");
+      expect(currentUser.isSuperAdmin).toBe(false);
+      expect(currentUser.permissions).toContain("knowledge-network:view");
+      expect(currentUser.permissions).not.toContain("knowledge-network:create");
+    }
+  });
+
+  it("keeps explicit runtime input above the mock user preset", () => {
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
+    const currentUser = {
+      id: "host-user",
+      name: "Host Operator",
+      isAdmin: true,
+      isSuperAdmin: false,
+      roles: ["operator"],
+      permissions: ["catalog:modify"],
+    };
+    expect(createRuntimeConfig({ currentUser }).currentUser).toEqual(currentUser);
+  });
+
+  it("ignores mock user selection when using a real backend", () => {
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    expect(createRuntimeConfig().currentUser.name).toBe("Local Admin");
+  });
+
   it("merges runtime user permissions and theme overrides", () => {
     const runtimeConfig = createRuntimeConfig({
       currentUser: {

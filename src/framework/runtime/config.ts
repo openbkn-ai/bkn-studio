@@ -15,7 +15,7 @@ import {
 import { resolveSupportedLocale } from "@/framework/i18n/locale";
 import { refreshOAuthTokens, shouldUseOAuthGate } from "@/framework/auth/oauth";
 import { clearStoredTokens } from "@/framework/auth/token-store";
-import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import { defaultDevRuntimeUser, getDevRuntimeUser } from "@/framework/runtime/dev-profile";
 
 const storageTokenManager: TokenManager = {
   getAccessToken: () => getDevAccessToken(),
@@ -56,9 +56,10 @@ const defaultRuntimeConfig: RuntimeConfig = {
   },
 };
 
-let runtimeConfig = defaultRuntimeConfig;
+let runtimeConfig = createRuntimeConfig();
 
 export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeConfig {
+  const currentUser = getDevRuntimeUser();
   const locale = resolveSupportedLocale({
     deploymentDefaultLocale: defaultRuntimeConfig.locale,
     runtimeLocale: runtimeInput.locale,
@@ -72,11 +73,10 @@ export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeCon
       tokenManager: runtimeInput.auth?.tokenManager ?? defaultRuntimeConfig.auth.tokenManager,
     },
     currentUser: {
-      ...defaultRuntimeConfig.currentUser,
+      ...currentUser,
       ...runtimeInput.currentUser,
-      permissions:
-        runtimeInput.currentUser?.permissions ?? defaultRuntimeConfig.currentUser.permissions,
-      roles: runtimeInput.currentUser?.roles ?? defaultRuntimeConfig.currentUser.roles,
+      permissions: runtimeInput.currentUser?.permissions ?? currentUser.permissions,
+      roles: runtimeInput.currentUser?.roles ?? currentUser.roles,
     },
     router: {
       ...defaultRuntimeConfig.router,

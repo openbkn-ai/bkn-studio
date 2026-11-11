@@ -20,6 +20,12 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       path: "/data-catalog",
     },
     {
+      key: "task-management",
+      labelKey: "shell.items.indexBuild",
+      icon: <ThunderboltOutlined />,
+      path: "/task-management",
+    },
+    {
       // The community entry explains the licence; installed routes retain their own guards.
       paidCapability: CAPABILITIES.KNOWLEDGE_BASE,
       paidEdition: "professional",
@@ -28,12 +34,6 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.knowledgeBase",
       icon: <FileTextOutlined />,
       path: "/knowledge-base",
-    },
-    {
-      key: "task-management",
-      labelKey: "shell.items.indexBuild",
-      icon: <ThunderboltOutlined />,
-      path: "/task-management",
     },
   ],
 };
