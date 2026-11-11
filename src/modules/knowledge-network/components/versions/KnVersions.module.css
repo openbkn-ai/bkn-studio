@@ -122,28 +122,200 @@
   gap: 12px;
 }
 
-.diffEntries {
-  max-height: 320px;
-  overflow: auto;
+.diffShell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
-.changeList {
-  margin: 0;
-  padding-left: 16px;
+/* Both panes scroll in their own box, so reading a long definition keeps the list in place. */
+.diffRail,
+.diffDetail {
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.diffRail {
+  padding: 4px 0;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+}
+
+.diffRailTitle {
+  padding: 8px 12px 4px;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.diffRailItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diffRailItem:hover {
+  background: var(--ant-color-fill-quaternary);
+}
+
+.diffRailItemActive {
+  border-left-color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+}
+
+.diffRailName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ant-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diffDetail {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  min-width: 0;
+  padding-right: 4px;
 }
 
-.changeOld {
-  margin-left: 8px;
-  color: var(--ant-color-error, #ff4d4f);
-  text-decoration: line-through;
+.diffDetailHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.changeNew {
-  margin-left: 8px;
-  color: var(--ant-color-success, #52c41a);
+.diffDetailName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.diffDetailMeta {
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.diffCard {
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+}
+
+.diffCardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.diffColumns,
+.diffFieldRow {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.diffColumns {
+  padding: 0 12px;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.diffFieldRow,
+.diffContentRow {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  font-size: 13px;
+  align-items: start;
+}
+
+.diffFieldRow:last-child,
+.diffContentRow:last-child {
+  border-bottom: 0;
+}
+
+.diffContentRow {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.diffFieldName {
+  color: var(--ant-color-text-secondary);
+}
+
+.diffValue,
+.diffValueOld,
+.diffValueNew,
+.diffValueAbsent {
+  word-break: break-word;
+}
+
+.diffValueOld {
+  color: var(--ant-color-error);
+}
+
+.diffValueNew {
+  color: var(--ant-color-success);
+}
+
+.diffValueAbsent {
+  color: var(--ant-color-text-quaternary);
+}
+
+.diffTableScroll {
+  overflow-x: auto;
+}
+
+.diffTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.diffTable th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  color: var(--ant-color-text-tertiary);
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.diffTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.diffTable tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .diffShell {
+    grid-template-columns: 1fr;
+  }
+
+  .diffRail,
+  .diffDetail {
+    max-height: none;
+  }
 }
 
 .problemList {

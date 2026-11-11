@@ -15,7 +15,10 @@ import {
   useReadableKnVersions,
   versionOptionLabel,
 } from "@/modules/knowledge-network/components/versions/useReadableKnVersions";
-import { parseKnVersionView } from "@/modules/knowledge-network/lib/kn-version-format";
+import {
+  knVersionName,
+  parseKnVersionView,
+} from "@/modules/knowledge-network/lib/kn-version-format";
 import { diffKnVersions } from "@/modules/knowledge-network/services/kn-version.service";
 import type {
   KnDiffResult,
@@ -72,6 +75,11 @@ export function KnDiffModal({
   // "running" is only a name for the running version's number in the selectors.
   const asValue = (view: KnVersionView) =>
     view === "running" ? String(versioning.running_version) : String(view);
+
+  const viewName = (view: KnVersionView) =>
+    view === "draft"
+      ? t("knowledgeNetwork.versions.draft")
+      : knVersionName(view === "running" ? versioning.running_version : view);
 
   // Older first: the draft is newer than every version, and numbers grow with time.
   const age = (view: KnVersionView) =>
@@ -131,7 +139,7 @@ export function KnDiffModal({
       onCancel={onClose}
       open={open}
       title={t("knowledgeNetwork.versions.diff.title")}
-      width={720}
+      width={1040}
     >
       <Space style={{ marginBottom: 12 }} wrap>
         <Select
@@ -160,7 +168,13 @@ export function KnDiffModal({
           type="info"
         />
       ) : (
-        <KnDiffSummary error={error} loading={loading} result={result} />
+        <KnDiffSummary
+          baseLabel={viewName(base)}
+          error={error}
+          loading={loading}
+          result={result}
+          targetLabel={viewName(target)}
+        />
       )}
     </Modal>
   );
