@@ -2157,6 +2157,40 @@ describe("resource.service · mock filterability", () => {
     expect(schema).toEqual(original);
   });
 
+  it("defaults mock Dataset IP fields to disabled and preserves false on save", async () => {
+    const { createCatalogResource, updateCatalogResource } = await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const schema = [
+      { name: "address", type: "ip" },
+      { name: "disabled_address", type: "ip", filterable: false },
+    ];
+    const before = structuredClone(schema);
+    const creating = createCatalogResource({
+      catalogId: "cat-001",
+      category: "dataset",
+      description: "",
+      name: "mock-ip-filterability",
+      schema,
+      sourceIdentifier: "mock-ip-filterability",
+    });
+    await vi.runAllTimersAsync();
+    const created = await creating;
+    expect(created.schema.map((field) => field.filterable)).toEqual([false, false]);
+    expect(schema).toEqual(before);
+
+    const saving = updateCatalogResource(created.id, {
+      ...created,
+      description: "Updated description",
+      schema: created.schema,
+    });
+    await vi.runAllTimersAsync();
+    const saved = await saving;
+    expect(saved?.schema.map((field) => field.filterable)).toEqual([false, false]);
+    expect(mockResources.find((resource) => resource.id === created.id)?.schema).toEqual(
+      created.schema,
+    );
+  });
+
   it.each(["create resource", "update resource", "create view", "update view"])(
     "rejects unsupported enabled fields during %s without mutating mock state",
     async (action) => {
@@ -2334,6 +2368,34 @@ describe("resource.service · field filterability", () => {
     putMock.mockResolvedValue({ data: {} });
   });
   afterEach(() => vi.unstubAllEnvs());
+
+  it.each([undefined, false, true])(
+    "preserves real IP filterable=%s without inferring defaults",
+    async (filterable) => {
+      getMock.mockResolvedValue({
+        data: {
+          entries: [
+            {
+              id: "resource-1",
+              category: "table",
+              schema_definition: [
+                {
+                  name: "address",
+                  type: "ip",
+                  ...(filterable === undefined ? {} : { filterable }),
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const { getCatalogResource } = await import("./resource.service");
+      const resource = await getCatalogResource("resource-1");
+      expect(resource.schema[0]?.filterable).toBe(filterable);
+      expect(postMock).not.toHaveBeenCalled();
+      expect(putMock).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(["create resource", "update resource", "create view", "update view"])(
     "rejects unsupported enabled fields before real requests during %s",
