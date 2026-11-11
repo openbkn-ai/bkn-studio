@@ -36,7 +36,6 @@ export const bknProjectEnUS = {
         updated: "Updated",
         actions: "Actions",
       },
-      networkInUseFailed: "Cannot read the network consumers use right now; try again later.",
       sameNetwork: "Same network · {{count}} other projects",
       sameNetwork_one: "Same network · {{count}} other project",
       sameNetwork_other: "Same network · {{count}} other projects",
@@ -79,6 +78,12 @@ export const bknProjectEnUS = {
         "Select the data catalogs that hold the structured data; the project references them and copies nothing.",
       catalogsPlaceholder: "Select data catalogs",
       catalogsLoadFailed: "Failed to load data catalogs",
+      versioningTitle: "Turn on versioning for this network?",
+      versioningDescription:
+        "Once it is on, every edit anyone in the workspace makes to this network takes effect only when published.",
+      versioningConfirm: "Turn on and create",
+      versioningForbidden:
+        "You cannot turn on versioning for this network. Ask the network's creator or an administrator.",
     },
     workspace: {
       title: "Project workspace",
@@ -865,7 +870,7 @@ export const bknProjectEnUS = {
       },
       fields: {
         baseNetwork: "Base network",
-        inUse: "In use",
+        running: "Running version",
         latestRelease: "Latest release",
         owner: "Owner",
         updated: "Updated",
@@ -940,11 +945,11 @@ export const bknProjectEnUS = {
       },
       versions: {
         title: "Versions and builds",
-        live: "Live version",
+        live: "Running version",
         draft: "Draft",
         latestRelease: "Latest release",
         unpublished: "Not published yet",
-        inUseUnknown: "Cannot tell right now",
+        runningUnknown: "Cannot tell right now",
         noDraft: "No draft yet",
         draftUpdated: "Updated {{time}}",
       },
@@ -2027,6 +2032,8 @@ export const bknProjectEnUS = {
       },
     },
     release: {
+      description:
+        "Publish the confirmed ontology as a new version of the network. Agents, MCP and evaluations use the new version at once; there is nothing to switch.",
       loadFailed: "The confirmation could not be loaded",
       empty: {
         title: "The draft is not confirmed yet",
@@ -2039,31 +2046,57 @@ export const bknProjectEnUS = {
       outdatedAction: "Confirm",
       ownerOnly: "Only the project owner can check again or build again",
       publish: {
-        title: "Publish",
+        title: "Publish a new version",
         description:
-          "Publish what was confirmed as a new version of the business knowledge network, then switch consumers to it.",
-        open: "Review release v{{version}}",
+          "Write the confirmed content into the network first, ask the scenario questions on it, and publish once you have read the results. Writing it leaves the running version as it is.",
+        descriptionShort:
+          "Write the confirmed content into the network first, ask the scenario questions on it, and publish once you have read the results.",
+        descriptionFirst:
+          "The network has not been published yet. Once published, agents and MCP can read this ontology.",
+        runningTag: "Running version {{version}}",
+        outdated:
+          "The running version was rolled back to {{running}}, while the project's content still builds on {{base}}. Publishing brings back the changes of {{base}} that were rolled back.",
+        rolledBack: "Rolled back; the running version is {{version}}",
+        steps: {
+          review: "Review the confirmed content",
+          prepare: "Write into the network and run the regression",
+          publish: "Publish",
+        },
+        fields: {
+          version: "This version",
+          confirmed: "Confirmed",
+          prepared: "Written into the network",
+          regression: "Scenario regression",
+        },
+        versionOn: "v{{version}} (builds on {{base}})",
+        versionFirst: "v{{version}}",
+        preparedBy: "{{time}}, {{who}}",
+        you: "you",
+        someone: "another member",
+        regressionNone: "No regression results yet",
+        regressionPassed: "{{passed}} / {{total}} passed",
+        regressionFailed:
+          "{{count}} scenario questions were not answered right. Go back to modeling and prepare again, or confirm and publish anyway.",
+        regressionFailed_one:
+          "{{count}} scenario question was not answered right. Go back to modeling and prepare again, or confirm and publish anyway.",
+        regressionFailed_other:
+          "{{count}} scenario questions were not answered right. Go back to modeling and prepare again, or confirm and publish anyway.",
+        nothingToPublish:
+          "The network has not changed. The confirmed content is the same as the running version {{version}}; there is nothing to publish.",
+        open: "Review and prepare",
         openReadOnly: "View release review",
-        ready:
-          "The data check passed; this can be published as v{{version}}. Read the release review first.",
-        readyAgain:
-          "There is new content since the last release; it can be published as v{{version}}.",
+        prepareAgain: "Prepare again",
+        publishAgain: "Publish again",
         waitCheck: "Publishing waits for the data check to pass.",
         waitConfirm: "Publishing waits for the draft to be confirmed and its data check to pass.",
-        state: {
-          ready: "Ready to publish",
-          published: "Published",
-          waitConfirm: "Awaiting confirmation",
-          waitCheck: "Awaiting the data check",
-        },
         publishedTag: "Published v{{version}}",
-        inUse: "Consumers use v{{version}}",
-        regressionLabel: "Scenario question regression",
-        viewRegression: "View regression",
-        notInUse: "v{{version}} is published, but consumers still use an earlier version.",
-        switch: "Switch consumers",
-        switchOwnerOnly: "Only the project owner can switch consumers.",
-        dialogTitle: "Release review",
+        viewRegression: "View results",
+        dialogTitle: "Prepare v{{version}}",
+        dialogDescription:
+          "The confirmed content is written into the network, then the scenario questions are asked on it. The running version stays as it is; decide to publish once you have read the regression.",
+        prepare: "Write into the network and run the regression",
+        prepared: "Written into the network; the scenario regression is running",
+        draftCommitted: "The online edits were committed to the project. Review again.",
         version: "Version",
         versionFormat: "A version is major.minor.patch, such as 1.0.3",
         versionInvalid: "The version is not major.minor.patch, such as 1.0.3",
@@ -2072,6 +2105,15 @@ export const bknProjectEnUS = {
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         join: "; ",
+        keptDocument:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocument_one:
+          "{{count}} field was decided as the documents have it right. The published data still uses the business system's value and the release records the difference; correct it in the business system:",
+        keptDocument_other:
+          "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",
+        keptDocumentItem:
+          "“{{field}}” of {{object}}: the document says “{{document}}”, the business system “{{system}}”",
+        keptDocumentReason: "{{row}} (reason: {{reason}})",
         originalDocuments:
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         originalDocuments_one:
@@ -2096,6 +2138,23 @@ export const bknProjectEnUS = {
         reason: {
           knowledge_base_not_ready:
             "Complete and review the full knowledge-base build for the current model.",
+          knowledge_base_review_items:
+            "The knowledge base still has items to review: {{items}}. Review them on the build page, or accept publishing with them.",
+          reviewItems: {
+            uncounted:
+              "The knowledge base still has items to review. Review them on the build page, or accept publishing with them.",
+            links: "{{count}} links",
+            links_one: "{{count}} link",
+            links_other: "{{count}} links",
+            values: "{{count}} current values",
+            values_one: "{{count}} current value",
+            values_other: "{{count}} current values",
+            conflicts: "{{count}} differences from the business system",
+            conflicts_one: "{{count}} difference from the business system",
+            conflicts_other: "{{count}} differences from the business system",
+          },
+          knowledge_base_review_not_applied:
+            "Some review decisions are not applied yet. Save links and current values on the build page, then review again.",
           knowledge_base_originals_changed:
             "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           knowledge_base_permission:
@@ -2141,12 +2200,14 @@ export const bknProjectEnUS = {
           similar_names: "I know the names are close; publish anyway",
           check_partial: "I know part of the data was not checked; publish anyway",
           index_not_ready: "I know some indexes are not ready; publish anyway",
+          knowledge_base_review_items: "I know some items are not reviewed; publish with them",
           other: "I know this did not pass; publish anyway",
         },
         accepted: {
           similar_names: "names close to existing content",
           check_partial: "part of the data not checked",
           index_not_ready: "some local indexes not ready",
+          knowledge_base_review_items: "items not reviewed",
           other: "a check that did not pass",
         },
         refusal: {
@@ -2206,12 +2267,9 @@ export const bknProjectEnUS = {
         unjudged_one: "{{count}} more question does not say what it needs, so it cannot be judged.",
         unjudged_other:
           "{{count}} more questions do not say what they need, so they cannot be judged.",
-        notes: "Release notes",
-        notesPlaceholder: "What this version changes; may be left empty",
         publishVersion: "Publish v{{version}}",
-        published: "v{{version}} is published. The scenario question regression has started.",
         regressionHint:
-          "After publishing, the scenario questions are asked once as a regression; its result does not affect the release.",
+          "Once written into the network, the scenario questions are asked once as a regression; its result does not stop publishing.",
         error: {
           KnowledgeBaseNotReady:
             "Complete and review the full knowledge-base build for the current model.",
@@ -2237,101 +2295,162 @@ export const bknProjectEnUS = {
             "Live edits conflict with the project's edits; resolve them before publishing.",
           UnfinishedAttempt:
             "The last publishing of this version did not finish and the branch has changed since. Choose a new version number.",
+          NotPrepared: "Nothing is written into the network yet. Prepare the release first.",
+          DraftHasChanges: "The network has online edits that were never published.",
+          DraftChanged:
+            "The network was edited after the release was written into it. Prepare it again.",
+          DraftOutdated:
+            "The running version was rolled back. Confirm whether to bring back the changes it took out.",
+          RunningChanged: "The running version just changed. Prepare the release again.",
+          NothingToPublish:
+            "The network has not changed. The confirmed content is the same as the running version; there is nothing to publish.",
+          ValidationFailed:
+            "The network's content did not pass validation and was not published. Check it in modeling and prepare again.",
+          NotReady: "Publishing is not available right now. Try again later.",
+          PublishPending:
+            "This version was sent for publishing and no answer came back. Publish again to finish it instead of preparing it anew.",
           other: "Could not publish; try again later.",
+        },
+      },
+      publishDialog: {
+        title: "Publish v{{version}}",
+        base: "Builds on",
+        regression: "Scenario regression",
+        outdated:
+          "The running version was rolled back to {{running}}. This release brings back the changes of {{version}}.",
+        outdatedNow:
+          "The running version was just rolled back. Confirm bringing these changes back, then publish.",
+        bringBack: "I confirm bringing these changes back",
+        acceptFailed: "{{count}} scenario questions were not answered right; publish anyway",
+        acceptFailed_one: "{{count}} scenario question was not answered right; publish anyway",
+        acceptFailed_other: "{{count}} scenario questions were not answered right; publish anyway",
+        community:
+          "The community edition keeps only the previous version. Once this is published, only the record of {{version}} is kept.",
+        notes: "Release notes",
+        notesPlaceholder: "What this version changes; may be left empty",
+        confirm: "Publish",
+        done: "v{{version}} is published; agents and MCP already use the new version",
+      },
+      draftChanges: {
+        title: "The network has online edits that were never published",
+        description:
+          "Someone edited the network directly in the workspace. Those edits are not published and not in the project. Writing the confirmed content replaces them.",
+        commit: "Commit them to the project first",
+        commitHint: "Bring these edits into the project, review again, then prepare. Recommended.",
+        overwrite: "Overwrite the online edits",
+        overwriteHint: "These edits are dropped and the network takes the confirmed content.",
+      },
+      copy: {
+        title: "Copy {{version}} as a draft",
+        kept: "Puts the content of {{version}} back into the project and the network's draft, to change and publish as a new version. The running version stays.",
+        recordOnly:
+          "The community edition kept only the record of this version. The content of {{version}} is taken from the project's history and put back into the project, to review and publish as a new version.",
+        replaces:
+          "Unpublished changes in the project are replaced. To keep them, publish or save them first.",
+        confirm: "Copy",
+        done: "{{version}} was copied. Continue in concept modeling.",
+        error: {
+          VersionPurged:
+            "Only the record of this version is kept and the project's history does not have its content; it cannot be copied.",
+          NotOwner: "Only the project owner can copy a version.",
+          other: "Could not copy. Try again later.",
         },
       },
       rollback: {
         open: "Roll back",
-        title: "Switch consumers back to the previous version",
-        fromTo: "Consumers will switch back from {{from}} to {{to}}.",
-        fromToBase:
-          "Consumers will switch back from {{from}} to the knowledge network before the first release.",
-        onlySwitches:
-          "Rolling back only switches consumers: scheduled tasks run on the earlier version again. No data or ontology definitions are changed.",
-        schedules: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
-        schedules_one: "This scheduled task stops on {{from}} and runs on {{to}}:",
-        schedules_other: "These {{count}} scheduled tasks stop on {{from}} and run on {{to}}:",
-        schedulesBase:
-          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
-        schedulesBase_one:
-          "This scheduled task stops on {{from}} and runs on the knowledge network before the first release:",
-        schedulesBase_other:
-          "These {{count}} scheduled tasks stop on {{from}} and run on the knowledge network before the first release:",
-        noSchedules: "No scheduled tasks to move.",
-        consumers: "Their owners switch back: {{kinds}}.",
-        consumer: {
-          agents: "agents",
-          mcp: "MCP services",
-          workshop: "Workshop apps",
-          eval: "evaluations",
-        },
-        unanswerable: "No longer answerable after rolling back",
-        affected: "Answers may change after rolling back",
-        answerableNew: "Answerable only after rolling back",
+        title: "Switch the running version",
+        titleBack: "Roll back to {{version}}",
+        titleSwitch: "Make {{version}} the running version",
+        effect:
+          "The switch takes effect at once: agents, MCP and schedules use {{to}}, with no configuration to change. You can switch back to {{from}} later.",
+        running: "Running now",
+        target: "Switch to",
+        questions: "Affected questions",
+        questionsCount: "{{count}} scenario questions are affected",
+        questionsCount_one: "{{count}} scenario question is affected",
+        questionsCount_other: "{{count}} scenario questions are affected",
+        questionsNone: "No scenario question is affected",
+        unanswerable: "Not answerable after the switch",
+        affected: "Answers may change after the switch",
+        answerableNew: "Answerable only after the switch",
+        projectStays:
+          "The project's content stays as it is. When you publish next, you are asked to confirm whether to bring these changes back.",
         refusal: {
-          NoPrevious:
-            "Consumers already use the earliest version; there is none to switch back to.",
+          NoPrevious: "There is no previous version to roll back to.",
           NotProjectRelease:
-            "The version in use was published by another project; only that project can roll it back.",
-          other: "Rolling back is not possible now.",
+            "Another project published the running version; only that project can roll it back.",
+          EditionRestricted:
+            "The community edition rolls back to the previous version only. The professional edition switches to any earlier version.",
+          NotFound: "This version cannot be found.",
+          VersionPurged:
+            "Only the record of this version is kept. Copy it as a draft from the versions list and publish it again.",
+          NotActivatable: "This version cannot become the running version now.",
+          other: "Switching is not possible now.",
         },
-        ownerOnly: "Only the project owner can roll back.",
-        confirm: "Switch consumers back",
-        loadFailed: "Can't read what rolling back would do right now",
-        outdated:
-          "Consumers or scheduled tasks changed since this was read. It has been read again; please confirm once more.",
-        done: "Consumers switched back to {{to}}.",
-        doneBase: "Consumers switched back to the knowledge network before the first release.",
-        error: {
-          NotOwner: "Only the project owner can roll back.",
-          ProjectArchived: "The project is archived and cannot be rolled back.",
-          other: "Could not roll back. Try again later.",
-        },
-      },
-      switch: {
-        title: "Switch consumers to v{{version}}",
-        fromTo: "Consumers switch from v{{from}} to v{{to}}.",
-        fromFirst: "Consumers switch from the original business knowledge network to v{{to}}.",
-        fromInUse: "Consumers switch from the version they use now to v{{to}}.",
-        schedules: "These {{count}} schedules move to v{{version}} and run as you:",
-        schedules_one: "This schedule moves to v{{version}} and runs as you:",
-        schedules_other: "These {{count}} schedules move to v{{version}} and run as you:",
-        noSchedules: "No schedules need to move.",
-        others: "Other consumers, such as agents, are switched by their owners.",
+        ownerOnly: "Only the project owner can switch the running version.",
         confirm: "Switch",
-        loadFailed: "What switching would move cannot be read right now",
-        done: "Consumers now use v{{version}}.",
-        alreadyInUse: "Consumers already use v{{version}}.",
-        alreadyInUseError: "Consumers already use v{{version}}.",
-        notOwner: "Only the project owner can switch consumers.",
-        failed: "Could not switch consumers; try again later.",
+        loadFailed: "Can't read what switching would do right now",
+        outdated:
+          "The running version changed since this was read. It has been read again; please confirm once more.",
+        done: "Switched to {{version}}",
+        error: {
+          NotOwner: "Only the project owner can switch the running version.",
+          ProjectArchived: "The project is archived; its running version cannot be switched.",
+          BrokenReferences:
+            "This version refers to content that no longer exists; it cannot be switched to.",
+          other: "Could not switch. Try again later.",
+        },
       },
       versions: {
         title: "Versions",
-        description:
-          "Every version of this business knowledge network, including those other projects published.",
+        descriptionFull:
+          "Every earlier version is kept. Any of them can become the running version, or be copied as a draft to change.",
+        descriptionCommunity:
+          "The community edition keeps the running version and the previous one. Only the record of earlier versions is kept; copy one as a draft to publish it again. The professional edition keeps the full history.",
         loadFailed: "The versions cannot be read right now",
         none: "No version has been published yet.",
-        version: "v{{version}}",
-        newest: "Newest",
-        inUse: "In use",
-        thisProject: "This project",
-        otherProject: "Another project",
+        number: "Version {{number}}",
+        empty: "—",
         you: "You",
         someone: "Another member",
         accepted: "Accepted when publishing: {{accepted}}",
-        regression: "Regression",
+        noRegression: "No regression",
+        regressionPassed: "{{passed}} / {{total}} passed",
+        status: {
+          running: "Running",
+          history: "History",
+          deprecated: "Deprecated",
+          recordOnly: "Record only",
+        },
+        origin: {
+          project: "This project",
+          other_project: "Another project",
+          workspace: "Workspace",
+          other: "Other",
+        },
+        switch: "Make running version",
+        rollBack: "Roll back to this version",
+        copy: "Copy as draft",
+        showEarlier: "Show earlier versions (record only, {{count}} in all)",
+        showEarlier_one: "Show the earlier version (record only, {{count}} in all)",
+        showEarlier_other: "Show earlier versions (record only, {{count}} in all)",
+        hideEarlier: "Hide earlier versions",
         columns: {
           version: "Version",
-          source: "Source",
+          status: "Status",
+          base: "Builds on",
+          notes: "Release notes",
           publisher: "Published by",
-          time: "Published",
-          notes: "Notes",
-          regression: "Scenario question regression",
+          origin: "Source",
+          regression: "Scenario regression",
+          actions: "Actions",
         },
       },
       regression: {
         title: "Scenario question regression of v{{version}}",
+        titlePrepared: "Scenario regression (written into the network)",
+        preparedHint:
+          "The scenario questions are answered on the content written into the network; the running version is not affected.",
         loadFailed: "The regression cannot be read right now",
         none: "This version has no regression yet.",
         run: "Run again",
@@ -2371,6 +2490,10 @@ export const bknProjectEnUS = {
           interrupted: "The regression was interrupted; it can be run again.",
           definitions_unreadable:
             "This version's ontology could not be read, so nothing was asked.",
+          draft_changed:
+            "The network was changed during the regression; prepare the release again.",
+          index_not_ready:
+            "The network's search was not ready, so nothing was asked; it can be run again.",
           other: "The regression did not finish; it can be run again.",
         },
         outcome: {

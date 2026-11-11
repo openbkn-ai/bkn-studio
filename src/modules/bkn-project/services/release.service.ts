@@ -13,15 +13,17 @@ import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getProject } from "@/modules/bkn-project/services/project.service";
 import type {
-  LineageRelease,
+  NetworkVersion,
+  PrepareInput,
+  ProjectVersions,
   PublishInput,
+  PublishResult,
   Regression,
   ReleaseItem,
   ReleaseQuestion,
   ReleaseReview,
-  RollbackNetwork,
   RollbackPlan,
-  SwitchPlan,
+  RollbackVersion,
 } from "@/modules/bkn-project/types/release";
 
 const API_PREFIX = "/bkn-project/v1";
@@ -76,21 +78,39 @@ type BackendReview = {
   version: string;
 };
 
-type BackendRelease = {
-  create_time: number;
-  network_id: string;
-  notes: string;
-  project_id: string;
+type BackendPrepared = {
   publisher: { id: string } | null;
-  state: string;
+  update_time: number;
   version: string;
+};
+
+type BackendVersion = {
+  base_version: number;
+  publish_time: number;
+  label: string;
+  notes: string;
+  origin: string;
+  publisher: { id: string } | null;
+  release?: string;
+  status: string;
+  version: number;
+};
+
+type BackendVersions = {
+  entries: BackendVersion[] | null;
+  prepared?: BackendPrepared | null;
+  versioning: {
+    draft?: { base_version: number; has_changes: boolean; outdated: boolean } | null;
+    full_history: boolean;
+    previous_version: number;
+    running_version: number;
+  };
 };
 
 type BackendRegression = {
   attempt: number;
   error: string;
   finish_time: number;
-  network_id: string;
   questions:
     | {
         id: string;
@@ -193,7 +213,6 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
   attempt: regression.attempt,
   error: regression.error,
   finishTime: regression.finish_time,
-  networkId: regression.network_id,
   questions: (regression.questions ?? []).map((question) => ({
     id: question.id,
     noRecord: question.no_record ?? false,
@@ -217,14 +236,37 @@ export const mapRegression = (regression: BackendRegression): Regression => ({
   version: regression.version,
 });
 
-const mapRelease = (release: BackendRelease): LineageRelease => ({
-  createTime: release.create_time,
-  networkId: release.network_id,
-  notes: release.notes,
-  projectId: release.project_id,
-  publisherId: release.publisher?.id ?? "",
-  state: release.state,
-  version: release.version,
+const mapVersion = (version: BackendVersion): NetworkVersion => ({
+  baseVersion: version.base_version,
+  createTime: version.publish_time,
+  label: version.label,
+  notes: version.notes,
+  origin: version.origin,
+  publisherId: version.publisher?.id ?? "",
+  release: version.release ?? "",
+  status: version.status,
+  version: version.version,
+});
+
+export const mapVersions = (data: BackendVersions): ProjectVersions => ({
+  entries: (data.entries ?? []).map(mapVersion),
+  prepared: data.prepared
+    ? {
+        publisherId: data.prepared.publisher?.id ?? "",
+        updateTime: data.prepared.update_time,
+        version: data.prepared.version,
+      }
+    : null,
+  versioning: {
+    draft: {
+      baseVersion: data.versioning.draft?.base_version ?? 0,
+      hasChanges: data.versioning.draft?.has_changes ?? false,
+      outdated: data.versioning.draft?.outdated ?? false,
+    },
+    fullHistory: data.versioning.full_history,
+    previousVersion: data.versioning.previous_version,
+    runningVersion: data.versioning.running_version,
+  },
 });
 
 /* ------------------------------------ API ------------------------------------ */
@@ -242,27 +284,42 @@ export async function getReleaseReview(projectId: string, version: string): Prom
 }
 
 /**
- * Publishes the project's branch once its review still stands and what did not pass is
- * accepted. The release's regression then starts in the background. Replies the new network.
+ * Writes the reviewed release into the network's draft, once its review still stands and what did
+ * not pass is accepted, and starts its scenario regression there. The running version stays.
  */
-export async function publishRelease(
-  projectId: string,
-  input: PublishInput,
-): Promise<{ networkId: string }> {
+export async function prepareRelease(projectId: string, input: PrepareInput): Promise<void> {
   if (useMock) {
-    return wait(await mockPublish(projectId, input));
+    await wait(await mockPrepare(projectId, input));
+    return;
   }
-  const response = await http.post<{ network_id: string }>(
-    `${projectPath(projectId)}/releases`,
+  await http.post(
+    `${projectPath(projectId)}/releases/${encodeURIComponent(input.version)}/prepare`,
     {
       accepts: input.accepts,
-      notes: input.notes,
+      overwrite_draft_changes: input.overwriteDraftChanges,
       signature: input.signature,
-      version: input.version,
     },
     { skipErrorToast: true },
   );
-  return { networkId: response.data.network_id };
+}
+
+/** Publishes the prepared release as the network's running version. */
+export async function publishRelease(
+  projectId: string,
+  input: PublishInput,
+): Promise<PublishResult> {
+  if (useMock) {
+    return wait(await mockPublish(projectId, input));
+  }
+  const response = await http.post<{ kn_version: number; purged_version?: number }>(
+    `${projectPath(projectId)}/releases`,
+    { allow_outdated_base: input.allowOutdatedBase, notes: input.notes, version: input.version },
+    { skipErrorToast: true },
+  );
+  return {
+    knVersion: response.data.kn_version,
+    purgedVersion: response.data.purged_version ?? 0,
+  };
 }
 
 /** Brings the live version into the project's branch. */
@@ -274,168 +331,118 @@ export async function syncBranch(projectId: string): Promise<void> {
   await http.post(`${projectPath(projectId)}/branch:sync`, undefined, { skipErrorToast: true });
 }
 
-/** Commits what was edited on the live network, then brings it into the project's branch. */
+/** Commits what was edited on the network outside the project, then brings it into the project. */
 export async function commitDrift(projectId: string): Promise<void> {
   if (useMock) {
+    mockDraft.hasChanges = false;
     await wait(null);
     return;
   }
   await http.post(`${projectPath(projectId)}/drift:commit`, undefined, { skipErrorToast: true });
 }
 
-/** The releases of a network's lineage, newest first, by any project. */
-export async function listReleases(lineageId: string): Promise<LineageRelease[]> {
+/** The versions of the project's network, newest first, its draft and the prepared release. */
+export async function getProjectVersions(projectId: string): Promise<ProjectVersions> {
   if (useMock) {
-    return wait([...mockReleases].reverse());
+    return wait(mockVersionsOf(projectId));
   }
-  const releases: LineageRelease[] = [];
-  const seen = new Set<string>();
-  let cursor: string | null = null;
-  do {
-    const response: AxiosResponse<{
-      entries: BackendRelease[] | null;
-      next_cursor: string | null;
-    }> = await http.get(`${API_PREFIX}/lineages/${encodeURIComponent(lineageId)}/releases`, {
-      params: { limit: 100, ...(cursor ? { cursor } : {}) },
-      skipErrorToast: true,
-    });
-    releases.push(...(response.data.entries ?? []).map(mapRelease));
-    cursor = response.data.next_cursor;
-    // A cursor that does not move on would page forever: stop at one seen before.
-    if (cursor && seen.has(cursor)) {
-      break;
-    }
-    if (cursor) {
-      seen.add(cursor);
-    }
-  } while (cursor);
-  return releases;
-}
-
-/** What switching consumers to a release of the project would move. */
-export async function getSwitchPlan(projectId: string, toNetworkId: string): Promise<SwitchPlan> {
-  if (useMock) {
-    return wait({
-      fromNetworkId: mockInUse,
-      schedules: [{ id: "s1", name: "Nightly delay warning" }],
-      toNetworkId,
-    });
-  }
-  const response = await http.get<{
-    from_network_id: string;
-    schedules: { id?: string; name: string }[] | null;
-    to_network_id: string;
-  }>(`${projectPath(projectId)}/switch-plan`, {
-    params: { to_network_id: toNetworkId },
+  const response = await http.get<BackendVersions>(`${projectPath(projectId)}/versions`, {
     skipErrorToast: true,
   });
-  return {
-    fromNetworkId: response.data.from_network_id,
-    schedules: (response.data.schedules ?? []).map((schedule, index) => ({
-      id: schedule.id ?? String(index),
-      name: schedule.name,
-    })),
-    toNetworkId: response.data.to_network_id,
-  };
+  return mapVersions(response.data);
 }
 
-/** Switches consumers to a release of the project. */
-export async function switchConsumers(projectId: string, toNetworkId: string): Promise<void> {
+/** Puts a version's content back into the project, and into the network's draft when it is kept. */
+export async function copyVersion(
+  projectId: string,
+  knVersion: number,
+  overwriteDraftChanges: boolean,
+): Promise<void> {
   if (useMock) {
-    await wait(null);
-    mockInUse = toNetworkId;
+    await wait(mockCopy(knVersion, overwriteDraftChanges));
     return;
   }
   await http.post(
-    `${projectPath(projectId)}/switches`,
-    { to_network_id: toNetworkId },
+    `${projectPath(projectId)}/versions/${knVersion}/copy`,
+    { overwrite_draft_changes: overwriteDraftChanges },
     { skipErrorToast: true },
   );
 }
 
-type BackendRollbackNetwork = { base: boolean; network_id: string; version?: string };
+type BackendRollbackVersion = { kn_version: number; label: string; version?: string };
 
-const rollbackNetwork = (network: BackendRollbackNetwork): RollbackNetwork => ({
-  base: network.base,
-  networkId: network.network_id,
-  version: network.version ?? "",
+const rollbackVersion = (version: BackendRollbackVersion): RollbackVersion => ({
+  knVersion: version.kn_version,
+  label: version.label,
+  version: version.version ?? "",
 });
 
-/** The network of the project's lineage consumers use: the base network before any switch. */
-export async function getNetworkInUse(projectId: string): Promise<RollbackNetwork> {
-  return (await getRollbackPlan(projectId)).from;
-}
-
-/** What rolling consumers back to the network before the one in use would do; changes nothing. */
-export async function getRollbackPlan(projectId: string): Promise<RollbackPlan> {
+/**
+ * What switching the running version back to `toVersion` would do, or to the previous version
+ * without it; changes nothing.
+ */
+export async function getRollbackPlan(
+  projectId: string,
+  toVersion?: number,
+): Promise<RollbackPlan> {
   if (useMock) {
-    const at = mockReleases.findIndex((release) => release.networkId === mockInUse);
-    const previous = at > 0 ? mockReleases[at - 1] : null;
-    return wait({
-      consumers: ["agents", "mcp", "workshop", "eval"],
-      from: { base: at < 0, networkId: mockInUse, version: at < 0 ? "" : mockReleases[at].version },
-      questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
-      refusals: at < 0 ? ["Rollback.NoPrevious"] : [],
-      schedules: [{ id: "s1", name: "Nightly delay warning" }],
-      signature: `mock-${mockInUse}`,
-      to: previous
-        ? { base: false, networkId: previous.networkId, version: previous.version }
-        : at === 0
-          ? { base: true, networkId: "supply_chain", version: "" }
-          : null,
-    });
+    return wait(mockRollbackPlan(toVersion));
   }
   const response = await http.get<{
-    consumers: string[] | null;
-    from: BackendRollbackNetwork;
+    from: BackendRollbackVersion;
+    full_history: boolean;
     questions?: BackendReview["questions"];
     refusals: { code: string }[] | null;
-    schedules: { id?: string; name: string }[] | null;
     signature: string;
-    to?: BackendRollbackNetwork | null;
-  }>(`${projectPath(projectId)}/rollback-plan`, { skipErrorToast: true });
+    to?: BackendRollbackVersion | null;
+  }>(`${projectPath(projectId)}/rollback-plan`, {
+    params: toVersion ? { to_version: toVersion } : undefined,
+    skipErrorToast: true,
+  });
   const plan = response.data;
   return {
-    consumers: plan.consumers ?? [],
-    from: rollbackNetwork(plan.from),
+    from: rollbackVersion(plan.from),
+    fullHistory: plan.full_history,
     questions: mapQuestions(plan.questions),
     refusals: (plan.refusals ?? []).map(({ code }) => code),
-    schedules: (plan.schedules ?? []).map((schedule, index) => ({
-      id: schedule.id ?? String(index),
-      name: schedule.name,
-    })),
     signature: plan.signature,
-    to: plan.to ? rollbackNetwork(plan.to) : null,
+    to: plan.to ? rollbackVersion(plan.to) : null,
   };
 }
 
-/**
- * Switches consumers back as the plan read said, while it still stands. Only schedules move and
- * the switch is recorded: no data or definitions are rewritten.
- */
-export async function rollBack(projectId: string, signature: string): Promise<void> {
+/** Switches the running version as the plan read said, while it still stands, for every consumer. */
+export async function rollBack(
+  projectId: string,
+  signature: string,
+  toVersion: number,
+): Promise<void> {
   if (useMock) {
-    const plan = await getRollbackPlan(projectId);
+    const plan = mockRollbackPlan(toVersion);
     if (plan.signature !== signature) {
       throw refused(409, "Rollback.PlanOutdated");
     }
-    mockInUse = plan.to?.networkId ?? mockInUse;
+    await wait(null);
+    mockActivate(plan.to?.knVersion ?? mockRunning);
     return;
   }
-  await http.post(`${projectPath(projectId)}/rollbacks`, { signature }, { skipErrorToast: true });
+  await http.post(
+    `${projectPath(projectId)}/rollbacks`,
+    { signature, to_version: toVersion },
+    { skipErrorToast: true },
+  );
 }
 
-/** The regression of a release of the project, or null before one exists. */
+/** The regression of a release of the project, by its version, or null before one exists. */
 export async function getRegression(
   projectId: string,
-  networkId: string,
+  version: string,
 ): Promise<Regression | null> {
   if (useMock) {
-    return wait(mockRegression(networkId));
+    return wait(mockRegression(version));
   }
   try {
     const response = await http.get<BackendRegression>(
-      `${projectPath(projectId)}/releases/${encodeURIComponent(networkId)}/regression`,
+      `${projectPath(projectId)}/releases/${encodeURIComponent(version)}/regression`,
       { skipErrorToast: true },
     );
     return mapRegression(response.data);
@@ -449,13 +456,13 @@ export async function getRegression(
 }
 
 /** Runs the regression of a release again, with the questions the requirements have now. */
-export async function runRegression(projectId: string, networkId: string): Promise<Regression> {
+export async function runRegression(projectId: string, version: string): Promise<Regression> {
   if (useMock) {
-    mockRegressionStarts[networkId] = Date.now();
-    return wait(mockRegression(networkId)!);
+    mockRegressionStarts[version] = Date.now();
+    return wait(mockRegression(version)!);
   }
   const response = await http.post<BackendRegression>(
-    `${projectPath(projectId)}/releases/${encodeURIComponent(networkId)}/regression:run`,
+    `${projectPath(projectId)}/releases/${encodeURIComponent(version)}/regression:run`,
     undefined,
     { skipErrorToast: true },
   );
@@ -472,24 +479,96 @@ const wait = async <T>(value: T, delay = 180) =>
 
 const mockOwnerId = defaultDevRuntimeUser.id ?? "mock-user";
 
-const mockReleases: LineageRelease[] = [
+/** A release of the mock lineage, prepared or published. */
+type MockRelease = {
+  createTime: number;
+  knVersion: number;
+  projectId: string;
+  publisherId: string;
+  version: string;
+};
+
+/** The published releases, oldest first. */
+const mockReleases: MockRelease[] = [
   {
     createTime: Date.parse("2026-10-20T09:00:00Z"),
-    networkId: "supply_chain_v1_0_0",
-    notes: "",
+    knVersion: 1,
     projectId: "p-002",
     publisherId: "another-user",
-    state: "live",
     version: "1.0.0",
   },
 ];
-let mockInUse = "supply_chain_v1_0_0";
+/** The versions of the mock network, oldest first. */
+const mockVersions: NetworkVersion[] = [
+  {
+    baseVersion: 0,
+    createTime: Date.parse("2026-10-20T09:00:00Z"),
+    label: "v1.0.0",
+    notes: "",
+    origin: "other_project",
+    publisherId: "another-user",
+    release: "1.0.0",
+    status: "running",
+    version: 1,
+  },
+];
+let mockRunning = 1;
+let mockPrevious = 0;
+const mockDraft = { baseVersion: 1, hasChanges: false, outdated: false };
+let mockPrepared: (MockRelease & { updateTime: number }) | null = null;
 
-/** The newest mock release of a project, and whether consumers use it; for the mock status. */
+function mockVersionsOf(projectId: string): ProjectVersions {
+  return {
+    entries: [...mockVersions].reverse().map((entry) => {
+      const release = mockReleases.find((item) => item.knVersion === entry.version);
+      return {
+        ...entry,
+        origin: release
+          ? release.projectId === projectId
+            ? "project"
+            : "other_project"
+          : "workspace",
+        status:
+          entry.version === mockRunning
+            ? "running"
+            : entry.status === "running"
+              ? "history"
+              : entry.status,
+      };
+    }),
+    prepared:
+      mockPrepared?.projectId === projectId
+        ? {
+            publisherId: mockPrepared.publisherId,
+            updateTime: mockPrepared.updateTime,
+            version: mockPrepared.version,
+          }
+        : null,
+    versioning: {
+      draft: { ...mockDraft },
+      fullHistory: true,
+      previousVersion: mockPrevious,
+      runningVersion: mockRunning,
+    },
+  };
+}
+
+/** The newest mock release of a project, for the mock status. */
 export function mockProjectRelease(projectId: string) {
   const latest = mockReleases[mockReleases.length - 1];
+  const rolledBack = latest.knVersion !== mockRunning;
+  const running = mockVersions.find((entry) => entry.version === mockRunning);
   return latest.projectId === projectId
-    ? { createTime: latest.createTime, inUse: mockInUse === latest.networkId, latest }
+    ? {
+        createTime: latest.createTime,
+        latest: {
+          knVersion: latest.knVersion,
+          networkId: "supply_chain",
+          rolledBack,
+          running: rolledBack ? { knVersion: mockRunning, label: running?.label ?? "" } : null,
+          version: latest.version,
+        },
+      }
     : null;
 }
 
@@ -559,7 +638,7 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
     refusals: exists ? ["Release.VersionExists"] : [],
     release: {
       baseVersion: mockReleases[mockReleases.length - 1].version,
-      networkId: `supply_chain_v${version.replaceAll(".", "_")}`,
+      networkId: "supply_chain",
       networkName: `Supply Chain · ${version}`,
     },
     risks: {
@@ -574,11 +653,15 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
   };
 }
 
-async function mockPublish(projectId: string, input: PublishInput) {
+async function mockOwned(projectId: string) {
   const project = await getProject(projectId).catch(() => null);
   if (project?.owner.id !== mockOwnerId) {
     throw refused(403, "Release.NotOwner");
   }
+}
+
+async function mockPrepare(projectId: string, input: PrepareInput) {
+  await mockOwned(projectId);
   const review = await mockReview(projectId, input.version);
   if (review.signature !== input.signature) {
     throw refused(409, "Release.ReviewOutdated");
@@ -586,36 +669,108 @@ async function mockPublish(projectId: string, input: PublishInput) {
   if (review.blocked || !review.accepts.every((accept) => input.accepts.includes(accept))) {
     throw refused(409, "Release.ChecksFailed");
   }
-  mockReleases.forEach((release) => (release.state = "archived"));
-  const accepted = input.accepts.length ? `Accepted: ${input.accepts.join(", ")}` : "";
-  mockReleases.push({
-    createTime: Date.now(),
-    networkId: review.release.networkId,
-    notes: [input.notes.trim(), accepted].filter(Boolean).join("\n\n"),
+  if (mockDraft.hasChanges && !input.overwriteDraftChanges) {
+    throw refused(409, "Release.DraftHasChanges");
+  }
+  const now = Date.now();
+  mockPrepared = {
+    createTime: now,
+    knVersion: 0,
     projectId,
     publisherId: mockOwnerId,
-    state: "live",
+    updateTime: now,
     version: input.version,
+  };
+  mockRegressionStarts[input.version] = now;
+  return null;
+}
+
+async function mockPublish(projectId: string, input: PublishInput): Promise<PublishResult> {
+  await mockOwned(projectId);
+  if (mockPrepared?.projectId !== projectId || mockPrepared.version !== input.version) {
+    throw refused(409, "Release.NotPrepared");
+  }
+  if (mockDraft.outdated && !input.allowOutdatedBase) {
+    throw refused(409, "Release.DraftOutdated");
+  }
+  const knVersion = mockVersions[mockVersions.length - 1].version + 1;
+  const now = Date.now();
+  mockVersions.push({
+    baseVersion: mockDraft.baseVersion,
+    createTime: now,
+    label: `v${input.version}`,
+    notes: input.notes.trim(),
+    origin: "project",
+    publisherId: mockOwnerId,
+    release: input.version,
+    status: "running",
+    version: knVersion,
   });
-  return { networkId: review.release.networkId };
+  mockReleases.push({ ...mockPrepared, createTime: now, knVersion });
+  mockPrepared = null;
+  mockDraft.baseVersion = knVersion;
+  mockActivate(knVersion);
+  return { knVersion, purgedVersion: 0 };
+}
+
+function mockActivate(knVersion: number) {
+  if (knVersion !== mockRunning) {
+    mockPrevious = mockRunning;
+    mockRunning = knVersion;
+  }
+  mockVersions.forEach((entry) => {
+    if (entry.status === "running" && entry.version !== knVersion) {
+      entry.status = "history";
+    }
+  });
+  // The draft started from a version the running one was switched back from.
+  mockDraft.outdated = mockDraft.baseVersion !== mockRunning;
+}
+
+function mockRollbackPlan(toVersion?: number): RollbackPlan {
+  const asVersion = (knVersion: number): RollbackVersion => {
+    const entry = mockVersions.find((item) => item.version === knVersion);
+    return { knVersion, label: entry?.label ?? "", version: entry?.release ?? "" };
+  };
+  const to = toVersion || mockPrevious;
+  return {
+    from: asVersion(mockRunning),
+    fullHistory: true,
+    questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
+    refusals: to ? [] : ["Rollback.NoPrevious"],
+    signature: `mock-${mockRunning}-${to}`,
+    to: to ? asVersion(to) : null,
+  };
+}
+
+function mockCopy(knVersion: number, overwrite: boolean) {
+  if (!mockVersions.some((entry) => entry.version === knVersion)) {
+    throw refused(410, "Release.VersionPurged");
+  }
+  if (mockDraft.hasChanges && !overwrite) {
+    throw refused(409, "Release.DraftHasChanges");
+  }
+  return null;
 }
 
 /** When the mock's regressions started; each runs for a few seconds. */
 const mockRegressionStarts: Record<string, number> = {};
 const MOCK_REGRESSION_MS = 4000;
 
-function mockRegression(networkId: string): Regression | null {
-  const release = mockReleases.find((entry) => entry.networkId === networkId);
+function mockRegression(version: string): Regression | null {
+  const release =
+    mockPrepared?.version === version
+      ? mockPrepared
+      : mockReleases.find((entry) => entry.version === version);
   if (!release || release.projectId === "p-002") {
     return null;
   }
-  const start = (mockRegressionStarts[networkId] ??= release.createTime);
+  const start = (mockRegressionStarts[version] ??= release.createTime);
   const running = Date.now() - start < MOCK_REGRESSION_MS;
   return {
     attempt: 1,
     error: "",
     finishTime: running ? 0 : start + MOCK_REGRESSION_MS,
-    networkId,
     questions: [
       {
         id: "q1",

@@ -8,7 +8,12 @@
 import type { TFunction } from "i18next";
 
 import type { LightStatusTone } from "@/framework/ui/common/LightStatusTag";
-import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-project/types/release";
+import type {
+  NetworkVersion,
+  Regression,
+  ReleaseCheck,
+  ReleaseItem,
+} from "@/modules/bkn-project/types/release";
 
 /**
  * Release codes are for machines; the page words them. Every set is open: a code the page does
@@ -33,6 +38,8 @@ const REASONS = new Set([
   "knowledge_base_originals_changed",
   "knowledge_base_permission",
   "knowledge_base_unavailable",
+  "knowledge_base_review_items",
+  "knowledge_base_review_not_applied",
   "not_confirmed",
   "confirmation_outdated",
   "mapping_missing",
@@ -51,7 +58,12 @@ const REASONS = new Set([
   "branch_behind",
   "metric_owner_missing",
 ]);
-const ACCEPTS = new Set(["similar_names", "check_partial", "index_not_ready"]);
+const ACCEPTS = new Set([
+  "similar_names",
+  "check_partial",
+  "index_not_ready",
+  "knowledge_base_review_items",
+]);
 const REFUSALS = new Set([
   "VersionExists",
   "NetworkExists",
@@ -77,6 +89,15 @@ const PUBLISH_ERRORS = new Set([
   "Drift",
   "MergeConflict",
   "UnfinishedAttempt",
+  "NotPrepared",
+  "DraftHasChanges",
+  "DraftChanged",
+  "DraftOutdated",
+  "RunningChanged",
+  "NothingToPublish",
+  "ValidationFailed",
+  "NotReady",
+  "PublishPending",
 ]);
 const CAPABILITY_REASONS = new Set(["changed", "network_id"]);
 
@@ -113,6 +134,24 @@ export function checkReasonText(t: TFunction, check: ReleaseCheck): string {
     const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
     return t(`${PREFIX}.reason.index_not_ready`, { ready: counts.ready ?? 0, total });
   }
+  if (reason === "knowledge_base_review_items") {
+    // Only the kinds the edition counted, and only those with items: no count is made up.
+    const counts = (details && typeof details === "object" ? details : {}) as Record<
+      string,
+      unknown
+    >;
+    const parts = (["links", "values", "conflicts"] as const).flatMap((kind) => {
+      const value = counts[`review_${kind}`];
+      return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+        ? [t(`${PREFIX}.reason.reviewItems.${kind}`, { count: value })]
+        : [];
+    });
+    return parts.length
+      ? t(`${PREFIX}.reason.knowledge_base_review_items`, {
+          items: parts.join(t("bknProject.listSeparator")),
+        })
+      : t(`${PREFIX}.reason.reviewItems.uncounted`);
+  }
   if (reason === "metric_owner_missing" && Array.isArray(details)) {
     return t(`${PREFIX}.reason.metric_owner_missing`, { count: details.length });
   }
@@ -132,16 +171,30 @@ export function checkDetailRows(
   /** Names an object type by id, as the review's changes name it. */
   itemName: (id: string) => string = (id) => id,
 ): string[] {
-  if (
-    check.code === "knowledge_base" &&
-    check.passed &&
-    check.details &&
-    typeof check.details === "object"
-  ) {
+  if (check.code === "knowledge_base" && check.details && typeof check.details === "object") {
+    const rows: string[] = [];
     const count = (check.details as { original_documents?: unknown }).original_documents;
-    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
-      return [t(`${PREFIX}.originalDocuments`, { count })];
+    if (check.passed && typeof count === "number" && Number.isSafeInteger(count) && count >= 0) {
+      rows.push(t(`${PREFIX}.originalDocuments`, { count }));
     }
+    // Fields decided as the documents have them right: the release keeps the business system's.
+    const kept = (check.details as { kept_document?: unknown }).kept_document;
+    if (Array.isArray(kept) && kept.length) {
+      rows.push(t(`${PREFIX}.keptDocument`, { count: kept.length }));
+      for (const field of kept as KeptField[]) {
+        const values = Array.isArray(field.document_values) ? field.document_values : [];
+        const row = t(`${PREFIX}.keptDocumentItem`, {
+          document: values.map(shownValue).join(t("bknProject.listSeparator")),
+          field: field.field ?? "",
+          object: [field.object, shownValue(field.record)].filter(Boolean).join(" "),
+          system: shownValue(field.system_value),
+        });
+        rows.push(
+          field.reason ? t(`${PREFIX}.keptDocumentReason`, { reason: field.reason, row }) : row,
+        );
+      }
+    }
+    return rows;
   }
   if (!check.passed && check.reason === "metric_owner_missing" && Array.isArray(check.details)) {
     return (check.details as MetricOwner[]).map((metric) =>
@@ -160,6 +213,27 @@ export function checkDetailRows(
 }
 
 type NamePair = { added: ReleaseItem; other: ReleaseItem };
+
+/** A shared field the professional edition's review decided as the documents have it right. */
+type KeptField = {
+  object?: string;
+  record?: unknown;
+  field?: string;
+  document_values?: unknown[];
+  system_value?: unknown;
+  reason?: string;
+};
+
+/** A business value as people read it: text as it is, a record by its key values. */
+function shownValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) return value.map(shownValue).join(" ");
+  if (typeof value === "object") return Object.values(value).map(shownValue).join(" ");
+  return "";
+}
 
 /** A metric of the branch whose object type the release lacks. */
 type MetricOwner = { id: string; name?: string; owner_object_type_id: string };
@@ -222,7 +296,12 @@ const REGRESSION_STATUSES = new Set([
   "no_questions",
   "data_source_missing",
 ]);
-const REGRESSION_ERRORS = new Set(["interrupted", "definitions_unreadable"]);
+const REGRESSION_ERRORS = new Set([
+  "interrupted",
+  "definitions_unreadable",
+  "draft_changed",
+  "index_not_ready",
+]);
 const OUTCOMES = new Set([
   "passed",
   "missing",
@@ -295,3 +374,11 @@ export const passedCount = (regression: Regression) => {
     total: asked.length,
   };
 };
+
+/** A version of the network as people know it: its label, or its number when it has none. */
+export const versionName = (t: TFunction, knVersion: number, label?: string) =>
+  label || t("bknProject.release.versions.number", { number: knVersion });
+
+/** Names a version of the network by its number, with the label the list gives it. */
+export const versionNameIn = (t: TFunction, entries: NetworkVersion[], knVersion: number) =>
+  versionName(t, knVersion, entries.find((entry) => entry.version === knVersion)?.label);

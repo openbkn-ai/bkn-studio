@@ -22,14 +22,13 @@ describe("field filterability", () => {
     "time",
     "datetime",
     "timestamp",
-    "ip",
     "boolean",
     "vector",
   ])("permits enabling unified type %s", (type) => {
     expect(canEnableFieldFiltering(type)).toBe(true);
   });
 
-  it.each(["binary", "other", "json", "point", "shape", "future_type", "", "keyword", "int"])(
+  it.each(["binary", "other", "json", "point", "shape", "ip", "future_type", "", "keyword", "int"])(
     "does not enable unsupported or native type %s",
     (type) => expect(canEnableFieldFiltering(type)).toBe(false),
   );

@@ -23,6 +23,7 @@ import {
   mockDiscoverRecords,
   mockResources,
   mockStartScan,
+  withMockFilterability,
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
@@ -36,7 +37,9 @@ describe("data catalog discover-status mocks", () => {
     const resource = mockResources.find((item) => item.id === "res-index-config-demo");
     expect(resource).toBeDefined();
     for (const field of resource!.schema) {
-      expect(field.filterable, field.type).toBe(!["binary", "json", "other"].includes(field.type));
+      expect(field.filterable, field.type).toBe(
+        !["binary", "json", "other", "ip"].includes(field.type),
+      );
     }
   });
 
@@ -71,6 +74,23 @@ describe("data catalog discover-status mocks", () => {
       }
     }
   });
+
+  it("defaults IP filtering to false while preserving explicit flags without changing the input", () => {
+    const schema = [
+      { name: "missing", type: "ip" },
+      { name: "disabled", type: "ip", filterable: false },
+      { name: "historical", type: "ip", filterable: true },
+    ];
+    const before = structuredClone(schema);
+
+    expect(withMockFilterability(schema).map((field) => field.filterable)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect(schema).toEqual(before);
+  });
+
   it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
     const restrictedIds = new Set([
       "res-permission-limited-orders",

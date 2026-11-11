@@ -10,7 +10,7 @@ import { createInstance } from "i18next";
 import { dataConnectEnUS } from "@/modules/data-connect/locales/en-US";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogDeletionImpact } from "@/shared/catalog";
 import type { DataConnectRecord } from "@/modules/data-connect/types/data-connect";
@@ -25,6 +25,12 @@ void deletionI18n.init({
 const previewCatalogDeletionMock = vi.hoisted(() => vi.fn());
 const dangerOpenMock = vi.hoisted(() => vi.fn());
 const warningMock = vi.hoisted(() => vi.fn());
+const currentPermissions = vi.hoisted(() => ({ value: ["catalog:create"] }));
+
+beforeEach(() => {
+  currentPermissions.value = ["catalog:create"];
+});
+afterEach(() => vi.unstubAllEnvs());
 
 vi.mock("@/shared/catalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/catalog")>()),
@@ -81,13 +87,10 @@ vi.mock("antd", async (importOriginal) => {
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
+    runtimeConfig: { currentUser: { permissions: currentPermissions.value } },
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn(), warning: warningMock },
   }),
-}));
-
-vi.mock("@/framework/permission/PermissionGate", () => ({
-  PermissionGate: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock("@/framework/safety/DangerDeleteModal", () => ({
@@ -234,6 +237,68 @@ describe("DataConnectListScene object permissions", () => {
       expect(onEdit).toHaveBeenCalledWith("catalog-manager");
     });
   });
+
+  it("denies write menus on actual catalog responses selected for the mock viewer", async () => {
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_USER", "viewer");
+    vi.resetModules();
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+    const { getDevRuntimeUser } = await import("@/framework/runtime/dev-profile");
+    currentPermissions.value = getDevRuntimeUser().permissions;
+    const result = await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "physical" });
+    listDataConnectRecordsMock.mockResolvedValue(result);
+
+    render(
+      <MemoryRouter>
+        <DataConnectListScene onEdit={onEdit} onOpenDiscovers={onOpenDiscovers} />
+      </MemoryRouter>,
+    );
+
+    const row = await screen.findByTestId("record-cat-001");
+    const summaryOnlyRow = await screen.findByTestId("record-cat-009");
+    expect(within(row).getByRole("button", { name: "common.detail" })).toBeInTheDocument();
+    for (const action of [
+      "dataConnect.discoverManage",
+      "common.edit",
+      "common.testConnection",
+      "common.disable",
+      "common.delete",
+    ]) {
+      expect(within(row).queryByRole("button", { name: action })).toBeNull();
+    }
+    expect(within(summaryOnlyRow).queryByRole("button", { name: "common.detail" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "common.create" })).toBeNull();
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onOpenDiscovers).not.toHaveBeenCalled();
+  });
+
+  it.each(["viewer", "admin"] as const)(
+    "gates creation on an empty result for the mock %s",
+    async (role) => {
+      vi.stubEnv("DEV", true);
+      vi.stubEnv("VITE_USE_MOCK", "true");
+      vi.stubEnv("VITE_MOCK_USER", role);
+      const { getDevRuntimeUser } = await import("@/framework/runtime/dev-profile");
+      currentPermissions.value = getDevRuntimeUser().permissions;
+      listDataConnectRecordsMock.mockResolvedValue({ items: [], total: 0 });
+      const onCreate = vi.fn();
+      render(
+        <MemoryRouter>
+          <DataConnectListScene onCreate={onCreate} />
+        </MemoryRouter>,
+      );
+      await screen.findByText("dataConnect.empty");
+      const createButtons = screen.queryAllByRole("button", { name: "common.create" });
+      if (role === "viewer") {
+        expect(createButtons).toHaveLength(0);
+      } else {
+        expect(createButtons).toHaveLength(2);
+        fireEvent.click(createButtons[0]);
+        expect(onCreate).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 
   it("shows a manual refresh hint without a retry button when connections fail to load", async () => {
     listDataConnectRecordsMock.mockRejectedValue(new Error("connections unavailable"));

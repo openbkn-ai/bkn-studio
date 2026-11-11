@@ -15,6 +15,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
+import { getMockUserRole } from "@/framework/runtime/mock-user";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -25,7 +26,6 @@ import {
   listProjects,
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
-import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 import { networkWorkspacePath, projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
@@ -44,6 +44,9 @@ export function ProjectListScene() {
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const currentUserId = runtimeConfig.currentUser.id;
+  // Only the local viewer scenario is read-only. Project creation has no independent
+  // permission point; real deployments continue to rely on the backend's network checks.
+  const canCreateProject = getMockUserRole() !== "viewer";
 
   const [keyword, setKeyword] = useState("");
   const [name, setName] = useState("");
@@ -206,32 +209,8 @@ export function ProjectListScene() {
       width: 260,
       render: (value: string, record) => (
         <div className={styles.stack}>
-          {/*
-           * A click opens the network consumers use now: the base one until a release is switched
-           * to. Opening it elsewhere (a modifier or the middle button) follows the link, to the
-           * lineage's base network the name stands for.
-           */}
-          <Link
-            onClick={(event) => {
-              if (
-                event.button !== 0 ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey
-              ) {
-                return;
-              }
-              event.preventDefault();
-              getNetworkInUse(record.id).then(
-                ({ networkId }) => void navigate(networkWorkspacePath(networkId)),
-                () => void message.error(t("bknProject.list.networkInUseFailed")),
-              );
-            }}
-            to={networkWorkspacePath(value)}
-          >
-            {networkNames[value] ?? value}
-          </Link>
+          {/* The project's network keeps its versions under one id: the link opens it. */}
+          <Link to={networkWorkspacePath(value)}>{networkNames[value] ?? value}</Link>
           <code className={styles.id}>{value}</code>
           {record.otherProjects > 0 ? (
             <Tag color="warning">
@@ -303,9 +282,11 @@ export function ProjectListScene() {
           <h2 className={styles.title}>{t("bknProject.title")}</h2>
           <p className={styles.intro}>{t("bknProject.description")}</p>
         </div>
-        <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
-          {t("bknProject.list.create")}
-        </AppButton>
+        {canCreateProject ? (
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
+            {t("bknProject.list.create")}
+          </AppButton>
+        ) : null}
       </div>
 
       <div className={styles.toolbar}>
@@ -385,15 +366,17 @@ export function ProjectListScene() {
         </div>
       ) : null}
 
-      <NewProjectModal
-        catalogs={catalogs}
-        catalogsError={catalogsError}
-        networks={networks}
-        networksError={networksError}
-        onCancel={() => setCreateOpen(false)}
-        onCreated={handleCreated}
-        open={createOpen}
-      />
+      {canCreateProject ? (
+        <NewProjectModal
+          catalogs={catalogs}
+          catalogsError={catalogsError}
+          networks={networks}
+          networksError={networksError}
+          onCancel={() => setCreateOpen(false)}
+          onCreated={handleCreated}
+          open={createOpen}
+        />
+      ) : null}
     </section>
   );
 }

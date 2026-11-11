@@ -75,7 +75,15 @@ export type ProjectStatus = {
   hints: { code: string; count?: number; total?: number }[];
   nextActions: ProjectNextAction[];
   /** The project's release, once the newest release is its own and came after its confirmation. */
-  release: { inUse: boolean; networkId: string; version: string } | null;
+  release: {
+    knVersion: number;
+    networkId: string;
+    /** The network was switched back and runs another version than this release. */
+    rolledBack: boolean;
+    /** The version the network runs when it was switched back; null otherwise. */
+    running: { knVersion: number; label: string } | null;
+    version: string;
+  } | null;
   stage: ProjectStage;
   /** `confirmation_outdated`, `check_outdated`. */
   stale: string[];

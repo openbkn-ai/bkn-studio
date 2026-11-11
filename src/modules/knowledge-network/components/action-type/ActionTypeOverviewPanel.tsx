@@ -133,6 +133,43 @@ export function ActionTypeOverviewPanel({
   const relationConfig =
     detail.operationConfig?.type === "relation" ? detail.operationConfig : undefined;
   const [relation, setRelation] = useState<RelationTypeDetail | null>(null);
+  const anchorRole =
+    relationConfig?.anchorRole ??
+    (relation?.sourceObjectTypeId === detail.objectTypeId ? "source" : "target");
+  const otherObjectTypeId =
+    anchorRole === "source" ? relation?.targetObjectTypeId : relation?.sourceObjectTypeId;
+  const currentObjectTypeName =
+    boundObjectType?.name ||
+    detail.objectTypeName ||
+    detail.objectTypeId ||
+    t("knowledgeNetwork.actionTypeGenericObjectName");
+  const otherObjectTypeName =
+    objectTypes.find((item) => item.id === otherObjectTypeId)?.name ||
+    (anchorRole === "source" ? relation?.targetObjectTypeName : relation?.sourceObjectTypeName) ||
+    relationConfig?.otherObjectCondition?.objectTypeId ||
+    t("knowledgeNetwork.actionTypeGenericObjectName");
+  const selfRelation =
+    relation?.sourceObjectTypeId === relation?.targetObjectTypeId && relation !== null;
+  const currentConditionObjectName = selfRelation
+    ? t("knowledgeNetwork.actionRelationObjectWithRole", {
+        objectTypeName: currentObjectTypeName,
+        role: t(
+          anchorRole === "source"
+            ? "knowledgeNetwork.actionRelationSourceRole"
+            : "knowledgeNetwork.actionRelationTargetRole",
+        ),
+      })
+    : currentObjectTypeName;
+  const otherConditionObjectName = selfRelation
+    ? t("knowledgeNetwork.actionRelationObjectWithRole", {
+        objectTypeName: otherObjectTypeName,
+        role: t(
+          anchorRole === "source"
+            ? "knowledgeNetwork.actionRelationTargetRole"
+            : "knowledgeNetwork.actionRelationSourceRole",
+        ),
+      })
+    : otherObjectTypeName;
   useEffect(() => {
     let cancelled = false;
     setRelation(null);
@@ -231,11 +268,19 @@ export function ActionTypeOverviewPanel({
                     </strong>
                   </div>
                   <div>
-                    <span>{t("knowledgeNetwork.actionRelationCurrentCondition")}</span>
+                    <span>
+                      {t("knowledgeNetwork.actionRelationCurrentCondition", {
+                        objectTypeName: currentConditionObjectName,
+                      })}
+                    </span>
                     <strong>{formatConditionLabel(detail.condition, t)}</strong>
                   </div>
                   <div>
-                    <span>{t("knowledgeNetwork.actionRelationOtherCondition")}</span>
+                    <span>
+                      {t("knowledgeNetwork.actionRelationOtherCondition", {
+                        objectTypeName: otherConditionObjectName,
+                      })}
+                    </span>
                     <strong>{formatConditionLabel(relationConfig.otherObjectCondition, t)}</strong>
                   </div>
                 </div>

@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import { http } from "@/framework/request/http";
 import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
 import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
@@ -131,7 +132,7 @@ export async function listKnowledgeNetworkObjectTypes(
     return wait(
       (mockObjectTypes[networkId] ?? []).map((item) => ({
         ...item,
-        operations: mockKnowledgeNetworkChildOperations,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
       })),
     );
   }
@@ -228,9 +229,10 @@ export async function listKnowledgeNetworkObjectTypePage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
-      entries: sorted
-        .slice(query.offset, query.offset + query.limit)
-        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      entries: sorted.slice(query.offset, query.offset + query.limit).map((item) => ({
+        ...item,
+        operations: filterMockOperations(mockKnowledgeNetworkChildOperations),
+      })),
       totalCount: sorted.length,
     });
   }
@@ -263,7 +265,11 @@ export async function getKnowledgeNetworkObjectType(
 ) {
   if (useMock) {
     const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
-    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
+    return wait(
+      record
+        ? { ...record, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
@@ -278,7 +284,11 @@ export async function getKnowledgeNetworkObjectType(
 export async function getKnowledgeNetworkObjectTypeDetail(networkId: string, objectTypeId: string) {
   if (useMock) {
     const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
-    return wait(detail ? { ...detail, operations: mockKnowledgeNetworkChildOperations } : null);
+    return wait(
+      detail
+        ? { ...detail, operations: filterMockOperations(mockKnowledgeNetworkChildOperations) }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(

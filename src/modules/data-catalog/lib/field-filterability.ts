@@ -20,7 +20,6 @@ const FILTERABLE_FIELD_TYPES = new Set([
   "time",
   "datetime",
   "timestamp",
-  "ip",
   "boolean",
   "vector",
 ]);

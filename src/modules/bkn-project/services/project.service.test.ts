@@ -102,12 +102,21 @@ describe("project.service", () => {
 
     await createProject({ catalogIds: ["c1"], knId: "orders", name: " Orders " });
 
-    expect(mockPost).toHaveBeenCalledWith("/bkn-project/v1/projects", {
-      catalog_ids: ["c1"],
-      kn_id: "orders",
-      name: "Orders",
-      new_kn: undefined,
-    });
+    expect(mockPost).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects",
+      {
+        catalog_ids: ["c1"],
+        enable_versioning: undefined,
+        kn_id: "orders",
+        name: "Orders",
+        new_kn: undefined,
+      },
+      { skipErrorToast: true },
+    );
+
+    // Turning versioning on for a network that does not keep versions, once the owner confirmed.
+    await createProject({ catalogIds: [], enableVersioning: true, knId: "orders", name: "O" });
+    expect(mockPost.mock.calls[1][1]).toMatchObject({ enable_versioning: true, kn_id: "orders" });
   });
 
   it("creates a project of a new network", async () => {
@@ -118,6 +127,7 @@ describe("project.service", () => {
 
     expect(mockPost.mock.calls[0][1]).toEqual({
       catalog_ids: [],
+      enable_versioning: undefined,
       kn_id: undefined,
       name: "Orders",
       new_kn: { name: "Delivery" },

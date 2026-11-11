@@ -1273,12 +1273,18 @@ describe("ViewEditorScene", () => {
     );
     renderEditor({ resourceId: "view-1" });
     await screen.findByDisplayValue("orders_view");
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
-    expect(screen.getByText("dataCatalog.filter.errors.emptyGroup")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    const filterSection = screen.getByText("dataCatalog.viewEditor.fixedFilter").closest("section");
+    if (!filterSection) throw new Error("The fixed filter section must be rendered");
+    const filters = within(filterSection);
+    const save = within(screen.getByRole("contentinfo")).getByRole("button", {
+      name: "dataCatalog.viewEditor.save",
+    });
+    fireEvent.click(filters.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(filters.getByText("dataCatalog.filter.errors.emptyGroup")).toBeTruthy();
+    fireEvent.click(save);
     expect(updateViewMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeGroup" }));
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    fireEvent.click(filters.getByRole("button", { name: "dataCatalog.filter.removeGroup" }));
+    fireEvent.click(save);
     await waitFor(() =>
       expect(updateViewMock).toHaveBeenCalledWith(
         "view-1",

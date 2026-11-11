@@ -8,18 +8,10 @@
 import { getActionTypeDynamicParameters } from "../utils/action-type-dynamic-params";
 import type { ActionExecutionInput } from "../utils/action-execution-input";
 
-import {
-  EditOutlined,
-  PlayCircleOutlined,
-  SettingOutlined,
-  UnorderedListOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, PlayCircleOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Card, Descriptions, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/relation-type.service";
-import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
-import { validateActionRelationBindings } from "@/modules/knowledge-network/utils/action-type-operation";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -27,17 +19,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
-import {
-  ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
-  ActionTypeExecutionEditor,
-  createDefaultActionTypeExecutionConfig,
-  normalizeActionTypeExecutionConfig,
-  validateActionTypeExecutionConfig,
-} from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
-import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   knowledgeNetworkReturnPath,
   knowledgeNetworkReturnState,
@@ -49,26 +32,18 @@ import {
 import {
   executeKnowledgeNetworkActionTypeNow,
   getKnowledgeNetworkActionTypeDetail,
-  updateKnowledgeNetworkActionType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ActionTypeDetail,
   ActionTypeActionSource,
-  ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
-import {
-  firstInvalidActionConstantParameter,
-  getActionSourceDisplayName,
-  getReadableActionSourceDisplayName,
-} from "@/modules/knowledge-network/utils/action-type-execution";
+import { getReadableActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 
 import detailStyles from "./ActionTypeDetailScene.module.css";
 import styles from "./KnowledgeNetworkResourceConfigScene.module.css";
 
-type ExecutionTab = "run" | "config" | "tasks";
-
-const ACTION_TYPE_EXECUTION_OPERATIONS = ["modify"] as const;
+type ExecutionTab = "run" | "tasks";
 
 export function ActionTypeExecutionScene() {
   const { t } = useTranslation();
@@ -81,55 +56,16 @@ export function ActionTypeExecutionScene() {
     networkId: string;
   }>();
   const [detail, setDetail] = useState<ActionTypeDetail | null>(null);
-  const [selectedRelation, setSelectedRelation] =
-    useState<KnowledgeNetworkRelationTypeRecord | null>(null);
-  const relationTypeId =
-    detail?.operationConfig?.type === "relation"
-      ? detail.operationConfig.relationTypeId
-      : undefined;
-  const [relationBindingError, setRelationBindingError] = useState<string | null>(null);
-  const [relationIdentityError, setRelationIdentityError] = useState<string | null>(null);
-  useEffect(() => {
-    setSelectedRelation(null);
-    if (!relationTypeId) return;
-    let cancelled = false;
-    void getKnowledgeNetworkRelationTypeDetail(networkId, relationTypeId)
-      .then((relation) => {
-        if (!cancelled) setSelectedRelation(relation);
-      })
-      .catch(() => {
-        if (!cancelled) setSelectedRelation(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [networkId, relationTypeId]);
   const [resolvedRunActionSource, setResolvedRunActionSource] = useState<
     ActionTypeActionSource | undefined
   >();
   const [runSourceResolutionFailed, setRunSourceResolutionFailed] = useState(false);
   const [runSourceResolving, setRunSourceResolving] = useState(false);
-  const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
-    createDefaultActionTypeExecutionConfig(),
-  );
-  const [executionSchemaState, setExecutionSchemaState] =
-    useState<ActionTypeExecutionParameterSchemaState>({
-      loaded: false,
-      parameterCount: 0,
-    });
-  const [executionSourceError, setExecutionSourceError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const {
-    access: operationAccess,
-    error: permissionError,
-    isLoading: isPermissionLoading,
-  } = useKnowledgeNetworkOperationAccessState(networkId, ACTION_TYPE_EXECUTION_OPERATIONS);
-  const canModify = operationAccess.modify;
   const canExecute = detail ? hasKnowledgeNetworkRecordOperation(detail, "execute") : false;
   const actionSource = detail?.executionConfig.actionSource;
   const canViewToolbox = hasPermissions({
@@ -153,12 +89,7 @@ export function ActionTypeExecutionScene() {
     location.state,
     actionTypeId ? detailPath : listPath,
   );
-  const activeTab: ExecutionTab =
-    searchParams.get("tab") === "config"
-      ? "config"
-      : searchParams.get("tab") === "tasks"
-        ? "tasks"
-        : "run";
+  const activeTab: ExecutionTab = searchParams.get("tab") === "tasks" ? "tasks" : "run";
 
   useEffect(() => {
     if (!networkId || !actionTypeId) {
@@ -177,7 +108,6 @@ export function ActionTypeExecutionScene() {
         }
 
         setDetail(actionTypeDetail);
-        setExecutionValue(actionTypeDetail.executionConfig);
       } catch (nextError) {
         setError(extractRequestErrorMessage(nextError));
       } finally {
@@ -237,61 +167,6 @@ export function ActionTypeExecutionScene() {
     }
 
     setSearchParams({ tab });
-  };
-
-  const handleSave = async () => {
-    if (!detail || !canModify) {
-      return;
-    }
-
-    const validationErrorKey = validateActionTypeExecutionConfig(executionValue, {
-      allowEmptyParameters:
-        executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
-    });
-    if (validationErrorKey) {
-      const validationError = t(validationErrorKey, {
-        name: firstInvalidActionConstantParameter(executionValue.parameters) ?? "",
-      });
-      setExecutionSourceError(
-        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
-      );
-      void message.error(validationError);
-      return;
-    }
-    setExecutionSourceError(null);
-
-    const normalizedExecution = normalizeActionTypeExecutionConfig(executionValue);
-    if (detail.operationConfig?.type === "relation") {
-      const bindingError =
-        relationIdentityError ?? validateActionRelationBindings(normalizedExecution.parameters);
-      if (bindingError) {
-        setRelationBindingError(t(bindingError));
-        return;
-      }
-    }
-    setRelationBindingError(null);
-
-    setSubmitting(true);
-    try {
-      await updateKnowledgeNetworkActionType(networkId, actionTypeId, {
-        actionKind: detail.actionKind,
-        operationConfig: detail.operationConfig,
-        affect: detail.affect,
-        color: detail.color,
-        condition: detail.condition,
-        description: detail.description,
-        executionConfig: normalizedExecution,
-        name: detail.name,
-        objectTypeId: detail.objectTypeId,
-        tags: detail.tags,
-      });
-      void message.success(t("common.success"));
-      void navigate(returnPath);
-    } catch (nextError) {
-      void message.error(extractRequestErrorMessage(nextError));
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const executeNow = async (input?: ActionExecutionInput) => {
@@ -370,7 +245,7 @@ export function ActionTypeExecutionScene() {
         </Descriptions>
         <div className={styles.executionActionBar}>
           <AppButton
-            disabled={isPermissionLoading || !canExecute}
+            disabled={!canExecute}
             icon={<PlayCircleOutlined />}
             loading={executing}
             onClick={handleExecuteNow}
@@ -386,74 +261,17 @@ export function ActionTypeExecutionScene() {
     );
   };
 
-  const renderConfigPanel = () => {
-    if (isPermissionLoading) {
-      return (
-        <div className={styles.loadingState}>
-          <Spin />
-        </div>
-      );
-    }
-
-    if (!canModify) {
-      return (
-        <Alert
-          message={t("knowledgeNetwork.actionTypeExecutionConfigReadonly")}
-          showIcon
-          type="info"
-        />
-      );
-    }
-
-    return (
-      <div className={styles.mappingFormPanel}>
-        <ActionTypeExecutionEditor
-          networkId={networkId}
-          objectTypeId={detail?.objectTypeId ?? ""}
-          onParameterSchemaStateChange={setExecutionSchemaState}
-          onChange={(nextValue) => {
-            setExecutionValue(nextValue);
-            setRelationBindingError(null);
-            if (getActionSourceDisplayName(nextValue.actionSource) || nextValue.sourceName.trim()) {
-              setExecutionSourceError(null);
-            }
-          }}
-          sourceError={executionSourceError}
-          parameterError={relationBindingError}
-          onRelationValidationChange={setRelationIdentityError}
-          relationBinding={
-            detail?.operationConfig?.type === "relation"
-              ? { relation: selectedRelation }
-              : undefined
-          }
-          value={executionValue}
-        />
-      </div>
-    );
-  };
-
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        isPermissionLoading ? undefined : activeTab === "config" && canModify ? (
-          <AppButton
-            disabled={isPermissionLoading}
-            loading={submitting}
-            onClick={() => void handleSave()}
-            type="primary"
-          >
-            {t("common.save")}
-          </AppButton>
-        ) : (
-          <AppButton
-            icon={<EditOutlined />}
-            onClick={() => {
-              void navigate(detailPath, { state: knowledgeNetworkReturnState(returnPath) });
-            }}
-          >
-            {t("knowledgeNetwork.actionTypeDetailOverview")}
-          </AppButton>
-        )
+        <AppButton
+          icon={<EditOutlined />}
+          onClick={() => {
+            void navigate(detailPath, { state: knowledgeNetworkReturnState(returnPath) });
+          }}
+        >
+          {t("knowledgeNetwork.actionTypeDetailOverview")}
+        </AppButton>
       }
       onBack={() => {
         void navigate(returnPath);
@@ -469,7 +287,6 @@ export function ActionTypeExecutionScene() {
         <Alert message={error} showIcon type="error" />
       ) : (
         <>
-          {permissionError ? <Alert message={permissionError} showIcon type="error" /> : null}
           <div className={detailStyles.detailLayout}>
             <aside className={detailStyles.sideNav}>
               <button
@@ -481,16 +298,6 @@ export function ActionTypeExecutionScene() {
               >
                 <PlayCircleOutlined />
                 <span>{t("knowledgeNetwork.actionTypeExecutionRun")}</span>
-              </button>
-              <button
-                className={
-                  activeTab === "config" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
-                }
-                onClick={() => setActiveTab("config")}
-                type="button"
-              >
-                <SettingOutlined />
-                <span>{t("knowledgeNetwork.actionTypeExecutionConfig")}</span>
               </button>
               <button
                 className={
@@ -506,7 +313,6 @@ export function ActionTypeExecutionScene() {
 
             <div className={detailStyles.contentPanel}>
               {activeTab === "run" ? renderRunPanel() : null}
-              {activeTab === "config" ? renderConfigPanel() : null}
               {activeTab === "tasks" && detail ? (
                 <ActionTypeTaskManagementPanel
                   actionTypeId={actionTypeId}

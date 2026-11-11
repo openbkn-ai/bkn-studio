@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import type {
   McpDetail,
   McpListQuery,
@@ -183,7 +184,10 @@ function buildMockMcpList(query: McpListQuery): McpListResult {
   const start = (query.page - 1) * query.pageSize;
 
   return {
-    items: filtered.slice(start, start + query.pageSize),
+    items: filtered.slice(start, start + query.pageSize).map((item) => ({
+      ...item,
+      operations: item.operations && filterMockOperations(item.operations),
+    })),
     total: filtered.length,
     page: query.page,
     pageSize: query.pageSize,
@@ -214,7 +218,10 @@ export async function getMcp(mcpId: string): Promise<McpRecord> {
       throw new Error("MCP not found");
     }
 
-    return record;
+    return {
+      ...record,
+      operations: record.operations && filterMockOperations(record.operations),
+    };
   }
 
   const response = await http.get<{
@@ -238,6 +245,7 @@ export async function getMcpDetail(mcpId: string): Promise<McpDetail> {
 
     return {
       ...record,
+      operations: record.operations && filterMockOperations(record.operations),
       headers: { Authorization: "Bearer mock-token" },
       toolConfigs: [],
     };

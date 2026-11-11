@@ -12,6 +12,8 @@
 
 ## 默认前提
 
+本地版本和用户权限场景见 [Mock 用户开发说明](https://github.com/openbkn-ai/bkn-docs/blob/main/docs/studio/runtime/design/issue-475-mock-users.md)。
+
 - 当前以独立应用模式开发
 - 平台前端允许按模块对接多个后端服务
 - 新模块默认基于现有架构继续扩展

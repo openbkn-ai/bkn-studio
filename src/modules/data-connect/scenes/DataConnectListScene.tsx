@@ -616,14 +616,16 @@ export function DataConnectListScene({
           ) : !loading && items.length === 0 ? (
             <EmptyStatePanel
               action={
-                <AppButton
-                  onClick={() => {
-                    void navigate("/data-connect/new");
-                  }}
-                  type="primary"
-                >
-                  {t("common.create")}
-                </AppButton>
+                <PermissionGate permissions="catalog:create">
+                  <AppButton
+                    onClick={() => {
+                      void navigate("/data-connect/new");
+                    }}
+                    type="primary"
+                  >
+                    {t("common.create")}
+                  </AppButton>
+                </PermissionGate>
               }
               description={t("dataConnect.emptyDescription")}
               icon={<ApiOutlined />}

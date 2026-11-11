@@ -20,12 +20,6 @@ const translate = vi.hoisted(
 );
 
 const mocks = vi.hoisted(() => ({
-  accessState: {
-    current: {
-      access: { modify: false },
-      isLoading: false,
-    },
-  },
   getDetail: vi.fn(),
   locationState: {
     current: null as { knowledgeNetworkReturnTo?: string } | null,
@@ -60,10 +54,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
       currentUser: { permissions: mocks.permissions.current },
     },
   }),
-}));
-
-vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
-  useKnowledgeNetworkOperationAccessState: () => mocks.accessState.current,
 }));
 
 vi.mock("@/modules/knowledge-network/services/action-type-tool.service", () => ({
@@ -144,10 +134,6 @@ afterAll(() => {
   window.matchMedia = originalMatchMedia;
 });
 beforeEach(() => {
-  mocks.accessState.current = {
-    access: { modify: false },
-    isLoading: false,
-  };
   mocks.permissions.current = [];
   mocks.search.current = "";
   mocks.locationState.current = null;
@@ -225,19 +211,16 @@ describe("ActionTypeExecutionScene review regressions", () => {
     expect(await screen.findByText("Functions/Normalize order")).not.toBeNull();
   });
 
-  it("does not flash the readonly warning while modify access is loading", async () => {
+  it("opens manual execution for a legacy execution-config URL", async () => {
     mocks.search.current = "tab=config";
-    mocks.accessState.current = {
-      access: { modify: false },
-      isLoading: true,
-    };
     mocks.getDetail.mockResolvedValue(createDetail({ type: "manual" }));
 
     render(<ActionTypeExecutionScene />);
 
     expect(await screen.findByText("Update order")).not.toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionConfigReadonly")).toBeNull();
-    expect(screen.getByTestId("execution-header-actions").childElementCount).toBe(0);
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionRunTitle")).not.toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionConfig")).toBeNull();
+    expect(screen.getByTestId("execution-header-actions").childElementCount).toBe(1);
   });
 
   it("opens the action overview while preserving the original graph return target", async () => {

@@ -20,7 +20,10 @@ import {
   validateRelationTypeMappingValues,
   type RelationTypeMappingFormValues,
 } from "@/modules/knowledge-network/components/relation-type/mapping-utils";
-import { DefinitionDeclarationFields } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import {
+  DefinitionAliasField,
+  DefinitionLifecycleFields,
+} from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
 import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import { RelationDeclarationsSection } from "@/modules/knowledge-network/components/relation-type/RelationDeclarationsSection";
 import { useRelationPropertyGuard } from "@/modules/knowledge-network/components/relation-type/relation-property-guard";
@@ -518,6 +521,11 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             >
               <Input count={RESOURCE_NAME_COUNT} showCount />
             </Form.Item>
+            <DefinitionAliasField
+              hintInTooltip
+              otherOwnNames={ownNames(undefined)}
+              ownNameFields={["name"]}
+            />
             <Form.Item
               label="ID"
               name="id"
@@ -548,10 +556,9 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
               <Input.TextArea autoSize={{ minRows: 6, maxRows: 10 }} maxLength={1000} showCount />
             </Form.Item>
-            <DefinitionDeclarationFields
+            <DefinitionLifecycleFields
               definitionId={mode === "edit" ? relationTypeId : undefined}
-              otherOwnNames={ownNames(undefined)}
-              ownNameFields={["name"]}
+              hintInTooltip
               resolveReplacement={resolveReplacement}
               searchReplacements={searchReplacements}
             />
