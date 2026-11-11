@@ -54,6 +54,7 @@ const antdHiddenStateClasses = [
   "ant-dropdown-hidden",
   "ant-dropdown-menu-hidden",
   "ant-dropdown-menu-submenu-hidden",
+  "ant-form-item-hidden",
   "ant-mentions-dropdown-hidden",
   "ant-menu-hidden",
   "ant-menu-submenu-hidden",
