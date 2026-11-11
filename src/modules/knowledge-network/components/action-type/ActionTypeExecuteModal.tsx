@@ -77,7 +77,7 @@ function ExecutionFields({
               <>
                 {fields.map((item) => (
                   <div key={item.key}>
-                    <ExecutionFields path={[...name, item.name]} schema={field.items!} />
+                    <ExecutionFields path={[item.name]} schema={field.items!} />
                     {fields.length > 1 ? (
                       <Button onClick={() => remove(item.name)}>{t("common.delete")}</Button>
                     ) : null}

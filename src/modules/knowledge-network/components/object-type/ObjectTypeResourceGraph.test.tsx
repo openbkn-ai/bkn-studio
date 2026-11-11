@@ -396,6 +396,49 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(graph).queryByText(/适用：|附加影响：|未声明/)).toBeNull();
   });
 
+  it("keeps a long tool path readable inside a separated execution card", async () => {
+    mocks.getActionDetail.mockResolvedValue({
+      ...action,
+      condition: { field: "amount", operation: ">", value: "100000000000000" },
+      executionConfig: {
+        actionSource: {
+          boxName: "电商对象关系操作",
+          toolName: "设置对象关系",
+          type: "tool",
+        },
+        parameters: [],
+        sourceName: "电商对象关系操作/设置对象关系",
+        sourceType: "tool",
+      },
+    });
+    renderGraph(false, { resourceScope: "actions" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
+    await within(graph).findByText("设置对象关系");
+    const operation = graph.querySelector<SVGGElement>('[data-action-semantic="operation"]');
+    const execution = graph.querySelector<SVGGElement>('[data-action-semantic="execution"]');
+    const result = graph.querySelector<SVGGElement>('[data-action-semantic="result"]');
+    expect(operation).not.toBeNull();
+    expect(execution).not.toBeNull();
+    expect(result).not.toBeNull();
+    expect([...execution!.querySelectorAll("text")].map((item) => item.textContent)).toEqual([
+      "执行工具",
+      "电商对象关系操作",
+      "设置对象关系",
+    ]);
+    expect(execution!.querySelector("title")).toHaveTextContent("电商对象关系操作/设置对象关系");
+    expect(execution!.querySelector("rect")).toHaveAttribute("width", "176");
+    const center = (node: SVGGElement) =>
+      Number(node.getAttribute("transform")?.match(/translate\(([-\d.]+)/)?.[1]);
+    const right = (node: SVGGElement) =>
+      center(node) + Number(node.querySelector("rect")?.getAttribute("width")) / 2;
+    const left = (node: SVGGElement) =>
+      center(node) - Number(node.querySelector("rect")?.getAttribute("width")) / 2;
+    expect(right(operation!)).toBeLessThan(left(execution!));
+    expect(right(execution!)).toBeLessThan(left(result!));
+  });
+
   it("shows relationship actions with their specific operation and both endpoints", async () => {
     const linkAction = {
       ...action,
@@ -898,9 +941,14 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "展开 行动类 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "行动类 更新订单" }));
+    const graph = screen.getByRole("img", { name: "销售订单的对象类关联图谱" });
     expect(
-      await screen.findByText("订单工具箱/订单核对工具", { selector: "text" }),
+      await within(graph).findByText("订单核对工具", { selector: "text" }),
     ).toBeInTheDocument();
+    expect(within(graph).getByText("订单工具箱", { selector: "text" })).toBeInTheDocument();
+    expect(graph.querySelector('[data-action-semantic="execution"] title')).toHaveTextContent(
+      "订单工具箱/订单核对工具",
+    );
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = screen.getByRole("dialog", { name: "行动类详情" });
 

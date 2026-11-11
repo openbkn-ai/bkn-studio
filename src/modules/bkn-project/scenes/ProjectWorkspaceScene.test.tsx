@@ -363,7 +363,7 @@ describe("ProjectWorkspaceScene", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
     // The latest release and the running version, in the header and on the cards.
-    expect(screen.getAllByText("v1.0.0")).toHaveLength(4);
+    await waitFor(() => expect(screen.getAllByText("v1.0.0")).toHaveLength(4));
   });
 
   it("counts the scenario questions of the drafted requirements", async () => {

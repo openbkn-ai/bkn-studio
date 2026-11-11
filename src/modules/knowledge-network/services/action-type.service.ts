@@ -467,16 +467,29 @@ export async function getActionTypeExecutionSchema(
     } else if (detail.operationConfig.type === "object") {
       if (detail.actionKind === "create") {
         const object = buildMockObjectTypeDetail(networkId, detail.objectTypeId);
-        fields.object_input = {
-          type: "object",
-          title: object?.name,
-          properties: Object.fromEntries(
-            (object?.dataProperties ?? []).map((item) => [
-              item.name,
-              { ...valueSchema(item.type), title: item.displayName || item.name },
-            ]),
-          ),
-        };
+        const mappedProperties = new Set(
+          detail.executionConfig.parameters
+            .filter((item) => item.valueFrom === "property")
+            .map((item) => item.value || item.sourcePropertyName)
+            .filter((name): name is string => Boolean(name)),
+        );
+        const inputProperties = (object?.dataProperties ?? []).filter((item) =>
+          mappedProperties.has(item.name),
+        );
+        if (inputProperties.length) {
+          fields.object_input = {
+            type: "object",
+            title: object?.name,
+            properties: Object.fromEntries(
+              inputProperties.map((item) => [
+                item.name,
+                { ...valueSchema(item.type), title: item.displayName || item.name },
+              ]),
+            ),
+            required: inputProperties.map((item) => item.name),
+          };
+          required.push("object_input");
+        }
       } else {
         fields._instance_identities = {
           type: "array",

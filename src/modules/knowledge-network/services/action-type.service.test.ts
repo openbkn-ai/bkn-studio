@@ -705,6 +705,95 @@ describe("action-type.service - relationship configuration preview", () => {
   });
 });
 
+describe("action-type.service - mock create execution schema", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("requires only mapped object properties, including legacy property names", async () => {
+    const service = await import("./action-type.service");
+    const created = await service.createKnowledgeNetworkActionType("kn-domain-risk", {
+      id: "create-mapped-order",
+      actionKind: "create",
+      color: "#1677ff",
+      description: "",
+      name: "Create mapped order",
+      objectTypeId: "ot-risk-order",
+      operationConfig: { type: "object" },
+      tags: [],
+      executionConfig: {
+        sourceType: "tool",
+        sourceName: "Create order",
+        parameters: [
+          { name: "name", valueFrom: "property", value: "order_name" },
+          { name: "id", valueFrom: "property", value: "", sourcePropertyName: "order_id" },
+          { name: "duplicate", valueFrom: "property", value: "order_name" },
+          { name: "summary", valueFrom: "input", value: "risk_summary" },
+          { name: "score", valueFrom: "const", value: "risk_score" },
+        ],
+      },
+    });
+    try {
+      const schema = await service.getActionTypeExecutionSchema("kn-domain-risk", created!.id);
+      expect(schema.properties?.object_input).toEqual({
+        type: "object",
+        title: "风险订单",
+        properties: {
+          order_id: { type: "string", title: "Order ID" },
+          order_name: { type: "string", title: "Order Name" },
+        },
+        required: ["order_id", "order_name"],
+      });
+      expect(schema.required).toEqual(["dynamic_params", "object_input"]);
+      expect(schema.properties?.dynamic_params).toEqual({
+        type: "object",
+        properties: { summary: { type: "string" } },
+        required: ["summary"],
+      });
+    } finally {
+      await service.deleteKnowledgeNetworkActionType("kn-domain-risk", created!.id);
+    }
+  });
+
+  it("omits object input and its required entry when no property is mapped", async () => {
+    const service = await import("./action-type.service");
+    const created = await service.createKnowledgeNetworkActionType("kn-domain-risk", {
+      id: "create-order-without-properties",
+      actionKind: "create",
+      color: "#1677ff",
+      description: "",
+      name: "Create order without properties",
+      objectTypeId: "ot-risk-order",
+      operationConfig: { type: "object" },
+      tags: [],
+      executionConfig: {
+        sourceType: "tool",
+        sourceName: "Create order",
+        parameters: [
+          { name: "name", valueFrom: "input", value: "order_name" },
+          { name: "score", valueFrom: "const", value: "risk_score" },
+        ],
+      },
+    });
+    try {
+      const schema = await service.getActionTypeExecutionSchema("kn-domain-risk", created!.id);
+      expect(schema.properties).toEqual({
+        dynamic_params: {
+          type: "object",
+          properties: { name: { type: "string" } },
+          required: ["name"],
+        },
+      });
+      expect(schema.required).toEqual(["dynamic_params"]);
+    } finally {
+      await service.deleteKnowledgeNetworkActionType("kn-domain-risk", created!.id);
+    }
+  });
+});
+
 describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
   beforeEach(() => {
     vi.resetModules();

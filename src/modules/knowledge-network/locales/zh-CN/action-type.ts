@@ -77,6 +77,7 @@ export const actiontypePart = {
   actionTypeExecutionParameterNamePlaceholder: "输入参数名",
   actionTypeExecutionParameterRequired: "请至少配置一条有效的执行参数映射。",
   actionTypeExecutionConstantInvalid: "参数「{{name}}」的固定值格式不正确，请按参数类型填写。",
+  actionTypeExecutionPropertyRequired: "请为执行参数「{{name}}」选择要使用的对象属性。",
   actionTypeExecutionPending: "调度计划配置将在后续版本开放，不影响当前执行映射维护。",
   actionTypeExecutionScheduleHint:
     "调度计划将在工具模块联调完成后继续补齐；当前可先维护执行映射与参数配置。",
