@@ -14,19 +14,30 @@
   background: var(--ant-color-bg-container);
 }
 
-.barRow {
-  display: flex;
+.viewSelect {
+  min-width: 64px;
+  color: var(--ant-color-text-secondary);
+}
+
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.notice {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.readOnlyNote {
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-}
-
-.barSpacer {
-  flex: 1;
-}
-
-.viewSelect {
-  min-width: 200px;
+  gap: 4px;
+  color: var(--ant-color-text-secondary);
+  font-size: 13px;
 }
 
 .draftStatus {

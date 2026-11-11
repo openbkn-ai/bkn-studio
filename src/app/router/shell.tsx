@@ -6,11 +6,12 @@
  */
 
 import { Outlet } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { SideNav } from "@/app/shell/SideNav";
 import { TopBar } from "@/app/shell/TopBar";
 import { WorkspaceLayout } from "@/app/shell/WorkspaceLayout";
+import { ShellTrailSlotContext } from "@/app/shell/workspace-slots-context";
 import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 
 const SIDENAV_COLLAPSED_STORAGE_KEY = "bkn-studio:sidenav-collapsed";
@@ -28,23 +29,28 @@ export function AppShell() {
     window.localStorage.setItem(SIDENAV_COLLAPSED_STORAGE_KEY, sidenavCollapsed ? "true" : "false");
   }, [sidenavCollapsed]);
 
+  const [trailHost, setTrailHost] = useState<HTMLSpanElement | null>(null);
+  const trailSlot = useMemo(() => ({ setTrailHost, trailHost }), [trailHost]);
+
   return (
-    <div className="console-shell">
-      <TopBar />
-      <LicenseStateBanner />
-      <div className={sidenavCollapsed ? "console-body is-sidenav-collapsed" : "console-body"}>
-        <SideNav
-          collapsed={sidenavCollapsed}
-          onToggleCollapsed={() => {
-            setSidenavCollapsed((current) => !current);
-          }}
-        />
-        <main className="console-main">
-          <WorkspaceLayout>
-            <Outlet />
-          </WorkspaceLayout>
-        </main>
+    <ShellTrailSlotContext.Provider value={trailSlot}>
+      <div className="console-shell">
+        <TopBar />
+        <LicenseStateBanner />
+        <div className={sidenavCollapsed ? "console-body is-sidenav-collapsed" : "console-body"}>
+          <SideNav
+            collapsed={sidenavCollapsed}
+            onToggleCollapsed={() => {
+              setSidenavCollapsed((current) => !current);
+            }}
+          />
+          <main className="console-main">
+            <WorkspaceLayout>
+              <Outlet />
+            </WorkspaceLayout>
+          </main>
+        </div>
       </div>
-    </div>
+    </ShellTrailSlotContext.Provider>
   );
 }

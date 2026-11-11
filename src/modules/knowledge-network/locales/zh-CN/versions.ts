@@ -23,6 +23,7 @@ export const versionsPart = {
     writeBlocked: "当前版本只读。请切换到草稿后再修改。",
     backToDraft: "回到草稿",
     history: "版本历史",
+    more: "更多版本操作",
     viewChanges: "查看差异",
     discard: "放弃修改",
     rollback: "回退到上一版",

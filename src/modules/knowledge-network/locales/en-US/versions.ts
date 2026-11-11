@@ -23,6 +23,7 @@ export const versionsPart = {
     writeBlocked: "This version is read-only. Switch to the draft to make changes.",
     backToDraft: "Back to draft",
     history: "Version history",
+    more: "More version actions",
     viewChanges: "View changes",
     discard: "Discard changes",
     rollback: "Roll back to the previous version",

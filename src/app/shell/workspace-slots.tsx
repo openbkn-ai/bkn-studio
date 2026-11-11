@@ -10,7 +10,7 @@ import { useContext } from "react";
 
 import { createPortal } from "react-dom";
 
-import { WorkspaceSlotsContext } from "@/app/shell/workspace-slots-context";
+import { ShellTrailSlotContext, WorkspaceSlotsContext } from "@/app/shell/workspace-slots-context";
 
 export function WorkspaceToolbarPortal({
   children,
@@ -23,4 +23,18 @@ export function WorkspaceToolbarPortal({
   }
 
   return createPortal(children, context.toolbarHost);
+}
+
+/** Renders after the top bar's trail; without a top bar it renders `fallback` in place. */
+export function ShellTrailPortal({
+  children,
+  fallback = null,
+}: PropsWithChildren<{ fallback?: ReactNode }>) {
+  const context = useContext(ShellTrailSlotContext);
+
+  if (!context?.trailHost) {
+    return <>{fallback}</>;
+  }
+
+  return createPortal(children, context.trailHost);
 }

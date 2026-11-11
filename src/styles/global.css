@@ -323,6 +323,18 @@ blockquote {
   font-size: 15px;
 }
 
+.console-brand-trail-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-left: -10px;
+}
+
+.console-brand-trail-slot:empty {
+  display: none;
+}
+
 .console-brand-path-item {
   display: inline-flex;
   align-items: center;

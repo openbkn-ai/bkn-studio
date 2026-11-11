@@ -81,23 +81,26 @@ describe("KnVersionBar", () => {
 
   afterEach(cleanup);
 
-  it("says nothing about a draft that matches the running version", () => {
+  it("shows a draft that matches the running version as that version", () => {
     renderBar(versioning(2, false));
+    expect(screen.getByText("v2")).toBeTruthy();
     expect(screen.queryByText(/knowledgeNetwork\.versions\.basedOn/)).toBeNull();
-    expect(screen.queryByText(/knowledgeNetwork\.versions\.noChanges/)).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.versions.publish.action")).toBeNull();
   });
 
-  it("names the base version when the draft has unpublished changes", () => {
+  it("brings out the draft, its base and publishing once it has changes", () => {
     renderBar(versioning(2, true));
     expect(
-      screen.getByText(
-        "knowledgeNetwork.versions.basedOn:v2 · knowledgeNetwork.versions.hasChanges",
-      ),
+      screen.getByText("knowledgeNetwork.versions.draft · knowledgeNetwork.versions.basedOn:v2"),
     ).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
   });
 
   it("says the network is not published yet before the first version", () => {
     renderBar(versioning(0, false));
-    expect(screen.getByText("knowledgeNetwork.versions.notPublished")).toBeTruthy();
+    expect(
+      screen.getByText("knowledgeNetwork.versions.draft · knowledgeNetwork.versions.notPublished"),
+    ).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
   });
 });
