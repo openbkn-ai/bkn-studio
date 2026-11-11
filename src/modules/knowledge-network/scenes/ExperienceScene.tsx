@@ -613,7 +613,7 @@ export function ExperienceScene({
 
         let ot: KnObjectType | null = null;
         let sampleRow: Record<string, unknown> | null = null;
-        if (op.id === "query_object_instance" || op.id === "run_sql") {
+        if (op.id === "query_object_instance") {
           ot = pickQueryableObjectType(detail);
           if (!ot) {
             message.warning(
@@ -683,17 +683,13 @@ export function ExperienceScene({
   }, [env, op, mode, knId, message, tokenProvider, t, currentTool]);
 
   // Whether the current op fetches by object type, controlling data-browser fill action visibility.
-  const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
+  const opFillsFromObjectType = op?.id === "query_object_instance";
 
   // Data-browser Fill Test Request action using the selected object type and real sample row.
   const fillTestFromObjectType = useCallback(
     async (ot: KnObjectType) => {
       if (!op) return;
       try {
-        if (op.id === "run_sql" && !ot.data_source?.id) {
-          message.warning(t("knowledgeNetwork.contextLoaderPanel.experience.objectTypeNoResource"));
-          return;
-        }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
           const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
@@ -772,29 +768,6 @@ export function ExperienceScene({
       copy(value, t("knowledgeNetwork.contextLoaderPanel.experience.fieldCopiedFallback", { key }));
     },
     [mode, op, bodyText, copy, message, t],
-  );
-
-  const fillResource = useCallback(
-    (resourceId: string) => {
-      // Match the canonical resource syntax used by generated test SQL: {{<data_source.id>}}.
-      const token = `{{${resourceId}}}`;
-      try {
-        const obj = JSON.parse(bodyText || "{}") as Record<string, unknown>;
-        if (obj && typeof obj === "object" && typeof obj.sql === "string") {
-          obj.sql = /\{\{[^}]*\}\}/.test(obj.sql)
-            ? obj.sql.replace(/\{\{[^}]*\}\}/, token)
-            : `SELECT * FROM ${token} LIMIT 20`;
-          setBodyText(JSON.stringify(obj, null, 2));
-          setBodyError(null);
-          message.success(t("knowledgeNetwork.contextLoaderPanel.experience.resourceFilledSql"));
-          return;
-        }
-      } catch {
-        /* Fall back to copy. */
-      }
-      copy(token, t("knowledgeNetwork.contextLoaderPanel.experience.resourcePlaceholderCopied"));
-    },
-    [bodyText, copy, message, t],
   );
 
   // Add concept_group into the request body's concept_groups array.
@@ -986,7 +959,6 @@ export function ExperienceScene({
               permissionNetworkId={network?.id ?? id}
               assistantKind={op ? requestDataAssistantKindOf(op.id) : null}
               onFillField={fillBodyField}
-              onFillResource={fillResource}
               onFillConceptGroup={fillConceptGroup}
               onFillTest={opFillsFromObjectType ? fillTestFromObjectType : undefined}
               onFillRelation={

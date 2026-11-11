@@ -49,7 +49,7 @@ const detail = (
 describe("opSupportsTestData", () => {
   it("covers data and metric ops, excludes relation/action ops", () => {
     expect(opSupportsTestData("query_object_instance")).toBe(true);
-    expect(opSupportsTestData("run_sql")).toBe(true);
+    expect(opSupportsTestData("run_sql")).toBe(false);
     expect(opSupportsTestData("search_schema")).toBe(true);
     expect(opSupportsTestData("get_kn_detail")).toBe(true);
     expect(opSupportsTestData("query_instance_subgraph")).toBe(true);
@@ -96,12 +96,6 @@ describe("buildTestData", () => {
     const noGroups = detail([ot("orders", ["status"], "res_orders")]);
     const fill = buildTestData(opById("search_schema"), "rest", "kn_demo", noGroups, null, null);
     expect(JSON.parse(fill.body).search_scope.concept_groups).toEqual([]);
-  });
-
-  it.each(["rest", "mcp"] as const)("run_sql uses a canonical placeholder in %s", (mode) => {
-    const resOt = pickQueryableObjectType(d);
-    const fill = buildTestData(opById("run_sql"), mode, "kn_demo", d, resOt, null);
-    expect(JSON.parse(fill.body).sql).toBe("SELECT * FROM {{res_orders}} LIMIT 10");
   });
 
   it("query_object_instance (REST) filters by a real field+value from the sample row", () => {

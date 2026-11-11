@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, CopyOutlined, DatabaseOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { ApiOutlined, CopyOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Empty, Input, Spin, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -46,21 +46,17 @@ function formatPreviewValue(value: unknown) {
 function ObjectTypeCard({
   ot,
   onFillField,
-  onFillResource,
   onFillTest,
   showObjectType,
-  showResource,
   copy,
   env,
   auth,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
-  onFillResource: (resourceId: string) => void;
   /** Fills the current endpoint with a real sample row for this object type; provided only when the endpoint queries by object type. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
   showObjectType: boolean;
-  showResource: boolean;
   copy: (text: string, label?: string) => void;
   env: ContextLoaderEnv;
   /** Used to refresh tokens automatically on 401 through OAuth renewal. */
@@ -176,52 +172,6 @@ function ObjectTypeCard({
         </div>
       ) : null}
 
-      {showResource ? (
-        <div className={styles.dbRow}>
-          <span className={styles.dbRowLabel}>
-            {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.dataResource")}
-          </span>
-          {res?.id ? (
-            <>
-              <Tooltip
-                title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillResourceTooltip", {
-                  resource: "resource",
-                })}
-              >
-                <button
-                  type="button"
-                  className={styles.dbRes}
-                  onClick={() => onFillResource(res.id)}
-                >
-                  <DatabaseOutlined />{" "}
-                  {res.name ||
-                    t("knowledgeNetwork.contextLoaderPanel.dataBrowser.resourceFallback")}{" "}
-                  · {res.id}
-                </button>
-              </Tooltip>
-              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyResourceId")}>
-                <button
-                  type="button"
-                  className={styles.dbCopy}
-                  onClick={() =>
-                    copy(
-                      res.id,
-                      t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedResourceId"),
-                    )
-                  }
-                >
-                  <CopyOutlined />
-                </button>
-              </Tooltip>
-            </>
-          ) : (
-            <span className={styles.dbNoRes}>
-              {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noBinding")}
-            </span>
-          )}
-        </div>
-      ) : null}
-
       {open && props.length > 0 ? (
         <div className={styles.dbPropList}>
           <div className={styles.dbPropHead}>
@@ -333,7 +283,6 @@ export function DataBrowserPanel({
   permissionNetworkId,
   assistantKind,
   onFillField,
-  onFillResource,
   onFillConceptGroup,
   onFillTest,
   onFillRelation,
@@ -346,7 +295,6 @@ export function DataBrowserPanel({
   permissionNetworkId?: string;
   assistantKind: RequestDataAssistantKind | null;
   onFillField: (key: string, value: string) => void;
-  onFillResource: (resourceId: string) => void;
   onFillConceptGroup: (groupId: string) => void;
   /** Provided when the endpoint queries by object type, letting each card fill a test request in one action. */
   onFillTest?: (ot: KnObjectType) => Promise<void>;
@@ -453,12 +401,10 @@ export function DataBrowserPanel({
     return grouped
       .map((section) => ({
         ...section,
-        ots: section.ots.filter(
-          (ot) => match(ot) && (assistantKind !== "resource" || Boolean(ot.data_source?.id)),
-        ),
+        ots: section.ots.filter(match),
       }))
       .filter((section) => section.ots.length > 0);
-  }, [assistantKind, detail, q, t]);
+  }, [detail, q, t]);
 
   const conceptGroups = useMemo(() => {
     if (!detail) return [];
@@ -491,9 +437,7 @@ export function DataBrowserPanel({
               ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterConceptGroup")
               : assistantKind === "relation"
                 ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterRelation")
-                : assistantKind === "resource"
-                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterResource")
-                  : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterObjectType")
+                : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterObjectType")
           }
           allowClear
         />
@@ -638,11 +582,7 @@ export function DataBrowserPanel({
         ) : sections.length === 0 ? (
           <div className={styles.dbCenter}>
             <Empty
-              description={
-                assistantKind === "resource"
-                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noResource")
-                  : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noObjectType")
-              }
+              description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noObjectType")}
             />
           </div>
         ) : (
@@ -654,10 +594,8 @@ export function DataBrowserPanel({
                   key={ot.id}
                   ot={ot}
                   onFillField={onFillField}
-                  onFillResource={onFillResource}
                   onFillTest={onFillTest}
                   showObjectType={assistantKind === "object-type"}
-                  showResource={assistantKind === "resource"}
                   copy={copy}
                   env={env}
                   auth={auth}

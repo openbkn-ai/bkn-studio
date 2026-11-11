@@ -122,7 +122,7 @@ export const agentChatPart = {
         },
         data_result_chars: {
           label: "Data result cap (chars)",
-          hint: "Results of run_sql, query_*, run_cypher and similar are truncated beyond this, with a hint to narrow the query",
+          hint: "Results of query_*, run_cypher and similar are truncated beyond this, with a hint to narrow the query",
         },
         schema_result_chars: {
           label: "Schema result cap (chars)",
