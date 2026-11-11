@@ -100,14 +100,8 @@ export const versionsPart = {
       disable: "Versioning disabled",
       retention: "Purged by the retention rule",
     },
-    enable: {
-      title: "Enable versioning",
-      intro:
-        "With versioning, a knowledge network keeps a draft that all edits go to, and numbered versions published from it. One version is running and used by readers and queries.",
-      warning:
-        "After you enable it, edits no longer take effect at once. They go to the draft and take effect when you publish. Enabling cannot be undone from Studio.",
-      action: "Enable versioning",
-    },
+    notStarted:
+      "This knowledge network has no versions yet: what it holds now is what is running. Your first edit in Studio makes it v1 and goes to a draft, which takes effect when you publish.",
     publish: {
       title: "Publish a version",
       action: "Publish",

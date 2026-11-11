@@ -40,9 +40,6 @@ vi.mock("@/modules/knowledge-network/components/versions/PublishVersionModal", (
 vi.mock("@/modules/knowledge-network/components/versions/KnDiffModal", () => ({
   KnDiffModal: () => null,
 }));
-vi.mock("@/modules/knowledge-network/components/versions/EnableVersioningModal", () => ({
-  EnableVersioningModal: () => null,
-}));
 
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
 
@@ -124,21 +121,12 @@ describe("KnVersionsPanel", () => {
     ).toBeNull();
   });
 
-  it("offers to enable versioning on a network without it", () => {
+  it("explains a network without versions instead of offering to turn them on", () => {
     renderPanel({ unversioned: true });
 
-    expect(
-      screen.getByRole("button", { name: "knowledgeNetwork.versions.enable.action" }),
-    ).toBeEnabled();
+    expect(screen.getByText("knowledgeNetwork.versions.notStarted")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(listVersions).not.toHaveBeenCalled();
-  });
-
-  it("does not let a reader enable versioning", () => {
-    renderPanel({ canModify: false, unversioned: true });
-
-    expect(
-      screen.getByRole("button", { name: "knowledgeNetwork.versions.enable.action" }),
-    ).toBeDisabled();
   });
 
   it("shows deprecate and purge for a history version in the Professional edition", async () => {

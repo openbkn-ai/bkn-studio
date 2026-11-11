@@ -13,7 +13,6 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { EnableVersioningModal } from "@/modules/knowledge-network/components/versions/EnableVersioningModal";
 import { KnDiffModal } from "@/modules/knowledge-network/components/versions/KnDiffModal";
 import {
   KnStatusText,
@@ -77,7 +76,6 @@ export function KnVersionsPanel({
   const [events, setEvents] = useState<KnVersionEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [enableOpen, setEnableOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [diff, setDiff] = useState<{ base: KnVersionView; target: KnVersionView } | null>(null);
   const enabled = Boolean(versioning?.enabled);
@@ -113,24 +111,10 @@ export function KnVersionsPanel({
     return (
       <div className={styles.page}>
         <Card title={t("knowledgeNetwork.versions.title")}>
-          <Typography.Paragraph>{t("knowledgeNetwork.versions.enable.intro")}</Typography.Paragraph>
           <Typography.Paragraph type="secondary">
-            {t("knowledgeNetwork.versions.enable.warning")}
+            {t("knowledgeNetwork.versions.notStarted")}
           </Typography.Paragraph>
-          <Button disabled={!canModify} onClick={() => setEnableOpen(true)} type="primary">
-            {t("knowledgeNetwork.versions.enable.action")}
-          </Button>
         </Card>
-        <EnableVersioningModal
-          networkId={networkId}
-          onClose={() => setEnableOpen(false)}
-          onEnabled={() => {
-            setEnableOpen(false);
-            message.success(t("common.success"));
-            onChanged();
-          }}
-          open={enableOpen}
-        />
       </div>
     );
   }
