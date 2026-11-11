@@ -13,6 +13,7 @@ import { http } from "@/framework/request/http";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 import {
   KnVersionReadOnlyError,
+  KnVersionUnknownError,
   forgetKnVersionContext,
   getKnVersionView,
   knVersionQuery,
@@ -189,6 +190,42 @@ describe("kn version context", () => {
     await http.get(`${NETWORK}/object-types`);
 
     expect(request("get", `${NETWORK}/object-types`)[0].params).toEqual({ kn_version: "draft" });
+  });
+
+  it("refuses a write while it cannot tell whether the network has versioning", async () => {
+    routes[`GET ${NETWORK}`] = { status: 503 };
+
+    await http.get(`${NETWORK}/object-types`);
+    await expect(http.post(`${NETWORK}/object-types`, {})).rejects.toBeInstanceOf(
+      KnVersionUnknownError,
+    );
+    await expect(http.put(`${NETWORK}/object-types/ot-1`, {})).rejects.toBeInstanceOf(
+      KnVersionUnknownError,
+    );
+
+    // The read went through; the writes asked again and sent nothing.
+    expect(request("get", `${NETWORK}/object-types`)).toHaveLength(1);
+    expect(request("get", NETWORK)).toHaveLength(3);
+    expect(request("post", `${NETWORK}/object-types`)).toHaveLength(0);
+    expect(request("put", `${NETWORK}/object-types/ot-1`)).toHaveLength(0);
+  });
+
+  it("writes once asking again finds the versioning", async () => {
+    routes[`GET ${NETWORK}`] = { status: 503 };
+    await http.get(`${NETWORK}/object-types`);
+
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.post(`${NETWORK}/object-types`, {});
+
+    expect(request("post", `${NETWORK}/object-types`)[0].params).toEqual({ branch: "draft" });
+  });
+
+  it("lets a lookup that only looks like a network through", async () => {
+    routes["GET /bkn-backend/v1/knowledge-networks/names"] = { status: 404 };
+
+    await http.post("/bkn-backend/v1/knowledge-networks/names", { ids: ["kn-1"] });
+
+    expect(request("post", "/bkn-backend/v1/knowledge-networks/names")).toHaveLength(1);
   });
 
   it("goes back to the default view when the version on screen was purged", async () => {

@@ -21,6 +21,7 @@ export const versionsPart = {
     outdatedTag: "已落后",
     readOnlyView: "你正在查看 {{version}}，该版本只读；修改会写入草稿。",
     writeBlocked: "当前版本只读。请切换到草稿后再修改。",
+    stateUnknown: "暂时无法确认这个知识网络的版本状态，请稍后重试。",
     backToDraft: "回到草稿",
     history: "版本历史",
     viewChanges: "查看差异",

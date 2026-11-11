@@ -21,6 +21,8 @@ export const versionsPart = {
     outdatedTag: "Outdated",
     readOnlyView: "You are viewing {{version}}. It is read-only; edits go to the draft.",
     writeBlocked: "This version is read-only. Switch to the draft to make changes.",
+    stateUnknown:
+      "The version state of this knowledge network could not be checked. Try again shortly.",
     backToDraft: "Back to draft",
     history: "Version history",
     viewChanges: "View changes",
