@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
+import { useAppServices } from "@/framework/context/use-app-services";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import {
   KnVersionActionPortal,
   KnVersionSlotPortal,
@@ -26,6 +28,7 @@ import {
   knVersionName,
   parseKnVersionView,
 } from "@/modules/knowledge-network/lib/kn-version-format";
+import { enableKnVersioning } from "@/modules/knowledge-network/services/kn-version.service";
 import type { KnVersionView, KnVersioning } from "@/modules/knowledge-network/types/kn-version";
 
 import styles from "./KnVersions.module.css";
@@ -68,13 +71,46 @@ function useVersionsLink(networkId: string) {
   return { onOpenChange: setPickerOpen, open: pickerOpen, popupRender };
 }
 
+type KnUnversionedBarProps = {
+  canModify: boolean;
+  networkId: string;
+  /** Reload the workspace once the network has versions. */
+  onChanged: () => void;
+};
+
 /**
- * A network without versions yet is what it holds now: its running v1. Its first edit keeps
- * that as v1 and starts a draft, and the full picker takes over.
+ * A network without versions yet is what it holds now, shown as v1, and its edits take effect
+ * at once. Publishing it keeps that content as the running v1 and starts a draft for the edits
+ * after, and the full picker takes over.
  */
-export function KnUnversionedBar({ networkId }: { networkId: string }) {
+export function KnUnversionedBar({ canModify, networkId, onChanged }: KnUnversionedBarProps) {
   const { t } = useTranslation();
+  const { message, modal } = useAppServices();
   const link = useVersionsLink(networkId);
+  const publish = canModify ? (
+    <Button
+      icon={<CloudUploadOutlined />}
+      onClick={() => {
+        modal.confirm({
+          content: t("knowledgeNetwork.versions.firstPublish.body"),
+          okText: t("knowledgeNetwork.versions.publish.action"),
+          onOk: async () => {
+            try {
+              await enableKnVersioning(networkId);
+              message.success(t("common.success"));
+              onChanged();
+            } catch (error) {
+              message.error(extractRequestErrorMessage(error));
+            }
+          },
+          title: t("knowledgeNetwork.versions.firstPublish.title"),
+        });
+      }}
+      type="primary"
+    >
+      {t("knowledgeNetwork.versions.publish.action")}
+    </Button>
+  ) : null;
   const select = (
     <Select
       {...link}
@@ -94,15 +130,24 @@ export function KnUnversionedBar({ networkId }: { networkId: string }) {
       variant="borderless"
     />
   );
+  const trail = (
+    <span className={styles.picker}>
+      {select}
+      {publish}
+    </span>
+  );
   return (
     <KnVersionSlotPortal
       fallback={
-        <ShellTrailPortal fallback={<div className={styles.bar}>{select}</div>}>
-          {select}
+        <ShellTrailPortal fallback={<div className={styles.bar}>{trail}</div>}>
+          {trail}
         </ShellTrailPortal>
       }
     >
-      <span className={styles.picker}>{select}</span>
+      <span className={styles.picker}>
+        {select}
+        <KnVersionActionPortal fallback={publish}>{publish}</KnVersionActionPortal>
+      </span>
     </KnVersionSlotPortal>
   );
 }

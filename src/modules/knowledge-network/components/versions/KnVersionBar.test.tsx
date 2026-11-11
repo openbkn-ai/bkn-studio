@@ -28,6 +28,15 @@ vi.mock("@/modules/knowledge-network/components/versions/useReadableKnVersions",
   versionOptionLabel: (version: { version: number }) => `v${version.version}`,
 }));
 
+const confirm = vi.fn();
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() }, modal: { confirm } }),
+}));
+const enableKnVersioning = vi.fn();
+vi.mock("@/modules/knowledge-network/services/kn-version.service", () => ({
+  enableKnVersioning: (...args: unknown[]) => enableKnVersioning(...args) as unknown,
+}));
+
 vi.mock("@/modules/knowledge-network/components/versions/PublishVersionModal", () => ({
   PublishVersionModal: () => null,
 }));
@@ -124,16 +133,34 @@ describe("KnVersionBar", () => {
     expect(screen.queryByText("knowledgeNetwork.versions.discard")).toBeNull();
   });
 
-  it("shows a network without versions as its running v1, with nothing to publish", () => {
-    render(<KnUnversionedBar networkId="kn-1" />);
+  it("shows a network without versions as its running v1", () => {
+    render(<KnUnversionedBar canModify={false} networkId="kn-1" onChanged={vi.fn()} />);
     expect(screen.getByText("v1")).toBeTruthy();
     expect(screen.queryByText(/knowledgeNetwork\.versions\.status\.running/)).toBeNull();
     expect(screen.queryByText("main")).toBeNull();
+    // A reader has nothing to publish.
     expect(screen.queryByText(/knowledgeNetwork\.versions\.publish\.action/)).toBeNull();
 
     fireEvent.mouseDown(screen.getByRole("combobox"));
     expect(screen.getByText("v1 (knowledgeNetwork.versions.status.running)")).toBeTruthy();
     expect(screen.getByText("knowledgeNetwork.versions.title")).toBeTruthy();
+  });
+
+  it("publishes a network without versions as v1 once confirmed", async () => {
+    const onChanged = vi.fn();
+    enableKnVersioning.mockResolvedValue({});
+    render(<KnUnversionedBar canModify networkId="kn-1" onChanged={onChanged} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /knowledgeNetwork\.versions\.publish\.action/ }),
+    );
+    const options = confirm.mock.calls[0][0] as { onOk: () => Promise<void>; title: string };
+    expect(options.title).toBe("knowledgeNetwork.versions.firstPublish.title");
+    expect(enableKnVersioning).not.toHaveBeenCalled();
+
+    await options.onOk();
+    expect(enableKnVersioning).toHaveBeenCalledWith("kn-1");
+    expect(onChanged).toHaveBeenCalled();
   });
 
   it("sits beside the network's title when the section shows one", () => {

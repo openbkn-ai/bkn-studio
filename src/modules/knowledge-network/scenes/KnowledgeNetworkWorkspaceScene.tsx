@@ -527,7 +527,11 @@ export function KnowledgeNetworkWorkspaceScene({
                 view={versionView}
               />
             ) : detail && section !== "versions" ? (
-              <KnUnversionedBar networkId={activeNetworkId} />
+              <KnUnversionedBar
+                canModify={mayModify}
+                networkId={activeNetworkId}
+                onChanged={() => setReloadTick((tick) => tick + 1)}
+              />
             ) : null}
             {detailError && !childMetricDetailHandlesLoadState ? (
               <Alert

@@ -22,6 +22,7 @@ import {
   activateKnVersion,
   changeKnVersionStatus,
   diffKnVersions,
+  enableKnVersioning,
   isKnVersionConflict,
   listKnVersions,
   publishKnVersion,
@@ -29,6 +30,10 @@ import {
   readKnVersionProblems,
   resetKnDraft,
 } from "@/modules/knowledge-network/services/kn-version.service";
+import {
+  getKnVersionContext,
+  recordKnVersioning,
+} from "@/modules/knowledge-network/services/shared/kn-version-context";
 
 const BASE = "/bkn-backend/v1/knowledge-networks/kn-1";
 
@@ -77,6 +82,33 @@ describe("kn-version.service", () => {
     expect(
       (postMock.mock.calls[0][1] as Record<string, unknown>).allow_outdated_base,
     ).toBeUndefined();
+  });
+
+  it("opens the draft after enabling, since enabling already needed modify", async () => {
+    // Before versioning the network was read without a draft, so nothing granted canDraft yet.
+    recordKnVersioning("kn-1", {
+      enabled: false,
+      full_history: true,
+      previous_version: 0,
+      running_version: 0,
+    });
+    postMock.mockResolvedValue({
+      data: {
+        draft: { base_version: 1, has_changes: false, outdated: false, revision: 1 },
+        enabled: true,
+        full_history: true,
+        previous_version: 0,
+        running_version: 1,
+      },
+    });
+
+    await enableKnVersioning("kn-1");
+
+    expect(getKnVersionContext("kn-1")).toMatchObject({
+      canDraft: true,
+      versioned: true,
+      view: "draft",
+    });
   });
 
   it("activates, resets and changes status through their own routes", async () => {

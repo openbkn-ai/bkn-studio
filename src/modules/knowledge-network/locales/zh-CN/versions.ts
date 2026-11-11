@@ -97,7 +97,11 @@ export const versionsPart = {
       retention: "社区版保留规则自动清理",
     },
     notStarted:
-      "当前内容就是运行中的 v1。在 Studio 里做第一次修改后，修改写入草稿，发布后成为 v2。",
+      "当前内容就是运行中的 v1，修改立即生效。在标题旁点击“发布”后，之后的修改写入草稿，再次发布后生效。",
+    firstPublish: {
+      title: "发布为 v1",
+      body: "当前内容会保存为运行中的 v1。之后的修改写入草稿，发布新版本后才生效，也可以回退到之前的版本。",
+    },
     publish: {
       title: "发布版本",
       action: "发布",

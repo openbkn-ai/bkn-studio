@@ -7,7 +7,10 @@
 
 import { readErrorCode, readErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
-import { forgetKnVersionContext } from "@/modules/knowledge-network/services/shared/kn-version-context";
+import {
+  forgetKnVersionContext,
+  recordKnVersioning,
+} from "@/modules/knowledge-network/services/shared/kn-version-context";
 import { useMock } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   KnDiffResult,
@@ -73,6 +76,22 @@ export async function getKnVersioning(networkId: string): Promise<KnVersioning> 
   const response = await http.get<KnVersioning>(`${base(networkId)}/versioning`, {
     skipErrorToast: true,
   });
+  return response.data;
+}
+
+export async function enableKnVersioning(
+  networkId: string,
+  input: { label?: string; notes?: string } = {},
+): Promise<KnVersioning> {
+  assertBackend();
+  const response = await http.post<KnVersioning>(
+    `${base(networkId)}/versioning`,
+    { label: input.label?.trim() || undefined, notes: input.notes?.trim() || undefined },
+    { headers: idempotencyHeaders(), skipErrorToast: true },
+  );
+  forgetKnVersionContext(networkId);
+  // Enabling needs modify, so whoever got here can work on the draft.
+  recordKnVersioning(networkId, response.data, ["modify"]);
   return response.data;
 }
 

@@ -101,7 +101,11 @@ export const versionsPart = {
       retention: "Purged by the retention rule",
     },
     notStarted:
-      "What this knowledge network holds now is its running v1. Your first edit in Studio goes to a draft, which becomes v2 when you publish.",
+      "What this knowledge network holds now is its running v1, and edits take effect at once. After you publish it from beside the title, edits go to a draft and take effect when you publish again.",
+    firstPublish: {
+      title: "Publish as v1",
+      body: "What the network holds now is kept as the running v1. Later edits go to a draft and take effect when you publish a new version, and you can roll back to an earlier one.",
+    },
     publish: {
       title: "Publish a version",
       action: "Publish",
