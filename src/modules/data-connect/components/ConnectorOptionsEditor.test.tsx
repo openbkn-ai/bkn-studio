@@ -190,7 +190,9 @@ describe("structured connector options in the configuration form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => expect(document.querySelector(".ant-form-item-has-error")).not.toBeNull());
     expect(screen.getAllByText(/Enter a non-empty string/)).toHaveLength(1);
-    expect(document.querySelector("details")).toHaveAttribute("open");
+    // The editor reopens the card in an effect, which React runs after the commit that already
+    // shows the error class, so the attribute can land after the wait above has returned.
+    await waitFor(() => expect(document.querySelector("details")).toHaveAttribute("open"));
     expect(onFinish).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole("textbox", { name: "Character set (charset)" }), {
       target: { value: "utf8mb4" },
