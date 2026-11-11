@@ -236,14 +236,20 @@ function ResourcePreviewContent({
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
   const queryPath: FilterQueryPath =
-    resource.category === "dataset" ||
-    resource.category === "index" ||
     (resource.category === "table" && !queriesSource) ||
-    (resource.category === "logical_view" &&
-      (resource.sourceMetadata?.sourceCategory === "index" ||
-        (!ignoreLocalIndex && (viewHasLocalIndex || result?.querySource === "local_index"))))
-      ? "local_index"
-      : "source";
+    (resource.category === "dataset" &&
+      resource.localIndexStatus === "available" &&
+      Boolean(resource.localIndexName)) ||
+    (isTableView &&
+      !ignoreLocalIndex &&
+      (viewHasLocalIndex || result?.querySource === "local_index"))
+      ? "managed_local_index"
+      : resource.category === "dataset" ||
+          resource.category === "index" ||
+          (resource.category === "logical_view" &&
+            resource.sourceMetadata?.sourceCategory === "index")
+        ? "local_index"
+        : "source";
   const activeFilter =
     filterValidationError(appliedFilter, resource.schema, queryPath) === null
       ? appliedFilter

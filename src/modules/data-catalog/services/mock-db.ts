@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { canEnableFieldFiltering } from "@/modules/data-catalog/lib/field-filterability";
 import type {
   BuildTask,
   CatalogResource,
@@ -56,6 +57,14 @@ const now = Date.now();
 const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
+// Mock responses supply Vega's effective defaults; live responses remain authoritative.
+export function withMockFilterability(schema: ResourceSchemaField[]): ResourceSchemaField[] {
+  return schema.map((field) => ({
+    ...field,
+    filterable: field.filterable ?? canEnableFieldFiltering(field.type),
+  }));
+}
+
 function makeResource(
   input: Omit<
     CatalogResource,
@@ -79,6 +88,7 @@ function makeResource(
 
   return {
     ...input,
+    schema: withMockFilterability(input.schema),
     columnCount: input.schema.length,
     enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",

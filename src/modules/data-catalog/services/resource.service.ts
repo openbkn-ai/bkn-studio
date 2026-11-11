@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { findUnsupportedFilterableField } from "@/modules/data-catalog/lib/field-filterability";
 import { http } from "@/framework/request/http";
 import {
   throwMockRequestError,
@@ -20,6 +21,7 @@ import {
   isNumericFilterType,
   isTemporalFilterType,
   parseFilterCondition,
+  sqlLikePatternRegex,
 } from "@/modules/data-catalog/lib/filter-tree";
 import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal";
 import i18n from "@/app/locales/i18n";
@@ -36,6 +38,7 @@ import {
   mockStartScan,
   mockQuerySourceRows,
   mockQuerySourceFulltext,
+  withMockFilterability,
 } from "@/modules/data-catalog/services/mock-db";
 import type {
   CatalogResource,
@@ -74,6 +77,7 @@ type BackendSchemaField = {
   description?: string;
   display_name?: string;
   features?: BackendFieldFeature[] | null;
+  filterable?: boolean;
   name?: string;
   original_description?: string;
   original_name?: string;
@@ -177,6 +181,7 @@ function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField
     name: field.name,
     original_name: field.name,
     type: field.type,
+    filterable: field.filterable,
     features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)),
   };
 }
@@ -197,6 +202,7 @@ function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchem
 
   return {
     ...base,
+    filterable: field.filterable,
     description,
     display_name: displayName,
     features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)) ?? [],
@@ -213,6 +219,7 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
 
   return {
     attributes: field.attributes,
+    filterable: field.filterable,
     name,
     type: field.type ?? field.original_type ?? "string",
     displayName: displayName && displayName !== name ? displayName : undefined,
@@ -453,6 +460,7 @@ function mapDerivedViewSchema(field: ResourceSchemaField): BackendSchemaField {
     name: field.name,
     original_name: field.originalName,
     type: field.type,
+    filterable: field.filterable,
     display_name: field.displayName?.trim(),
     ...(field.features === undefined
       ? {}
@@ -610,7 +618,30 @@ export async function getCatalogResources(ids: string[]) {
   return resources;
 }
 
+function validateFieldFilterability(schema: readonly ResourceSchemaField[]) {
+  const unsupported = findUnsupportedFilterableField(schema);
+  if (unsupported) {
+    throw new Error(
+      i18n.t("dataCatalog.resource.unsupportedFilterableField", {
+        name: unsupported.name,
+        type: unsupported.type,
+      }),
+    );
+  }
+}
+
+function validateMockUpdateFilterability(schema: readonly ResourceSchemaField[]) {
+  if (schema.some((field) => typeof field.filterable !== "boolean")) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "schema_definition fields require a boolean filterable",
+    );
+  }
+}
+
 export async function createCatalogResource(input: ResourceCreateInput) {
+  validateFieldFilterability(input.schema);
   if (useMock) {
     const resource: CatalogResource = {
       id: `res-${mockSlug(10)}`,
@@ -622,14 +653,15 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       enabled: true,
       localIndexStatus: "unavailable",
       operations: ["view_detail", "query_data", "delete"],
-      schema:
+      schema: withMockFilterability(
         input.schema.length > 0
           ? input.schema
           : [
-              { name: "id", type: "bigint" },
-              { name: "name", type: "varchar(128)" },
+              { name: "id", type: "integer" },
+              { name: "name", type: "string" },
               { name: "updated_at", type: "datetime" },
             ],
+      ),
       columnCount: input.schema.length > 0 ? input.schema.length : 3,
       rowCount: input.category === "dataset" ? 0 : null,
       expectedUpdateTime: Date.now(),
@@ -681,7 +713,9 @@ export async function updateCatalogResource(
   input: ResourceUpdateInput,
   options: { skipErrorToast?: boolean } = {},
 ) {
+  validateFieldFilterability(input.schema);
   if (useMock) {
+    validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
@@ -748,6 +782,7 @@ export async function updateCatalogResource(
 
 /** Derived views use a dedicated write path so generic resource field mapping cannot lose source bindings. */
 export async function createDerivedView(input: DerivedViewInput): Promise<CatalogResource> {
+  validateFieldFilterability(input.schema);
   if (useMock) {
     const source = mockResources.find((item) => item.id === input.sourceResourceId);
     if (!source || (source.category !== "table" && source.category !== "index")) {
@@ -757,6 +792,17 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
         "Invalid source resource.",
       );
     }
+    const schema = withMockFilterability(
+      input.schema.map((field) => ({
+        ...field,
+        filterable:
+          field.filterable ??
+          source.schema.find(
+            (sourceField) => (sourceField.originalName || sourceField.name) === field.originalName,
+          )?.filterable,
+      })),
+    );
+    validateFieldFilterability(schema);
     const timestamp = Date.now();
     const resource: CatalogResource = {
       catalogId: input.catalogId,
@@ -775,7 +821,7 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       name: input.name,
       operations: ["view_detail", "query_data", "delete"],
       rowCount: null,
-      schema: input.schema,
+      schema,
       sourceIdentifier: "",
       sourceMetadata: { sourceCategory: source.category },
       tags: input.tags,
@@ -815,7 +861,9 @@ export async function updateDerivedView(
   id: string,
   input: DerivedViewUpdateInput,
 ): Promise<CatalogResource | null> {
+  validateFieldFilterability(input.schema);
   if (useMock) {
+    validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     const current = mockResources[index];
     if (!current || current.category !== "logical_view" || current.logicalType !== "derived") {
@@ -1068,6 +1116,16 @@ function mockBinaryContent(row: number, byteLength: number) {
 function assertMockFilterSupported(condition: unknown): void {
   if (!condition || typeof condition !== "object" || Array.isArray(condition)) return;
   const node = condition as Record<string, unknown>;
+  if (
+    ["like", "not_like"].includes(String(node.operation)) &&
+    (typeof node.value !== "string" || sqlLikePatternRegex(node.value) === null)
+  ) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "LIKE patterns require a string without an incomplete trailing escape.",
+    );
+  }
   // Do not silently simulate backend-specific search or calendar semantics as an empty result.
   if (
     ["regex", "match", "match_phrase", "multi_match", "knn_vector", "before", "current"].includes(
@@ -1169,10 +1227,8 @@ function mockFilterMatches(
       return !String(actual).startsWith(String(expected));
     case "like":
     case "not_like": {
-      const literal = String(expected).replace(/\\([%_\\])/g, "$1");
-      return node.operation === "like"
-        ? String(actual).includes(literal)
-        : !String(actual).includes(literal);
+      const matches = sqlLikePatternRegex(String(expected))!.test(String(actual));
+      return node.operation === "like" ? matches : !matches;
     }
     case "contain":
     case "not_contain": {

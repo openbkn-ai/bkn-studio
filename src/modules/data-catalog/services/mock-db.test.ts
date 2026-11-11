@@ -24,6 +24,20 @@ import {
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("provides effective filterability for every seeded resource field", () => {
+    for (const resource of mockResources) {
+      for (const field of resource.schema) {
+        expect(typeof field.filterable, `${resource.id}.${field.name}`).toBe("boolean");
+      }
+    }
+
+    const resource = mockResources.find((item) => item.id === "res-index-config-demo");
+    expect(resource).toBeDefined();
+    for (const field of resource!.schema) {
+      expect(field.filterable, field.type).toBe(!["binary", "json", "other"].includes(field.type));
+    }
+  });
+
   it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
     const restrictedIds = new Set([
       "res-permission-limited-orders",

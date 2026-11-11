@@ -207,7 +207,7 @@ export function FilterTreeEditor({
                       label: ["==", "!=", ">", "<", ">=", "<="].includes(operation)
                         ? operation
                         : t(
-                            `dataCatalog.filter.operations.${operation === "contain" && queryPath === "local_index" ? "containAny" : operation}`,
+                            `dataCatalog.filter.operations.${operation === "contain" && queryPath !== "source" ? "containAny" : operation}`,
                           ),
                       value: operation,
                     }))}

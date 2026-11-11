@@ -401,8 +401,8 @@ export const dataCatalogEnUS = {
         "Supports 1–9 fractional digits or integer epoch milliseconds. RFC3339 specifies a timezone; text without an offset uses the server timezone, without browser timezone conversion.",
       rangeHint: "Both bounds are included: [lower, upper].",
       outRangeHint: "Below the lower bound or above the upper bound; excludes the bounds.",
-      substringHint:
-        "Matches literal substrings; escape percent signs with a backslash. Underscores are literal.",
+      likePatternHint:
+        "SQL LIKE matches the entire value: % matches any string, _ matches one character, and a backslash escapes the next character. Use %abc% for a substring.",
       relativeTimeHint:
         "Relative to the server clock; calendar boundaries use the server timezone.",
       containSourceHint: "Matches items in a comma-separated source field.",
@@ -418,8 +418,8 @@ export const dataCatalogEnUS = {
         not_null: "Is not NULL",
         exist: "Exists",
         not_exist: "Does not exist",
-        like: "Contains literal substring",
-        not_like: "Does not contain literal substring",
+        like: "Matches SQL LIKE pattern",
+        not_like: "Does not match SQL LIKE pattern",
         prefix: "Starts with",
         not_prefix: "Does not start with",
         regex: "Regular expression",
@@ -442,7 +442,8 @@ export const dataCatalogEnUS = {
         minute: "Minute",
       },
       errors: {
-        invalidSubstring: "Escape a literal percent sign as \\% or use regex for patterns.",
+        invalidLikePattern:
+          "A SQL LIKE pattern cannot end with an unpaired backslash. Use \\\\ for a literal backslash.",
         invalidDate:
           "Enter a valid date or full datetime; check the calendar date, offset and precision.",
         invalidRange:
@@ -632,6 +633,14 @@ export const dataCatalogEnUS = {
       fieldDisplayName: "Business Name",
       fieldDescription: "Description",
       fieldType: "Type",
+      filterableTypeUnsupported:
+        "Type {{type}} does not support enabling filtering. An existing enabled setting can be turned off.",
+      unsupportedFilterableField:
+        "Field {{name}} ({{type}}) cannot enable filtering. Turn it off before saving.",
+      fieldFilterable: "Filterable",
+      fieldFilterableLabel: "Allow filtering by {{name}}",
+      filterableEnabled: "On",
+      filterableDisabled: "Off",
       fieldOriginalName: "Original Field Name",
       fieldOriginalType: "Original Type",
       fieldOriginalDescription: "Original Description",
@@ -641,11 +650,11 @@ export const dataCatalogEnUS = {
       logicalViewIndexReadOnly:
         "Studio does not support editing index configuration for logical views. You can still view the configuration.",
       editHint:
-        "You can edit the resource description, field business names, and field descriptions here.",
+        "You can edit the resource description, field business names, field descriptions, and filtering switches here.",
       copyValue: "Copy {{label}}",
       copyValueSuccess: "{{label}} copied",
       copyValueFailed: "Unable to copy {{label}}",
-      fieldEditableHint: "Business name and description can be edited inline.",
+      fieldEditableHint: "Business name, description, and filtering switch can be edited inline.",
       modifiedCount: "{{count}} fields modified",
       modifiedCount_one: "{{count}} field modified",
       modifiedCount_other: "{{count}} fields modified",

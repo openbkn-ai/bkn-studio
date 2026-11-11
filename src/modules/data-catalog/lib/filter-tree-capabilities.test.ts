@@ -219,15 +219,37 @@ describe("filter boundaries and precision", () => {
     });
   });
 
-  it("keeps legacy wildcard filters read-only and validates newly entered substrings", () => {
-    expect(parseFilterCondition({ field: "title", operation: "like", value: "%old%" })).toBeNull();
-    const group: FilterGroup = {
-      kind: "group",
-      operation: "and",
-      children: [{ kind: "rule", field: "title", operation: "like", value: "%new%" }],
-    };
-    expect(filterValidationError(group, fields)).toBe("invalidSubstring");
-  });
+  it.each(["like", "not_like"] as const)(
+    "round-trips stored and edited SQL LIKE patterns for %s on every query path",
+    (operation) => {
+      for (const path of ["source", "local_index", "managed_local_index"] as const) {
+        for (const value of ["abc", "%abc%", "a_b", "a\\%\\_b", "a\\qb", "a\\\\", ""]) {
+          const raw = { field: "title", operation, value };
+          const parsed = parseFilterCondition(raw, path);
+          expect(parsed).not.toBeNull();
+          expect(filterValidationError(parsed!, fields, path)).toBeNull();
+          expect(filterToBackend(parsed!, fields, path)).toEqual({
+            operation: "and",
+            sub_conditions: [{ ...raw, value_from: "const" }],
+          });
+        }
+      }
+    },
+  );
+
+  it.each(["like", "not_like"] as const)(
+    "rejects an incomplete trailing escape in %s patterns",
+    (operation) => {
+      for (const value of ["abc\\", "abc\\\\\\"]) {
+        const group: FilterGroup = {
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "rule", field: "title", operation, value }],
+        };
+        expect(filterValidationError(group, fields)).toBe("invalidLikePattern");
+      }
+    },
+  );
 
   it.each([
     ["n", "1.5"],

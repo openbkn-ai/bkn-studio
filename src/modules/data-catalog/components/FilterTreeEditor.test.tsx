@@ -30,6 +30,22 @@ const filter: FilterGroup = {
 };
 
 describe("FilterTreeEditor field labels", () => {
+  it("edits SQL LIKE patterns unchanged and shows the pattern hint", () => {
+    render(
+      <FilterTreeEditor
+        fields={fields}
+        onChange={vi.fn()}
+        value={{
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "rule", field: "status", operation: "like", value: "%ab_c\\%" }],
+        }}
+      />,
+    );
+    expect(screen.getByDisplayValue("%ab_c\\%")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.filter.likePatternHint")).toBeTruthy();
+  });
+
   it("keeps Text presence conditions available without a keyword Feature", () => {
     render(
       <FilterTreeEditor
