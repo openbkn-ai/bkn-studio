@@ -115,7 +115,7 @@ export const agentChatPart = {
         },
         data_result_chars: {
           label: "数据类结果上限（字）",
-          hint: "run_sql、query_*、run_cypher 等单条结果超出部分截断，并提示缩小查询",
+          hint: "query_*、run_cypher 等单条结果超出部分截断，并提示缩小查询",
         },
         schema_result_chars: {
           label: "Schema 类结果上限（字）",

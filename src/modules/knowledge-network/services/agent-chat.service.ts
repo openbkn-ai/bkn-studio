@@ -36,7 +36,7 @@ export type AgentConfig = {
   maxSteps: number;
   /** Between-step eviction: keep this many recent full tool results; 0 disables eviction. */
   keepToolResults: number;
-  /** Result character cap for data tools such as run_sql and query_*; 0 disables truncation. */
+  /** Result character cap for data tools such as query_* and run_cypher; 0 disables truncation. */
   dataToolCap: number;
   /** Result character cap for schema/discovery tools; 0 disables truncation. */
   schemaToolCap: number;

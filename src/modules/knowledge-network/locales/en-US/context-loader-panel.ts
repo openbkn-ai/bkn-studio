@@ -171,14 +171,10 @@ export const contextLoaderPanelPart = {
       testDataFilled: "Test data filled",
       testDataFilledWithNote: "Test data filled - {{note}}",
       generateTestDataFailed: "Failed to generate test data",
-      objectTypeNoResource:
-        "This object type is not bound to a data resource, so SQL test data cannot be generated.",
       testRequestFilledFromObject: "Filled test request with {{name}}{{note}}",
       subgraphFilled: "Subgraph path filled - {{name}}",
       fieldFilled: "Filled {{key}}",
       fieldCopiedFallback: "Copied. The current API has no {{key}} field, so paste it manually.",
-      resourceFilledSql: "Resource filled into SQL",
-      resourcePlaceholderCopied: "Resource placeholder copied",
       conceptGroupAdded: "Added resource group {{id}}",
       conceptGroupCopiedFallback:
         "Copied resource group {{id}}. The current API has no concept_groups field.",
@@ -211,8 +207,6 @@ export const contextLoaderPanelPart = {
       conceptGroup: "Select resource groups and fill concept_groups to narrow semantic search.",
       objectType:
         "Select an object type and fill ot_id. Real sample rows can generate a test request.",
-      resource:
-        "Select a data resource and fill SQL resource placeholders. You can inspect fields and sample data.",
       relation:
         "Select a relation type and generate the relation path needed for a subgraph query.",
       title: "Request data assistant",
@@ -479,12 +473,6 @@ export const contextLoaderPanelPart = {
       fillOtIdTooltip: "Click to fill ot_id for the current API",
       copyOtId: "Copy ot_id",
       copiedOtId: "ot_id copied",
-      dataResource: "Data resource",
-      fillResourceTooltip: "Click to fill the {{resource}} placeholder for run_sql",
-      resourceFallback: "Resource",
-      copyResourceId: "Copy resource id",
-      copiedResourceId: "Resource id copied",
-      noBinding: "No binding",
       fieldsHeader: "Fields · click to copy names",
       copyFieldName: "Copy field name {{name}}",
       copiedFieldName: "{{name}} copied",
@@ -498,7 +486,6 @@ export const contextLoaderPanelPart = {
       ungrouped: "Ungrouped",
       filterConceptGroup: "Filter resource groups...",
       filterRelation: "Filter relation types...",
-      filterResource: "Filter data resources...",
       filterObjectType: "Filter object types...",
       retry: "Reload",
       noConceptGroup: "No matching resource groups",
@@ -513,7 +500,6 @@ export const contextLoaderPanelPart = {
       path: "Path",
       copyRelationId: "Copy relation ID",
       copiedRelationId: "Relation ID copied",
-      noResource: "No matching data resources",
       noObjectType: "No matching object types",
     },
   },

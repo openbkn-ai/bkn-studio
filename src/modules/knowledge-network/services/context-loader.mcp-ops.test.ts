@@ -32,15 +32,15 @@ describe("mcpOpsFrom", () => {
   });
 
   it("does not add a local op the deployment did not report", () => {
-    const ops = mcpOpsFrom([tool("run_sql")]);
+    const ops = mcpOpsFrom([tool("query_metric")]);
     expect(ops).toHaveLength(1);
     expect(ops.some((op) => op.id === "query_object_instance")).toBe(false);
   });
 
   it("uses the curated op for a reported tool and synthesizes the rest", () => {
-    const curated = CONTEXT_LOADER_OPS.find((op) => op.id === "run_sql");
+    const curated = CONTEXT_LOADER_OPS.find((op) => op.id === "query_metric");
     expect(curated).toBeDefined();
-    const ops = mcpOpsFrom([tool("run_sql"), tool("not_in_catalog")]);
+    const ops = mcpOpsFrom([tool("query_metric"), tool("not_in_catalog")]);
     expect(ops[0].id).toBe(curated?.id);
     expect(ops[1].id).toBe("not_in_catalog");
   });

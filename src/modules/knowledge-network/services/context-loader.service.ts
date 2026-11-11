@@ -63,7 +63,7 @@ function languageHeaders(): Record<"Accept-Language", string> {
   return { "Accept-Language": getRuntimeConfig().locale };
 }
 
-export type RequestDataAssistantKind = "concept-group" | "object-type" | "resource" | "relation";
+export type RequestDataAssistantKind = "concept-group" | "object-type" | "relation";
 
 /** Returns the data-assistant type for operations that can be filled from KN model data. */
 export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKind | null {
@@ -72,8 +72,6 @@ export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKi
       return "concept-group";
     case "query_object_instance":
       return "object-type";
-    case "run_sql":
-      return "resource";
     case "query_instance_subgraph":
       return "relation";
     default:
@@ -173,35 +171,6 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
           limit: 10,
         },
       ],
-    },
-  },
-  {
-    id: "list_resources",
-    summary:
-      "Lists data-layer resources accessible to the current account, with optional catalog_id/type filters and offset/limit pagination. " +
-      "Results are already filtered by token account permissions, so the frontend must not assume global visibility.",
-    path: `${REST_PREFIX}/kn/list_resources`,
-    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { catalog_id: "your_catalog_id", type: "table", offset: 0, limit: 20 },
-  },
-  {
-    id: "describe_resource",
-    summary:
-      "Describes one data resource schema and returns connector_type plus columns. resource_id comes from list_resources entries[].resource_id.",
-    path: `${REST_PREFIX}/kn/describe_resource`,
-    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { resource_id: "your_resource_id" },
-  },
-  {
-    id: "run_sql",
-    summary:
-      "Runs SQL against knowledge-network resources and returns result rows. Table names use {{<resource_id>}} placeholders; cross-catalog joins are not supported.",
-    path: `${REST_PREFIX}/kn/run_sql`,
-    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    // Data tables must be referenced through resource placeholders, not raw table names.
-    body: {
-      kn_id: "your_kn_id",
-      sql: "SELECT * FROM {{resource_id}} WHERE status = 'active' LIMIT 10",
     },
   },
   {
@@ -366,15 +335,12 @@ export function exampleBodyText(
 
 const TEST_DATA_OPS = new Set([
   "query_object_instance",
-  "run_sql",
   "search_schema",
   "get_kn_detail",
   "query_instance_subgraph",
   "get_object_types",
   "get_relation_types",
   "query_metric",
-  "describe_resource",
-  "list_resources",
 ]);
 
 /** Whether this operation supports test-data fill. */
@@ -423,8 +389,7 @@ export type TestDataFill = { body: string; query?: Record<string, string>; note:
 
 /**
  * Builds a test request body for supported operations. The caller prefetches ot/sampleRow
- * according to operation needs: query_object_instance needs both; run_sql only needs a
- * resource-bound ot; schema and KN detail requests need neither.
+ * according to operation needs: query_object_instance needs both; schema and KN detail requests need neither.
  */
 /**
  * Builds a directly sendable request body. For MCP, pass the reported tool's inputSchema so the
@@ -478,12 +443,6 @@ function buildTestDataBody(
         body: JSON.stringify(body, null, 2),
         note: groupId ? `kn_id + real concept group ${groupId}` : "Filled kn_id",
       };
-    }
-
-    case "run_sql": {
-      const resId = ot?.data_source?.id ?? "";
-      const body = { kn_id: knId, sql: `SELECT * FROM {{${resId}}} LIMIT 10` };
-      return { body: JSON.stringify(body, null, 2), note: `Resource ${resId}` };
     }
 
     case "query_instance_subgraph": {
@@ -580,22 +539,6 @@ function buildTestDataBody(
         note: `Metric ${metric.name || metric.id} (object type ${ot?.name || ot?.id})`,
       };
     }
-
-    case "describe_resource": {
-      const resId = detail.object_types.find((o) => o.data_source?.id)?.data_source?.id ?? "";
-      return {
-        body: JSON.stringify({ resource_id: resId }, null, 2),
-        note: resId
-          ? `Resource ${resId} (from object-type binding)`
-          : "This network has no object-type resource binding; fill resource_id manually",
-      };
-    }
-
-    case "list_resources":
-      return {
-        body: JSON.stringify({ type: "table", offset: 0, limit: 20 }, null, 2),
-        note: "First 20 table resources",
-      };
 
     default:
       return { body: exampleBodyText(op, mode, knId), note: "" };

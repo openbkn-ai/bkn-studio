@@ -577,11 +577,9 @@ export function ContextLoaderIntegrationPanel({
       ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.conceptGroup")
       : dataAssistantKind === "object-type"
         ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.objectType")
-        : dataAssistantKind === "resource"
-          ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.resource")
-          : dataAssistantKind === "relation"
-            ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.relation")
-            : "";
+        : dataAssistantKind === "relation"
+          ? t("knowledgeNetwork.contextLoaderPanel.dataAssistant.relation")
+          : "";
   const hasCallState = sending || response !== null || reqError !== null;
   const resultContentVisible =
     !isVerifyView || (hasCallState && resultOpen && mcpResultTab === "result");
