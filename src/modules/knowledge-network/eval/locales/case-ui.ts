@@ -43,8 +43,6 @@ export const caseUiResources = {
     selectTheActualResourceThisCaseWillEvaluate: "请先选择这条用例要评测的真实资源。",
     thisEvaluationTargetDoesNotSupportAutomaticExecution:
       "当前评测对象暂不支持自动运行。函数需要可读取的实际来源合同；对象数据检查请通过规则应用新建。",
-    authorizationForTheSelectedReadOnlyFunctionHasChanged:
-      "所选执行配置或资源绑定已变化，请刷新后重新选择。",
     caseSavedAndEnabled: "用例已保存并启用",
     caseSaved: "用例已保存",
     loadTheCurrentResourceSParameterContractBeforeStarting:
@@ -456,8 +454,6 @@ export const caseUiResources = {
       "Select the actual resource this case will evaluate first.",
     thisEvaluationTargetDoesNotSupportAutomaticExecution:
       "This evaluation target does not support automatic execution yet. Functions require an accessible source contract; create object data checks by applying rules.",
-    authorizationForTheSelectedReadOnlyFunctionHasChanged:
-      "Authorization for the selected function has changed. Refresh and select it again.",
     caseSavedAndEnabled: "Case saved and enabled",
     caseSaved: "Case saved",
     loadTheCurrentResourceSParameterContractBeforeStarting:

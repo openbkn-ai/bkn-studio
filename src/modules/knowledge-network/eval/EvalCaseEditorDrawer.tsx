@@ -827,7 +827,12 @@ export function EvalCaseEditorDrawer({
     return entries.map((item) => ({
       ...item,
       resource_id: item.resource_id || selectedId || "",
-      ...(draft && target?.operation ? { operation: target.operation } : {}),
+      ...(target?.operation &&
+      (target.resource_id
+        ? (item.resource_id || selectedId) === target.resource_id
+        : item.name === target.name)
+        ? { operation: target.operation }
+        : {}),
     }));
   }, [callableFunctions, imported, selectedResource, draft, standaloneExecution]);
   useEffect(() => {
@@ -1201,7 +1206,7 @@ export function EvalCaseEditorDrawer({
       return;
     }
     if (executionMode === "direct" && !callableFunction && !resourceEditor) {
-      setError(caseUiText("authorizationForTheSelectedReadOnlyFunctionHasChanged"));
+      setError(caseUiText("executionBindingChanged"));
       return;
     }
     await execute(
@@ -1308,7 +1313,7 @@ export function EvalCaseEditorDrawer({
       !isObjectDefinition &&
       !["resource", "relation"].includes(executionMode)
     ) {
-      setError(caseUiText("authorizationForTheSelectedReadOnlyFunctionHasChanged"));
+      setError(caseUiText("executionBindingChanged"));
       return;
     }
     setTrialBusy(true);
