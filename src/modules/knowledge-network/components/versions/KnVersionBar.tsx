@@ -175,7 +175,7 @@ export function KnVersionBar({
         variant="borderless"
       />
       {canPublish ? (
-        <Button onClick={() => setPublishOpen(true)} size="small" type="link">
+        <Button onClick={() => setPublishOpen(true)} size="small" type="primary">
           {t("knowledgeNetwork.versions.publish.action")}
         </Button>
       ) : null}

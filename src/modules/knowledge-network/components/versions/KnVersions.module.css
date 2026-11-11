@@ -21,7 +21,7 @@
 .picker {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   font-size: 13px;
 }
 

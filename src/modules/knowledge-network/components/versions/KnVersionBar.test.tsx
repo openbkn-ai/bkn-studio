@@ -97,7 +97,12 @@ describe("KnVersionBar", () => {
     expect(
       screen.getByText("knowledgeNetwork.versions.draft · knowledgeNetwork.versions.basedOn:v2"),
     ).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
+    // Publishing is the one thing to do with a changed draft, so it stands out.
+    expect(
+      screen
+        .getByRole("button", { name: "knowledgeNetwork.versions.publish.action" })
+        .classList.contains("ant-btn-variant-solid"),
+    ).toBe(true);
   });
 
   it("says the network is not published yet before the first version", () => {
