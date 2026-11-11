@@ -118,7 +118,16 @@ describe("kn version context", () => {
 
     const [write] = request("put", `${NETWORK}/object-types/ot-1`);
     expect(write.headers.get("If-Match")).toBe('"7"');
-    expect(write.params).toEqual({});
+    expect(write.params).toEqual({ branch: "draft" });
+  });
+
+  it("names the draft when it creates a definition, so the write is not published at once", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+
+    await http.post(`${NETWORK}/object-types`, {}, { params: { branch: "main" } });
+
+    const [write] = request("post", `${NETWORK}/object-types`);
+    expect(write.params).toEqual({ branch: "draft" });
   });
 
   it("reads the definition first when a save has no ETag yet", async () => {
@@ -139,7 +148,7 @@ describe("kn version context", () => {
     await http.delete(`${NETWORK}/object-types/ot-1,ot-2`);
 
     const [write] = request("delete", `${NETWORK}/object-types/ot-1,ot-2`);
-    expect(write.params).toEqual({ expected_draft_revision: 41 });
+    expect(write.params).toEqual({ branch: "draft", expected_draft_revision: 41 });
     expect(write.headers.has("If-Match")).toBe(false);
   });
 
@@ -149,7 +158,7 @@ describe("kn version context", () => {
     await http.put(NETWORK, { name: "x" });
 
     const [write] = request("put", NETWORK);
-    expect(write.params).toEqual({ expected_draft_revision: 40 });
+    expect(write.params).toEqual({ branch: "draft", expected_draft_revision: 40 });
   });
 
   it("refuses writes while an older version is on screen, and reads that version", async () => {

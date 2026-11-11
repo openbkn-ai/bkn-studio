@@ -380,9 +380,9 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
   }
 
   if (method === "post") {
-    // Creates and validations go to the draft on their own; only the branch they name is dropped.
-    if (context.view === "draft" && existingParams.branch !== undefined) {
-      config.params = withoutBranch(existingParams);
+    // Creates and validations name the draft: a write without it is published at once.
+    if (context.view === "draft") {
+      config.params = { ...existingParams, branch: "draft" };
     }
     return config;
   }
@@ -394,9 +394,9 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
   if (context.view !== "draft") {
     throw new KnVersionReadOnlyError();
   }
-  if (existingParams.branch !== undefined) {
-    config.params = withoutBranch(existingParams);
-  }
+  // Studio edits the draft and publishes it on its own; a write without the branch would be
+  // published at once.
+  config.params = { ...existingParams, branch: "draft" };
 
   const currentParams = (config.params ?? {}) as Record<string, unknown>;
   const key = etagKey(target.knId, target.rest);
