@@ -126,4 +126,52 @@ describe("action execution form", () => {
       expect(submit).toHaveBeenCalledWith({ object_input: { brand_name: "Acme" } }),
     );
   });
+
+  it("submits multiple selected object identities with shared runtime parameters", async () => {
+    loadSchema.mockResolvedValue({
+      type: "object",
+      properties: {
+        dynamic_params: {
+          type: "object",
+          properties: {
+            data: {
+              type: "object",
+              properties: { status: { type: "string", title: "Status" } },
+              required: ["status"],
+            },
+          },
+          required: ["data"],
+        },
+        _instance_identities: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { brand_id: { type: "integer", title: "Brand ID" } },
+            required: ["brand_id"],
+          },
+        },
+      },
+      required: ["dynamic_params", "_instance_identities"],
+    });
+    const submit = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
+    render(<ActionTypeExecuteModal {...props} onSubmit={submit} />);
+    await screen.findByLabelText("Status");
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionExecutionAddObject" }),
+    );
+    const identities = screen.getAllByLabelText("Brand ID");
+    expect(identities).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "inactive" } });
+    fireEvent.change(identities[0], { target: { value: "371" } });
+    fireEvent.change(identities[1], { target: { value: "372" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeExecuteImmediately" }),
+    );
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith({
+        dynamic_params: { data: { status: "inactive" } },
+        _instance_identities: [{ brand_id: 371 }, { brand_id: 372 }],
+      }),
+    );
+  });
 });

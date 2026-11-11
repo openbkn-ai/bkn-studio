@@ -180,9 +180,9 @@ const INITIAL_METRIC_VISIBLE_COUNTS: Record<ObjectMetricTypeV1, number> = {
 const OVERVIEW_LIMIT = 12;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.5;
-const ACTION_FOCUS_TRIGGER_WIDTH = 140;
-const ACTION_FOCUS_SOURCE_WIDTH = 120;
-const ACTION_FOCUS_IMPACT_WIDTH = 150;
+const ACTION_FOCUS_TRIGGER_WIDTH = 160;
+const ACTION_FOCUS_SOURCE_WIDTH = 176;
+const ACTION_FOCUS_IMPACT_WIDTH = 170;
 
 function objectNodeColor(objectTypeId: string, configuredColor?: string) {
   if (configuredColor) return configuredColor;
@@ -196,6 +196,24 @@ function objectNodeColor(objectTypeId: string, configuredColor?: string) {
 function truncate(value: string, max = 14) {
   const chars = Array.from(value);
   return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : value;
+}
+
+function truncateSvgLabel(value: string, maxWidth: number) {
+  const characters = Array.from(value);
+  const widthOf = (character: string) =>
+    character === " " ? 4 : (character.codePointAt(0) ?? 0) > 127 ? 12 : 7;
+  if (characters.reduce((width, character) => width + widthOf(character), 0) <= maxWidth) {
+    return value;
+  }
+  let width = 12;
+  const visible: string[] = [];
+  for (const character of characters) {
+    const nextWidth = width + widthOf(character);
+    if (nextWidth > maxWidth) break;
+    visible.push(character);
+    width = nextWidth;
+  }
+  return `${visible.join("")}…`;
 }
 
 function relationLabelWidth(name: string) {
@@ -2472,6 +2490,10 @@ export function ObjectTypeResourceGraph({
               const sourceName =
                 presentation.sourceName ||
                 t("knowledgeNetwork.actionTypeExecutionSourceUnavailable");
+              const sourceSeparator = sourceName.lastIndexOf("/");
+              const sourceGroup = sourceSeparator > 0 ? sourceName.slice(0, sourceSeparator) : "";
+              const sourceTool =
+                sourceSeparator > 0 ? sourceName.slice(sourceSeparator + 1) : sourceName;
               const additionalImpact = [
                 presentation.affectedObjectLabel,
                 presentation.affectDescription,
@@ -2496,13 +2518,13 @@ export function ObjectTypeResourceGraph({
                 nodePositions[actionFocusActionKey] ?? originalActionPosition;
               const actionFocusTriggerPosition =
                 nodePositions[actionFocusTriggerKey] ??
-                ({ x: originalActionPosition.x + 150, y: laneY } satisfies Point);
+                ({ x: originalActionPosition.x + 180, y: laneY } satisfies Point);
               const actionFocusSourcePosition =
                 nodePositions[actionFocusSourceKey] ??
-                ({ x: originalActionPosition.x + 310, y: laneY } satisfies Point);
+                ({ x: originalActionPosition.x + 400, y: laneY } satisfies Point);
               const actionFocusImpactPosition =
                 nodePositions[actionFocusImpactKey] ??
-                ({ x: originalActionPosition.x + 470, y: laneY } satisfies Point);
+                ({ x: originalActionPosition.x + 630, y: laneY } satisfies Point);
               const actionFocusOwnerEdge = trimmedLine(
                 ownerPosition,
                 actionFocusActionPosition,
@@ -2656,16 +2678,19 @@ export function ObjectTypeResourceGraph({
                       textAnchor="middle"
                       y={applicableConditionLabel ? 5 : 14}
                     >
-                      {truncate(
+                      {truncateSvgLabel(
                         t("knowledgeNetwork.objectTypeGraphActionTargetObject", {
                           object: presentation.objectTypeLabel,
                         }),
-                        18,
+                        ACTION_FOCUS_TRIGGER_WIDTH - 20,
                       )}
                     </text>
                     {applicableConditionLabel ? (
                       <text className={styles.actionSemanticDescription} textAnchor="middle" y="26">
-                        {truncate(applicableConditionLabel, 18)}
+                        {truncateSvgLabel(
+                          applicableConditionLabel,
+                          ACTION_FOCUS_TRIGGER_WIDTH - 20,
+                        )}
                       </text>
                     ) : null}
                     <title>{`${presentation.objectTypeLabel}${applicableConditionLabel ? ` · ${applicableConditionLabel}` : ""}`}</title>
@@ -2682,17 +2707,26 @@ export function ObjectTypeResourceGraph({
                     transform={`translate(${actionFocusSourcePosition.x} ${actionFocusSourcePosition.y})`}
                   >
                     <rect
-                      height="58"
+                      height="76"
                       rx="8"
                       width={ACTION_FOCUS_SOURCE_WIDTH}
                       x={-ACTION_FOCUS_SOURCE_WIDTH / 2}
-                      y="-29"
+                      y="-38"
                     />
-                    <text className={styles.actionSemanticTitle} textAnchor="middle" y="-7">
+                    <text className={styles.actionSemanticTitle} textAnchor="middle" y="-19">
                       {t("knowledgeNetwork.objectTypeGraphActionTool")}
                     </text>
-                    <text className={styles.actionSemanticDescription} textAnchor="middle" y="14">
-                      {truncate(sourceName, 15)}
+                    {sourceGroup ? (
+                      <text className={styles.actionSemanticDescription} textAnchor="middle" y="2">
+                        {truncateSvgLabel(sourceGroup, ACTION_FOCUS_SOURCE_WIDTH - 20)}
+                      </text>
+                    ) : null}
+                    <text
+                      className={styles.actionSemanticToolName}
+                      textAnchor="middle"
+                      y={sourceGroup ? 23 : 13}
+                    >
+                      {truncateSvgLabel(sourceTool, ACTION_FOCUS_SOURCE_WIDTH - 20)}
                     </text>
                     <title>{sourceName}</title>
                   </g>
@@ -2726,11 +2760,14 @@ export function ObjectTypeResourceGraph({
                       textAnchor="middle"
                       y={additionalImpactLabel ? 5 : 14}
                     >
-                      {truncate(presentation.primaryResultLabel, 18)}
+                      {truncateSvgLabel(
+                        presentation.primaryResultLabel,
+                        ACTION_FOCUS_IMPACT_WIDTH - 20,
+                      )}
                     </text>
                     {additionalImpactLabel ? (
                       <text className={styles.actionSemanticDescription} textAnchor="middle" y="26">
-                        {truncate(additionalImpactLabel, 18)}
+                        {truncateSvgLabel(additionalImpactLabel, ACTION_FOCUS_IMPACT_WIDTH - 20)}
                       </text>
                     ) : null}
                     <title>{`${presentation.primaryResultLabel}${additionalImpactLabel ? ` · ${additionalImpactLabel}` : ""}`}</title>
