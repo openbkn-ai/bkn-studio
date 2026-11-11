@@ -100,4 +100,30 @@ describe("action execution form", () => {
     ).toBeDisabled();
     expect(submit).not.toHaveBeenCalled();
   });
+
+  it("only asks for mapped properties of a new object", async () => {
+    loadSchema.mockResolvedValue({
+      type: "object",
+      properties: {
+        object_input: {
+          type: "object",
+          title: "Brands",
+          properties: { brand_name: { type: "string", title: "Brand name" } },
+          required: ["brand_name"],
+        },
+      },
+      required: ["object_input"],
+    });
+    const submit = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
+    render(<ActionTypeExecuteModal {...props} onSubmit={submit} />);
+    await screen.findByLabelText("Brand name");
+    expect(screen.queryByLabelText("Country")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Brand name"), { target: { value: "Acme" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeExecuteImmediately" }),
+    );
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith({ object_input: { brand_name: "Acme" } }),
+    );
+  });
 });

@@ -12,8 +12,10 @@ import type { ActionTypeExecutionConfig } from "@/modules/knowledge-network/type
 import {
   ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY,
   ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY,
+  ACTION_TYPE_EXECUTION_PROPERTY_REQUIRED_KEY,
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
   firstInvalidActionConstantParameter,
+  firstUnmappedActionPropertyParameter,
   validateActionTypeExecutionConfig,
 } from "./action-type-execution";
 
@@ -69,6 +71,17 @@ describe("validateActionTypeExecutionConfig", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  it("rejects an unmapped object property even when another parameter is valid", () => {
+    const parameters = [
+      { name: "name", valueFrom: "input" as const },
+      { name: "country", valueFrom: "property" as const, value: "" },
+    ];
+    expect(firstUnmappedActionPropertyParameter(parameters)).toBe("country");
+    expect(validateActionTypeExecutionConfig(createExecutionConfig({ parameters }))).toBe(
+      ACTION_TYPE_EXECUTION_PROPERTY_REQUIRED_KEY,
+    );
   });
 
   it("rejects an empty constant before serialization even when another mapping is valid", () => {

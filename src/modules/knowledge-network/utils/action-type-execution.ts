@@ -178,6 +178,21 @@ export const ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY =
 export const ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY =
   "knowledgeNetwork.actionTypeExecutionConstantInvalid";
 
+export const ACTION_TYPE_EXECUTION_PROPERTY_REQUIRED_KEY =
+  "knowledgeNetwork.actionTypeExecutionPropertyRequired";
+
+export function firstUnmappedActionPropertyParameter(
+  parameters: ActionTypeExecutionParameter[],
+): string | null {
+  const invalid = parameters.find(
+    (item) =>
+      item.name.trim() &&
+      item.valueFrom === "property" &&
+      !(item.value?.trim() || item.sourcePropertyName?.trim()),
+  );
+  return invalid?.name.trim() || null;
+}
+
 export function validateActionTypeExecutionConfig(
   value: ActionTypeExecutionConfig,
   options: ActionTypeExecutionValidationOptions = {},
@@ -207,6 +222,10 @@ export function validateActionTypeExecutionConfig(
 
   if (firstInvalidActionConstantParameter(value.parameters)) {
     return ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY;
+  }
+
+  if (firstUnmappedActionPropertyParameter(value.parameters)) {
+    return ACTION_TYPE_EXECUTION_PROPERTY_REQUIRED_KEY;
   }
 
   if (validParameters.length === 0 && !options.allowEmptyParameters) {
@@ -245,7 +264,7 @@ export function normalizeActionTypeExecutionConfig(
     })
     .map((item) => {
       const valueFrom = item.valueFrom ?? "input";
-      const resolvedValue = item.value ?? item.sourcePropertyName ?? "";
+      const resolvedValue = item.value || item.sourcePropertyName || "";
 
       return {
         description: item.description,

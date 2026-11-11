@@ -155,7 +155,7 @@ function toBackendActionParameters(
     .map((item) => {
       const source = item.valueFrom ?? "input";
       let value: unknown;
-      if (source === "property") value = item.value ?? item.sourcePropertyName;
+      if (source === "property") value = item.value || item.sourcePropertyName;
       if (source === "const") {
         value =
           typeof item.value === "string"
