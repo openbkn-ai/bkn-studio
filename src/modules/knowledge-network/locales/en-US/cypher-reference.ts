@@ -12,7 +12,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
   {
     title: "Query shape",
     rules: [
-      "MATCH pattern [WHERE condition] RETURN items [ORDER BY …] [SKIP n] [LIMIT n]; a query may open with WITH ['a', 'b'] AS codes to name constants for its conditions.",
+      "MATCH pattern [WHERE condition] RETURN items [ORDER BY …] [SKIP n] [LIMIT n]; a query may open with WITH ['a', 'b'] AS codes to name constants for its conditions. SKIP and LIMIT take an integer or a $parameter (as in LIMIT $n) whose value is a non-negative integer.",
       "Read-only: RETURN is required; no CREATE, MERGE, SET, DELETE or REMOVE.",
       "Without LIMIT a query returns at most 1000 rows, and the status bar says when it filled them; LIMIT is capped at 10000; a query holds at most 8 relationships and 9 nodes.",
     ],
@@ -38,10 +38,10 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "WHERE conditions",
     rules: [
       "Compare with = <> < <= > >=; not-equal is <> (!= is read as it). Both sides may be properties, as in a.x <> a.y, or arithmetic, as in a.amount * a.rate > 100.",
-      "IN takes a list: a.code IN ['A', 'B'], or a parameter IN $list.",
+      "IN takes a list: a.code IN ['A', 'B'], or a parameter IN $list; over an empty list IN matches no row and NOT … IN matches every row.",
       "Strings: STARTS WITH, CONTAINS, ENDS WITH, on string properties only, matched as a literal substring; % and _ are not wildcards.",
       "Nulls: IS NULL, IS NOT NULL; never = null.",
-      "Combine with AND, OR, NOT and parentheses; no XOR. Dates are written date('2026-08-13').",
+      "Combine with AND, OR, NOT and parentheses; no XOR. Dates are written date('2026-08-13'); against a date or timestamp property a string such as '2026-08-13' or '2026-08-13T09:30:00' works too, and any other form (such as '2026/08/13') is an error.",
     ],
     notes: ["", "", ""],
   },
@@ -71,7 +71,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
       "After a WITH, RETURN may return the nodes it passed on, for instance to draw the filtered groups as derived edges.",
       "Pass one property's values to the next MATCH: WITH DISTINCT a.p AS v (or collect(a.p) AS vs), then MATCH … WHERE b.q = v (or b.q IN vs); no WITH may follow.",
       "Compare two lists (a different form from passing values to the next MATCH above): each of two stages collects one property, and the second WITH passes the first list on and collects the second; RETURN holds only size(l1), size(l2) and the shared count size([x IN l1 WHERE x IN l2]), as one row, and cannot return the lists themselves.",
-      "Pass nodes on to the next MATCH: WITH a, count(b) AS total, then MATCH (a)-…, which may aggregate again, with total usable in RETURN and ORDER BY; when the query aggregates, return total as a column of its own wherever it is used. A WITH that does not aggregate passes each node on once per matched row, which multiplies the counts.",
+      "Pass nodes on to the next MATCH: WITH a, count(b) AS total, then MATCH (a)-…, which may aggregate again, with total usable in RETURN and ORDER BY; when the query aggregates, return total as a column of its own wherever it is used. A WITH that does not aggregate passes each node on once per matched row, which multiplies the counts. After grouping by a node, a later stage may compute with its properties and the aggregates together, as in WITH o, count(i) AS n RETURN o.amount - n.",
     ],
     notes: [
       "Filter after aggregating",

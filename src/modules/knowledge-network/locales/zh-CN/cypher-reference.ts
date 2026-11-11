@@ -12,7 +12,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
   {
     title: "查询结构",
     rules: [
-      "MATCH 模式 [WHERE 条件] RETURN 返回项 [ORDER BY …] [SKIP n] [LIMIT n]；可以用 WITH ['a', 'b'] AS codes 开头定义常量，供后面的条件使用。",
+      "MATCH 模式 [WHERE 条件] RETURN 返回项 [ORDER BY …] [SKIP n] [LIMIT n]；可以用 WITH ['a', 'b'] AS codes 开头定义常量，供后面的条件使用。SKIP 和 LIMIT 可以写整数，也可以写 $参数（如 LIMIT $n），参数须为非负整数。",
       "只读：必须有 RETURN；不能 CREATE、MERGE、SET、DELETE、REMOVE。",
       "不写 LIMIT 时最多返回 1000 行，返回满时状态栏会提示可能还有更多；LIMIT 上限 10000；一条查询最多 8 条关系、9 个节点。",
     ],
@@ -38,10 +38,10 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "WHERE 条件",
     rules: [
       "比较：= <> < <= > >=；不等于写 <>（!= 也接受）。两边可以都是属性，如 a.x <> a.y，也可以写算术，如 a.amount * a.rate > 100。",
-      "IN 后面是列表：a.code IN ['A', 'B']，或用参数 IN $list。",
+      "IN 后面是列表：a.code IN ['A', 'B']，或用参数 IN $list；列表为空时 IN 不匹配任何行，NOT … IN 匹配所有行。",
       "字符串：STARTS WITH、CONTAINS、ENDS WITH，只用于字符串属性，按字面子串匹配，% 和 _ 不是通配符。",
       "空值：IS NULL、IS NOT NULL；不能写 = null。",
-      "组合：AND、OR、NOT 和括号；不支持 XOR。日期写 date('2026-08-13')。",
+      "组合：AND、OR、NOT 和括号；不支持 XOR。日期写 date('2026-08-13')；和日期、时间戳属性比较时也可以直接写字符串 '2026-08-13' 或 '2026-08-13T09:30:00'，其他格式（如 '2026/08/13'）会报错。",
     ],
     notes: ["", "", ""],
   },
@@ -65,7 +65,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
       "WITH 之后，RETURN 可以直接返回传下来的节点，例如把过滤后的分组画成虚拟边。",
       "把一个属性的值传给下一个 MATCH：WITH DISTINCT a.p AS v（或 collect(a.p) AS vs），再接 MATCH … WHERE b.q = v（或 b.q IN vs）；之后不能再接 WITH。",
       "比较两个列表（和上一条按值过滤是两种不同的写法）：两段各自 collect 一个属性，第二个 WITH 把第一个列表传下去，并 collect 第二个列表；RETURN 只写 size(l1)、size(l2) 和共有元素个数 size([x IN l1 WHERE x IN l2])，返回一行，不能返回列表本身。",
-      "把节点传给下一个 MATCH：WITH a, count(b) AS total，再接 MATCH (a)-…，第二段可以再聚合，RETURN 和 ORDER BY 可以用 total；查询含聚合时，用到 total 就要把它也作为单独一列返回。WITH 不聚合时，每个节点按匹配到的行数重复传下去，计数会成倍增加。",
+      "把节点传给下一个 MATCH：WITH a, count(b) AS total，再接 MATCH (a)-…，第二段可以再聚合，RETURN 和 ORDER BY 可以用 total；查询含聚合时，用到 total 就要把它也作为单独一列返回。WITH 不聚合时，每个节点按匹配到的行数重复传下去，计数会成倍增加。按节点分组后，后面可以用它的属性和聚合值一起计算，如 WITH o, count(i) AS n RETURN o.amount - n。",
     ],
     notes: [
       "聚合后过滤",

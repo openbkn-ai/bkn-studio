@@ -793,9 +793,9 @@ export const executionFactoryZhCN = {
       responseEnvelope:
         "只要工具执行了，HTTP 状态码就是 200；成败看返回中的 status_code，内容在 body 中。",
       responseCypherValue:
-        "「单个值」：body 为 {value}；没有行时 value 为 null，多于一行时 status_code 为 400。",
+        '「单个值」：body 为 {value}；没有行时 value 为 null，多于一行时 status_code 为 400。decimal 属性的值和对它的 sum() 以字符串返回（如 "13833141.000000"，不丢精度），计算出的比值等以数字返回，调用方要两种都能处理。',
       responseCypherTable:
-        "「表格」：body 为 {columns, entries, limited}；语句没写 LIMIT 且结果超过 1000 行时，只返回前 1000 行，limited 为 true。",
+        '「表格」：body 为 {columns, entries, limited}；语句没写 LIMIT 且结果超过 1000 行时，只返回前 1000 行，limited 为 true。decimal 属性的值和对它的 sum() 以字符串返回（如 "13833141.000000"，不丢精度），计算出的比值等以数字返回，调用方要两种都能处理。',
       responsePython:
         "body 是沙箱的执行结果：handler 的返回值在 body.result 中，另有 stdout、stderr、exit_code 等。",
       responseOpenapi: "status_code、headers、body 是目标接口的原始响应。",
@@ -822,7 +822,6 @@ export const executionFactoryZhCN = {
       shapeTableHint: "表格：返回全部行，结果为 {columns, entries, limited}。",
       notices: {
         positional: "保存只接受 $名称 形式的参数，请把 $0 这类位置参数改成命名参数。",
-        "row-count-parameter": "LIMIT 和 SKIP 后面只能写整数，不能用 $参数。",
         "limit-too-large": "LIMIT 不能超过 {{max}}。",
         "table-default-limit":
           "没写 LIMIT 时最多返回 {{rows}} 行；超出时结果中的 limited 为 true，调用方据此知道结果不全。",
@@ -860,7 +859,7 @@ export const executionFactoryZhCN = {
           shapeValue:
             "函数返回「单个值」：语句只返回一列、至多一行，例如用 count()、sum()、max() 聚合，或 ORDER BY … LIMIT 1；不返回节点或关系，不需要能画成图。",
           shapeTable:
-            "函数返回「表格」：返回调用方需要的属性列，不返回整个节点或关系，不需要能画成图。不要写 LIMIT，除非描述明确要求前 N 条：不写时平台最多返回 1000 行，超出时用 limited 告诉调用方结果不全；自己写的 LIMIT 截断后调用方无从得知。",
+            "函数返回「表格」：返回调用方需要的属性列，不返回整个节点或关系，不需要能画成图。不要写 LIMIT，除非描述明确要求前 N 条：不写时平台最多返回 1000 行，超出时用 limited 告诉调用方结果不全；自己写的 LIMIT 截断后调用方无从得知。要由调用方决定条数时写 LIMIT $limit，参数类型为 number。",
           answer:
             '交付时先给 cypher 代码块，再给一个 json 代码块列出每个参数，例如 [{"name": "supplier_code", "type": "string", "description": "供应商编码，如 S001", "example": "S001"}]；type 取 string、number、boolean 或 array，example 用试跑时的值。',
           existing: "函数已有这些参数，适用时沿用同名参数：",

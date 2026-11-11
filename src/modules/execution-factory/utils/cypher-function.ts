@@ -17,21 +17,37 @@ import type { CypherResult } from "@/modules/knowledge-network/cypher/graph-valu
 
 /**
  * The inputs a statement's `$name` parameters call for, in first-use order. A parameter already
- * declared keeps its type, description and example; a new one is a required string; one the
- * statement no longer uses is dropped. Every input is required: bkn-backend has no optional
- * parameter, a statement using `$name` fails without one.
+ * declared keeps its type, description and example; a new one is a required string, or a number
+ * when the statement uses it as SKIP or LIMIT; one the statement no longer uses is dropped. Every
+ * input is required: bkn-backend has no optional parameter, a statement using `$name` fails
+ * without one.
  */
 export function syncCypherInputs(
   inputs: readonly FunctionParameterDef[],
   code: string,
 ): FunctionParameterDef[] {
   const byName = new Map(inputs.map((input) => [input.name ?? "", input]));
-  return scanCypherParameters(code).names.map((name) => {
+  const scan = scanCypherParameters(code);
+  const rowCounts = rowCountParameters(code, scan.spans);
+  return scan.names.map((name) => {
     const existing = byName.get(name);
-    return existing
-      ? { ...existing, required: true }
-      : { name, type: "string", required: true, description: "" };
+    if (existing) return { ...existing, required: true };
+    const type = rowCounts.has(name) ? "number" : "string";
+    return { name, type, required: true, description: "" };
   });
+}
+
+/** The parameters a statement writes right after SKIP or LIMIT, which bkn-backend binds as row counts. */
+function rowCountParameters(
+  code: string,
+  spans: ReturnType<typeof scanCypherParameters>["spans"],
+): Set<string> {
+  const text = blankCypherLiterals(code);
+  return new Set(
+    spans
+      .filter((span) => /\b(SKIP|LIMIT)\s+$/i.test(text.slice(0, span.start)))
+      .map((span) => span.name),
+  );
 }
 
 /** Rows bkn-backend returns when the statement writes no LIMIT (CYPHER_DEFAULT_LIMIT). */
@@ -42,8 +58,6 @@ export const CYPHER_MAX_LIMIT = 10000;
 export type CypherFunctionNotice =
   /** `$0`: the save takes named parameters only. */
   | { kind: "positional"; level: "warning" }
-  /** `LIMIT $n` / `SKIP $n`: bkn-backend takes an integer literal there, never a parameter. */
-  | { kind: "row-count-parameter"; level: "warning" }
   | { kind: "limit-too-large"; level: "warning"; max: number }
   /** A table with no LIMIT gets the default rows, and `limited: true` when there were more. */
   | { kind: "table-default-limit"; level: "info"; rows: number }
@@ -61,9 +75,6 @@ export function cypherFunctionNotices(
   const notices: CypherFunctionNotice[] = [];
   if (scanCypherParameters(code).positional) notices.push({ kind: "positional", level: "warning" });
   const text = blankCypherLiterals(code);
-  if (/\b(LIMIT|SKIP)\s+\$/i.test(text)) {
-    notices.push({ kind: "row-count-parameter", level: "warning" });
-  }
   const returns = [...text.matchAll(/\bRETURN\b/gi)];
   if (returns.length === 0) return notices;
   const tail = text.slice((returns[returns.length - 1].index ?? 0) + "RETURN".length);

@@ -833,9 +833,9 @@ export const executionFactoryEnUS = {
       responseEnvelope:
         "Whenever the tool ran, the HTTP status is 200; read status_code for the outcome and body for the content.",
       responseCypherValue:
-        "Single value: body is {value}; value is null when there is no row, and status_code is 400 when there is more than one.",
+        'Single value: body is {value}; value is null when there is no row, and status_code is 400 when there is more than one. A decimal property and its sum() come back as strings (such as "13833141.000000", keeping the precision), while computed values such as ratios come back as numbers; a caller has to handle both.',
       responseCypherTable:
-        "Table: body is {columns, entries, limited}; when the statement has no LIMIT and there are more than 1000 rows, the first 1000 come back with limited true.",
+        'Table: body is {columns, entries, limited}; when the statement has no LIMIT and there are more than 1000 rows, the first 1000 come back with limited true. A decimal property and its sum() come back as strings (such as "13833141.000000", keeping the precision), while computed values such as ratios come back as numbers; a caller has to handle both.',
       responsePython:
         "body is the sandbox's run: what the handler returns is in body.result, beside stdout, stderr, exit_code and the like.",
       responseOpenapi: "status_code, headers and body are the target API's own response.",
@@ -864,7 +864,6 @@ export const executionFactoryEnUS = {
       notices: {
         positional:
           "Saving accepts only named parameters ($name). Rename positional ones such as $0.",
-        "row-count-parameter": "LIMIT and SKIP take an integer, not a $parameter.",
         "limit-too-large": "LIMIT cannot exceed {{max}}.",
         "table-default-limit":
           "Without LIMIT, at most {{rows}} rows come back; when there are more, limited is true in the result so the caller knows it is partial.",
@@ -907,7 +906,7 @@ export const executionFactoryEnUS = {
           shapeValue:
             "The function returns a single value: the statement returns one column and at most one row, for example with count(), sum() or max(), or ORDER BY … LIMIT 1; no nodes or relationships, and it need not draw as a graph.",
           shapeTable:
-            "The function returns a table: return the property columns a caller needs, not whole nodes or relationships, and it need not draw as a graph. Write no LIMIT unless the description asks for the first N rows: without one the platform returns at most 1000 rows and sets limited when there were more, while a LIMIT you write cuts the rows without the caller knowing.",
+            "The function returns a table: return the property columns a caller needs, not whole nodes or relationships, and it need not draw as a graph. Write no LIMIT unless the description asks for the first N rows: without one the platform returns at most 1000 rows and sets limited when there were more, while a LIMIT you write cuts the rows without the caller knowing. When the caller picks the number of rows, write LIMIT $limit with a number parameter.",
           answer:
             'Hand over a cypher code block, then a json code block listing every parameter, for example [{"name": "supplier_code", "type": "string", "description": "supplier code, such as S001", "example": "S001"}]; type is string, number, boolean or array, and example is the value you tried.',
           existing:
