@@ -16,7 +16,8 @@ import styles from "./KnVersions.module.css";
 /** Wraps the workspace so the version picker can sit beside the network's title. */
 export function KnVersionSlotProvider({ children }: PropsWithChildren) {
   const [host, setHost] = useState<HTMLSpanElement | null>(null);
-  const value = useMemo(() => ({ host, setHost }), [host]);
+  const [actionHost, setActionHost] = useState<HTMLSpanElement | null>(null);
+  const value = useMemo(() => ({ actionHost, host, setActionHost, setHost }), [actionHost, host]);
   return <KnVersionSlotContext.Provider value={value}>{children}</KnVersionSlotContext.Provider>;
 }
 
@@ -36,4 +37,22 @@ export function KnVersionSlotPortal({
     return <>{fallback}</>;
   }
   return createPortal(children, context.host);
+}
+
+/** Placed last among the actions on the right of the network's title. */
+export function KnVersionActionHost() {
+  const context = useContext(KnVersionSlotContext);
+  return <span className={styles.titleSlot} ref={context?.setActionHost} />;
+}
+
+/** Renders among the title's actions when they are on screen, otherwise `fallback`. */
+export function KnVersionActionPortal({
+  children,
+  fallback = null,
+}: PropsWithChildren<{ fallback?: ReactNode }>) {
+  const context = useContext(KnVersionSlotContext);
+  if (!context?.actionHost) {
+    return <>{fallback}</>;
+  }
+  return createPortal(children, context.actionHost);
 }

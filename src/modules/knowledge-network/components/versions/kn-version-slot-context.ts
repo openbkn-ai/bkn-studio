@@ -7,9 +7,14 @@
 
 import { createContext } from "react";
 
-/** Where the version picker goes when the section shows the network's own title (the overview). */
+/**
+ * Where the version picker goes when the section shows the network's own title (the overview),
+ * and where publishing goes among that title's actions.
+ */
 export type KnVersionSlotValue = {
+  actionHost: HTMLSpanElement | null;
   host: HTMLSpanElement | null;
+  setActionHost: (host: HTMLSpanElement | null) => void;
   setHost: (host: HTMLSpanElement | null) => void;
 };
 

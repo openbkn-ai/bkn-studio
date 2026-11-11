@@ -36,7 +36,10 @@ import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/pr
 import { WorkspaceGraphOverviewAction } from "@/modules/knowledge-network/scenes/workspace/WorkspaceGraphOverviewAction";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import { KnVersionSlotHost } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
+import {
+  KnVersionActionHost,
+  KnVersionSlotHost,
+} from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import type {
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
@@ -217,6 +220,7 @@ export function WorkspaceOverviewSection({
                   {t("common.edit")}
                 </AppButton>
               ) : null}
+              <KnVersionActionHost />
             </div>
           </div>
           <div className={styles.overviewHeaderComment}>

@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
-import { KnVersionSlotPortal } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
+import {
+  KnVersionActionPortal,
+  KnVersionSlotPortal,
+} from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { PublishVersionModal } from "@/modules/knowledge-network/components/versions/PublishVersionModal";
 import {
   useReadableKnVersions,
@@ -113,27 +116,35 @@ export function KnVersionBar({
     </>
   );
 
-  const picker = (
+  const select = (
+    <Select
+      aria-label={t("knowledgeNetwork.versions.viewing")}
+      className={styles.viewSelect}
+      labelRender={({ label, value }) => (value === "draft" ? draftLabel() : label)}
+      onChange={(value) => onViewChange(parseKnVersionView(value))}
+      onOpenChange={setPickerOpen}
+      open={pickerOpen}
+      options={options}
+      popupMatchSelectWidth={false}
+      popupRender={popupRender}
+      prefix={<BranchesOutlined />}
+      value={isDraft ? "draft" : viewValue}
+      variant="borderless"
+    />
+  );
+
+  const publish = canPublish ? (
+    <Button icon={<CloudUploadOutlined />} onClick={() => setPublishOpen(true)} type="primary">
+      {t("knowledgeNetwork.versions.publish.action")}
+    </Button>
+  ) : null;
+
+  // In the top bar, publishing follows the picker; on the overview it is the main action on the
+  // right of the title, with the network's other actions.
+  const trailPicker = (
     <span className={styles.picker}>
-      <Select
-        aria-label={t("knowledgeNetwork.versions.viewing")}
-        className={styles.viewSelect}
-        labelRender={({ label, value }) => (value === "draft" ? draftLabel() : label)}
-        onChange={(value) => onViewChange(parseKnVersionView(value))}
-        onOpenChange={setPickerOpen}
-        open={pickerOpen}
-        options={options}
-        popupMatchSelectWidth={false}
-        popupRender={popupRender}
-        prefix={<BranchesOutlined />}
-        value={isDraft ? "draft" : viewValue}
-        variant="borderless"
-      />
-      {canPublish ? (
-        <Button icon={<CloudUploadOutlined />} onClick={() => setPublishOpen(true)} type="primary">
-          {t("knowledgeNetwork.versions.publish.action")}
-        </Button>
-      ) : null}
+      {select}
+      {publish}
     </span>
   );
 
@@ -143,12 +154,15 @@ export function KnVersionBar({
     <>
       <KnVersionSlotPortal
         fallback={
-          <ShellTrailPortal fallback={<div className={styles.bar}>{picker}</div>}>
-            {picker}
+          <ShellTrailPortal fallback={<div className={styles.bar}>{trailPicker}</div>}>
+            {trailPicker}
           </ShellTrailPortal>
         }
       >
-        {picker}
+        <span className={styles.picker}>
+          {select}
+          <KnVersionActionPortal fallback={publish}>{publish}</KnVersionActionPortal>
+        </span>
       </KnVersionSlotPortal>
       {outdated ? (
         <div className={styles.notice}>

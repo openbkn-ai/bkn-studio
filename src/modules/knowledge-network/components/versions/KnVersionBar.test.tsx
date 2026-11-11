@@ -37,6 +37,7 @@ vi.mock("@/modules/knowledge-network/components/versions/KnDiffModal", () => ({
 
 import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
 import {
+  KnVersionActionHost,
   KnVersionSlotHost,
   KnVersionSlotProvider,
 } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
@@ -138,5 +139,33 @@ describe("KnVersionBar", () => {
       </KnVersionSlotProvider>,
     );
     expect(screen.getByTestId("title").textContent).toContain("v2");
+  });
+
+  it("puts publishing on the right with the title's actions, and the picker by the title", () => {
+    render(
+      <KnVersionSlotProvider>
+        <h2 data-testid="title">
+          name
+          <KnVersionSlotHost />
+        </h2>
+        <div data-testid="actions">
+          <KnVersionActionHost />
+        </div>
+        <KnVersionBar
+          canModify
+          networkId="kn-1"
+          onChanged={vi.fn()}
+          onViewChange={vi.fn()}
+          versioning={versioning(2, true)}
+          view="draft"
+        />
+      </KnVersionSlotProvider>,
+    );
+    expect(screen.getByTestId("actions").textContent).toContain(
+      "knowledgeNetwork.versions.publish.action",
+    );
+    expect(screen.getByTestId("title").textContent).not.toContain(
+      "knowledgeNetwork.versions.publish.action",
+    );
   });
 });
