@@ -1874,6 +1874,7 @@ export function FunctionWorkbenchScene({
                         onChange={handleCypherCodeChange}
                         onHistory={() => undefined}
                         onRun={() => void handleRun()}
+                        readOnly={!canEditFunction}
                         schema={cypher.schema}
                         value={active.code}
                       />
