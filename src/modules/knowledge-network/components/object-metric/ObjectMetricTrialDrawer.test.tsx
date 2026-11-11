@@ -1284,7 +1284,7 @@ describe("ObjectMetricTrialDrawer", () => {
     );
 
     expect(
-      screen.getByRole("dialog", { name: "试算 · 订单支付额 已发布 · v5" }),
+      screen.getByRole("dialog", { name: /^试算 · 订单支付额\s*已发布 · v5$/ }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "试算" }));
     expect(await screen.findByText("无数据")).toBeInTheDocument();
