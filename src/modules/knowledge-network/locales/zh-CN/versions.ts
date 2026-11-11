@@ -53,10 +53,6 @@ export const versionsPart = {
     communityNote: "社区版只保留运行版本与上一版。废止、恢复与清理需要专业版。",
     metricSaveAndValidate: "保存并校验",
     metricValidated: "指标已保存并校验，随知识网络发布后生效。",
-    create: {
-      versioning: "开启版本管理",
-      versioningHint: "修改会写入草稿，发布版本后才生效。",
-    },
     status: {
       running: "运行中",
       history: "历史",

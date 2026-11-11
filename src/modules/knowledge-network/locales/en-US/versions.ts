@@ -56,10 +56,6 @@ export const versionsPart = {
     metricSaveAndValidate: "Save and validate",
     metricValidated:
       "The metric is saved and validated. It goes live when the knowledge network is published.",
-    create: {
-      versioning: "Enable versioning",
-      versioningHint: "Edits go to a draft and take effect only after you publish a version.",
-    },
     status: {
       running: "Running",
       history: "History",
