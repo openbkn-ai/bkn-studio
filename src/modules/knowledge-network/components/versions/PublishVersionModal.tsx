@@ -232,7 +232,7 @@ export function PublishVersionModal({
       onOk={() => void submit()}
       open={open}
       title={t("knowledgeNetwork.versions.publish.title")}
-      width={680}
+      width={1040}
     >
       <div className={styles.diff}>
         {conflict ? (
@@ -290,7 +290,11 @@ export function PublishVersionModal({
                 version: knVersionName(base),
               })}
             </Typography.Text>
-            <KnDiffSummary result={againstBase} />
+            <KnDiffSummary
+              baseLabel={knVersionName(base)}
+              result={againstBase}
+              targetLabel={t("knowledgeNetwork.versions.draft")}
+            />
           </>
         ) : null}
         {running > 0 ? (
@@ -300,7 +304,13 @@ export function PublishVersionModal({
                 version: knVersionName(running),
               })}
             </Typography.Text>
-            <KnDiffSummary error={diffError} loading={diffLoading} result={againstRunning} />
+            <KnDiffSummary
+              baseLabel={knVersionName(running)}
+              error={diffError}
+              loading={diffLoading}
+              result={againstRunning}
+              targetLabel={t("knowledgeNetwork.versions.draft")}
+            />
           </>
         ) : (
           <Alert

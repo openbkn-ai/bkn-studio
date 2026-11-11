@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
@@ -40,9 +40,6 @@ vi.mock("@/modules/knowledge-network/components/versions/PublishVersionModal", (
 vi.mock("@/modules/knowledge-network/components/versions/KnDiffModal", () => ({
   KnDiffModal: () => null,
 }));
-vi.mock("@/modules/knowledge-network/components/versions/EnableVersioningModal", () => ({
-  EnableVersioningModal: () => null,
-}));
 
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
 
@@ -54,7 +51,12 @@ const versioned = (fullHistory: boolean): KnVersioning => ({
   running_version: 3,
 });
 
-function renderPanel(props: { fullHistory?: boolean; canModify?: boolean; unversioned?: boolean }) {
+function renderPanel(props: {
+  fullHistory?: boolean;
+  canModify?: boolean;
+  unversioned?: boolean;
+  versioning?: KnVersioning;
+}) {
   return render(
     <KnVersionsPanel
       canDelete
@@ -63,9 +65,10 @@ function renderPanel(props: { fullHistory?: boolean; canModify?: boolean; unvers
       onChanged={vi.fn()}
       onViewChange={vi.fn()}
       versioning={
-        props.unversioned
+        props.versioning ??
+        (props.unversioned
           ? { enabled: false, full_history: true, previous_version: 0, running_version: 0 }
-          : versioned(props.fullHistory ?? true)
+          : versioned(props.fullHistory ?? true))
       }
     />,
   );
@@ -102,21 +105,53 @@ describe("KnVersionsPanel", () => {
     vi.clearAllMocks();
   });
 
-  it("offers to enable versioning on a network without it", () => {
-    renderPanel({ unversioned: true });
-
+  it("keeps discarding the draft and rolling back in the danger zone", () => {
+    renderPanel({});
+    const zone = screen.getByRole("region", { name: "knowledgeNetwork.versions.danger.title" });
     expect(
-      screen.getByRole("button", { name: "knowledgeNetwork.versions.enable.action" }),
-    ).toBeEnabled();
-    expect(listVersions).not.toHaveBeenCalled();
+      within(zone).getByRole("button", { name: "knowledgeNetwork.versions.discard" }),
+    ).toBeTruthy();
+    expect(
+      within(zone).getByRole("button", { name: "knowledgeNetwork.versions.danger.rollbackAction" }),
+    ).toBeTruthy();
+    // The daily actions stay where they were, without the destructive ones.
+    expect(
+      screen.getAllByRole("button", { name: "knowledgeNetwork.versions.discard" }),
+    ).toHaveLength(1);
   });
 
-  it("does not let a reader enable versioning", () => {
-    renderPanel({ canModify: false, unversioned: true });
+  it("names the running version the draft goes back to, and none before the first publish", () => {
+    renderPanel({});
+    expect(screen.getByText("knowledgeNetwork.versions.danger.discardBody")).toBeInTheDocument();
+    cleanup();
 
+    renderPanel({
+      versioning: {
+        draft: { base_version: 0, has_changes: true, outdated: false, revision: 2 },
+        enabled: true,
+        full_history: true,
+        previous_version: 0,
+        running_version: 0,
+      },
+    });
     expect(
-      screen.getByRole("button", { name: "knowledgeNetwork.versions.enable.action" }),
-    ).toBeDisabled();
+      screen.getByText("knowledgeNetwork.versions.danger.discardBodyEmpty"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no danger zone to a reader", () => {
+    renderPanel({ canModify: false });
+    expect(
+      screen.queryByRole("region", { name: "knowledgeNetwork.versions.danger.title" }),
+    ).toBeNull();
+  });
+
+  it("explains a network without versions instead of offering to turn them on", () => {
+    renderPanel({ unversioned: true });
+
+    expect(screen.getByText("knowledgeNetwork.versions.notStarted")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(listVersions).not.toHaveBeenCalled();
   });
 
   it("shows deprecate and purge for a history version in the Professional edition", async () => {

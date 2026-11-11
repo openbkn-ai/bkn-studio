@@ -20,12 +20,13 @@ import {
 } from "@ant-design/icons";
 import { Badge, Modal } from "antd";
 import type { MenuProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import { UserPill } from "@/app/shell/UserPill";
+import { ShellTrailSlotContext } from "@/app/shell/workspace-slots-context";
 import { useResolvedTheme, useToggleTheme } from "@/app/theme/theme-context";
 import openBknLogo from "@/assets/brand/openbkn-logo-compact.webp";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
@@ -49,6 +50,7 @@ import {
 
 export function TopBar() {
   const { t } = useTranslation();
+  const trailSlot = useContext(ShellTrailSlotContext);
   const location = useLocation();
   const matches = useMatches();
   const navigate = useNavigate();
@@ -367,6 +369,7 @@ export function TopBar() {
               ))}
             </div>
           ) : null}
+          <span className="console-brand-trail-slot" ref={trailSlot?.setTrailHost} />
         </div>
       </div>
 

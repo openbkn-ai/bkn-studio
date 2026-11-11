@@ -12,3 +12,11 @@ export type WorkspaceSlotsValue = {
 };
 
 export const WorkspaceSlotsContext = createContext<WorkspaceSlotsValue | null>(null);
+
+/** Where a page may add a small control right after the top bar's trail, such as a version picker. */
+export type ShellTrailSlotValue = {
+  setTrailHost: (host: HTMLSpanElement | null) => void;
+  trailHost: HTMLSpanElement | null;
+};
+
+export const ShellTrailSlotContext = createContext<ShellTrailSlotValue | null>(null);

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { SideNav } from "@/app/shell/SideNav";
 import { TopBar } from "@/app/shell/TopBar";
 import { WorkspaceLayout } from "@/app/shell/WorkspaceLayout";
+import { ShellTrailSlotProvider } from "@/app/shell/workspace-slots";
 import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 
 const SIDENAV_COLLAPSED_STORAGE_KEY = "bkn-studio:sidenav-collapsed";
@@ -29,22 +30,24 @@ export function AppShell() {
   }, [sidenavCollapsed]);
 
   return (
-    <div className="console-shell">
-      <TopBar />
-      <LicenseStateBanner />
-      <div className={sidenavCollapsed ? "console-body is-sidenav-collapsed" : "console-body"}>
-        <SideNav
-          collapsed={sidenavCollapsed}
-          onToggleCollapsed={() => {
-            setSidenavCollapsed((current) => !current);
-          }}
-        />
-        <main className="console-main">
-          <WorkspaceLayout>
-            <Outlet />
-          </WorkspaceLayout>
-        </main>
+    <ShellTrailSlotProvider>
+      <div className="console-shell">
+        <TopBar />
+        <LicenseStateBanner />
+        <div className={sidenavCollapsed ? "console-body is-sidenav-collapsed" : "console-body"}>
+          <SideNav
+            collapsed={sidenavCollapsed}
+            onToggleCollapsed={() => {
+              setSidenavCollapsed((current) => !current);
+            }}
+          />
+          <main className="console-main">
+            <WorkspaceLayout>
+              <Outlet />
+            </WorkspaceLayout>
+          </main>
+        </div>
       </div>
-    </div>
+    </ShellTrailSlotProvider>
   );
 }

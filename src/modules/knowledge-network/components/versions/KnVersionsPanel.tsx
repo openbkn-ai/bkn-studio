@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Card, Space, Table, Tabs, Tag, Typography } from "antd";
+import { Alert, Button, Card, Space, Table, Tabs, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,8 +13,11 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { EnableVersioningModal } from "@/modules/knowledge-network/components/versions/EnableVersioningModal";
 import { KnDiffModal } from "@/modules/knowledge-network/components/versions/KnDiffModal";
+import {
+  KnStatusText,
+  type KnStatusTone,
+} from "@/modules/knowledge-network/components/versions/KnStatusText";
 import { PublishVersionModal } from "@/modules/knowledge-network/components/versions/PublishVersionModal";
 import {
   confirmActivate,
@@ -49,10 +52,10 @@ type KnVersionsPanelProps = {
   versioning?: KnVersioning;
 };
 
-const STATUS_COLOR: Record<KnVersionStatus, string> = {
-  deprecated: "default",
-  history: "blue",
-  purged: "default",
+const STATUS_TONE: Record<KnVersionStatus, KnStatusTone> = {
+  deprecated: "neutral",
+  history: "info",
+  purged: "neutral",
   running: "success",
 };
 
@@ -73,7 +76,6 @@ export function KnVersionsPanel({
   const [events, setEvents] = useState<KnVersionEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [enableOpen, setEnableOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [diff, setDiff] = useState<{ base: KnVersionView; target: KnVersionView } | null>(null);
   const enabled = Boolean(versioning?.enabled);
@@ -109,24 +111,10 @@ export function KnVersionsPanel({
     return (
       <div className={styles.page}>
         <Card title={t("knowledgeNetwork.versions.title")}>
-          <Typography.Paragraph>{t("knowledgeNetwork.versions.enable.intro")}</Typography.Paragraph>
           <Typography.Paragraph type="secondary">
-            {t("knowledgeNetwork.versions.enable.warning")}
+            {t("knowledgeNetwork.versions.notStarted")}
           </Typography.Paragraph>
-          <Button disabled={!canModify} onClick={() => setEnableOpen(true)} type="primary">
-            {t("knowledgeNetwork.versions.enable.action")}
-          </Button>
         </Card>
-        <EnableVersioningModal
-          networkId={networkId}
-          onClose={() => setEnableOpen(false)}
-          onEnabled={() => {
-            setEnableOpen(false);
-            message.success(t("common.success"));
-            onChanged();
-          }}
-          open={enableOpen}
-        />
       </div>
     );
   }
@@ -154,7 +142,9 @@ export function KnVersionsPanel({
       dataIndex: "status",
       key: "status",
       render: (value: KnVersionStatus) => (
-        <Tag color={STATUS_COLOR[value]}>{t(`knowledgeNetwork.versions.status.${value}`)}</Tag>
+        <KnStatusText tone={STATUS_TONE[value]}>
+          {t(`knowledgeNetwork.versions.status.${value}`)}
+        </KnStatusText>
       ),
       title: t("knowledgeNetwork.versions.columns.status"),
       width: 110,
@@ -336,23 +326,28 @@ export function KnVersionsPanel({
           </div>
           <div>
             <div className={styles.summaryLabel}>{t("knowledgeNetwork.versions.draftStatus")}</div>
-            <Space size={4} wrap>
-              {running > 0 ? (
-                <Tag>
-                  {t("knowledgeNetwork.versions.basedOn", {
-                    version: knVersionName(draft?.base_version ?? 0),
-                  })}
-                </Tag>
-              ) : null}
-              {draft?.has_changes ? (
-                <Tag color="warning">{t("knowledgeNetwork.versions.hasChanges")}</Tag>
-              ) : (
-                <Tag color="success">{t("knowledgeNetwork.versions.noChanges")}</Tag>
-              )}
-              {draft?.outdated ? (
-                <Tag color="error">{t("knowledgeNetwork.versions.outdatedTag")}</Tag>
-              ) : null}
-            </Space>
+            <div className={styles.summaryValue}>
+              <span className={styles.draftStatus}>
+                {draft?.has_changes ? <span aria-hidden className={styles.changesDot} /> : null}
+                {[
+                  running > 0
+                    ? t("knowledgeNetwork.versions.basedOn", {
+                        version: knVersionName(draft?.base_version ?? 0),
+                      })
+                    : null,
+                  draft?.has_changes
+                    ? t("knowledgeNetwork.versions.hasChanges")
+                    : t("knowledgeNetwork.versions.noChanges"),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {draft?.outdated ? (
+                  <span className={styles.outdatedText}>
+                    {t("knowledgeNetwork.versions.outdatedTag")}
+                  </span>
+                ) : null}
+              </span>
+            </div>
           </div>
         </div>
         {!professional ? (
@@ -389,16 +384,6 @@ export function KnVersionsPanel({
               onClick={() => setDiff({ base: "running", target: canModify ? "draft" : "running" })}
             >
               {t("knowledgeNetwork.versions.diff.title")}
-            </Button>
-          ) : null}
-          {canModify && draft?.has_changes ? (
-            <Button danger onClick={() => confirmResetDraft(actionContext)}>
-              {t("knowledgeNetwork.versions.discard")}
-            </Button>
-          ) : null}
-          {canModify && previous > 0 && running > 0 ? (
-            <Button onClick={() => confirmActivate(actionContext, previous, true)}>
-              {t("knowledgeNetwork.versions.rollback")}
             </Button>
           ) : null}
         </Space>
@@ -440,6 +425,68 @@ export function KnVersionsPanel({
           ]}
         />
       </Card>
+      {canModify ? (
+        // Operations that throw work away or change what readers see, apart from the daily ones.
+        <section aria-labelledby="kn-version-danger" className={styles.dangerZone}>
+          <div className={styles.dangerHeader}>
+            <span className={styles.dangerTitle} id="kn-version-danger">
+              {t("knowledgeNetwork.versions.danger.title")}
+            </span>
+          </div>
+          <div>
+            <div className={styles.dangerRow}>
+              <div>
+                <div className={styles.dangerRowTitle}>
+                  {t("knowledgeNetwork.versions.danger.discardTitle")}
+                </div>
+                <div className={styles.dangerRowBody}>
+                  {!draft?.has_changes
+                    ? t("knowledgeNetwork.versions.danger.discardNone")
+                    : running > 0
+                      ? t("knowledgeNetwork.versions.danger.discardBody", {
+                          version: knVersionName(running),
+                        })
+                      : // Nothing is running before the first publish: discarding empties the draft.
+                        t("knowledgeNetwork.versions.danger.discardBodyEmpty")}
+                </div>
+              </div>
+              <Button
+                danger
+                disabled={!draft?.has_changes}
+                onClick={() => confirmResetDraft(actionContext)}
+              >
+                {t("knowledgeNetwork.versions.discard")}
+              </Button>
+            </div>
+            <div className={styles.dangerRow}>
+              <div>
+                <div className={styles.dangerRowTitle}>
+                  {t("knowledgeNetwork.versions.danger.rollbackTitle")}
+                </div>
+                <div className={styles.dangerRowBody}>
+                  {previous > 0 && running > 0
+                    ? t("knowledgeNetwork.versions.danger.rollbackBody", {
+                        previous: knVersionName(previous),
+                        running: knVersionName(running),
+                      })
+                    : t("knowledgeNetwork.versions.danger.rollbackNone")}
+                </div>
+              </div>
+              <Button
+                danger
+                disabled={!(previous > 0 && running > 0)}
+                onClick={() => confirmActivate(actionContext, previous, true)}
+              >
+                {previous > 0
+                  ? t("knowledgeNetwork.versions.danger.rollbackAction", {
+                      version: knVersionName(previous),
+                    })
+                  : t("knowledgeNetwork.versions.rollback")}
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : null}
       <PublishVersionModal
         hasCapabilities={hasCapabilities}
         networkId={networkId}

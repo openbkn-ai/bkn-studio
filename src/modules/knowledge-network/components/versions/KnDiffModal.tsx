@@ -15,7 +15,10 @@ import {
   useReadableKnVersions,
   versionOptionLabel,
 } from "@/modules/knowledge-network/components/versions/useReadableKnVersions";
-import { parseKnVersionView } from "@/modules/knowledge-network/lib/kn-version-format";
+import {
+  knVersionName,
+  parseKnVersionView,
+} from "@/modules/knowledge-network/lib/kn-version-format";
 import { diffKnVersions } from "@/modules/knowledge-network/services/kn-version.service";
 import type {
   KnDiffResult,
@@ -24,7 +27,7 @@ import type {
 } from "@/modules/knowledge-network/types/kn-version";
 
 type KnDiffModalProps = {
-  /** What to show on the left when the dialog opens. */
+  /** The pair to compare when the dialog opens; the older one ends up on the left. */
   initialBase?: KnVersionView;
   initialTarget?: KnVersionView;
   networkId: string;
@@ -73,7 +76,25 @@ export function KnDiffModal({
   const asValue = (view: KnVersionView) =>
     view === "running" ? String(versioning.running_version) : String(view);
 
-  const compare = (from: KnVersionView = base, to: KnVersionView = target) => {
+  const viewName = (view: KnVersionView) =>
+    view === "draft"
+      ? t("knowledgeNetwork.versions.draft")
+      : knVersionName(view === "running" ? versioning.running_version : view);
+
+  // Older first: the draft is newer than every version, and numbers grow with time.
+  const age = (view: KnVersionView) =>
+    view === "draft"
+      ? Number.POSITIVE_INFINITY
+      : view === "running"
+        ? versioning.running_version
+        : view;
+
+  // A comparison always reads from the older side to the newer one, so "added" means
+  // what the newer side has; a pair picked the other way round is turned around.
+  const compare = (picked: KnVersionView = base, other: KnVersionView = target) => {
+    const [from, to] = age(picked) > age(other) ? [other, picked] : [picked, other];
+    setBase(from);
+    setTarget(to);
     const request = ++latest.current;
     setLoading(true);
     setError(null);
@@ -102,10 +123,11 @@ export function KnDiffModal({
     if (!open) {
       return;
     }
-    setBase(initialBase);
-    setTarget(initialTarget);
     if (versioning.running_version > 0) {
       compare(initialBase, initialTarget);
+    } else {
+      setBase(initialBase);
+      setTarget(initialTarget);
     }
     // The selectors run it again on demand.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,7 +139,7 @@ export function KnDiffModal({
       onCancel={onClose}
       open={open}
       title={t("knowledgeNetwork.versions.diff.title")}
-      width={720}
+      width={1040}
     >
       <Space style={{ marginBottom: 12 }} wrap>
         <Select
@@ -146,7 +168,13 @@ export function KnDiffModal({
           type="info"
         />
       ) : (
-        <KnDiffSummary error={error} loading={loading} result={result} />
+        <KnDiffSummary
+          baseLabel={viewName(base)}
+          error={error}
+          loading={loading}
+          result={result}
+          targetLabel={viewName(target)}
+        />
       )}
     </Modal>
   );
