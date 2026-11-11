@@ -224,7 +224,115 @@ const querySourceDemoViews = [
   }),
 );
 
+const filterDemoSchema: ResourceSchemaField[] = [
+  { name: "id", displayName: "订单ID", type: "integer" },
+  { name: "order_code", displayName: "订单编号", type: "string" },
+  { name: "status", displayName: "订单状态", type: "integer" },
+  { name: "begin_time", displayName: "开始时间", type: "datetime" },
+  { name: "end_time", displayName: "结束时间", type: "datetime" },
+].map((field) => ({
+  ...field,
+  originalName: field.name,
+  originalType: field.type,
+  description: field.displayName,
+  originalDescription: field.displayName,
+}));
+
+const filterDemoCondition = {
+  operation: "and",
+  sub_conditions: [
+    { field: "status", operation: "not_null" },
+    { field: "status", operation: "!=", value_from: "const", value: -1 },
+    {
+      operation: "or",
+      sub_conditions: [
+        { field: "begin_time", operation: "null" },
+        { field: "end_time", operation: "null" },
+        { field: "begin_time", operation: "<=", value_from: "field", value: "end_time" },
+      ],
+    },
+  ],
+};
+
+const filterDemoResources = [
+  makeResource({
+    id: "res-filter-orders",
+    catalogId: "cat-001",
+    name: "filter_demo_orders",
+    category: "table",
+    sourceIdentifier: "crm_core.filter_demo_orders",
+    description: "过滤条件演示源表，含订单状态与开始、结束时间。",
+    schema: filterDemoSchema,
+    tags: ["demo", "filter"],
+    status: "active",
+    rowCount: 9,
+    expectedUpdateTime: minutesAgo(1),
+  }),
+  ...[
+    {
+      id: "res-filter-compatible-view",
+      name: "filter_compatible_view",
+      description: "兼容条件示例：空值判断、时间字段比较与嵌套 AND/OR 均可展示和编辑。",
+      filterCondition: filterDemoCondition,
+    },
+    {
+      id: "res-filter-incompatible-view",
+      name: "filter_incompatible_nodes",
+      description:
+        "局部不兼容示例：嵌套组保留正常条件，旧式空字符串条件与高级操作显示 JSON，需手动删除后保存。预览在条件修正前会报不支持。",
+      filterCondition: {
+        operation: "and",
+        sub_conditions: [
+          ...filterDemoCondition.sub_conditions,
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "status", operation: ">=", value: 0 },
+              { field: "order_code", operation: "empty" },
+              {
+                field: "order_code",
+                operation: "multi_match",
+                value: "ORD",
+                fields: ["order_code"],
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: "res-filter-incompatible-root-view",
+      name: "filter_incompatible_group",
+      description:
+        "整组不兼容示例：额外参数使根组无法编辑，完整 JSON 可查看，必须手动删除该组后才能保存。",
+      filterCondition: { ...filterDemoCondition, extra_parameter: "mock-incompatible-group" },
+    },
+  ].map(({ id, name, description, filterCondition }) =>
+    makeResource({
+      id,
+      catalogId: "cat-001",
+      name,
+      description,
+      category: "logical_view",
+      logicalType: "derived",
+      sourceIdentifier: id,
+      sourceMetadata: {
+        sourceCategory: "table",
+        objectType: "table",
+        originalName: "crm_core.filter_demo_orders",
+      },
+      logicalViewDefinition: { sourceResourceId: "res-filter-orders", filterCondition },
+      schema: filterDemoSchema.map((field) => ({ ...field })),
+      tags: ["demo", "filter"],
+      status: "active",
+      rowCount: 9,
+      expectedUpdateTime: minutesAgo(1),
+    }),
+  ),
+];
+
 export const mockResources: CatalogResource[] = [
+  ...filterDemoResources,
   makeResource({
     id: "res-customers",
     catalogId: "cat-001",

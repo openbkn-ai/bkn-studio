@@ -55,6 +55,52 @@
   margin-top: 2px;
 }
 
+.unsupportedNode {
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-error-border);
+  background: var(--color-error-bg);
+}
+
+.unsupportedHeader,
+.unsupportedReason,
+.unsupportedActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unsupportedHeader {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.unsupportedReason {
+  min-width: 0;
+  flex: 1;
+  color: var(--color-error-text);
+  font-size: 12px;
+}
+
+.unsupportedReason > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unsupportedActions {
+  flex-shrink: 0;
+  margin-left: auto;
+  gap: 4px;
+}
+
+.unsupportedNode .unsupportedJSON {
+  resize: none;
+  font-family: monospace;
+  font-size: 12px;
+}
+
 .readOnlyLogic {
   padding: 4px 8px;
   background: var(--color-fill-secondary);

@@ -13,6 +13,8 @@ import { fixedFilterSourceBlockReason } from "@/modules/data-catalog/lib/view-qu
 import {
   filterValidationError,
   parseFilterCondition,
+  parseFilterTree,
+  hasUnsupportedFilterNodes,
 } from "@/modules/data-catalog/lib/filter-tree";
 
 import {
@@ -38,6 +40,37 @@ describe("data catalog discover-status mocks", () => {
     }
   });
 
+  it("provides compatible, partially incompatible and root-group filter demos with real source bindings", () => {
+    const source = mockResources.find((item) => item.id === "res-filter-orders")!;
+    for (const [id, incompatible] of [
+      ["res-filter-compatible-view", false],
+      ["res-filter-incompatible-view", true],
+      ["res-filter-incompatible-root-view", true],
+    ] as const) {
+      const view = mockResources.find((item) => item.id === id)!;
+      expect(view.logicalViewDefinition?.sourceResourceId).toBe(source.id);
+      expect(view.schema.map((field) => [field.originalName, field.type])).toEqual(
+        source.schema.map((field) => [field.originalName, field.type]),
+      );
+      const tree = parseFilterTree(view.logicalViewDefinition?.filterCondition);
+      expect(hasUnsupportedFilterNodes(tree)).toBe(incompatible);
+      expect(filterValidationError(tree, source.schema)).toBe(
+        incompatible ? "unsupportedCondition" : null,
+      );
+      if (id === "res-filter-incompatible-view") {
+        expect(tree.children[0]).toMatchObject({ kind: "rule", operation: "not_null" });
+        expect(tree.children[3]).toMatchObject({
+          kind: "group",
+          operation: "or",
+          children: [
+            { kind: "rule" },
+            { kind: "unsupported", reason: "legacyCondition" },
+            { kind: "unsupported", reason: "unsupportedOperation" },
+          ],
+        });
+      }
+    }
+  });
   it("grants delete on ordinary resource categories and keeps restricted examples read-only", () => {
     const restrictedIds = new Set([
       "res-permission-limited-orders",

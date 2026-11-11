@@ -1107,7 +1107,7 @@ describe("ViewEditorScene", () => {
       })),
     ),
   ])(
-    "preserves an existing $filterCondition.operation definition with indexed=$indexed while editing metadata",
+    "requires explicit removal of $filterCondition.operation with indexed=$indexed before saving metadata",
     async ({ filterCondition, indexed }) => {
       const indexedSource: CatalogResource = {
         ...source,
@@ -1136,18 +1136,26 @@ describe("ViewEditorScene", () => {
       await screen.findByDisplayValue("orders_view");
       expect(screen.getByText("dataCatalog.viewEditor.unsupportedFilter")).toBeTruthy();
       expect(
-        screen.getByRole("textbox", { name: "dataCatalog.viewEditor.fixedFilter" }),
+        screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" }),
       ).toHaveValue(JSON.stringify(filterCondition, null, 2));
       fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
         target: { value: "Order Number" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      const save = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+      expect(save).toBeDisabled();
+      fireEvent.click(save);
+      expect(updateViewMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+      expect(save).toBeEnabled();
+      expect(screen.getByText("dataCatalog.filter.noConditions")).toBeTruthy();
+      fireEvent.click(save);
       await waitFor(() =>
         expect(updateViewMock).toHaveBeenCalledWith(
           "view-1",
-          expect.objectContaining({ filterCondition }),
+          expect.objectContaining({ filterCondition: null }),
         ),
       );
+      expect(view.logicalViewDefinition?.filterCondition).toEqual(filterCondition);
     },
   );
 
@@ -1190,8 +1198,15 @@ describe("ViewEditorScene", () => {
     );
   });
 
-  it("preserves an unsupported existing filter while editing display names", async () => {
-    const filter = { field: "id", operation: "knn_vector", value: [1, 2] };
+  it("requires explicit removal of a nested unsupported node and keeps supported siblings", async () => {
+    const incompatible = { field: "id", operation: "knn_vector", value: [1, 2] };
+    const filter = {
+      operation: "and",
+      sub_conditions: [
+        { field: "id", operation: ">=", value: 1 },
+        { operation: "or", sub_conditions: [incompatible, { field: "id", operation: "null" }] },
+      ],
+    };
     const view = {
       ...source,
       id: "view-1",
@@ -1210,15 +1225,94 @@ describe("ViewEditorScene", () => {
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
       target: { value: "Order Number" },
     });
+    const save = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(updateViewMock).not.toHaveBeenCalled();
+    const json = screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" });
+    expect(json).toHaveValue(JSON.stringify(incompatible, null, 2));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              { field: "id", operation: ">=", value_from: "const", value: 1 },
+              { operation: "or", sub_conditions: [{ field: "id", operation: "null" }] },
+            ],
+          },
+        }),
+      ),
+    );
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
+  });
+
+  it("requires explicit removal of an emptied nested group after deleting its incompatible child", async () => {
+    const filter = {
+      operation: "and",
+      sub_conditions: [
+        { field: "id", operation: ">=", value: 1 },
+        { operation: "or", sub_conditions: [{ field: "id", operation: "custom", value: 2 }] },
+      ],
+    };
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(screen.getByText("dataCatalog.filter.errors.emptyGroup")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(updateViewMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeGroup" }));
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
     await waitFor(() =>
       expect(updateViewMock).toHaveBeenCalledWith(
         "view-1",
         expect.objectContaining({
-          filterCondition: filter,
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [{ field: "id", operation: ">=", value_from: "const", value: 1 }],
+          },
         }),
       ),
     );
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
+  });
+
+  it("does not persist incompatible-node deletion when editing is cancelled", async () => {
+    const filter = { field: "id", operation: "custom", value: 2 };
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.cancel" }));
+    expect(updateViewMock).not.toHaveBeenCalled();
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
   });
 
   it.each(["source", "local_index"] as const)(
@@ -1358,7 +1452,7 @@ describe("ViewEditorScene", () => {
     );
   });
 
-  it("keeps an unsupported filter blocked after its source schema changes", async () => {
+  it("still validates the latest source schema after an incompatible filter is explicitly deleted", async () => {
     const view = {
       ...source,
       id: "view-1",
@@ -1381,6 +1475,11 @@ describe("ViewEditorScene", () => {
     await screen.findByDisplayValue("orders_view");
 
     const saveButton = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    expect(saveButton).toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(sourceReads).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
     expect(await screen.findByText("dataCatalog.viewEditor.sourceSchemaChanged")).toBeTruthy();
     fireEvent.click(saveButton);
