@@ -5,9 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { BranchesOutlined, EllipsisOutlined } from "@ant-design/icons";
-import { Alert, Button, Dropdown, Select } from "antd";
-import type { MenuProps } from "antd";
+import { BranchesOutlined } from "@ant-design/icons";
+import { Alert, Button, Select } from "antd";
+import type { ReactElement } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -61,6 +61,7 @@ export function KnVersionBar({
   const { message, modal } = useAppServices();
   const [publishOpen, setPublishOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const versions = useReadableKnVersions(networkId, versioning.running_version);
   const draft = versioning.draft;
   const base = draft?.base_version ?? 0;
@@ -106,25 +107,56 @@ export function KnVersionBar({
     versioning,
   };
 
-  const menuItems: MenuProps["items"] = [
+  // What used to sit in a separate menu goes under the version list, as GitHub does for branches.
+  const actions = [
     ...(canModify && isDraft && running > 0 && hasChanges
-      ? [{ key: "diff", label: t("knowledgeNetwork.versions.viewChanges") }]
+      ? [
+          {
+            key: "diff",
+            label: t("knowledgeNetwork.versions.viewChanges"),
+            run: () => setDiffOpen(true),
+          },
+        ]
       : []),
     ...(canModify && isDraft && hasChanges
-      ? [{ danger: true, key: "discard", label: t("knowledgeNetwork.versions.discard") }]
+      ? [
+          {
+            danger: true,
+            key: "discard",
+            label: t("knowledgeNetwork.versions.discard"),
+            run: () => confirmResetDraft(actionContext),
+          },
+        ]
       : []),
-    { key: "history", label: t("knowledgeNetwork.versions.history") },
+    {
+      key: "history",
+      label: t("knowledgeNetwork.versions.history"),
+      run: () => void navigate(`/knowledge-network/workspace/${networkId}/versions`),
+    },
   ];
 
-  const onMenu: MenuProps["onClick"] = ({ key }) => {
-    if (key === "diff") {
-      setDiffOpen(true);
-    } else if (key === "discard") {
-      confirmResetDraft(actionContext);
-    } else {
-      void navigate(`/knowledge-network/workspace/${networkId}/versions`);
-    }
-  };
+  const popupRender = (menu: ReactElement) => (
+    <>
+      {menu}
+      <div className={styles.pickerActions}>
+        {actions.map((action) => (
+          <Button
+            block
+            danger={action.danger}
+            key={action.key}
+            onClick={() => {
+              setPickerOpen(false);
+              action.run();
+            }}
+            size="small"
+            type="text"
+          >
+            {action.label}
+          </Button>
+        ))}
+      </div>
+    </>
+  );
 
   const picker = (
     <span className={styles.picker}>
@@ -133,31 +165,24 @@ export function KnVersionBar({
         className={styles.viewSelect}
         labelRender={({ label, value }) => (value === "draft" ? draftLabel() : label)}
         onChange={(value) => onViewChange(parseKnVersionView(value))}
+        onOpenChange={setPickerOpen}
+        open={pickerOpen}
         options={options}
         popupMatchSelectWidth={false}
+        popupRender={popupRender}
         prefix={<BranchesOutlined />}
-        size="small"
         value={isDraft ? "draft" : viewValue}
-        variant="filled"
+        variant="borderless"
       />
       {canPublish ? (
         <Button onClick={() => setPublishOpen(true)} size="small" type="link">
           {t("knowledgeNetwork.versions.publish.action")}
         </Button>
       ) : null}
-      <Dropdown menu={{ items: menuItems, onClick: onMenu }} trigger={["click"]}>
-        <Button
-          aria-label={t("knowledgeNetwork.versions.more")}
-          icon={<EllipsisOutlined />}
-          size="small"
-          type="text"
-        />
-      </Dropdown>
     </span>
   );
 
   const outdated = isDraft && draft?.outdated;
-  const viewedVersion = view === "running" || view === "draft" ? running : view;
 
   return (
     <>
@@ -170,29 +195,16 @@ export function KnVersionBar({
       >
         {picker}
       </KnVersionSlotPortal>
-      {outdated || !isDraft ? (
+      {outdated ? (
         <div className={styles.notice}>
-          {outdated ? (
-            <Alert
-              message={t("knowledgeNetwork.versions.outdated", {
-                base: knVersionName(base),
-                running: knVersionName(running),
-              })}
-              showIcon
-              type="warning"
-            />
-          ) : (
-            <span className={styles.readOnlyNote}>
-              {t("knowledgeNetwork.versions.readOnlyView", {
-                version: knVersionName(viewedVersion),
-              })}
-              {canModify ? (
-                <Button onClick={() => onViewChange("draft")} size="small" type="link">
-                  {t("knowledgeNetwork.versions.backToDraft")}
-                </Button>
-              ) : null}
-            </span>
-          )}
+          <Alert
+            message={t("knowledgeNetwork.versions.outdated", {
+              base: knVersionName(base),
+              running: knVersionName(running),
+            })}
+            showIcon
+            type="warning"
+          />
         </div>
       ) : null}
       <PublishVersionModal

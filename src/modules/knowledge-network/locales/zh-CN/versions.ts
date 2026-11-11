@@ -19,11 +19,8 @@ export const versionsPart = {
     outdated:
       "运行版本已切换为 {{running}}，草稿仍基于 {{base}}。发布草稿会把已回退的改动重新带回线上。",
     outdatedTag: "已落后",
-    readOnlyView: "你正在查看 {{version}}，该版本只读；修改会写入草稿。",
     writeBlocked: "当前版本只读。请切换到草稿后再修改。",
-    backToDraft: "回到草稿",
     history: "版本历史",
-    more: "更多版本操作",
     viewChanges: "查看差异",
     discard: "放弃修改",
     rollback: "回退到上一版",

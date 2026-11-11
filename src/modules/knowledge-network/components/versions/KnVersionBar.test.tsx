@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
@@ -106,6 +106,18 @@ describe("KnVersionBar", () => {
       screen.getByText("knowledgeNetwork.versions.draft · knowledgeNetwork.versions.notPublished"),
     ).toBeTruthy();
     expect(screen.getByText("knowledgeNetwork.versions.publish.action")).toBeTruthy();
+  });
+
+  it("keeps the version actions in the picker instead of a separate menu", () => {
+    renderBar(versioning(2, true));
+    expect(screen.queryByRole("button", { name: "knowledgeNetwork.versions.more" })).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.versions.history")).toBeNull();
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+
+    expect(screen.getByText("knowledgeNetwork.versions.history")).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.versions.viewChanges")).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.versions.discard")).toBeTruthy();
   });
 
   it("sits beside the network's title when the section shows one", () => {

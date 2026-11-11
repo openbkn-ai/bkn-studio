@@ -30,15 +30,6 @@
   border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
-.readOnlyNote {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  color: var(--ant-color-text-secondary);
-  font-size: 13px;
-}
-
 .draftStatus {
   display: inline-flex;
   flex-wrap: wrap;
@@ -173,4 +164,16 @@
 
 .titleSlot:empty {
   display: none;
+}
+
+.pickerActions {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ant-color-split);
+}
+
+.pickerActions :global(.ant-btn) {
+  justify-content: flex-start;
 }
