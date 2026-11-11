@@ -47,64 +47,81 @@ type DefinitionDeclarationFieldsProps = {
   searchReplacements: (keyword: string) => Promise<ReplacementOption[]>;
 };
 
-/**
- * The aliases and lifecycle in the basic info of a definition form, as
- * `aliases`, `lifecycleStatus`, `lifecycleReason` and `replacedBy` of the enclosing form.
- * The reason and replacement appear when the status is deprecated.
- */
-export function DefinitionDeclarationFields({
-  definitionId,
+/** The aliases field of a definition form, using `aliases` in the enclosing form. */
+export function DefinitionAliasField({
+  hintInTooltip = false,
   otherOwnNames = [],
   ownNameFields,
+}: Pick<DefinitionDeclarationFieldsProps, "otherOwnNames" | "ownNameFields"> & {
+  hintInTooltip?: boolean;
+}) {
+  const { t } = useTranslation();
+  const form = Form.useFormInstance();
+  const aliasesHint = t(`${PREFIX}.aliasesHint`, {
+    length: MAX_ALIAS_LENGTH,
+    max: MAX_PROPERTY_ALIASES,
+  });
+
+  return (
+    <Form.Item
+      dependencies={[...ownNameFields]}
+      extra={hintInTooltip ? undefined : aliasesHint}
+      label={t(`${PREFIX}.aliases`)}
+      name="aliases"
+      rules={[
+        {
+          validator: (_, value: string[] | undefined) => {
+            const ownNames = [
+              ...ownNameFields.map((field) => String(form.getFieldValue(field) ?? "")),
+              ...otherOwnNames,
+            ];
+            const problem = definitionAliasProblem(value, ownNames);
+            return problem
+              ? Promise.reject(
+                  new Error(t(`${PREFIX}.aliasProblem.${problem.key}`, problem.params)),
+                )
+              : Promise.resolve();
+          },
+        },
+      ]}
+      tooltip={hintInTooltip ? aliasesHint : undefined}
+    >
+      <Select
+        aria-label={t(`${PREFIX}.aliases`)}
+        mode="tags"
+        notFoundContent={null}
+        open={false}
+        placeholder={t(`${PREFIX}.aliasesPlaceholder`)}
+        suffixIcon={null}
+        tokenSeparators={[...ALIAS_SEPARATORS]}
+      />
+    </Form.Item>
+  );
+}
+
+/** The lifecycle fields, including the reason and replacement when deprecated. */
+export function DefinitionLifecycleFields({
+  definitionId,
+  hintInTooltip = false,
   resolveReplacement,
   searchReplacements,
-}: DefinitionDeclarationFieldsProps) {
+}: Pick<
+  DefinitionDeclarationFieldsProps,
+  "definitionId" | "resolveReplacement" | "searchReplacements"
+> & { hintInTooltip?: boolean }) {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
   const status = Form.useWatch<LifecycleStatus | undefined>("lifecycleStatus", form);
   const deprecated = status === "deprecated";
+  const lifecycleHint = t(`${PREFIX}.lifecycleHint`);
 
   return (
     <>
       <Form.Item
-        dependencies={[...ownNameFields]}
-        label={t(`${PREFIX}.aliases`)}
-        name="aliases"
-        tooltip={t(`${PREFIX}.aliasesHint`, {
-          length: MAX_ALIAS_LENGTH,
-          max: MAX_PROPERTY_ALIASES,
-        })}
-        rules={[
-          {
-            validator: (_, value: string[] | undefined) => {
-              const ownNames = [
-                ...ownNameFields.map((field) => String(form.getFieldValue(field) ?? "")),
-                ...otherOwnNames,
-              ];
-              const problem = definitionAliasProblem(value, ownNames);
-              return problem
-                ? Promise.reject(
-                    new Error(t(`${PREFIX}.aliasProblem.${problem.key}`, problem.params)),
-                  )
-                : Promise.resolve();
-            },
-          },
-        ]}
-      >
-        <Select
-          aria-label={t(`${PREFIX}.aliases`)}
-          mode="tags"
-          notFoundContent={null}
-          open={false}
-          placeholder={t(`${PREFIX}.aliasesPlaceholder`)}
-          suffixIcon={null}
-          tokenSeparators={[...ALIAS_SEPARATORS]}
-        />
-      </Form.Item>
-      <Form.Item
+        extra={hintInTooltip ? undefined : lifecycleHint}
         label={t(`${PREFIX}.lifecycle`)}
         name="lifecycleStatus"
-        tooltip={t(`${PREFIX}.lifecycleHint`)}
+        tooltip={hintInTooltip ? lifecycleHint : undefined}
       >
         <Radio.Group
           options={(["active", "deprecated"] as const).map((value) => ({
@@ -138,6 +155,23 @@ export function DefinitionDeclarationFields({
           </Form.Item>
         </>
       ) : null}
+    </>
+  );
+}
+
+/** Aliases and lifecycle fields in their usual order for definition forms. */
+export function DefinitionDeclarationFields(props: DefinitionDeclarationFieldsProps) {
+  return (
+    <>
+      <DefinitionAliasField
+        otherOwnNames={props.otherOwnNames}
+        ownNameFields={props.ownNameFields}
+      />
+      <DefinitionLifecycleFields
+        definitionId={props.definitionId}
+        resolveReplacement={props.resolveReplacement}
+        searchReplacements={props.searchReplacements}
+      />
     </>
   );
 }

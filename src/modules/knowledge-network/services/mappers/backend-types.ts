@@ -229,9 +229,12 @@ export type BackendRelationType = import("./declarations").BackendRelationDeclar
   };
 
 export type BackendActionType = import("./declarations").BackendDefinitionDeclarationFields & {
+  operation_config?: import("../../utils/action-type-operation").BackendActionOperationConfig;
   action_source?: {
     box_id?: string;
+    box_name?: string;
     mcp_id?: string;
+    mcp_name?: string;
     tool_id?: string;
     tool_name?: string;
     type?: "manual" | "mcp" | "tool";
@@ -249,7 +252,7 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
     operation?: string;
     sub_conditions?: BackendActionType["condition"][];
     value?: string | string[];
-    value_from?: "const";
+    value_from?: "const" | "property" | "input";
   };
   id: string;
   name: string;
@@ -261,8 +264,9 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
   object_type_id?: string;
   parameters?: Array<{
     name: string;
-    value?: string;
-    value_from?: "property" | "input" | "const";
+    type?: string;
+    value?: unknown;
+    value_from?: "property" | "input" | "const" | "source_identity" | "target_identity";
   }>;
   tags?: string[];
   update_time?: number;

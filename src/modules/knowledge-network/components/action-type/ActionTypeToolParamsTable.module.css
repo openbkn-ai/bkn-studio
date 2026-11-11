@@ -124,6 +124,11 @@
   width: 112px;
 }
 
+.identitySourceSelect {
+  flex: 0 0 170px;
+  width: 170px;
+}
+
 .valueFromSelect :global(.ant-select-selector) {
   border-radius: 6px !important;
 }

@@ -135,9 +135,11 @@ http.interceptors.response.use(
             return http(config);
           }
         } catch {
-          // A revoked refresh token ends the session below.
+          // A refresh failure alone does not establish that the session has expired.
         }
-        runtimeConfig.auth.tokenManager.onAuthFailure?.();
+        if (await isSessionRejected(config)) {
+          runtimeConfig.auth.tokenManager.onAuthFailure?.();
+        }
       } else if (config && (await isSessionRejected(config))) {
         runtimeConfig.auth.tokenManager.onAuthFailure?.();
       }

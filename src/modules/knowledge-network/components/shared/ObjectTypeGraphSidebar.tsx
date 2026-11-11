@@ -17,6 +17,7 @@ import listStyles from "./ResourceListPanel.module.css";
 import styles from "./ResourceGraphExplorer.module.css";
 
 type Props = {
+  beforeHeader?: ReactNode;
   emptyContent: ReactNode;
   items: KnowledgeNetworkObjectTypeRecord[];
   loading: boolean;
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export function ObjectTypeGraphSidebar({
+  beforeHeader,
   emptyContent,
   items,
   loading,
@@ -46,6 +48,7 @@ export function ObjectTypeGraphSidebar({
   const { t } = useTranslation();
   return (
     <aside className={styles.objectSidebar}>
+      {beforeHeader}
       <div className={styles.objectSidebarHeader}>
         <strong>{t("knowledgeNetwork.objectTypes")}</strong>
         <span>{totalCount}</span>

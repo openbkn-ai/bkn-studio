@@ -39,7 +39,10 @@ import {
   ResourceTagsSelect,
   validateKnowledgeNetworkTags,
 } from "@/modules/knowledge-network/components/shared/ResourceTagsSelect";
-import { DefinitionDeclarationFields } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
+import {
+  DefinitionAliasField,
+  DefinitionLifecycleFields,
+} from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
 import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import { useKnowledgeNetworkCanModify } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
@@ -624,6 +627,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             >
               <Input count={RESOURCE_NAME_COUNT} showCount />
             </Form.Item>
+            <DefinitionAliasField hintInTooltip ownNameFields={["name"]} />
             <Form.Item
               label="ID"
               name="id"
@@ -669,9 +673,9 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
               <Input.TextArea autoSize={{ minRows: 6, maxRows: 10 }} maxLength={1000} showCount />
             </Form.Item>
-            <DefinitionDeclarationFields
+            <DefinitionLifecycleFields
               definitionId={mode === "edit" ? objectTypeId : undefined}
-              ownNameFields={["name"]}
+              hintInTooltip
               resolveReplacement={resolveReplacement}
               searchReplacements={searchReplacements}
             />

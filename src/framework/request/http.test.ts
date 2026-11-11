@@ -213,6 +213,53 @@ describe("http request headers", () => {
     expect(onAuthFailure).not.toHaveBeenCalled();
   });
 
+  it.each(["missing", "failed"])(
+    "keeps a valid session when a business endpoint returns 401 and refresh is %s",
+    async (refreshState) => {
+      const onAuthFailure = vi.fn();
+      const refreshAccessToken = vi.fn(() =>
+        refreshState === "failed"
+          ? Promise.reject(new Error("refresh endpoint unavailable"))
+          : Promise.resolve(null),
+      );
+      setRuntimeConfig(
+        createRuntimeConfig({
+          auth: {
+            tokenManager: {
+              getAccessToken: () => "valid-token",
+              refreshAccessToken,
+              onAuthFailure,
+            },
+          },
+        }),
+      );
+      const businessRequest: AxiosAdapter = (config) => {
+        if (config.url === "/safe/v1/me") {
+          return Promise.resolve({
+            config,
+            data: { id: "user-1" },
+            headers: {},
+            status: 200,
+            statusText: "OK",
+          });
+        }
+        return Promise.reject(
+          Object.assign(new Error("Business HTTP 401"), {
+            isAxiosError: true,
+            config,
+            response: { status: 401 },
+          }),
+        );
+      };
+      await expect(
+        http.get("/bkn-backend/v1/knowledge-networks/kn-1/action-types", {
+          adapter: businessRequest,
+        }),
+      ).rejects.toThrow("Business HTTP 401");
+      expect(onAuthFailure).not.toHaveBeenCalled();
+    },
+  );
+
   it("reports the backend description when a download fails with a blob body", async () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);

@@ -30,6 +30,7 @@ import { formatNumber } from "@/framework/i18n/format";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { ActionTypeCreateEntryModal } from "@/modules/knowledge-network/components/action-type/ActionTypeCreateEntryModal";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { WorkspaceGraphOverviewAction } from "@/modules/knowledge-network/scenes/workspace/WorkspaceGraphOverviewAction";
@@ -76,6 +77,7 @@ export function WorkspaceOverviewSection({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const [createActionEntryOpen, setCreateActionEntryOpen] = useState(false);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [authorizeRequested, setAuthorizeRequested] = useState(false);
   // Judged on the record's own operations, not on a platform permission point. bkn-backend writes
@@ -311,9 +313,7 @@ export function WorkspaceOverviewSection({
             {canModify ? (
               <AppButton
                 className={styles.overviewStatAction}
-                onClick={() => {
-                  void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
-                }}
+                onClick={() => setCreateActionEntryOpen(true)}
                 type="link"
               >
                 {t("knowledgeNetwork.createActionTypeEntry")}
@@ -396,6 +396,17 @@ export function WorkspaceOverviewSection({
           />
         </Suspense>
       ) : null}
+
+      <ActionTypeCreateEntryModal
+        onCancel={() => setCreateActionEntryOpen(false)}
+        onChoose={(operation) => {
+          setCreateActionEntryOpen(false);
+          void navigate(
+            `/knowledge-network/workspace/${networkId}/action-types/create?operation=${operation}`,
+          );
+        }}
+        open={createActionEntryOpen}
+      />
     </div>
   );
 }
