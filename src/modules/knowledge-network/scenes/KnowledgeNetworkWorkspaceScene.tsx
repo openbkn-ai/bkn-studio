@@ -37,6 +37,7 @@ import type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import { KnVersioningOffEntry } from "@/modules/knowledge-network/components/versions/KnVersioningOffEntry";
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
 import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
@@ -518,6 +519,11 @@ export function KnowledgeNetworkWorkspaceScene({
               onViewChange={setVersionView}
               versioning={versioning}
               view={versionView}
+            />
+          ) : detail && mayModify && section !== "versions" ? (
+            <KnVersioningOffEntry
+              networkId={activeNetworkId}
+              onEnabled={() => setReloadTick((tick) => tick + 1)}
             />
           ) : null}
           {detailError && !childMetricDetailHandlesLoadState ? (

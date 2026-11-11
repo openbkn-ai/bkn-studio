@@ -61,7 +61,7 @@ export function KnowledgeNetworkFormModal({
       identifier: record?.identifier ?? "",
       name: record?.name ?? "",
       tags: record?.tags ?? [],
-      versioning: false,
+      versioning: true,
     });
   }, [form, open, record]);
 
