@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApartmentOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { FormOutlined, ToolOutlined } from "@ant-design/icons";
 import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -39,7 +39,7 @@ export function ActionTypeCreateEntryModal({
       <div className={styles.choices}>
         <button className={styles.choice} onClick={() => onChoose("object")} type="button">
           <span className={styles.icon}>
-            <ApartmentOutlined />
+            <FormOutlined aria-hidden />
           </span>
           <strong>{t("knowledgeNetwork.actionOperationObjectEntry")}</strong>
           <span>{t("knowledgeNetwork.actionOperationObjectDescription")}</span>
@@ -53,7 +53,7 @@ export function ActionTypeCreateEntryModal({
         <button className={styles.choice} onClick={() => onChoose("tool")} type="button">
           <span className={styles.choiceTop}>
             <span className={styles.icon}>
-              <ThunderboltOutlined />
+              <ToolOutlined aria-hidden />
             </span>
           </span>
           <strong>{t("knowledgeNetwork.actionOperationTool")}</strong>
