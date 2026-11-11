@@ -44,13 +44,9 @@ describe("cypherFunctionNotices", () => {
     ]);
   });
 
-  it("refuses a parameter where bkn-backend takes an integer", () => {
-    expect(kinds("MATCH (s:supplier) RETURN s.name SKIP $offset LIMIT $n", "table")).toEqual([
-      "row-count-parameter",
-    ]);
-    expect(kinds("MATCH (s) RETURN s.name LIMIT $`row count`", "table")).toContain(
-      "row-count-parameter",
-    );
+  it("takes a parameter as SKIP and LIMIT", () => {
+    expect(kinds("MATCH (s:supplier) RETURN s.name SKIP $offset LIMIT $n", "table")).toEqual([]);
+    expect(kinds("MATCH (s) RETURN s.name LIMIT $`row count`", "table")).toEqual([]);
   });
 
   it("warns above the largest LIMIT bkn-backend runs", () => {
@@ -85,6 +81,18 @@ describe("syncCypherInputs", () => {
     ).toEqual([
       { name: "id", type: "string", required: true, description: "" },
       { name: "min", type: "number", required: true, description: "lower bound", example: 3 },
+    ]);
+  });
+
+  it("makes a new SKIP or LIMIT parameter a number", () => {
+    expect(
+      syncCypherInputs(
+        [{ name: "n", type: "string", required: true, description: "kept" }],
+        "MATCH (o:po) WHERE o.note = 'LIMIT $x' RETURN o.id SKIP $from LIMIT $n",
+      ),
+    ).toEqual([
+      { name: "from", type: "number", required: true, description: "" },
+      { name: "n", type: "string", required: true, description: "kept" },
     ]);
   });
 });
