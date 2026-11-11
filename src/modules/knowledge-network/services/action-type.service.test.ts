@@ -558,6 +558,12 @@ describe("action-type.service - deployed operation contract", () => {
     const created = (postMock.mock.calls[0]?.[1] as { entries: Record<string, unknown>[] })
       .entries[0];
     const updated = putMock.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(postMock.mock.calls[0]?.[2]).toMatchObject({
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(putMock.mock.calls[0]?.[2]).toMatchObject({
+      headers: { "Content-Type": "application/json" },
+    });
     expect(created.operation_config).toMatchObject({
       type: "relation",
       relation_type_id: "order_supplier",
@@ -728,6 +734,7 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
         },
       },
       expect.objectContaining({
+        headers: { "Content-Type": "application/json" },
         params: { kn_version: "draft" },
         transformRequest: expect.any(Array) as unknown,
       }),

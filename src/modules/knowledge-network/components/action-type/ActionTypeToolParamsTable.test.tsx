@@ -53,6 +53,24 @@ const context: ActionRelationTableContext = {
 };
 
 describe("relationship identities in the tool parameter table", () => {
+  it("marks an invalid typed constant and clears the error after correction", async () => {
+    renderWithoutAntdStyles(
+      <ActionTypeToolParamsTable
+        hasSource
+        inputSchema={[{ key: "payload", name: "payload", type: "object" }]}
+        parameters={[{ name: "payload", type: "object", valueFrom: "const", value: "abc" }]}
+        propertyOptions={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    const input = await screen.findByPlaceholderText(
+      "knowledgeNetwork.actionTypeExecutionValueConstPlaceholder",
+    );
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(input, { target: { value: '{"ok":true}' } });
+    expect(input).toHaveAttribute("aria-invalid", "false");
+  });
+
   it("binds an endpoint directly in the row and displays the configured identity as read-only", async () => {
     const onChange = vi.fn();
     function Editor() {

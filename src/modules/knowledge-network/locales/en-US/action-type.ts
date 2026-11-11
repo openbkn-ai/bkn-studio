@@ -80,6 +80,7 @@ export const actiontypePart = {
   actionTypeOperatorSelectPlaceholder: "Select tool name",
   actionTypeExecutionParameterNamePlaceholder: "Enter a parameter name",
   actionTypeExecutionParameterRequired: "Configure at least one valid execution parameter mapping.",
+  actionTypeExecutionConstantInvalid: "Enter a valid value for parameter {{name}}.",
   actionTypeExecutionPending:
     "Schedule configuration will open in a later release and does not block execution mapping.",
   actionTypeExecutionScheduleHint:

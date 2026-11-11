@@ -58,6 +58,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import {
+  firstInvalidActionConstantParameter,
   getActionSourceDisplayName,
   getReadableActionSourceDisplayName,
 } from "@/modules/knowledge-network/utils/action-type-execution";
@@ -248,7 +249,9 @@ export function ActionTypeExecutionScene() {
         executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
     });
     if (validationErrorKey) {
-      const validationError = t(validationErrorKey);
+      const validationError = t(validationErrorKey, {
+        name: firstInvalidActionConstantParameter(executionValue.parameters) ?? "",
+      });
       setExecutionSourceError(
         validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );

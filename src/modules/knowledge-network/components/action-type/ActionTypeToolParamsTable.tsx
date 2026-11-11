@@ -15,6 +15,7 @@ import { RelationTypePropertySelect } from "@/modules/knowledge-network/componen
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type { ActionTypeExecutionParameter } from "@/modules/knowledge-network/types/knowledge-network";
 import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
+import { isInvalidActionConstantValue } from "@/modules/knowledge-network/utils/action-type-execution";
 import { getAllExpandableParamKeys } from "@/modules/knowledge-network/utils/tool-input-params";
 import {
   buildParamTableRows,
@@ -200,8 +201,19 @@ export function ActionTypeToolParamsTable({
               <Input
                 className={styles.valueInput}
                 disabled={!hasSource}
+                status={
+                  isInvalidActionConstantValue(record.type, record.value ?? "")
+                    ? "error"
+                    : undefined
+                }
+                aria-invalid={isInvalidActionConstantValue(record.type, record.value ?? "")}
                 onChange={(event) => updateRow(record.key, { value: event.target.value })}
                 placeholder={t("knowledgeNetwork.actionTypeExecutionValueConstPlaceholder")}
+                title={
+                  isInvalidActionConstantValue(record.type, record.value ?? "")
+                    ? t("knowledgeNetwork.actionTypeExecutionConstantInvalid", { name: record.key })
+                    : undefined
+                }
                 value={record.value}
               />
             ) : valueFrom === "property" ? (

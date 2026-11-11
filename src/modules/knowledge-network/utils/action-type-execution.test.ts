@@ -10,8 +10,10 @@ import { describe, expect, it } from "vitest";
 import type { ActionTypeExecutionConfig } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
+  ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY,
   ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY,
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY,
+  firstInvalidActionConstantParameter,
   validateActionTypeExecutionConfig,
 } from "./action-type-execution";
 
@@ -77,5 +79,21 @@ describe("validateActionTypeExecutionConfig", () => {
         }),
       ),
     ).toBe(ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY);
+  });
+
+  it("identifies the parameter when a typed constant has the wrong shape", () => {
+    const parameters = [
+      { name: "enabled", type: "boolean", valueFrom: "const" as const, value: "yes" },
+      { name: "payload", type: "object", valueFrom: "const" as const, value: "abc" },
+    ];
+    expect(firstInvalidActionConstantParameter(parameters)).toBe("enabled");
+    expect(validateActionTypeExecutionConfig(createExecutionConfig({ parameters }))).toBe(
+      ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY,
+    );
+    expect(
+      firstInvalidActionConstantParameter([
+        { name: "payload", type: "object", valueFrom: "const", value: '{"ok":true}' },
+      ]),
+    ).toBeNull();
   });
 });

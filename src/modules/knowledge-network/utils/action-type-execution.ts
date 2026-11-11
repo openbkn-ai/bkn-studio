@@ -11,6 +11,65 @@ import type {
   ActionTypeExecutionConfig,
   ActionTypeExecutionParameter,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
+
+const JSON_CONSTANT_TYPES = new Set([
+  "boolean",
+  "bool",
+  "integer",
+  "int",
+  "int32",
+  "int64",
+  "long",
+  "number",
+  "double",
+  "float",
+  "array",
+  "object",
+]);
+
+export function parseActionConstantValue(type: string | undefined, value: string): unknown {
+  const normalizedType = type?.toLowerCase() ?? "";
+  if (!JSON_CONSTANT_TYPES.has(normalizedType)) return value;
+  const text = value.trim();
+  if (["integer", "int", "int32", "int64", "long"].includes(normalizedType)) {
+    if (!/^-?(?:0|[1-9]\d*)$/.test(text)) throw new Error("Expected an integer");
+  } else if (["number", "double", "float"].includes(normalizedType)) {
+    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text))
+      throw new Error("Expected a number");
+  }
+  const parsed: unknown = parsePrecisionPreservingJSON(text);
+  if (["boolean", "bool"].includes(normalizedType) && typeof parsed !== "boolean")
+    throw new Error("Expected a boolean");
+  if (normalizedType === "array" && !Array.isArray(parsed)) throw new Error("Expected an array");
+  if (
+    normalizedType === "object" &&
+    (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+  )
+    throw new Error("Expected an object");
+  return parsed;
+}
+
+export function isInvalidActionConstantValue(type: string | undefined, value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    parseActionConstantValue(type, value);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+export function firstInvalidActionConstantParameter(
+  parameters: ActionTypeExecutionParameter[],
+): string | null {
+  const invalid = parameters.find(
+    (item) =>
+      (item.valueFrom ?? "input") === "const" &&
+      isInvalidActionConstantValue(item.type, item.value ?? ""),
+  );
+  return invalid?.name.trim() || null;
+}
 
 export function createEmptyExecutionParameter(): ActionTypeExecutionParameter {
   return {
@@ -116,6 +175,9 @@ export const ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY =
 export const ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY =
   "knowledgeNetwork.actionTypeExecutionParameterRequired";
 
+export const ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY =
+  "knowledgeNetwork.actionTypeExecutionConstantInvalid";
+
 export function validateActionTypeExecutionConfig(
   value: ActionTypeExecutionConfig,
   options: ActionTypeExecutionValidationOptions = {},
@@ -145,6 +207,10 @@ export function validateActionTypeExecutionConfig(
 
   if (validParameters.length === 0 && !options.allowEmptyParameters) {
     return ACTION_TYPE_EXECUTION_PARAMETER_REQUIRED_KEY;
+  }
+
+  if (firstInvalidActionConstantParameter(validParameters)) {
+    return ACTION_TYPE_EXECUTION_CONSTANT_INVALID_KEY;
   }
 
   return null;

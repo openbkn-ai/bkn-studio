@@ -40,6 +40,7 @@ import {
 } from "@/modules/knowledge-network/components/definition-declarations/DefinitionDeclarationFields";
 import { DefinitionRefusal } from "@/modules/knowledge-network/components/definition-declarations/DefinitionRefusal";
 import {
+  firstInvalidActionConstantParameter,
   getActionSourceDisplayName,
   isActionConditionEmpty,
   normalizeActionTypeCondition,
@@ -643,7 +644,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
         executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
     });
     if (validationErrorKey) {
-      const validationError = t(validationErrorKey);
+      const validationError = t(validationErrorKey, {
+        name: firstInvalidActionConstantParameter(executionValue.parameters) ?? "",
+      });
       setExecutionSourceError(
         validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );

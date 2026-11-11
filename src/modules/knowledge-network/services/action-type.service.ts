@@ -522,6 +522,7 @@ export async function executeKnowledgeNetworkActionTypeNow(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
     input,
     {
+      headers: { "Content-Type": "application/json" },
       params: await resolveKnReadParams(networkId),
       transformRequest: [transformPrecisionSafeJSONRequest],
     },
@@ -585,7 +586,11 @@ export async function createKnowledgeNetworkActionType(
       entries: [toBackendActionTypeCreateEntry(input)],
     },
     // The form shows the refusal itself, with the definitions it names.
-    { skipErrorToast: true, transformRequest: [transformPrecisionSafeJSONRequest] },
+    {
+      headers: { "Content-Type": "application/json" },
+      skipErrorToast: true,
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -640,7 +645,11 @@ export async function updateKnowledgeNetworkActionType(
   const response = await http.put<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
     toBackendActionTypeUpdatePayload(input),
-    { skipErrorToast: true, transformRequest: [transformPrecisionSafeJSONRequest] },
+    {
+      headers: { "Content-Type": "application/json" },
+      skipErrorToast: true,
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   const record = unwrapSingleEntryResponse(response.data);

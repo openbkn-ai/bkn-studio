@@ -5,10 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  parsePrecisionPreservingJSON,
-  transformPrecisionSafeJSONRequest,
-} from "@/framework/request/precision-safe-json";
+import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
+import { parseActionConstantValue } from "@/modules/knowledge-network/utils/action-type-execution";
 
 import type {
   ActionTypeActionSource,
@@ -159,26 +157,10 @@ function toBackendActionParameters(
       let value: unknown;
       if (source === "property") value = item.value ?? item.sourcePropertyName;
       if (source === "const") {
-        value = item.value;
-        if (
-          typeof value === "string" &&
-          [
-            "boolean",
-            "bool",
-            "integer",
-            "int",
-            "int32",
-            "int64",
-            "long",
-            "number",
-            "double",
-            "float",
-            "array",
-            "object",
-          ].includes(item.type?.toLowerCase() ?? "")
-        ) {
-          value = parsePrecisionPreservingJSON(value);
-        }
+        value =
+          typeof item.value === "string"
+            ? parseActionConstantValue(item.type, item.value)
+            : item.value;
       }
       return { name: item.name.trim(), type: item.type, value_from: source, value };
     });
