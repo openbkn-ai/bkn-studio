@@ -71,11 +71,11 @@
 }
 
 .resourceRow {
-  align-items: center;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: auto minmax(0, 360px);
-  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 360px;
 }
 
 .resourceLabel {
