@@ -53,6 +53,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
       "collect(x) 把每组收成列表，{k: v} 构造映射；collect 不能和 count、sum 等聚合同时返回，计数请单独查。",
       "算术 + - * / %：两个整数相除会被拒，要小数时一边乘 1.0；% 只用于整数。",
       "CASE WHEN … THEN … ELSE … END 和 coalesce(a, b)：各分支要么都是数字，要么都不是。",
+      "标量函数：round(x)、round(x, 2)、abs(x)、toInteger(x)（向零截断）、toFloat(x)、toUpper(s)、toLower(s)、toString(x)，能写在 CASE 能写的地方。decimal 值和对它的 sum() 以字符串返回，要数字用 toFloat(...) 或 round(..., n)。",
       "DISTINCT 和 ORDER BY 只用于属性、聚合或返回列，不用于节点和关系本身；节点和关系本来就按身份去重。聚合或 DISTINCT 之后只能按返回的值排序。",
       "UNION ALL 把几段查询的结果接在一起，UNION 还会去掉重复的行，两者不能混用：每段返回同样的列（名称和顺序一致，用 AS 对齐），可以各带 ORDER BY、LIMIT，只能返回值，不能返回节点、关系和 collect。",
     ],
@@ -100,7 +101,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     rules: [
       "对象类绑定的是数据集或索引（不是 SQL 数据源），或一条查询跨多个数据源时，服务端逐个对象类读取数据，再在内存里关联，只支持基础写法。",
       "可以用：MATCH、多跳、OPTIONAL MATCH；WHERE；返回属性和聚合，ORDER BY、SKIP、LIMIT；WITH 聚合后过滤、按上一段的值过滤；返回节点、关系和虚拟边，和 SQL 数据源上一样画图；UNION / UNION ALL，每段各自读取。",
-      "会被拒：CASE、coalesce；对分组再统计、比较两个列表、把节点传给下一个 MATCH；collect。",
+      "会被拒：CASE、coalesce、标量函数；对分组再统计、比较两个列表、把节点传给下一个 MATCH；collect。",
       "要读的数据太多或超时会被拒（ReadBudgetExceeded），加条件或 LIMIT 缩小范围。只有关系类能按键关联：只靠 a.code = b.code 这类相等条件连起来的两个节点会先全部读出再两两组合，容易超限，执行计划也不会提醒。",
     ],
     notes: ["数据集上可用：过滤、分组和排序"],
@@ -109,7 +110,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "不支持",
     rules: [
       "UNWIND、变长路径 [:R*1..3]、XOR、乘方 ^、关系属性 r.x。",
-      "date() / datetime() / localdatetime()、coalesce()、size()（只用于 WITH 收集的列表）和聚合以外的函数调用。",
+      "date() / datetime() / localdatetime()、coalesce()、上面的标量函数、size()（只用于 WITH 收集的列表）和聚合以外的函数调用，如 sqrt()、trim()、substring()。",
       "第二个 WITH 之后再 MATCH；做过聚合的 WITH 之后再 collect（比较两个列表时第二个 WITH 的 collect 除外）。",
       "对节点或关系用 DISTINCT（RETURN DISTINCT n、collect(DISTINCT n)）、按节点或关系排序；collect 与 count、sum 等聚合同时返回。",
     ],
