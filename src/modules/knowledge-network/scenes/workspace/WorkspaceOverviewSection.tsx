@@ -200,6 +200,7 @@ export function WorkspaceOverviewSection({
               <KnVersionSlotHost />
             </div>
             <div className={styles.overviewHeaderTitleRight}>
+              <KnVersionActionHost />
               {extensionWorkspaceActions().map((action) => (
                 <ExtensionActionButton action={action} key={action.key} networkId={networkId} />
               ))}
@@ -220,7 +221,6 @@ export function WorkspaceOverviewSection({
                   {t("common.edit")}
                 </AppButton>
               ) : null}
-              <KnVersionActionHost />
             </div>
           </div>
           <div className={styles.overviewHeaderComment}>

@@ -39,7 +39,7 @@ export function KnVersionSlotPortal({
   return createPortal(children, context.host);
 }
 
-/** Placed last among the actions on the right of the network's title. */
+/** Placed first among the actions on the right of the network's title. */
 export function KnVersionActionHost() {
   const context = useContext(KnVersionSlotContext);
   return <span className={styles.titleSlot} ref={context?.setActionHost} />;
