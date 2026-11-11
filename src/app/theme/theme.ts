@@ -56,6 +56,17 @@ const DARK_STATUS_TOKENS = {
   blue7: "#93c5fd",
 };
 
+/**
+ * Light success tints. AntD derives a success tag's fill and border from colorSuccess; from the deep
+ * green used for text that lands on a grayish olive. Pin them to the page's own success tints.
+ */
+const LIGHT_SUCCESS_TOKENS = {
+  colorSuccessBg: "#ecfdf3",
+  colorSuccessBgHover: "#dcfce7",
+  colorSuccessBorder: "#bbf7d0",
+  colorSuccessBorderHover: "#86efac",
+};
+
 /** Compatibility helper for consumers that need the dark solid-action state colors. */
 export function darkButtonFor(primaryColor: string) {
   const colors = createSemanticColors(primaryColor, "dark");
@@ -103,7 +114,7 @@ export function createThemeConfig(
       colorSuccess: isDark ? "#4ade80" : "#15803d",
       // Dark status tints: the hue at 12% alpha with a 35% border, so tags adapt to whatever row or
       // panel they sit on. AntD's generated dark palette lands on near-black maroon/olive.
-      ...(isDark ? DARK_STATUS_TOKENS : {}),
+      ...(isDark ? DARK_STATUS_TOKENS : LIGHT_SUCCESS_TOKENS),
       colorText: isDark ? "#e6e8eb" : "#111827",
       colorTextSecondary: isDark ? "#a8afba" : "#475569",
       colorTextTertiary: colors.textTertiary,

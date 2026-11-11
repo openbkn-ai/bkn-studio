@@ -112,6 +112,14 @@ describe("createThemeConfig", () => {
     expect(light?.colorBgMask).toBeUndefined();
   });
 
+  it("gives light success tags a clean green tint instead of a derived olive", () => {
+    const light = createThemeConfig(runtimeConfig, "light").token;
+
+    expect(light?.colorSuccess).toBe("#15803d");
+    expect(light?.colorSuccessBg).toBe("#ecfdf3");
+    expect(light?.colorSuccessBorder).toBe("#bbf7d0");
+  });
+
   it("uses legible selected tab colors on both themes", () => {
     const lightTabs = createThemeConfig(runtimeConfig, "light").components?.Tabs;
     const darkTabs = createThemeConfig(runtimeConfig, "dark").components?.Tabs;
