@@ -334,8 +334,7 @@ export const dataCatalogEnUS = {
       sourceBlocked: "No query access or resource unavailable",
       sourceChangeTitle: "Change logical view source?",
       sourceChangeHint: "Changing the source resets output fields and fixed filters.",
-      sourceLocked:
-        "This logical view has an unsupported fixed filter, so its logical view source cannot be changed.",
+      sourceLocked: "Delete incompatible filter conditions before changing the source resource.",
       fields: "Output Fields",
       sourceField: "Source Field",
       outputName: "Output Name",
@@ -347,7 +346,7 @@ export const dataCatalogEnUS = {
       moveDown: "Move Down",
       fixedFilter: "Fixed Filter",
       unsupportedFilter:
-        "This filter contains operations the editor cannot change. Saving other edits preserves it unchanged.",
+        "Remove the marked incompatible filter nodes before saving. Removing conditions may change the filter results.",
       filterNeedsReview:
         "The fixed filter is incompatible with the current query path or source fields. Update it or change the logical view source.",
       noAccess:
@@ -371,6 +370,21 @@ export const dataCatalogEnUS = {
       save: "Save Logical View",
     },
     filter: {
+      unsupportedNode: "Incompatible condition",
+      expandJSON: "Expand JSON",
+      collapseJSON: "Collapse JSON",
+      removeUnsupported: "Delete incompatible condition",
+      noConditions: "No filter conditions",
+      unsupportedReasons: {
+        invalidNode: "The condition node or group structure is not recognized.",
+        extraParameters: "This condition has additional parameters the editor does not support.",
+        unsupportedOperation: "The editor does not support this condition operator.",
+        invalidValueSource:
+          "The value source or right-hand field format is not supported for this operation.",
+        invalidValue: "The condition value structure is not supported.",
+        legacyCondition:
+          "This legacy condition cannot be safely converted to an editable condition.",
+      },
       match: "Match",
       groupLogic: "Condition logic",
       and: "All conditions (AND)",
@@ -444,6 +458,7 @@ export const dataCatalogEnUS = {
       errors: {
         invalidLikePattern:
           "A SQL LIKE pattern cannot end with an unpaired backslash. Use \\\\ for a literal backslash.",
+        unsupportedCondition: "Delete incompatible filter conditions before saving.",
         invalidDate:
           "Enter a valid date or full datetime; check the calendar date, offset and precision.",
         invalidRange:

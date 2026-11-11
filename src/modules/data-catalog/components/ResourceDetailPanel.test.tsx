@@ -636,6 +636,119 @@ describe("ResourceDetailPanel", () => {
     expect(filterCard.queryByRole("button")).toBeNull();
   });
 
+  it("keeps supported detail conditions visible beside incompatible nested JSON", () => {
+    const incompatible = { field: "id", operation: "custom", extra: { preserved: true } };
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicalType: "derived",
+            logicalViewDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [
+                  { field: "amount", operation: ">", value: 1000 },
+                  {
+                    operation: "or",
+                    sub_conditions: [incompatible, { field: "id", operation: "not_null" }],
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const card = within(screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!);
+    expect(card.getByText("1000")).toBeTruthy();
+    expect(card.getByText("dataCatalog.filter.and")).toBeTruthy();
+    expect(card.getByText("dataCatalog.filter.or")).toBeTruthy();
+    expect(card.getByText("not_null")).toBeTruthy();
+    expect(card.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" })).toHaveValue(
+      JSON.stringify(incompatible, null, 2),
+    );
+    expect(card.queryByRole("button", { name: "dataCatalog.filter.removeUnsupported" })).toBeNull();
+    expect(card.getByRole("button", { name: "dataCatalog.filter.expandJSON" })).toBeTruthy();
+  });
+
+  it.each([
+    { category: "index", localIndexStatus: "unavailable", localIndexName: undefined },
+    { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
+  ] as const)(
+    "uses the index channel to show a legacy before condition for $category",
+    async (sourceState) => {
+      const filter = { field: "at", operation: "before", value: [3, "2026-10-30T00:00:00Z"] };
+      getCatalogResourceMock.mockResolvedValue({
+        ...resource,
+        ...sourceState,
+        id: "source-orders",
+        schema: [{ name: "at", displayName: "Order Time", type: "datetime" }],
+      });
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{
+              ...resource,
+              category: "logical_view",
+              logicalType: "derived",
+              logicalViewDefinition: { sourceResourceId: "source-orders", filterCondition: filter },
+            }}
+          />
+        </MemoryRouter>,
+      );
+      expect(
+        await screen.findByText("dataCatalog.filter.unsupportedReasons.legacyCondition"),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" }),
+      ).toHaveValue(JSON.stringify(filter, null, 2));
+    },
+  );
+
+  it("keeps a current before condition readable on the index channel", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...resource,
+      id: "source-orders",
+      category: "index",
+      schema: [{ name: "at", displayName: "Order Time", type: "datetime" }],
+    });
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicalType: "derived",
+            logicalViewDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                field: "at",
+                operation: "before",
+                value: [3, "week"],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Order Time")).toBeTruthy();
+    const card = within(screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!);
+    expect(card.getByText("before")).toBeTruthy();
+    expect(card.queryByRole("textbox")).toBeNull();
+  });
+
   it("uses source schema labels for fixed filters on hidden source fields", async () => {
     getCatalogResourceMock.mockResolvedValue({
       ...resource,

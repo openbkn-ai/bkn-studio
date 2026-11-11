@@ -47,10 +47,23 @@ export type FilterRule = {
   valueFrom?: "const" | "field";
 };
 export type FilterGroup = { kind: "group"; operation: "and" | "or"; children: FilterNode[] };
-export type FilterNode = FilterGroup | FilterRule;
+export type UnsupportedFilterReason =
+  | "invalidNode"
+  | "extraParameters"
+  | "unsupportedOperation"
+  | "invalidValueSource"
+  | "invalidValue"
+  | "legacyCondition";
+export type UnsupportedFilterNode = {
+  kind: "unsupported";
+  raw: unknown;
+  reason: UnsupportedFilterReason;
+};
+export type FilterNode = FilterGroup | FilterRule | UnsupportedFilterNode;
 /** Managed resources and views share search independently of ordinary source filtering. */
 export type FilterQueryPath = "source" | "local_index" | "managed_local_index";
 type FilterError =
+  | "unsupportedCondition"
   | "emptyGroup"
   | "tooMany"
   | "invalidField"
@@ -114,38 +127,55 @@ export function filterSupportsFieldValue(operation: FilterOperation) {
   return hasOperation(COMPARISONS, operation);
 }
 
+/** Strict parser for consumers that require an entirely editable condition. */
 export function parseFilterCondition(
   raw: unknown,
   path: FilterQueryPath = "source",
 ): FilterGroup | null {
+  const tree = parseFilterTree(raw, path);
+  return hasUnsupportedFilterNodes(tree) ? null : tree;
+}
+
+export function hasUnsupportedFilterNodes(node: FilterNode): boolean {
+  return (
+    node.kind === "unsupported" ||
+    (node.kind === "group" && node.children.some(hasUnsupportedFilterNodes))
+  );
+}
+
+/** Keep incompatible nodes intact so users can inspect and explicitly remove them. */
+export function parseFilterTree(raw: unknown, path: FilterQueryPath = "source"): FilterGroup {
   if (raw === null || raw === undefined) return emptyFilterGroup();
   const scalar = (value: unknown) =>
     ["string", "number", "boolean"].includes(typeof value) || BigNumber.isBigNumber(value);
-  const parse = (value: unknown): FilterNode | null => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const parse = (value: unknown): FilterNode => {
+    const unsupported = (reason: UnsupportedFilterReason): UnsupportedFilterNode => ({
+      kind: "unsupported",
+      raw: value,
+      reason,
+    });
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      return unsupported("invalidNode");
     const node = value as Record<string, unknown>;
     if (node.operation === "and" || node.operation === "or") {
       if (Object.keys(node).some((key) => !["operation", "sub_conditions"].includes(key)))
-        return null;
-      if (!Array.isArray(node.sub_conditions) || !node.sub_conditions.length) return null;
-      const children = node.sub_conditions.map(parse);
-      if (children.some((child) => child === null)) return null;
-      return { kind: "group", operation: node.operation, children: children as FilterNode[] };
+        return unsupported("extraParameters");
+      if (!Array.isArray(node.sub_conditions) || !node.sub_conditions.length)
+        return unsupported("invalidNode");
+      return { kind: "group", operation: node.operation, children: node.sub_conditions.map(parse) };
     }
+    if (typeof node.operation !== "string") return unsupported("invalidNode");
+    if (!FILTER_OPERATIONS.has(node.operation)) return unsupported("unsupportedOperation");
     if (
-      Object.keys(node).some(
-        (key) => !["field", "operation", "value", "value_from"].includes(key),
-      ) ||
-      typeof node.field !== "string" ||
-      typeof node.operation !== "string" ||
-      !FILTER_OPERATIONS.has(node.operation) ||
-      (node.value_from !== undefined && node.value_from !== "const" && node.value_from !== "field")
+      Object.keys(node).some((key) => !["field", "operation", "value", "value_from"].includes(key))
     )
-      return null;
+      return unsupported("extraParameters");
+    if (typeof node.field !== "string") return unsupported("invalidNode");
+    if (node.value_from !== undefined && node.value_from !== "const" && node.value_from !== "field")
+      return unsupported("invalidValueSource");
     const operation = node.operation as FilterOperation;
     const kind = filterValueKind(operation);
-    // Stored emptiness can change semantics when the query channel changes.
-    // Keep their full original definitions rather than silently rewriting them.
+    // These stored definitions cannot be rewritten without potentially changing semantics.
     if (
       ["empty", "not_empty"].includes(operation) ||
       (path !== "source" &&
@@ -153,17 +183,17 @@ export function parseFilterCondition(
         Array.isArray(node.value) &&
         !hasOperation(FILTER_TIME_UNITS, String(node.value[1])))
     )
-      return null;
-
+      return unsupported("legacyCondition");
     if (
       node.value_from === "field" &&
       (!filterSupportsFieldValue(operation) || typeof node.value !== "string")
     )
-      return null;
+      return unsupported("invalidValueSource");
     if (kind !== "none") {
       if (["set", "range", "before"].includes(kind)) {
-        if (!Array.isArray(node.value) || !node.value.every(scalar)) return null;
-      } else if (!scalar(node.value)) return null;
+        if (!Array.isArray(node.value) || !node.value.every(scalar))
+          return unsupported("invalidValue");
+      } else if (!scalar(node.value)) return unsupported("invalidValue");
     }
     return {
       kind: "rule",
@@ -179,11 +209,7 @@ export function parseFilterCondition(
     };
   };
   const parsed = parse(raw);
-  return parsed?.kind === "group"
-    ? parsed
-    : parsed
-      ? { kind: "group", operation: "and", children: [parsed] }
-      : null;
+  return parsed.kind === "group" ? parsed : { kind: "group", operation: "and", children: [parsed] };
 }
 
 function isLargeIntegerType(type: string) {
@@ -277,6 +303,7 @@ export function filterValidationError(
   fields: ResourceSchemaField[],
   path: FilterQueryPath = "source",
 ): FilterError | null {
+  if (hasUnsupportedFilterNodes(group)) return "unsupportedCondition";
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
   const validate = (node: FilterNode, root: boolean): FilterError | null => {
     if (node.kind === "group") {
@@ -288,6 +315,7 @@ export function filterValidationError(
       }
       return null;
     }
+    if (node.kind === "unsupported") return "unsupportedCondition";
     const field = fieldMap.get(node.field);
     if (!field) return "invalidField";
     if (!filterOperationsForField(field, path).includes(node.operation))
@@ -398,11 +426,15 @@ export function filterToBackend(
   fields: ResourceSchemaField[],
   path: FilterQueryPath = "source",
 ): Record<string, unknown> | null {
+  if (hasUnsupportedFilterNodes(group))
+    throw new Error("Remove incompatible filter conditions before saving.");
   if (!group.children.length) return null;
   const fieldMap = new Map(fields.map((field) => [field.name, field]));
   const serialize = (node: FilterNode): Record<string, unknown> => {
     if (node.kind === "group")
       return { operation: node.operation, sub_conditions: node.children.map(serialize) };
+    if (node.kind === "unsupported")
+      throw new Error("Cannot serialize an incompatible filter condition.");
     const base = { field: node.field, operation: node.operation };
     if (node.operation === "empty" || node.operation === "not_empty") {
       // Equality uses keyword routing for TEXT and keeps NULL separate from empty strings.

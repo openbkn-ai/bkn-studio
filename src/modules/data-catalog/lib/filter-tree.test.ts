@@ -13,12 +13,113 @@ import {
   filterToBackend,
   filterValidationError,
   parseFilterCondition,
+  parseFilterTree,
+  hasUnsupportedFilterNodes,
 } from "./filter-tree";
 
 const fields = [
   { name: "age", type: "integer" },
   { name: "state", type: "string" },
 ];
+
+describe("partially supported filter trees", () => {
+  it.each(["source", "local_index", "managed_local_index"] as const)(
+    "round-trips the issue's null and datetime field comparisons on the %s path",
+    (path) => {
+      const schema = [
+        { name: "status", type: "integer" },
+        { name: "begin_time", type: "datetime" },
+        { name: "end_time", type: "datetime" },
+      ];
+      const raw = {
+        operation: "and",
+        sub_conditions: [
+          { field: "status", operation: "not_null" },
+          { field: "status", operation: "!=", value_from: "const", value: -1 },
+          {
+            operation: "or",
+            sub_conditions: [
+              { field: "begin_time", operation: "null" },
+              { field: "end_time", operation: "null" },
+              { field: "begin_time", operation: "<=", value_from: "field", value: "end_time" },
+            ],
+          },
+        ],
+      };
+      const tree = parseFilterTree(raw, path);
+      expect(hasUnsupportedFilterNodes(tree)).toBe(false);
+      expect(filterValidationError(tree, schema, path)).toBeNull();
+      expect(filterToBackend(tree, schema, path)).toEqual(raw);
+    },
+  );
+
+  it("keeps supported siblings and nested logic around an incompatible node", () => {
+    const raw = { field: "state", operation: "multi_match", value: "open", fields: ["state"] };
+    const tree = parseFilterTree({
+      operation: "and",
+      sub_conditions: [
+        { field: "age", operation: ">=", value: 18 },
+        { operation: "or", sub_conditions: [{ field: "state", operation: "null" }, raw] },
+      ],
+    });
+    expect(tree.children[0]).toMatchObject({ kind: "rule", operation: ">=" });
+    expect(tree.children[1]).toMatchObject({
+      kind: "group",
+      operation: "or",
+      children: [
+        { kind: "rule", operation: "null" },
+        { kind: "unsupported", raw },
+      ],
+    });
+    expect(hasUnsupportedFilterNodes(tree)).toBe(true);
+    expect(filterValidationError(tree, fields)).toBe("unsupportedCondition");
+    expect(() => filterToBackend(tree, fields)).toThrow();
+    expect(tree.children).toHaveLength(2);
+  });
+
+  it.each([
+    [
+      { operation: "xor", sub_conditions: [{ field: "age", operation: ">", value: 18 }] },
+      "unsupportedOperation",
+    ],
+    [{ operation: "and", sub_conditions: [], extra: true }, "extraParameters"],
+    [{ field: "age", operation: "in", value: 18 }, "invalidValue"],
+    [{ field: "age", operation: "==", value_from: "script", value: 18 }, "invalidValueSource"],
+    [{ field: "state", operation: "empty" }, "legacyCondition"],
+    [42, "invalidNode"],
+  ])("retains an incompatible root intact: %j", (raw, reason) => {
+    expect(parseFilterTree(raw).children).toEqual([{ kind: "unsupported", raw, reason }]);
+    expect(parseFilterCondition(raw)).toBeNull();
+  });
+
+  it("allows serialization only after an explicit removal and preserves empty-group validation", () => {
+    const tree = parseFilterTree({
+      operation: "or",
+      sub_conditions: [
+        { field: "age", operation: "unknown", value: 18 },
+        { field: "age", operation: ">=", value: 21 },
+      ],
+    });
+    tree.children.splice(0, 1);
+    expect(filterValidationError(tree, fields)).toBeNull();
+    expect(filterToBackend(tree, fields)).toEqual({
+      operation: "or",
+      sub_conditions: [{ field: "age", operation: ">=", value_from: "const", value: 21 }],
+    });
+    expect(
+      filterValidationError(
+        {
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "group", operation: "or", children: [] }],
+        },
+        fields,
+      ),
+    ).toBe("emptyGroup");
+    tree.children = [];
+    expect(filterToBackend(tree, fields)).toBeNull();
+  });
+});
 
 describe("filter-tree", () => {
   it("keeps large integer input as text and limits index operations", () => {
