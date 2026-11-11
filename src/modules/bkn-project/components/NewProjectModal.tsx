@@ -9,7 +9,9 @@ import { Alert, Form, Input, Modal, Radio, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { createProject } from "@/modules/bkn-project/services/project.service";
+import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 
 import styles from "./NewProjectModal.module.css";
@@ -47,30 +49,50 @@ export function NewProjectModal({
   const { t } = useTranslation();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
+  // The chosen network does not keep versions yet: the owner confirms turning them on.
+  const [askVersioning, setAskVersioning] = useState(false);
+  // Why creating failed, said in the dialog, which stays open to retry.
+  const [failure, setFailure] = useState<string | null>(null);
   const mode = Form.useWatch("mode", form) ?? "existing";
 
   const handleClose = () => {
     form.resetFields();
+    setFailure(null);
+    setAskVersioning(false);
     onCancel();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (enableVersioning = false) => {
     // Fields that fail validation show their own messages.
     const values = await form.validateFields().catch(() => null);
     if (!values) {
       return;
     }
     setSubmitting(true);
+    setFailure(null);
     try {
       const project = await createProject({
         catalogIds: values.catalogIds ?? [],
         name: values.name,
-        ...(values.mode === "new" ? { newKnName: values.newKnName } : { knId: values.knId }),
+        ...(values.mode === "new"
+          ? { newKnName: values.newKnName }
+          : { knId: values.knId, ...(enableVersioning ? { enableVersioning } : {}) }),
       });
+      setAskVersioning(false);
       form.resetFields();
       onCreated(project);
-    } catch {
-      // The request layer shows bkn-project's localized message; the dialog stays open to retry.
+    } catch (error) {
+      const code = projectErrorCode(error);
+      if (code === "Project.VersioningRequired") {
+        setAskVersioning(true);
+      } else {
+        setAskVersioning(false);
+        setFailure(
+          code === "Project.VersioningForbidden"
+            ? t("bknProject.create.versioningForbidden")
+            : requestFailureText(t, error, "bknProject.create.failed"),
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -86,6 +108,18 @@ export function NewProjectModal({
       open={open}
       title={t("bknProject.create.title")}
     >
+      <Modal
+        cancelText={t("common.cancel")}
+        confirmLoading={submitting}
+        destroyOnHidden
+        okText={t("bknProject.create.versioningConfirm")}
+        onCancel={() => setAskVersioning(false)}
+        onOk={() => void handleSubmit(true)}
+        open={askVersioning}
+        title={t("bknProject.create.versioningTitle")}
+      >
+        <p>{t("bknProject.create.versioningDescription")}</p>
+      </Modal>
       <Form<FormValues>
         form={form}
         initialValues={{ catalogIds: [], mode: "existing" }}
@@ -182,6 +216,9 @@ export function NewProjectModal({
             showIcon
             type="error"
           />
+        ) : null}
+        {failure ? (
+          <Alert className={styles.alert} message={failure} showIcon type="error" />
         ) : null}
       </Form>
     </Modal>

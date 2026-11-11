@@ -16,7 +16,6 @@ const createProjectMock = vi.hoisted(() => vi.fn());
 const listNetworksMock = vi.hoisted(() => vi.fn());
 const setArchivedMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
-const getNetworkInUseMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const confirmMock = vi.hoisted(() => vi.fn());
 const newProjectModalRenderMock = vi.hoisted(() => vi.fn());
@@ -44,10 +43,6 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   listProjectNetworks: listNetworksMock,
   listProjects: listProjectsMock,
   setProjectArchived: setArchivedMock,
-}));
-
-vi.mock("@/modules/bkn-project/services/release.service", () => ({
-  getNetworkInUse: getNetworkInUseMock,
 }));
 
 vi.mock("@/shared/catalog", () => ({
@@ -191,39 +186,14 @@ describe("ProjectListScene", () => {
     });
   });
 
-  it("opens the network the project's consumers use from its network name", async () => {
+  it("opens the project's network from its name: one network keeps every version", async () => {
     listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
-    getNetworkInUseMock.mockResolvedValue({
-      base: false,
-      networkId: "orders_v1_0_0",
-      version: "1.0.0",
-    });
     renderScene();
 
     const link = await screen.findByRole("link", { name: "Orders network" });
-    // Without script, the link still leads to the base network.
     expect(link).toHaveAttribute("href", "/knowledge-network/workspace/orders/overview");
     fireEvent.click(link);
-    expect(await screen.findByText("opened orders_v1_0_0")).toBeInTheDocument();
-    expect(getNetworkInUseMock).toHaveBeenCalledWith("p1");
-  });
-
-  it("says so when the network in use cannot be read, and lets other ways of opening through", async () => {
-    listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
-    getNetworkInUseMock.mockRejectedValue(new Error("down"));
-    renderScene();
-
-    const link = await screen.findByRole("link", { name: "Orders network" });
-    fireEvent.click(link);
-    await waitFor(() =>
-      expect(messageMock.error).toHaveBeenCalledWith("bknProject.list.networkInUseFailed"),
-    );
-    expect(screen.queryByText(/^opened /)).toBeNull();
-
-    // A modifier opens the link as it is, to the lineage's base network, without reading.
-    getNetworkInUseMock.mockClear();
-    fireEvent.click(link, { ctrlKey: true });
-    expect(getNetworkInUseMock).not.toHaveBeenCalled();
+    expect(await screen.findByText("opened orders")).toBeInTheDocument();
   });
 
   it("searches by name and shows archived projects on request, from the first page", async () => {

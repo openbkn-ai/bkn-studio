@@ -40,7 +40,6 @@ function regression(extra: Partial<Regression> = {}): Regression {
     attempt: 1,
     error: "",
     finishTime: 2,
-    networkId: "n_v1_0_2",
     questions: [
       {
         id: "q1",
@@ -110,13 +109,7 @@ function regression(extra: Partial<Regression> = {}): Regression {
 
 function renderDrawer(canRun = true) {
   return renderWithoutAntdStyles(
-    <RegressionDrawer
-      canRun={canRun}
-      networkId="n_v1_0_2"
-      onClose={vi.fn()}
-      projectId="p1"
-      version="1.0.2"
-    />,
+    <RegressionDrawer canRun={canRun} onClose={vi.fn()} projectId="p1" version="1.0.2" />,
   );
 }
 
@@ -180,6 +173,18 @@ describe("RegressionDrawer", () => {
     expect(drawer.getByText("回答时查询了 3 次，其中 1 次没有成功")).toBeInTheDocument();
   });
 
+  it("says a prepared release is answered on the network without touching the running version", async () => {
+    getRegressionMock.mockResolvedValue(regression());
+    renderWithoutAntdStyles(
+      <RegressionDrawer canRun onClose={vi.fn()} prepared projectId="p1" version="1.0.3" />,
+    );
+    expect(await screen.findByText("场景回归（写入网络后）")).toBeInTheDocument();
+    expect(
+      await screen.findByText("在写入的内容上回答场景问题，运行版本不受影响。"),
+    ).toBeInTheDocument();
+    expect(getRegressionMock).toHaveBeenCalledWith("p1", "1.0.3");
+  });
+
   it("says a question the data had no record for was not asked", async () => {
     const base = regression();
     getRegressionMock.mockResolvedValue({
@@ -204,7 +209,7 @@ describe("RegressionDrawer", () => {
     const drawer = within(await screen.findByRole("dialog"));
     await drawer.findByText("未通过");
     fireEvent.click(screen.getByRole("button", { name: "重新运行" }));
-    await waitFor(() => expect(runRegressionMock).toHaveBeenCalledWith("p1", "n_v1_0_2"));
+    await waitFor(() => expect(runRegressionMock).toHaveBeenCalledWith("p1", "1.0.2"));
     expect(await drawer.findByText("运行中")).toBeInTheDocument();
     expect(drawer.getAllByText("提问中").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "重新运行" })).toBeDisabled();
@@ -229,6 +234,14 @@ describe("RegressionDrawer", () => {
     renderDrawer();
     expect(await screen.findByText("回归被中断了，可以重新运行。")).toBeInTheDocument();
     expect(screen.getByText("没能跑完")).toBeInTheDocument();
+  });
+
+  it("asks to prepare again when the network was changed during the regression", async () => {
+    getRegressionMock.mockResolvedValueOnce(
+      regression({ error: "draft_changed", results: [], status: "failed" }),
+    );
+    renderDrawer();
+    expect(await screen.findByText("回归期间网络被修改，请重新准备。")).toBeInTheDocument();
   });
 
   it("says which questions were not asked because their tables are gone", async () => {

@@ -44,7 +44,8 @@ import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/dra
 import { conceptsInModel } from "@/modules/bkn-project/components/concepts/inModel";
 import { DRAFT_POLL_MS, getConcepts, getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getOntologyIndex } from "@/modules/bkn-project/services/publish.service";
-import { getNetworkInUse } from "@/modules/bkn-project/services/release.service";
+import { versionNameIn } from "@/modules/bkn-project/components/release/releaseMessages";
+import { getProjectVersions } from "@/modules/bkn-project/services/release.service";
 import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
@@ -52,7 +53,7 @@ import type { Concepts } from "@/modules/bkn-project/types/concepts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import type { ProjectIndex } from "@/modules/bkn-project/types/publish";
-import type { RollbackNetwork } from "@/modules/bkn-project/types/release";
+import type { ProjectVersions } from "@/modules/bkn-project/types/release";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 import {
   networkWorkspacePath,
@@ -116,20 +117,20 @@ export function ProjectOverview({
       `${projectSectionPath(project.id, section)}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`,
     );
 
-  // The network consumers use, undefined while it is read.
-  // undefined while it is read, null when it could not be: the page says so, never guesses.
-  const [inUse, setInUse] = useState<RollbackNetwork | null | undefined>(undefined);
+  // The versions of the network, for the version it runs.
+  // undefined while they are read, null when they could not be: the page says so, never guesses.
+  const [versions, setVersions] = useState<ProjectVersions | null | undefined>(undefined);
   useEffect(() => {
     let current = true;
-    getNetworkInUse(project.id).then(
-      (network) => {
+    getProjectVersions(project.id).then(
+      (next) => {
         if (current) {
-          setInUse(network);
+          setVersions(next);
         }
       },
       () => {
         if (current) {
-          setInUse(null);
+          setVersions(null);
         }
       },
     );
@@ -403,14 +404,14 @@ export function ProjectOverview({
     },
   ];
 
-  const inUseVersion =
-    inUse === undefined
+  const runningVersion =
+    versions === undefined
       ? PLACEHOLDER
-      : inUse === null
-        ? t("bknProject.overview.versions.inUseUnknown")
-        : inUse.base
-          ? t("bknProject.overview.fields.baseNetwork")
-          : `v${inUse.version}`;
+      : versions === null
+        ? t("bknProject.overview.versions.runningUnknown")
+        : versions.versioning.runningVersion
+          ? versionNameIn(t, versions.entries, versions.versioning.runningVersion)
+          : t("bknProject.overview.versions.unpublished");
   const latestVersion =
     latestRelease === undefined
       ? PLACEHOLDER
@@ -454,10 +455,12 @@ export function ProjectOverview({
             {networkLink(project.knId, networkName)}
           </span>
           <span className={kn.overviewHeaderFooterLabel}>
-            {t("bknProject.overview.fields.inUse")}:
+            {t("bknProject.overview.fields.running")}:
           </span>
           <span className={kn.overviewHeaderFooterValue}>
-            {inUse ? networkLink(inUse.networkId, inUseVersion) : inUseVersion}
+            {versions?.versioning.runningVersion
+              ? networkLink(project.knId, runningVersion)
+              : runningVersion}
           </span>
           <span className={kn.overviewHeaderFooterLabel}>
             {t("bknProject.overview.fields.latestRelease")}:
@@ -634,7 +637,7 @@ export function ProjectOverview({
           {/* Labels and values in a compact two-column grid, not a row stretched end to end. */}
           <dl className={styles.keyValues}>
             <dt>{t("bknProject.overview.versions.live")}</dt>
-            <dd>{inUseVersion}</dd>
+            <dd>{runningVersion}</dd>
             <dt>{t("bknProject.overview.versions.draft")}</dt>
             <dd>
               {draft

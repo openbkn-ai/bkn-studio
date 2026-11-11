@@ -48,6 +48,8 @@ export type ProjectListResult = {
 /** Exactly one of `knId` and `newKnName` is set. */
 export type CreateProjectInput = {
   catalogIds: string[];
+  /** The owner confirmed that edits to the chosen network take effect only once published. */
+  enableVersioning?: boolean;
   knId?: string;
   name: string;
   newKnName?: string;

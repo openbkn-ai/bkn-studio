@@ -5,38 +5,73 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert } from "antd";
+import { CheckOutlined } from "@ant-design/icons";
+import { Alert, Progress } from "antd";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import {
   passedCount,
   regressionStatusText,
-  regressionTone,
+  versionName,
+  versionNameIn,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
+import { ReleasePublishDialog } from "@/modules/bkn-project/components/release/ReleasePublishDialog";
 import { ReleaseReviewDialog } from "@/modules/bkn-project/components/release/ReleaseReviewDialog";
 import { RollbackDialog } from "@/modules/bkn-project/components/release/RollbackDialog";
-import { SwitchConsumersDialog } from "@/modules/bkn-project/components/release/SwitchConsumersDialog";
 import { getRegression, REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
-import type { Regression } from "@/modules/bkn-project/types/release";
+import type { ProjectVersions, Regression } from "@/modules/bkn-project/types/release";
+import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 
 import styles from "./Release.module.css";
 
 const PREFIX = "bknProject.release.publish";
+const STEPS = ["review", "prepare", "publish"] as const;
 
 /** Stages that wait on the data check before a release can be reviewed. */
 const WAITING = new Set(["checking", "check_not_started", "check_needs_attention"]);
 
+/** Regressions that leave nothing for the owner to accept before publishing. */
+const SETTLED = new Set(["running", "passed", "no_questions"]);
+
+const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
+
+/** The three steps of publishing, the done ones ticked. */
+function Steps({ current }: { current: number }) {
+  const { t } = useTranslation();
+  return (
+    <ol className={styles.steps}>
+      {STEPS.map((step, index) => (
+        <li
+          aria-current={index === current ? "step" : undefined}
+          className={[
+            styles.step,
+            index < current ? styles.stepDone : index === current ? styles.stepCurrent : "",
+          ].join(" ")}
+          key={step}
+        >
+          <span className={styles.stepNumber}>
+            {index < current ? <CheckOutlined /> : index + 1}
+          </span>
+          {t(`${PREFIX}.steps.${step}`)}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /**
- * Publishing the confirmation as a new version, then switching consumers to it. What may be done
- * comes from the status: a review once the check passed, a switch once published.
+ * Publishing the confirmation as a new version of the project's network: the confirmed content is
+ * reviewed, written into the network where the scenario questions are asked of it, then
+ * published. Consumers use the new version at once; there is nothing to switch.
  */
 export function ReleasePublish({
-  baseNetworkId,
   canPublish,
   onChanged,
   onGoToBuild,
@@ -44,60 +79,71 @@ export function ReleasePublish({
   onOpenRegression,
   projectId,
   status,
-  versionOf,
+  versions,
 }: {
-  /** The network the lineage started from, before any release. */
-  baseNetworkId: string;
   /** The owner of an unarchived project. */
   canPublish: boolean;
-  /** Something was published or switched: the page reads the status and versions again. */
+  /** Something was prepared, published or switched: the page reads status and versions again. */
   onChanged: () => void;
-  /** Opens how the scenario questions did on the project's release. */
   /** Opens the build page, where indexes not ready yet are built. */
   onGoToBuild?: () => void;
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
-  onOpenRegression: () => void;
+  /** Opens how the scenario questions did on a release; `prepared` while it is not published. */
+  onOpenRegression: (version: string, prepared: boolean) => void;
   projectId: string;
   status: ProjectStatus;
-  versionOf: (networkId: string) => string | undefined;
+  /** null while the versions are read, or when they could not be. */
+  versions: ProjectVersions | null;
 }) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
+  const directory = useAccountDirectory();
   const [reviewing, setReviewing] = useState(false);
-  const [switching, setSwitching] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
+  // The network turned out the same as its running version when publishing.
+  const [unchangedAs, setUnchangedAs] = useState<string | null>(null);
   const review = status.nextActions.find((action) => action.action === "review_release");
-  const switchAction = status.nextActions.find((action) => action.action === "switch_consumers");
   const rollbackAction = status.nextActions.find((action) => action.action === "review_rollback");
   const release = status.release;
+  // The network was switched back to another version than the project's newest release.
+  const rolledBack = Boolean(release?.rolledBack);
+  const prepared = versions?.prepared ?? null;
+  const versioning = versions?.versioning;
+  const entries = versions?.entries ?? [];
+  const name = (knVersion: number) => versionNameIn(t, entries, knVersion);
+  const running = versioning?.runningVersion ?? 0;
+  const draftBase = versioning?.draft.baseVersion ?? 0;
+  const outdated = Boolean(versioning?.draft.outdated);
 
-  // How the release's regression went, said beside it; a failed read only leaves it unsaid.
+  // How the regression of the prepared release, or of the published one, went.
+  const regressionOf = prepared?.version ?? release?.version ?? "";
   const [regression, setRegression] = useState<Regression | null>(null);
-  const releasedAs = release?.networkId;
+  const [regressionReads, setRegressionReads] = useState(0);
   useEffect(() => {
     setRegression(null);
-    if (!releasedAs) {
+    if (!regressionOf) {
       return undefined;
     }
     let active = true;
-    getRegression(projectId, releasedAs)
+    getRegression(projectId, regressionOf)
       .then((next) => active && setRegression(next))
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [projectId, releasedAs]);
-  // A regression starts right after publishing: read it again until it ends, so its tag does not
-  // stay "running". Counts every read, so a running regression is read again after a failed read.
-  const [regressionReads, setRegressionReads] = useState(0);
+  }, [projectId, regressionOf]);
+  // A regression starts right after preparing: read it again until it ends. Counts every read, so
+  // a running regression is read again after a failed read too.
   const regressionRunning = regression?.status === "running";
   useEffect(() => {
-    if (!regressionRunning || !releasedAs) {
+    if (!regressionRunning || !regressionOf) {
       return undefined;
     }
     let active = true;
     const timer = window.setTimeout(() => {
-      getRegression(projectId, releasedAs)
+      getRegression(projectId, regressionOf)
         .then((next) => active && setRegression(next))
         .catch(() => undefined)
         .finally(() => active && setRegressionReads((count) => count + 1));
@@ -106,90 +152,161 @@ export function ReleasePublish({
       active = false;
       window.clearTimeout(timer);
     };
-  }, [projectId, regressionReads, regressionRunning, releasedAs]);
+  }, [projectId, regressionOf, regressionReads, regressionRunning]);
+  useEffect(() => setUnchangedAs(null), [prepared?.version]);
 
-  // Where publishing stands, as the other panels say theirs: ready, published, or waiting.
-  const stateTag = review ? (
-    <LightStatusTag tone="info">{t(`${PREFIX}.state.ready`)}</LightStatusTag>
-  ) : release ? (
-    <LightStatusTag tone="success">{t(`${PREFIX}.state.published`)}</LightStatusTag>
-  ) : (
-    // Confirmed but not checked yet waits for the check, not for confirming: as the line below says.
-    <LightStatusTag tone="neutral">
-      {t(`${PREFIX}.state.${WAITING.has(status.stage) ? "waitCheck" : "waitConfirm"}`)}
-    </LightStatusTag>
+  const who = (id: string) =>
+    id === runtimeConfig.currentUser.id
+      ? t(`${PREFIX}.you`)
+      : (directory.get(id) ?? t(`${PREFIX}.someone`));
+
+  const counts = regression ? passedCount(regression) : { passed: 0, total: 0 };
+  const failedQuestions =
+    regression && !SETTLED.has(regression.status) ? counts.total - counts.passed : 0;
+  const regressionText = !regression
+    ? t(`${PREFIX}.regressionNone`)
+    : counts.total && regression.status !== "running"
+      ? t(`${PREFIX}.regressionPassed`, counts)
+      : regressionStatusText(t, regression.status);
+
+  const regressionLine = (version: string, isPrepared: boolean) => (
+    <span className={styles.row}>
+      {regression && counts.total && regression.status !== "running" ? (
+        <Progress
+          className={styles.regressionBar}
+          percent={Math.round((counts.passed / counts.total) * 100)}
+          showInfo={false}
+          size="small"
+          status={counts.passed === counts.total ? "success" : "normal"}
+        />
+      ) : null}
+      <span>{regressionText}</span>
+      <AppButton onClick={() => onOpenRegression(version, isPrepared)} size="small" type="link">
+        {t(`${PREFIX}.viewRegression`)}
+      </AppButton>
+    </span>
   );
 
+  // The version this release builds on, said after its number.
+  const versionLine = (version: string) =>
+    draftBase
+      ? t(`${PREFIX}.versionOn`, { base: name(draftBase), version })
+      : t(`${PREFIX}.versionFirst`, { version });
+
+  const reviewButton = review ? (
+    <AppButton onClick={() => setReviewing(true)} type={prepared ? undefined : "primary"}>
+      {canPublish
+        ? t(`${PREFIX}.${prepared ? "prepareAgain" : rolledBack ? "publishAgain" : "open"}`)
+        : t(`${PREFIX}.openReadOnly`)}
+    </AppButton>
+  ) : null;
+
+  const title = (
+    <span className={styles.row}>
+      {t(`${PREFIX}.title`)}
+      {running ? (
+        <LightStatusTag tone="success">
+          {t(`${PREFIX}.runningTag`, { version: name(running) })}
+        </LightStatusTag>
+      ) : null}
+    </span>
+  );
+  const description = !versioning
+    ? t(`${PREFIX}.description`)
+    : !running
+      ? t(`${PREFIX}.descriptionFirst`)
+      : outdated
+        ? t(`${PREFIX}.descriptionShort`)
+        : t(`${PREFIX}.description`);
+
   return (
-    <Section
-      actions={
+    <Section description={description} title={title}>
+      {outdated && running ? (
+        <Alert
+          message={t(`${PREFIX}.outdated`, { base: name(draftBase), running: name(running) })}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+      {prepared ? (
         <>
-          {stateTag}
-          {review ? (
-            <AppButton onClick={() => setReviewing(true)} type="primary">
-              {t(`${PREFIX}.${canPublish ? "open" : "openReadOnly"}`, {
-                version: review.suggestedVersion,
+          <Steps current={2} />
+          <dl className={styles.keyValues}>
+            <dt>{t(`${PREFIX}.fields.version`)}</dt>
+            <dd>{versionLine(prepared.version)}</dd>
+            <dt>{t(`${PREFIX}.fields.prepared`)}</dt>
+            <dd>
+              {t(`${PREFIX}.preparedBy`, {
+                time: formatTime(prepared.updateTime),
+                who: who(prepared.publisherId),
               })}
-            </AppButton>
+            </dd>
+            <dt>{t(`${PREFIX}.fields.regression`)}</dt>
+            <dd>{regressionLine(prepared.version, true)}</dd>
+          </dl>
+          {unchangedAs ? (
+            <Alert
+              message={t(`${PREFIX}.nothingToPublish`, { version: name(running) })}
+              showIcon
+              type="info"
+            />
+          ) : failedQuestions ? (
+            <Alert
+              message={t(`${PREFIX}.regressionFailed`, { count: failedQuestions })}
+              showIcon
+              type="warning"
+            />
           ) : null}
+          <div className={styles.row}>
+            {canPublish ? (
+              <AppButton
+                disabled={Boolean(unchangedAs)}
+                onClick={() => setPublishing(true)}
+                type="primary"
+              >
+                {t(`${PREFIX}.publishVersion`, { version: prepared.version })}
+              </AppButton>
+            ) : null}
+            {reviewButton}
+          </div>
         </>
-      }
-      description={t(`${PREFIX}.description`)}
-      title={t(`${PREFIX}.title`)}
-    >
-      {release ? (
+      ) : review ? (
+        <>
+          {rolledBack && release?.running ? (
+            <div className={styles.row}>
+              <LightStatusTag tone="warning">
+                {t(`${PREFIX}.rolledBack`, {
+                  version: versionName(t, release.running.knVersion, release.running.label),
+                })}
+              </LightStatusTag>
+            </div>
+          ) : null}
+          <Steps current={0} />
+          <dl className={styles.keyValues}>
+            <dt>{t(`${PREFIX}.fields.version`)}</dt>
+            <dd>{versionLine(review.suggestedVersion ?? "")}</dd>
+            {status.confirmation ? (
+              <>
+                <dt>{t(`${PREFIX}.fields.confirmed`)}</dt>
+                <dd>{formatTime(status.confirmation.time)}</dd>
+              </>
+            ) : null}
+          </dl>
+          <div className={styles.row}>{reviewButton}</div>
+        </>
+      ) : release ? (
         <div className={styles.row}>
           <LightStatusTag tone="success">
             {t(`${PREFIX}.publishedTag`, { version: release.version })}
           </LightStatusTag>
-          {release.inUse ? (
-            <span className={styles.muted}>
-              {t(`${PREFIX}.inUse`, { version: release.version })}
-            </span>
-          ) : null}
-          {regression ? (
-            <>
-              <span className={styles.label}>{t(`${PREFIX}.regressionLabel`)}</span>
-              <LightStatusTag tone={regressionTone(regression.status)}>
-                {regressionStatusText(t, regression.status)}
-              </LightStatusTag>
-              {passedCount(regression).total ? (
-                <span className={styles.muted}>
-                  {t("bknProject.release.regression.summary", passedCount(regression))}
-                </span>
-              ) : null}
-            </>
-          ) : null}
-          <AppButton onClick={onOpenRegression} size="small" type="link">
-            {t(`${PREFIX}.viewRegression`)}
-          </AppButton>
-          {rollbackAction ? (
+          {regressionLine(release.version, false)}
+          {rollbackAction && !rolledBack ? (
             <AppButton onClick={() => setRollingBack(true)} size="small" type="link">
               {t("bknProject.release.rollback.open")}
             </AppButton>
           ) : null}
         </div>
-      ) : null}
-      {release && !release.inUse && switchAction ? (
-        <Alert
-          action={
-            switchAction.allowed ? (
-              <AppButton onClick={() => setSwitching(true)} size="small" type="primary">
-                {t(`${PREFIX}.switch`)}
-              </AppButton>
-            ) : null
-          }
-          description={switchAction.allowed ? undefined : t(`${PREFIX}.switchOwnerOnly`)}
-          message={t(`${PREFIX}.notInUse`, { version: release.version })}
-          showIcon
-          type="warning"
-        />
-      ) : null}
-      {review ? (
-        <p className={styles.muted}>
-          {t(`${PREFIX}.${release ? "readyAgain" : "ready"}`, { version: review.suggestedVersion })}
-        </p>
-      ) : release ? null : (
+      ) : (
         <p className={styles.muted}>
           {t(`${PREFIX}.${WAITING.has(status.stage) ? "waitCheck" : "waitConfirm"}`)}
         </p>
@@ -200,12 +317,39 @@ export function ReleasePublish({
           onCancel={() => setReviewing(false)}
           onGoToBuild={onGoToBuild}
           onGoToKinetic={onGoToKinetic}
-          onPublished={() => {
+          onPrepared={() => {
             setReviewing(false);
             onChanged();
           }}
           projectId={projectId}
-          suggestedVersion={review.suggestedVersion ?? ""}
+          suggestedVersion={prepared?.version ?? review.suggestedVersion ?? ""}
+        />
+      ) : null}
+      {publishing && prepared ? (
+        <ReleasePublishDialog
+          baseName={draftBase ? name(draftBase) : ""}
+          failedQuestions={failedQuestions}
+          onCancel={() => setPublishing(false)}
+          onNothingToPublish={() => {
+            setPublishing(false);
+            setUnchangedAs(prepared.version);
+          }}
+          onPublished={() => {
+            setPublishing(false);
+            onChanged();
+          }}
+          outdated={outdated}
+          outdatedName={name(draftBase)}
+          projectId={projectId}
+          // The community edition keeps the running and the previous version only.
+          purgedName={
+            versioning && !versioning.fullHistory && versioning.previousVersion
+              ? name(versioning.previousVersion)
+              : ""
+          }
+          regressionText={regressionText}
+          runningName={name(running)}
+          version={prepared.version}
         />
       ) : null}
       {rollingBack ? (
@@ -217,20 +361,7 @@ export function ReleasePublish({
             onChanged();
           }}
           projectId={projectId}
-        />
-      ) : null}
-      {switching && release ? (
-        <SwitchConsumersDialog
-          baseNetworkId={baseNetworkId}
-          onCancel={() => setSwitching(false)}
-          onSwitched={() => {
-            setSwitching(false);
-            onChanged();
-          }}
-          projectId={projectId}
-          toNetworkId={release.networkId}
-          toVersion={release.version}
-          versionOf={versionOf}
+          rollback
         />
       ) : null}
     </Section>

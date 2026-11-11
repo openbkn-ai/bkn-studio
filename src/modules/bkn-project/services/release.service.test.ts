@@ -157,107 +157,127 @@ describe("release.service", () => {
     });
   });
 
-  it("publishes with the review's signature and what is accepted", async () => {
-    const { publishRelease } = await importService();
-    mockPost.mockResolvedValue({ data: { network_id: "n_v1_0_3", tag: "v1.0.3" } });
+  it("prepares with the review's signature and what is accepted, then publishes", async () => {
+    const { prepareRelease, publishRelease } = await importService();
+    mockPost.mockResolvedValueOnce({ data: { state: "prepared", version: "1.0.3" } });
 
+    await prepareRelease("p/1", {
+      accepts: ["index_not_ready"],
+      overwriteDraftChanges: true,
+      signature: "sig",
+      version: "1.0.3",
+    });
+    expect(mockPost).toHaveBeenCalledWith(
+      `${prefix}/releases/1.0.3/prepare`,
+      { accepts: ["index_not_ready"], overwrite_draft_changes: true, signature: "sig" },
+      { skipErrorToast: true },
+    );
+
+    mockPost.mockResolvedValueOnce({ data: { kn_version: 8, network_id: "n", purged_version: 6 } });
     expect(
       await publishRelease("p/1", {
-        accepts: ["index_not_ready"],
+        allowOutdatedBase: true,
         notes: "Adds orders",
-        signature: "sig",
         version: "1.0.3",
       }),
-    ).toEqual({ networkId: "n_v1_0_3" });
-    expect(mockPost).toHaveBeenCalledWith(
+    ).toEqual({ knVersion: 8, purgedVersion: 6 });
+    expect(mockPost).toHaveBeenLastCalledWith(
       `${prefix}/releases`,
-      { accepts: ["index_not_ready"], notes: "Adds orders", signature: "sig", version: "1.0.3" },
+      { allow_outdated_base: true, notes: "Adds orders", version: "1.0.3" },
       { skipErrorToast: true },
     );
   });
 
-  it("reads every release of a lineage, page after page", async () => {
-    const { listReleases } = await importService();
-    const release = (version: string) => ({
-      create_time: 1,
-      network_id: `n_${version}`,
-      notes: "",
-      project_id: "p/1",
-      publisher: { id: "u1", type: "user" },
-      state: "archived",
-      version,
-    });
-    mockGet
-      .mockResolvedValueOnce({ data: { entries: [release("1.0.1")], next_cursor: "c2" } })
-      .mockResolvedValueOnce({ data: { entries: [release("1.0.0")], next_cursor: null } });
-
-    const releases = await listReleases("lin");
-
-    expect(releases.map((entry) => entry.version)).toEqual(["1.0.1", "1.0.0"]);
-    expect(releases[0]).toEqual({
-      createTime: 1,
-      networkId: "n_1.0.1",
-      notes: "",
-      projectId: "p/1",
-      publisherId: "u1",
-      state: "archived",
-      version: "1.0.1",
-    });
-    expect(mockGet).toHaveBeenLastCalledWith("/bkn-project/v1/lineages/lin/releases", {
-      params: { cursor: "c2", limit: 100 },
-      skipErrorToast: true,
-    });
-  });
-
-  it("stops paging when the cursor does not move on", async () => {
-    const { listReleases } = await importService();
-    const page = (version: string) => ({
+  it("reads the versions of the project's network, null lists as empty", async () => {
+    const { getProjectVersions } = await importService();
+    mockGet.mockResolvedValueOnce({
       data: {
         entries: [
           {
-            create_time: 1,
-            network_id: `n_${version}`,
+            base_version: 6,
+            publish_time: 5,
+            label: "v1.3.0",
+            notes: "N",
+            origin: "project",
+            publisher: { id: "u1", type: "user" },
+            release: "1.3.0",
+            status: "running",
+            version: 7,
+          },
+          {
+            base_version: 3,
+            publish_time: 4,
+            label: "",
             notes: "",
-            project_id: "p",
+            origin: "workspace",
             publisher: null,
-            state: "live",
-            version,
+            status: "deprecated",
+            version: 4,
           },
         ],
-        next_cursor: "same",
+        prepared: { publisher: { id: "u1" }, state: "prepared", update_time: 9, version: "1.4.0" },
+        versioning: {
+          draft: { base_version: 7, has_changes: true, outdated: false, revision: 3 },
+          enabled: true,
+          full_history: false,
+          previous_version: 6,
+          running_version: 7,
+        },
       },
     });
-    mockGet.mockResolvedValueOnce(page("1.0.1")).mockResolvedValueOnce(page("1.0.0"));
+    expect(await getProjectVersions("p/1")).toEqual({
+      entries: [
+        {
+          baseVersion: 6,
+          createTime: 5,
+          label: "v1.3.0",
+          notes: "N",
+          origin: "project",
+          publisherId: "u1",
+          release: "1.3.0",
+          status: "running",
+          version: 7,
+        },
+        {
+          baseVersion: 3,
+          createTime: 4,
+          label: "",
+          notes: "",
+          origin: "workspace",
+          publisherId: "",
+          release: "",
+          status: "deprecated",
+          version: 4,
+        },
+      ],
+      prepared: { publisherId: "u1", updateTime: 9, version: "1.4.0" },
+      versioning: {
+        draft: { baseVersion: 7, hasChanges: true, outdated: false },
+        fullHistory: false,
+        previousVersion: 6,
+        runningVersion: 7,
+      },
+    });
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/versions`, { skipErrorToast: true });
 
-    expect((await listReleases("lin")).map((entry) => entry.version)).toEqual(["1.0.1", "1.0.0"]);
-    expect(mockGet).toHaveBeenCalledTimes(2);
+    mockGet.mockResolvedValueOnce({
+      data: {
+        entries: null,
+        versioning: { full_history: true, previous_version: 0, running_version: 0 },
+      },
+    });
+    const empty = await getProjectVersions("p/1");
+    expect(empty.entries).toEqual([]);
+    expect(empty.prepared).toBeNull();
   });
 
-  it("reads what switching would move, then switches", async () => {
-    const { getSwitchPlan, switchConsumers } = await importService();
-    mockGet.mockResolvedValue({
-      data: {
-        from_network_id: "n_v1_0_1",
-        lineage_id: "lin",
-        schedules: [{ id: "s1", name: "Nightly" }],
-        to_network_id: "n_v1_0_2",
-      },
-    });
-    mockPost.mockResolvedValue({ data: {} });
-
-    expect(await getSwitchPlan("p/1", "n_v1_0_2")).toEqual({
-      fromNetworkId: "n_v1_0_1",
-      schedules: [{ id: "s1", name: "Nightly" }],
-      toNetworkId: "n_v1_0_2",
-    });
-    expect(mockGet).toHaveBeenCalledWith(`${prefix}/switch-plan`, {
-      params: { to_network_id: "n_v1_0_2" },
-      skipErrorToast: true,
-    });
-    await switchConsumers("p/1", "n_v1_0_2");
+  it("copies a version as the draft", async () => {
+    const { copyVersion } = await importService();
+    mockPost.mockResolvedValueOnce({ data: {} });
+    await copyVersion("p/1", 5, false);
     expect(mockPost).toHaveBeenCalledWith(
-      `${prefix}/switches`,
-      { to_network_id: "n_v1_0_2" },
+      `${prefix}/versions/5/copy`,
+      { overwrite_draft_changes: false },
       { skipErrorToast: true },
     );
   });
@@ -269,7 +289,6 @@ describe("release.service", () => {
         attempt: 1,
         error: "",
         finish_time: 9,
-        network_id: "n_v1_0_2",
         project_id: "p/1",
         questions: [
           {
@@ -305,11 +324,10 @@ describe("release.service", () => {
       },
     });
 
-    expect(await getRegression("p/1", "n_v1_0_2")).toEqual({
+    expect(await getRegression("p/1", "1.0.2")).toEqual({
       attempt: 1,
       error: "",
       finishTime: 9,
-      networkId: "n_v1_0_2",
       questions: [
         {
           id: "q1",
@@ -359,7 +377,7 @@ describe("release.service", () => {
       status: "not_passed",
       version: "1.0.2",
     });
-    expect(mockGet).toHaveBeenCalledWith(`${prefix}/releases/n_v1_0_2/regression`, {
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/releases/1.0.2/regression`, {
       skipErrorToast: true,
     });
 
@@ -369,13 +387,13 @@ describe("release.service", () => {
         status: 404,
       } as AxiosResponse),
     );
-    expect(await getRegression("p/1", "n_v1_0_2")).toBeNull();
+    expect(await getRegression("p/1", "1.0.2")).toBeNull();
 
     mockPost.mockResolvedValue({
-      data: { network_id: "n_v1_0_2", questions: [], results: null, status: "running" },
+      data: { questions: [], results: null, status: "running" },
     });
-    expect((await runRegression("p/1", "n_v1_0_2")).status).toBe("running");
-    expect(mockPost).toHaveBeenCalledWith(`${prefix}/releases/n_v1_0_2/regression:run`, undefined, {
+    expect((await runRegression("p/1", "1.0.2")).status).toBe("running");
+    expect(mockPost).toHaveBeenCalledWith(`${prefix}/releases/1.0.2/regression:run`, undefined, {
       skipErrorToast: true,
     });
   });
@@ -384,8 +402,8 @@ describe("release.service", () => {
     const { getRollbackPlan, rollBack } = await importService();
     mockGet.mockResolvedValueOnce({
       data: {
-        consumers: ["agents"],
-        from: { base: false, network_id: "n_v1_0_1", version: "1.0.1" },
+        from: { kn_version: 7, label: "v1.3.0", version: "1.3.0" },
+        full_history: true,
         questions: {
           affected: null,
           answerable_new: null,
@@ -396,14 +414,13 @@ describe("release.service", () => {
           unjudged: 0,
         },
         refusals: null,
-        schedules: [{ name: "Nightly" }],
         signature: "sig",
-        to: { base: true, network_id: "n" },
+        to: { kn_version: 4, label: "" },
       },
     });
-    expect(await getRollbackPlan("p/1")).toEqual({
-      consumers: ["agents"],
-      from: { base: false, networkId: "n_v1_0_1", version: "1.0.1" },
+    expect(await getRollbackPlan("p/1", 4)).toEqual({
+      from: { knVersion: 7, label: "v1.3.0", version: "1.3.0" },
+      fullHistory: true,
       questions: {
         affected: [],
         answerableNew: [],
@@ -419,31 +436,50 @@ describe("release.service", () => {
         unjudged: 0,
       },
       refusals: [],
-      schedules: [{ id: "0", name: "Nightly" }],
       signature: "sig",
-      to: { base: true, networkId: "n", version: "" },
+      to: { knVersion: 4, label: "", version: "" },
     });
-    expect(mockGet).toHaveBeenCalledWith(`${prefix}/rollback-plan`, { skipErrorToast: true });
+    expect(mockGet).toHaveBeenCalledWith(`${prefix}/rollback-plan`, {
+      params: { to_version: 4 },
+      skipErrorToast: true,
+    });
 
     mockGet.mockResolvedValueOnce({
       data: {
-        consumers: null,
-        from: { base: true, network_id: "n" },
+        from: { kn_version: 1, label: "v1.0.0" },
+        full_history: false,
         refusals: [{ code: "Rollback.NoPrevious" }],
-        schedules: null,
         signature: "s2",
       },
     });
     const none = await getRollbackPlan("p/1");
     expect(none.to).toBeNull();
     expect(none.refusals).toEqual(["Rollback.NoPrevious"]);
+    expect(mockGet).toHaveBeenLastCalledWith(`${prefix}/rollback-plan`, {
+      params: undefined,
+      skipErrorToast: true,
+    });
 
     mockPost.mockResolvedValueOnce({ data: {} });
-    await rollBack("p/1", "sig");
+    await rollBack("p/1", "sig", 4);
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/rollbacks`,
-      { signature: "sig" },
+      { signature: "sig", to_version: 4 },
       { skipErrorToast: true },
     );
+  });
+
+  it("prepares, publishes and rolls back in the mock, versions following", async () => {
+    const { getProjectVersions, getRollbackPlan, publishRelease, rollBack } =
+      await importService("true");
+    const before = await getProjectVersions("p-001");
+    expect(before.versioning.runningVersion).toBe(1);
+    // Publishing waits for a prepared release.
+    await expect(
+      publishRelease("p-001", { allowOutdatedBase: false, notes: "", version: "9.9.9" }),
+    ).rejects.toBeTruthy();
+    const plan = await getRollbackPlan("p-001");
+    expect(plan.refusals).toEqual(["Rollback.NoPrevious"]);
+    await expect(rollBack("p-001", "other", 1)).rejects.toBeTruthy();
   });
 });

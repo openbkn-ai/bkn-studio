@@ -8,7 +8,12 @@
 import type { TFunction } from "i18next";
 
 import type { LightStatusTone } from "@/framework/ui/common/LightStatusTag";
-import type { Regression, ReleaseCheck, ReleaseItem } from "@/modules/bkn-project/types/release";
+import type {
+  NetworkVersion,
+  Regression,
+  ReleaseCheck,
+  ReleaseItem,
+} from "@/modules/bkn-project/types/release";
 
 /**
  * Release codes are for machines; the page words them. Every set is open: a code the page does
@@ -84,6 +89,15 @@ const PUBLISH_ERRORS = new Set([
   "Drift",
   "MergeConflict",
   "UnfinishedAttempt",
+  "NotPrepared",
+  "DraftHasChanges",
+  "DraftChanged",
+  "DraftOutdated",
+  "RunningChanged",
+  "NothingToPublish",
+  "ValidationFailed",
+  "NotReady",
+  "PublishPending",
 ]);
 const CAPABILITY_REASONS = new Set(["changed", "network_id"]);
 
@@ -282,7 +296,12 @@ const REGRESSION_STATUSES = new Set([
   "no_questions",
   "data_source_missing",
 ]);
-const REGRESSION_ERRORS = new Set(["interrupted", "definitions_unreadable"]);
+const REGRESSION_ERRORS = new Set([
+  "interrupted",
+  "definitions_unreadable",
+  "draft_changed",
+  "index_not_ready",
+]);
 const OUTCOMES = new Set([
   "passed",
   "missing",
@@ -355,3 +374,11 @@ export const passedCount = (regression: Regression) => {
     total: asked.length,
   };
 };
+
+/** A version of the network as people know it: its label, or its number when it has none. */
+export const versionName = (t: TFunction, knVersion: number, label?: string) =>
+  label || t("bknProject.release.versions.number", { number: knVersion });
+
+/** Names a version of the network by its number, with the label the list gives it. */
+export const versionNameIn = (t: TFunction, entries: NetworkVersion[], knVersion: number) =>
+  versionName(t, knVersion, entries.find((entry) => entry.version === knVersion)?.label);

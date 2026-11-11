@@ -17,7 +17,19 @@ const getProjectMock = vi.hoisted(() => vi.fn());
 const getNetworkMock = vi.hoisted(() => vi.fn());
 const getLatestReleaseMock = vi.hoisted(() => vi.fn());
 const getDraftMock = vi.hoisted(() => vi.fn());
-const getNetworkInUseMock = vi.hoisted(() => vi.fn());
+const getProjectVersionsMock = vi.hoisted(() => vi.fn());
+
+/** The versions of the project's network, running the given one. */
+const versionsRunning = (runningVersion: number, label = "") => ({
+  entries: runningVersion ? [{ label, version: runningVersion }] : [],
+  prepared: null,
+  versioning: {
+    draft: { baseVersion: runningVersion, hasChanges: false, outdated: false },
+    fullHistory: true,
+    previousVersion: 0,
+    runningVersion,
+  },
+});
 const directoryMock = vi.hoisted(() => new Map<string, string>());
 const translate = vi.hoisted(
   () => (key: string, options?: Record<string, unknown>) =>
@@ -115,7 +127,7 @@ vi.mock("@/modules/bkn-project/components/DataSourceHealth", () => ({
 }));
 
 vi.mock("@/modules/bkn-project/services/release.service", () => ({
-  getNetworkInUse: getNetworkInUseMock,
+  getProjectVersions: getProjectVersionsMock,
 }));
 
 const getOntologyIndexMock = vi.hoisted(() => vi.fn());
@@ -264,16 +276,12 @@ describe("ProjectWorkspaceScene", () => {
     });
     getDraftMock.mockResolvedValue(null);
     getOntologyIndexMock.mockResolvedValue(null);
-    getNetworkInUseMock.mockResolvedValue({ base: true, networkId: "orders", version: "" });
+    getProjectVersionsMock.mockResolvedValue(versionsRunning(1, "v1.0.0"));
     directoryMock.clear();
   });
 
-  it("links the base network, the one in use and the latest release to their workspaces", async () => {
-    getNetworkInUseMock.mockResolvedValue({
-      base: false,
-      networkId: "orders_v0_9_0",
-      version: "0.9.0",
-    });
+  it("links the network, its running version and the latest release to their workspaces", async () => {
+    getProjectVersionsMock.mockResolvedValue(versionsRunning(3, "v0.9.0"));
     renderScene();
 
     const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
@@ -281,41 +289,38 @@ describe("ProjectWorkspaceScene", () => {
       "href",
       "/knowledge-network/workspace/orders/overview",
     );
+    expect(within(header).getByText("bknProject.overview.fields.running:")).toBeInTheDocument();
+    // One network keeps every version: the running one opens the same network.
     expect(await within(header).findByRole("link", { name: "v0.9.0" })).toHaveAttribute(
       "href",
-      "/knowledge-network/workspace/orders_v0_9_0/overview",
+      "/knowledge-network/workspace/orders/overview",
     );
     expect(within(header).getByRole("link", { name: "v1.0.0" })).toHaveAttribute(
       "href",
       "/knowledge-network/workspace/orders_v1_0_0/overview",
     );
-    expect(getNetworkInUseMock).toHaveBeenCalledWith("p1");
+    expect(getProjectVersionsMock).toHaveBeenCalledWith("p1");
   });
 
-  it("says it cannot tell the network in use when that cannot be read, rather than guess", async () => {
-    getNetworkInUseMock.mockRejectedValue(new Error("down"));
+  it("says it cannot tell the running version when that cannot be read, rather than guess", async () => {
+    getProjectVersionsMock.mockRejectedValue(new Error("down"));
     renderScene();
 
     const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
     expect(
-      await within(header).findByText("bknProject.overview.versions.inUseUnknown"),
+      await within(header).findByText("bknProject.overview.versions.runningUnknown"),
     ).toBeInTheDocument();
-    expect(
-      within(header).queryByRole("link", { name: "bknProject.overview.fields.baseNetwork" }),
-    ).toBeNull();
   });
 
-  it("says the base network is in use before any release, and that nothing is published", async () => {
+  it("says nothing is published before any release", async () => {
     getLatestReleaseMock.mockResolvedValue(null);
+    getProjectVersionsMock.mockResolvedValue(versionsRunning(0));
     renderScene();
 
     const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
     expect(
-      await within(header).findByRole("link", { name: "bknProject.overview.fields.baseNetwork" }),
-    ).toHaveAttribute("href", "/knowledge-network/workspace/orders/overview");
-    expect(
-      within(header).getByText("bknProject.overview.versions.unpublished"),
-    ).toBeInTheDocument();
+      await within(header).findAllByText("bknProject.overview.versions.unpublished"),
+    ).toHaveLength(2);
   });
 
   it("names the page in the navigation only, and shows the network on the overview", async () => {
@@ -357,8 +362,8 @@ describe("ProjectWorkspaceScene", () => {
       screen.getByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
-    // In the header and on the release card.
-    expect(screen.getAllByText("v1.0.0")).toHaveLength(2);
+    // The latest release and the running version, in the header and on the cards.
+    expect(screen.getAllByText("v1.0.0")).toHaveLength(4);
   });
 
   it("counts the scenario questions of the drafted requirements", async () => {
