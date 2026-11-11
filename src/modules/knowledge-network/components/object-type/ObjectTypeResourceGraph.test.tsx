@@ -82,6 +82,14 @@ vi.mock("@/modules/knowledge-network/components/shared/resource-permission-reque
 
 import { ObjectTypeResourceGraph } from "./ObjectTypeResourceGraph";
 
+// A detail row's accessible name is "label value" in a browser, where antd lays
+// the two out as separate boxes. Tests run without antd's CSS, so the same two
+// inline elements join with no space; accept either.
+function detailRow(name: string) {
+  const parts = name.split(" ").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`^${parts.join("\\s*")}$`);
+}
+
 const originalMatchMedia = window.matchMedia;
 
 beforeAll(() => {
@@ -414,13 +422,17 @@ describe("ObjectTypeResourceGraph", () => {
     expect(within(graph).queryByText(/适用：|附加影响：/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     const drawer = await screen.findByRole("dialog", { name: "行动类详情" });
-    expect(within(drawer).getByRole("row", { name: "行动类别 对象关系操作" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "具体操作 建立关系" })).toBeInTheDocument();
-    expect(await within(drawer).findByRole("row", { name: "关系类 客户关系" })).toBeInTheDocument();
     expect(
-      within(drawer).getByRole("row", {
-        name: "作用范围 销售订单 → 客户关系 → 客户",
-      }),
+      within(drawer).getByRole("row", { name: detailRow("行动类别 对象关系操作") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("具体操作 建立关系") }),
+    ).toBeInTheDocument();
+    expect(
+      await within(drawer).findByRole("row", { name: detailRow("关系类 客户关系") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("作用范围 销售订单 → 客户关系 → 客户") }),
     ).toBeInTheDocument();
   });
   it("keeps the current object and shows lightweight category-specific empty hints", async () => {
@@ -795,22 +807,32 @@ describe("ObjectTypeResourceGraph", () => {
     expect(actions).not.toBeNull();
     expect(descriptions).not.toBeNull();
     expect(description).not.toBeNull();
-    expect(within(drawer).getByRole("row", { name: "资源类型 行动类" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "行动类别 对象实例操作" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "具体操作 修改对象实例" })).toBeInTheDocument();
     expect(
-      within(drawer).getByRole("row", { name: "触发条件 订单金额 大于 100" }),
-    ).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "执行来源类型 工具" })).toBeInTheDocument();
-    expect(
-      within(drawer).getByRole("row", { name: "执行来源名称 订单核对工具" }),
+      within(drawer).getByRole("row", { name: detailRow("资源类型 行动类") }),
     ).toBeInTheDocument();
     expect(
-      within(drawer).getByRole("row", { name: /执行参数 2 个执行参数 · 1 个动态参数/ }),
+      within(drawer).getByRole("row", { name: detailRow("行动类别 对象实例操作") }),
     ).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "影响对象类 销售订单" })).toBeInTheDocument();
     expect(
-      within(drawer).getByRole("row", { name: "影响说明 同步订单核对结果" }),
+      within(drawer).getByRole("row", { name: detailRow("具体操作 修改对象实例") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("触发条件 订单金额 大于 100") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("执行来源类型 工具") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("执行来源名称 订单核对工具") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: /执行参数\s*2 个执行参数 · 1 个动态参数/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("影响对象类 销售订单") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("影响说明 同步订单核对结果") }),
     ).toBeInTheDocument();
     expect(
       actions!.compareDocumentPosition(descriptions!) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1299,8 +1321,12 @@ describe("ObjectTypeResourceGraph", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "关系类 客户关系" }));
     const drawer = screen.getByRole("dialog", { name: "关系类详情" });
-    expect(within(drawer).getByRole("row", { name: "起点对象类 销售订单" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("row", { name: "终点对象类 客户" })).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("起点对象类 销售订单") }),
+    ).toBeInTheDocument();
+    expect(
+      within(drawer).getByRole("row", { name: detailRow("终点对象类 客户") }),
+    ).toBeInTheDocument();
     expect(within(drawer).getByText("描述")).toBeInTheDocument();
     expect(within(drawer).queryByText("业务定义")).not.toBeInTheDocument();
     expect(within(drawer).getByRole("button", { name: "申请权限" })).toHaveAttribute(
@@ -1330,10 +1356,14 @@ describe("ObjectTypeResourceGraph", () => {
     fireEvent.click(await screen.findByRole("button", { name: "对象指标 订单金额" }));
     expect(await screen.findByText("v1")).toBeInTheDocument();
     expect(screen.getByText("草稿")).toBeInTheDocument();
-    expect(screen.queryByRole("row", { name: "资源类型 对象指标" })).not.toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /对象指标编码 order_amount/ })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: "对象指标类型 原子对象指标" })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: "所属对象类 销售订单" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("row", { name: detailRow("资源类型 对象指标") }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /对象指标编码\s*order_amount/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("row", { name: detailRow("对象指标类型 原子对象指标") }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: detailRow("所属对象类 销售订单") })).toBeInTheDocument();
     expect(screen.queryByText("计算范围")).not.toBeInTheDocument();
     expect(screen.getByText("业务定义")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "详情" })).toBeInTheDocument();
