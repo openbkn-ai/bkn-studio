@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,19 +59,28 @@ vi.mock("@/modules/knowledge-network/components/relation-type/RelationTypeMappin
   normalizeRelationTypeMappingValues: (value: unknown) => value,
   RelationTypeMappingEditor: ({
     onChange,
+    semantics,
     value,
   }: {
     onChange: (value: unknown) => void;
+    semantics?: ReactNode;
     value: { mappingMode: string; mappingRules: Ends };
   }) => (
-    <button
-      onClick={() =>
-        onChange({ ...value, mappingRules: { ...value.mappingRules, targetObjectTypeId: "nurse" } })
-      }
-      type="button"
-    >
-      move target
-    </button>
+    <div>
+      <button
+        onClick={() =>
+          onChange({
+            ...value,
+            mappingRules: { ...value.mappingRules, targetObjectTypeId: "nurse" },
+          })
+        }
+        type="button"
+      >
+        move target
+      </button>
+      <section aria-label="semantics">{semantics}</section>
+      <section aria-label="mapping rules" />
+    </div>
   ),
   validateRelationTypeMappingValues: () => null,
 }));
@@ -175,12 +184,16 @@ describe("RelationTypeMappingScene", () => {
     });
   });
 
-  it("shows the relation declarations below the mapping", async () => {
+  it("puts the semantics among the mapping and the advanced settings after it", async () => {
     renderScene();
 
+    const semantics = await screen.findByRole("region", { name: "semantics" });
     expect(
-      await screen.findByText("knowledgeNetwork.relationDeclarations.title"),
+      within(semantics).getByText("knowledgeNetwork.relationDeclarations.cardinality"),
     ).toBeInTheDocument();
+    const advanced = screen.getByText("knowledgeNetwork.relationDeclarations.advanced");
+    const rules = screen.getByRole("region", { name: "mapping rules" });
+    expect(rules.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows a declaration refusal with links to what it names, not as a toast", async () => {

@@ -564,25 +564,6 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       <>
         {renderRelationInfoBar()}
         <div className={`${styles.sectionPanel} ${styles.mappingFormPanel}`}>
-          <Suspense
-            fallback={
-              <div className={styles.loadingState}>
-                <Spin />
-              </div>
-            }
-          >
-            <RelationTypeMappingEditor
-              confirmRelationPropertyChange={confirmRelationPropertyChange}
-              networkId={networkId}
-              objectTypes={objectTypes}
-              onChange={setMappingValue}
-              relationProperties={
-                mappingValue.mappingMode === "resource" ? relationProperties : undefined
-              }
-              value={mappingValue}
-            />
-          </Suspense>
-          {refusalOnBasicInfo ? null : refusalBanner}
           <RelationDeclarationsSection
             ends={mappingValue.mappingRules}
             networkId={networkId}
@@ -593,7 +574,33 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             sourceName={objectTypeName(mappingValue.mappingRules.sourceObjectTypeId)}
             targetName={objectTypeName(mappingValue.mappingRules.targetObjectTypeId)}
             value={declarations}
-          />
+          >
+            {({ advanced, semantics }) => (
+              <>
+                <Suspense
+                  fallback={
+                    <div className={styles.loadingState}>
+                      <Spin />
+                    </div>
+                  }
+                >
+                  <RelationTypeMappingEditor
+                    confirmRelationPropertyChange={confirmRelationPropertyChange}
+                    networkId={networkId}
+                    objectTypes={objectTypes}
+                    onChange={setMappingValue}
+                    relationProperties={
+                      mappingValue.mappingMode === "resource" ? relationProperties : undefined
+                    }
+                    semantics={semantics}
+                    value={mappingValue}
+                  />
+                </Suspense>
+                {refusalOnBasicInfo ? null : refusalBanner}
+                {advanced}
+              </>
+            )}
+          </RelationDeclarationsSection>
         </div>
       </>
     );

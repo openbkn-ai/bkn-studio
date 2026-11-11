@@ -29,6 +29,19 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() } }),
 }));
 
+const valueTypeService = vi.hoisted(() => ({
+  create: vi.fn(),
+  update: vi.fn(),
+}));
+
+vi.mock("@/modules/knowledge-network/services/value-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/value-type.service")
+  >()),
+  createKnowledgeNetworkValueType: valueTypeService.create,
+  updateKnowledgeNetworkValueType: valueTypeService.update,
+}));
+
 vi.mock("antd", async (importOriginal) => {
   const actual = await importOriginal<typeof import("antd")>();
   return {
@@ -322,5 +335,77 @@ describe("PropertyDeclarationsSection", () => {
 
     expect(await screen.findByText(`${PREFIX}.timezoneInvalid`)).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  describe("a value type opened from the declarations", () => {
+    const price: ValueType = { ...amount, id: "price", name: "Price", unit: undefined };
+    const VALUE_TYPES = "knowledgeNetwork.valueTypes";
+
+    it("takes the drawer in place of the property, then names the new one", async () => {
+      valueTypeService.create.mockResolvedValue("price");
+      const declarationContext = context({
+        reloadValueTypes: vi.fn().mockResolvedValue([amount, price]),
+      });
+      const onSubmit = renderDrawer(property(), declarationContext);
+      fireEvent.change(
+        formItem("knowledgeNetwork.objectTypePropertyDisplayName").querySelector("input")!,
+        {
+          target: { value: "Fee changed" },
+        },
+      );
+
+      fireEvent.click(screen.getByText(`${PREFIX}.valueTypeCreate`));
+
+      // One drawer: its title, body and footer now belong to the value type.
+      expect(screen.getAllByRole("heading")).toHaveLength(1);
+      expect(screen.getByRole("heading")).toHaveTextContent(`${VALUE_TYPES}.form.createTitle`);
+      expect(screen.queryByRole("button", { name: "common.ok" })).toBeNull();
+      expect(screen.getByText("knowledgeNetwork.objectTypePropertyName")).not.toBeVisible();
+
+      fireEvent.change(formItem(`${VALUE_TYPES}.form.name`).querySelector("input")!, {
+        target: { value: "Price" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+      // A value type made for a decimal property starts as a decimal.
+      await waitFor(() =>
+        expect(valueTypeService.create).toHaveBeenCalledWith(
+          "kn-1",
+          expect.objectContaining({ baseType: "decimal", name: "Price" }),
+        ),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("heading")).toHaveTextContent(
+          "knowledgeNetwork.objectTypeEditDataProperty",
+        ),
+      );
+      expect(screen.getByText("knowledgeNetwork.objectTypePropertyName")).toBeVisible();
+      expect(declarationContext.reloadValueTypes).toHaveBeenCalled();
+      submit();
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          declarations: { constraints: { valueType: "price" } },
+          displayName: "Fee changed",
+        }),
+      );
+    });
+
+    it("goes back to the property without saving", () => {
+      valueTypeService.create.mockReset();
+      renderDrawer(property({ declarations: { constraints: { valueType: "amount_cny" } } }));
+
+      fireEvent.click(screen.getByText(`${PREFIX}.valueTypeView`));
+      expect(screen.getByRole("heading")).toHaveTextContent(`${VALUE_TYPES}.form.editTitle`);
+      fireEvent.click(screen.getAllByRole("button", { name: "common.back" })[0]);
+
+      expect(screen.getByRole("heading")).toHaveTextContent(
+        "knowledgeNetwork.objectTypeEditDataProperty",
+      );
+      expect(formItem(`${PREFIX}.valueType`)).toHaveTextContent("Amount");
+      expect(valueTypeService.create).not.toHaveBeenCalled();
+      expect(valueTypeService.update).not.toHaveBeenCalled();
+    });
   });
 });

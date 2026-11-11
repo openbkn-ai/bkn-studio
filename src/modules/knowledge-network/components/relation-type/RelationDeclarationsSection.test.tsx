@@ -122,20 +122,47 @@ function openSelect(label: string) {
 }
 
 describe("RelationDeclarationsSection", () => {
-  it("opens for a relation that declares something, and is folded otherwise", () => {
+  it("shows the semantics and folds the advanced settings unless the relation is secondary", () => {
+    mocks.list.mockResolvedValue({ entries: [], totalCount: 0 });
     renderSection({ cardinality: "one_to_one" }, otherEnds);
-    expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
+    expect(screen.getByText(`${PREFIX}.cardinality`, { selector: "label" })).toBeVisible();
+    const advanced = screen.getByRole("button", { expanded: false });
+    expect(within(advanced).getByText(`${PREFIX}.advanced`)).toBeTruthy();
     cleanup();
 
-    renderSection(undefined, otherEnds);
-    const header = screen.getByRole("button", { expanded: false });
-    expect(within(header).getByText(`${PREFIX}.notDeclared`)).toBeTruthy();
+    renderSection({ importance: "secondary" }, otherEnds);
+    expect(
+      within(screen.getByRole("button", { expanded: true })).getByText(`${PREFIX}.advanced`),
+    ).toBeTruthy();
   });
 
-  it("reads as not declared when a BKN file declares only the verification", () => {
-    renderSection({ verification: "confirmed" }, otherEnds);
-    const header = screen.getByRole("button", { expanded: false });
-    expect(within(header).getByText(`${PREFIX}.notDeclared`)).toBeTruthy();
+  it("gives the caller the semantics and the advanced settings to place apart", () => {
+    mocks.list.mockResolvedValue({ entries: [], totalCount: 0 });
+    renderWithoutAntdStyles(
+      <RelationDeclarationsSection
+        ends={otherEnds}
+        networkId="clinic"
+        onChange={vi.fn()}
+        relationName="检验对象"
+        sourceName="检验申请"
+        targetName="患者"
+        value={{ cardinality: "many_to_one", importance: "secondary" }}
+      >
+        {({ advanced, semantics }) => (
+          <>
+            <section aria-label="semantics">{semantics}</section>
+            <section aria-label="advanced">{advanced}</section>
+          </>
+        )}
+      </RelationDeclarationsSection>,
+    );
+
+    const semantics = screen.getByRole("region", { name: "semantics" });
+    const advanced = screen.getByRole("region", { name: "advanced" });
+    expect(within(semantics).getByText(`${PREFIX}.cardinality`)).toBeTruthy();
+    expect(within(semantics).queryByText(`${PREFIX}.importance`)).toBeNull();
+    expect(within(advanced).getByText(`${PREFIX}.importance`)).toBeTruthy();
+    expect(within(advanced).queryByText(`${PREFIX}.cardinality`)).toBeNull();
   });
 
   it("says from source to target what the cardinality and the required ends mean", async () => {

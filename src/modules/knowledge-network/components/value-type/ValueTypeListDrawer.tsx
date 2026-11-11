@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Drawer, Empty, Input, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
@@ -23,7 +23,8 @@ import type { ValueType } from "@/modules/knowledge-network/types/knowledge-netw
 import { valueTypeKind } from "@/modules/knowledge-network/utils/property-declarations";
 
 import { ValueTypeEnumItems } from "./ValueTypeEnumItems";
-import { ValueTypeFormDrawer } from "./ValueTypeFormDrawer";
+import { useValueTypeEditor, valueTypeFormTitle } from "./useValueTypeEditor";
+import { ValueTypeFormFields } from "./ValueTypeForm";
 import styles from "./ValueTypeListDrawer.module.css";
 import {
   ValueTypeReferencedDialog,
@@ -60,7 +61,8 @@ type FormTarget = { valueType?: ValueType } | null;
 
 /**
  * The value types of a network, opened from the object type section. They belong to the whole
- * network, which the title says, so no one takes them for part of one object type.
+ * network, which the title says, so no one takes them for part of one object type. Creating,
+ * editing and viewing one shows its form in this drawer, in place of the list.
  */
 export function ValueTypeListDrawer({
   canModify,
@@ -80,9 +82,19 @@ export function ValueTypeListDrawer({
   const [keyword, setKeyword] = useState("");
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
   const [refusal, setRefusal] = useState<ValueTypeReferencedRefusal | null>(null);
+  const editor = useValueTypeEditor({
+    active: formTarget !== null,
+    networkId,
+    onSaved: () => {
+      setFormTarget(null);
+      setReload((value) => value + 1);
+    },
+    valueType: formTarget?.valueType,
+  });
 
   useEffect(() => {
     if (!open) {
+      setFormTarget(null);
       return;
     }
     let current = true;
@@ -182,14 +194,10 @@ export function ValueTypeListDrawer({
       : []),
   ];
 
-  return (
-    <Drawer
-      destroyOnHidden
-      onClose={onClose}
-      open={open}
-      title={t(`${PREFIX}.drawerTitle`)}
-      width={820}
-    >
+  const leaveForm = () => setFormTarget(null);
+
+  const list = (
+    <>
       <Typography.Paragraph className={styles.description}>
         {t(`${PREFIX}.drawerDescription`)}
       </Typography.Paragraph>
@@ -238,14 +246,61 @@ export function ValueTypeListDrawer({
           size="middle"
         />
       )}
-      <ValueTypeFormDrawer
-        networkId={networkId}
-        onClose={() => setFormTarget(null)}
-        onSaved={() => setReload((value) => value + 1)}
-        open={formTarget !== null}
-        readOnly={!canModify}
-        valueType={formTarget?.valueType}
-      />
+    </>
+  );
+
+  return (
+    <Drawer
+      // Leaving a form goes back to the list.
+      closable={formTarget === null}
+      destroyOnHidden
+      footer={
+        formTarget ? (
+          <div className={styles.footer}>
+            <AppButton onClick={leaveForm}>{t("common.back")}</AppButton>
+            {canModify ? (
+              <AppButton
+                loading={editor.submitting}
+                onClick={() => void editor.submit()}
+                type="primary"
+              >
+                {t("common.save")}
+              </AppButton>
+            ) : null}
+          </div>
+        ) : undefined
+      }
+      maskClosable={formTarget === null}
+      onClose={formTarget ? leaveForm : onClose}
+      open={open}
+      title={
+        formTarget ? (
+          <span className={styles.formTitle}>
+            <AppButton
+              aria-label={t("common.back")}
+              icon={<ArrowLeftOutlined />}
+              onClick={leaveForm}
+              size="small"
+              type="text"
+            />
+            {valueTypeFormTitle(t, !canModify, formTarget.valueType)}
+          </span>
+        ) : (
+          t(`${PREFIX}.drawerTitle`)
+        )
+      }
+      width={820}
+    >
+      {formTarget ? (
+        <ValueTypeFormFields
+          form={editor.form}
+          readOnly={!canModify}
+          valueType={formTarget.valueType}
+        />
+      ) : (
+        list
+      )}
+      {editor.refusalDialog}
       {refusal ? (
         <ValueTypeReferencedDialog
           networkId={networkId}

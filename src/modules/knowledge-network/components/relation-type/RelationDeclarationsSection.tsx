@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Collapse, Form, Input, Radio, Select, Tag, Tooltip } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Checkbox, Collapse, Form, Input, Radio, Select, Tooltip } from "antd";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
@@ -22,7 +22,6 @@ import {
   fitRelationDeclarations,
   hasSameEnds,
   isSymmetric,
-  normalizeRelationDeclarations,
   RELATION_CARDINALITIES,
   RELATION_CHARACTERISTICS,
   type RelationEnds,
@@ -34,7 +33,7 @@ import styles from "./RelationDeclarationsSection.module.css";
 import { useRelationSentence } from "./use-relation-sentence";
 
 const PREFIX = "knowledgeNetwork.relationDeclarations";
-const PANEL_KEY = "relation-declarations";
+const ADVANCED_KEY = "relation-advanced";
 
 /** The backend's limit on a reverse name, the same as on a relation's other names. */
 export const REVERSE_NAME_MAX_LENGTH = 40;
@@ -42,7 +41,12 @@ export const REVERSE_NAME_MAX_LENGTH = 40;
 type ClearedNotice =
   { kind: "ends" } | { kind: "symmetric"; names: ClearedRelationDeclaration[] } | null;
 
+/** The two places the declarations show: the semantics before the mapping rules, the rest after. */
+export type RelationDeclarationParts = { advanced: ReactNode; semantics: ReactNode };
+
 type RelationDeclarationsSectionProps = {
+  /** Places the parts; absent, the semantics and then the advanced settings. */
+  children?: (parts: RelationDeclarationParts) => ReactNode;
   ends: RelationEnds;
   networkId: string;
   onChange: (value: RelationDeclarations | undefined) => void;
@@ -57,6 +61,7 @@ type RelationDeclarationsSectionProps = {
 };
 
 export function RelationDeclarationsSection({
+  children,
   ends,
   networkId,
   onChange,
@@ -68,9 +73,7 @@ export function RelationDeclarationsSection({
   value,
 }: RelationDeclarationsSectionProps) {
   const { t } = useTranslation();
-  // The join basis is not edited here, so a relation declaring only that reads as not declared.
-  const declared = Boolean(normalizeRelationDeclarations({ ...value, verification: undefined }));
-  const [open, setOpen] = useState(declared);
+  const [advancedOpen, setAdvancedOpen] = useState(value?.importance === "secondary");
   const [notice, setNotice] = useState<ClearedNotice>(null);
   const [candidates, setCandidates] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
@@ -81,7 +84,7 @@ export function RelationDeclarationsSection({
 
   useEffect(() => {
     if (refused) {
-      setOpen(true);
+      setAdvancedOpen(true);
     }
   }, [refused]);
 
@@ -186,7 +189,7 @@ export function RelationDeclarationsSection({
           })
         : null;
 
-  const body = (
+  const semantics = (
     <Form colon={false} component="div" layout="vertical">
       {noticeText ? (
         <Alert
@@ -283,6 +286,11 @@ export function RelationDeclarationsSection({
           />
         </Form.Item>
       ) : null}
+    </Form>
+  );
+
+  const advancedBody = (
+    <Form colon={false} component="div" layout="vertical">
       <div className={styles.row}>
         <Form.Item label={t(`${PREFIX}.importance`)} tooltip={t(`${PREFIX}.importanceHint`)}>
           <Radio.Group
@@ -317,26 +325,31 @@ export function RelationDeclarationsSection({
     </Form>
   );
 
-  return (
+  const advanced = (
     <Collapse
-      activeKey={open ? [PANEL_KEY] : []}
+      activeKey={advancedOpen ? [ADVANCED_KEY] : []}
       className={styles.section}
       items={[
         {
-          children: body,
+          children: advancedBody,
+          extra: <span className={styles.note}>{t(`${PREFIX}.advancedNote`)}</span>,
           forceRender: true,
-          key: PANEL_KEY,
-          label: (
-            <span className={styles.title}>
-              {t(`${PREFIX}.title`)}
-              {declared ? null : (
-                <Tag className={styles.undeclared}>{t(`${PREFIX}.notDeclared`)}</Tag>
-              )}
-            </span>
-          ),
+          key: ADVANCED_KEY,
+          label: <span className={styles.title}>{t(`${PREFIX}.advanced`)}</span>,
         },
       ]}
-      onChange={(keys) => setOpen((Array.isArray(keys) ? keys : [keys]).includes(PANEL_KEY))}
+      onChange={(keys) =>
+        setAdvancedOpen((Array.isArray(keys) ? keys : [keys]).includes(ADVANCED_KEY))
+      }
     />
+  );
+
+  return children ? (
+    children({ advanced, semantics })
+  ) : (
+    <>
+      {semantics}
+      {advanced}
+    </>
   );
 }
