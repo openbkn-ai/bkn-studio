@@ -13,7 +13,7 @@ import {
   PartitionOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Alert, Form, Input, Select, Spin, Steps, Switch, Tag } from "antd";
+import { Alert, Form, Input, Select, Spin, Steps, Switch, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +30,10 @@ import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
+import {
+  canEnableFieldFiltering,
+  findUnsupportedFilterableField,
+} from "@/modules/data-catalog/lib/field-filterability";
 import {
   emptyFilterGroup,
   filterToBackend,
@@ -88,11 +92,11 @@ function isUsableSource(resource: CatalogResource) {
 }
 
 function sourceFilterQueryPath(resource: CatalogResource | null): FilterQueryPath {
-  return resource?.category === "index" ||
-    (resource?.category === "table" &&
-      resource.localIndexStatus === "available" &&
-      resource.localIndexName)
-    ? "local_index"
+  if (resource?.category === "index") return "local_index";
+  return resource?.category === "table" &&
+    resource.localIndexStatus === "available" &&
+    resource.localIndexName
+    ? "managed_local_index"
     : "source";
 }
 
@@ -101,6 +105,7 @@ function draftField(field: ResourceSchemaField): ResourceSchemaField {
     name: field.name,
     originalName: field.originalName || field.name,
     type: field.type,
+    filterable: field.filterable,
     displayName: field.displayName || field.name,
   };
 }
@@ -418,6 +423,16 @@ export function ViewEditorScene({
       setError(tagErrorMessage(tagError));
       return;
     }
+    const unsupported = findUnsupportedFilterableField(fields);
+    if (unsupported) {
+      setError(
+        t("dataCatalog.resource.unsupportedFilterableField", {
+          name: unsupported.name,
+          type: unsupported.type,
+        }),
+      );
+      return;
+    }
     const names = fields.map((field) => field.name.trim());
     const displayNames = fields.map((field) => field.displayName?.trim() ?? "");
     if (
@@ -491,6 +506,7 @@ export function ViewEditorScene({
           name: field.name.trim(),
           originalName: field.originalName,
           type: field.type,
+          filterable: field.filterable,
           displayName: field.displayName?.trim(),
         })),
         sourceResourceId: source.id,
@@ -819,6 +835,7 @@ export function ViewEditorScene({
                             <th>{t("dataCatalog.viewEditor.outputName")}</th>
                             <th>{t("dataCatalog.viewEditor.displayName")}</th>
                             <th>{t("dataCatalog.viewEditor.fieldType")}</th>
+                            <th>{t("dataCatalog.resource.fieldFilterable")}</th>
                             <th aria-label="Actions" />
                           </tr>
                         </thead>
@@ -898,6 +915,35 @@ export function ViewEditorScene({
                                   ) : null}
                                 </td>
                                 <td>{field.type}</td>
+                                <td>
+                                  <Tooltip
+                                    title={
+                                      !canEnableFieldFiltering(field.type)
+                                        ? t("dataCatalog.resource.filterableTypeUnsupported", {
+                                            type: field.type,
+                                          })
+                                        : undefined
+                                    }
+                                  >
+                                    <span>
+                                      <Switch
+                                        aria-label={t("dataCatalog.resource.fieldFilterableLabel", {
+                                          name: field.name,
+                                        })}
+                                        checked={field.filterable === true}
+                                        disabled={
+                                          saving ||
+                                          (!canEnableFieldFiltering(field.type) &&
+                                            field.filterable !== true)
+                                        }
+                                        onChange={(filterable) =>
+                                          updateField(index, { filterable })
+                                        }
+                                        size="small"
+                                      />
+                                    </span>
+                                  </Tooltip>
+                                </td>
                                 <td className={styles.fieldActions}>
                                   <AppButton
                                     aria-label={t("dataCatalog.viewEditor.moveUp")}

@@ -47,8 +47,7 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
     </Tooltip>
   );
   const stringInput =
-    ["string", "text"].includes(type ?? "") ||
-    (type === "large_integer" && queryPath === "local_index");
+    ["string", "text"].includes(type ?? "") || (type === "large_integer" && queryPath !== "source");
   const input = (value: string | undefined, label: string, update: (value: string) => void) =>
     type === "boolean" ? (
       <Select
@@ -229,7 +228,7 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
         </span>
       ) : null}
       {["like", "not_like"].includes(rule.operation) ? (
-        <span className={styles.valueHint}>{t("dataCatalog.filter.substringHint")}</span>
+        <span className={styles.valueHint}>{t("dataCatalog.filter.likePatternHint")}</span>
       ) : null}
     </div>
   );

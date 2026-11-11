@@ -81,6 +81,7 @@ const source = {
   schema: [
     {
       name: "id",
+      filterable: true,
       originalName: "id",
       displayName: "Order ID",
       type: "integer",
@@ -303,6 +304,9 @@ describe("ViewEditorScene", () => {
       target: { value: "orders_view" },
     });
     fireEvent.click(screen.getByRole("switch", { name: "common.status" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: "dataCatalog.resource.fieldFilterableLabel" }),
+    );
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
       target: { value: "Order Number" },
     });
@@ -320,6 +324,7 @@ describe("ViewEditorScene", () => {
               name: "id",
               originalName: "id",
               displayName: "Order Number",
+              filterable: false,
             }),
           ],
         }),
@@ -330,6 +335,48 @@ describe("ViewEditorScene", () => {
     };
     expect(createPayload.schema[0]).not.toHaveProperty("features");
   }, 20_000);
+
+  it.each([false, true])(
+    "guards unsupported view field filtering and permits repairing enabled=%s history",
+    async (filterable) => {
+      const schema = [{ ...source.schema[0], type: "binary", filterable }];
+      const view = {
+        ...source,
+        id: "view-1",
+        category: "logical_view",
+        logicalType: "derived",
+        name: "orders_view",
+        expectedUpdateTime: 42,
+        schema,
+        logicalViewDefinition: { sourceResourceId: "source-1" },
+      } as CatalogResource;
+      getResourceMock.mockImplementation((id: string) =>
+        Promise.resolve(id === "view-1" ? view : { ...source, schema }),
+      );
+      renderEditor({ resourceId: "view-1" });
+      await screen.findByDisplayValue("orders_view");
+      const toggle = screen.getByRole("switch", {
+        name: "dataCatalog.resource.fieldFilterableLabel",
+      });
+      if (filterable) {
+        expect(toggle).not.toBeDisabled();
+        fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+        expect(
+          await screen.findByText("dataCatalog.resource.unsupportedFilterableField"),
+        ).toBeTruthy();
+        expect(updateViewMock).not.toHaveBeenCalled();
+        fireEvent.click(toggle);
+      }
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseEnter(toggle.parentElement!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "dataCatalog.resource.filterableTypeUnsupported",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      await waitFor(() => expect(updateViewMock).toHaveBeenCalledOnce());
+      expect(updateViewMock.mock.calls[0]?.[1]).toMatchObject({ schema: [{ filterable: false }] });
+    },
+  );
 
   it("returns to type selection without losing the draft", async () => {
     renderEditor({ catalogId: "cat-1" });
@@ -1225,6 +1272,46 @@ describe("ViewEditorScene", () => {
       );
     },
   );
+
+  it("saves a fixed ordinary condition using the managed schema despite a disabled source switch", async () => {
+    const schema = [{ ...source.schema[0], filterable: false }];
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      schema,
+      logicalViewDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: { field: "id", operation: ">=", value: 10 },
+      },
+    } as CatalogResource;
+    const indexedSource = {
+      ...source,
+      localIndexName: "idx_orders",
+      localIndexStatus: "available",
+      schema,
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : indexedSource),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [{ field: "id", operation: ">=", value: 10, value_from: "const" }],
+          },
+        }),
+      ),
+    );
+  });
 
   it("lets an existing view repair a Text filter after its table gains an index", async () => {
     const view = {

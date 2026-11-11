@@ -38,6 +38,8 @@ export type ResourceSchemaField = {
   displayName?: string;
   /** Field description (backend description). */
   description?: string;
+  /** Effective filtering switch supplied by Vega; independent of projection and index features. */
+  filterable?: boolean;
   /** Field-level index features, such as full text and vectors. */
   features?: ResourceFieldFeature[];
   name: string;
