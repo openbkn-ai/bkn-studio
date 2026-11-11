@@ -50,7 +50,7 @@ export function KnVersionBar({
 }: KnVersionBarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [publishOpen, setPublishOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const versions = useReadableKnVersions(networkId, versioning.running_version);
@@ -72,6 +72,7 @@ export function KnVersionBar({
   ];
 
   const actionContext = {
+    modal,
     networkId,
     notify: message,
     onChanged,
