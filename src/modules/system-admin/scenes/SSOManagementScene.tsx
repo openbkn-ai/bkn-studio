@@ -21,6 +21,8 @@ import {
   type SSOProviderPage,
 } from "@/modules/system-admin/services/sso-provider.service";
 
+import { SSODirectorySyncModal } from "../components/SSODirectorySyncModal";
+
 export function SSOManagementScene() {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
@@ -31,6 +33,7 @@ export function SSOManagementScene() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SSOProvider>();
+  const [syncProvider, setSyncProvider] = useState<SSOProvider>();
   const [busy, setBusy] = useState(false);
   const [form] = Form.useForm<SSOProviderInput>();
   const loginEnabled = Form.useWatch("login_enabled", form);
@@ -180,6 +183,7 @@ export function SSOManagementScene() {
   );
   return (
     <section>
+      <SSODirectorySyncModal provider={syncProvider} onClose={() => setSyncProvider(undefined)} />
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Typography.Title level={3}>{label("title")}</Typography.Title>
         <Typography.Paragraph>{label("description")}</Typography.Paragraph>
@@ -218,6 +222,11 @@ export function SSOManagementScene() {
               render: (_, row) => (
                 <Space>
                   <AppButton onClick={() => edit(row)}>{label("edit")}</AppButton>
+                  {row.adapter === "casdoor" && (
+                    <AppButton onClick={() => setSyncProvider(row)}>
+                      {label("sync.title")}
+                    </AppButton>
+                  )}
                   <AppButton onClick={() => toggle(row)}>
                     {label(row.enabled ? "disable" : "enable")}
                   </AppButton>
