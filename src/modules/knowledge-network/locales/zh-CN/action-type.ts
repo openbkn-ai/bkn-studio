@@ -26,8 +26,6 @@ export const actiontypePart = {
   actionTypeApplicableCondition: "适用条件（可选）",
   actionTypeApplicableConditionHint:
     "适用条件只限定哪些{{objectTypeName}}实例可以操作；执行时仍需指定具体实例。",
-  actionTypeApplicableConditionCreateHint:
-    "此创建行动保留了原有条件；条件不会创建新实例，请核对它是否仍适用于当前定义。",
   actionTypeExecutionCreateHint:
     "选择创建{{objectTypeName}}实例的工具，并设置创建时要传给工具的信息，例如名称、编号。",
   actionTypeExecutionUpdateHint:
@@ -275,4 +273,13 @@ export const actiontypePart = {
   actionRelationIdentityFromTarget: "取自终点对象类已配置的唯一标识",
   actionRelationExecutionHint: "选择负责建立或解除关系的执行工具。",
   actionOperationUnavailable: "当前环境尚未支持保存此类操作。",
+  actionExecutionDynamicParams: "运行时参数",
+  actionExecutionObjects: "操作对象",
+  actionExecutionRelation: "关系对象",
+  actionExecutionSource: "起点对象",
+  actionExecutionTarget: "终点对象",
+  actionExecutionObjectInput: "新对象属性",
+  actionExecutionObjectRequired: "请指定至少一个操作对象。",
+  actionExecutionAddObject: "添加对象",
+  actionExecutionSchemaUnavailable: "无法获取执行配置，请稍后重试。",
 };

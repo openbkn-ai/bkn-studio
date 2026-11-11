@@ -28,8 +28,6 @@ export const actiontypePart = {
   actionTypeApplicableCondition: "Applicable conditions (optional)",
   actionTypeApplicableConditionHint:
     "Conditions limit which {{objectTypeName}} instances can be operated on; a specific instance must still be selected at execution time.",
-  actionTypeApplicableConditionCreateHint:
-    "This create action retains an existing condition. A condition does not create a new instance; check that it still applies to this definition.",
   actionTypeExecutionCreateHint:
     "Choose the tool that creates an instance of {{objectTypeName}}, then set the information passed to it, such as a name or reference number.",
   actionTypeExecutionUpdateHint:
@@ -298,4 +296,14 @@ export const actiontypePart = {
   actionRelationIdentityFromTarget: "Use the target object type's configured identity",
   actionRelationExecutionHint: "Select the tool that creates or removes the relationship.",
   actionOperationUnavailable: "This environment does not yet support saving this operation.",
+  actionExecutionDynamicParams: "Runtime parameters",
+  actionExecutionObjects: "Target objects",
+  actionExecutionRelation: "Relation objects",
+  actionExecutionSource: "Source object",
+  actionExecutionTarget: "Target object",
+  actionExecutionObjectInput: "New object properties",
+  actionExecutionObjectRequired: "Specify at least one target object.",
+  actionExecutionAddObject: "Add object",
+  actionExecutionSchemaUnavailable:
+    "Execution configuration is unavailable. Please try again later.",
 };

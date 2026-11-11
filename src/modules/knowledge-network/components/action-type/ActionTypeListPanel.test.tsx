@@ -6,7 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigate = vi.hoisted(() => vi.fn());
@@ -130,8 +130,13 @@ vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGr
 import { ActionTypeListPanel } from "./ActionTypeListPanel";
 
 function renderPanel(initialEntry = "/?view=list", canDelete = false, canModify = false) {
+  function LocationProbe() {
+    const location = useLocation();
+    return <span data-testid="location-search">{location.search}</span>;
+  }
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
+      <LocationProbe />
       <ActionTypeListPanel
         canDelete={canDelete}
         canModify={canModify}
@@ -181,6 +186,33 @@ afterEach(() => {
 });
 
 describe("ActionTypeListPanel menu access", () => {
+  it("resets the URL and request page when changing tool type on page three", async () => {
+    listActionTypePage.mockResolvedValue({ entries: [], totalCount: 30 });
+    renderPanel("/?view=list&page=3");
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({ offset: 20 }) as unknown,
+      ),
+    );
+
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "knowledgeNetwork.actionTypeExecutionToolCategory" }),
+    );
+    fireEvent.click(await screen.findByText("executionFactory.openapiToolboxTab"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location-search")).toHaveTextContent(
+        "executionToolCategory=openapi",
+      );
+      expect(screen.getByTestId("location-search")).not.toHaveTextContent("page=3");
+      expect(listActionTypePage).toHaveBeenLastCalledWith(
+        "network-1",
+        expect.objectContaining({ executionToolCategory: "openapi", offset: 0 }) as unknown,
+      );
+    });
+  });
+
   it("filters the list by the execution tool category", async () => {
     renderPanel("/?view=list");
 

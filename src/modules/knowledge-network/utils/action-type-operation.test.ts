@@ -174,8 +174,8 @@ describe("action operation compatibility", () => {
       executionConfig: execution,
     });
     expect(payload.parameters).toEqual([
-      { name: "order_id", value_from: "source_identity", value: undefined },
-      { name: "supplier_id", value_from: "target_identity", value: undefined },
+      { name: "order_id", type: "string", value_from: "source_identity", value: undefined },
+      { name: "supplier_id", type: "string", value_from: "target_identity", value: undefined },
     ]);
     const detail = mapActionTypeDetail({ ...payload, id: "a-1" });
     expect(detail.executionConfig.parameters.map((parameter) => parameter.valueFrom)).toEqual([

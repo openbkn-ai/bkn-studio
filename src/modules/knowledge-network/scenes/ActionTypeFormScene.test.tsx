@@ -92,14 +92,6 @@ vi.mock("@/modules/knowledge-network/services/relation-type.service", () => ({
   listKnowledgeNetworkRelationTypePage: mocks.listRelations,
   getKnowledgeNetworkRelationTypeDetail: mocks.getRelation,
 }));
-vi.mock("@/modules/knowledge-network/services/action-type.service", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/modules/knowledge-network/services/action-type.service")
-  >()),
-  canPersistActionTypeOperation: () => true,
-  canPersistActionTypeCondition: () => true,
-}));
-
 // The execution and condition editors are tested on their own; here they accept anything.
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor", () => ({
   ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY: "tool-required",
@@ -781,7 +773,7 @@ describe("ActionTypeFormScene navigation context", () => {
 });
 
 describe("ActionTypeFormScene rule panels", () => {
-  it("retains an existing condition when editing a create action", async () => {
+  it("drops a legacy condition when editing a create action", async () => {
     mocks.routeParams.current = { actionTypeId: "a-1", networkId: "network-1" };
     const condition = { field: "status", objectTypeId: "orders", operation: "==", value: "open" };
     mocks.getActionTypeDetail.mockResolvedValue({
@@ -799,9 +791,9 @@ describe("ActionTypeFormScene rule panels", () => {
 
     renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
 
-    expect(
-      await screen.findByText("knowledgeNetwork.actionTypeApplicableCondition"),
-    ).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Existing create action")).toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeApplicableCondition")).toBeNull();
+    expect(screen.queryByTestId("action-condition-editor")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
 
     await waitFor(() =>
@@ -809,7 +801,7 @@ describe("ActionTypeFormScene rule panels", () => {
         "network-1",
         "a-1",
         expect.objectContaining({
-          condition: expect.objectContaining({ field: "status" }) as unknown,
+          condition: undefined,
         }),
       ),
     );

@@ -264,7 +264,8 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
   object_type_id?: string;
   parameters?: Array<{
     name: string;
-    value?: string;
+    type?: string;
+    value?: unknown;
     value_from?: "property" | "input" | "const" | "source_identity" | "target_identity";
   }>;
   tags?: string[];

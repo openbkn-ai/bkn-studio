@@ -22,12 +22,7 @@ import {
 import type { ActionTypeExecutionParameterSchemaState } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionEditor";
 import { ActionTypeRelationFields } from "@/modules/knowledge-network/components/action-type/ActionTypeRelationFields";
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
-import {
-  canPersistActionTypeOperation,
-  canPersistActionTypeCondition,
-  ActionTypeConditionUnsupportedError,
-  ActionTypeOperationUnsupportedError,
-} from "@/modules/knowledge-network/services/action-type.service";
+
 import {
   actionTypeOperationLabelKey,
   getActionTypeOperationKind,
@@ -347,32 +342,15 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           ),
         })
       : otherObjectTypeName;
-  const unsupportedOperation = !canPersistActionTypeOperation({
-    operationConfig:
-      operationKind === "relation"
-        ? {
-            type: "relation",
-            relationTypeId: "",
-            relationOperation: "create",
-          }
-        : { type: operationKind },
-    objectTypeId: watchedObjectTypeId || "",
-  });
   // What the aliases and lifecycle were when the action type was read; a save sends what changed.
   const definitionBaseline = useRef<DefinitionDeclarations | undefined>(undefined);
   const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
   const watchedCondition = Form.useWatch("condition", basicForm);
   const watchedOtherCondition = Form.useWatch("otherObjectCondition", basicForm);
-  const unsupportedCondition =
-    isObjectBoundOperation &&
-    (!canPersistActionTypeCondition(watchedCondition) ||
-      (operationKind === "relation" && !canPersistActionTypeCondition(watchedOtherCondition)));
   const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
   const showConditionPanel =
     operationKind === "relation" ||
-    (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined)
-      ? true
-      : isObjectOperation && (hasSavedCondition || !isActionConditionEmpty(watchedCondition));
+    (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined);
 
   const switchActionKind = (nextKind: BasicFormValues["actionKind"]) => {
     const previousKind = activeActionKind.current;
@@ -567,7 +545,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             affectComment: detail.affect?.comment ?? "",
             affectObjectTypeId: detail.affect?.objectTypeId,
             color: detail.color,
-            condition: detail.condition ?? null,
+            condition:
+              detail.operationConfig?.type !== "relation" && detail.actionKind === "create"
+                ? null
+                : (detail.condition ?? null),
             description: detail.description,
             id: detail.id,
             name: detail.name,
@@ -596,7 +577,11 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           setOperationKind(getActionTypeOperationKind(detail));
           activeActionKind.current = nextBasic.actionKind;
           operationDrafts.current = {};
-          setHasSavedCondition(!isActionConditionEmpty(detail.condition));
+          setHasSavedCondition(
+            detail.operationConfig?.type !== "relation" && detail.actionKind === "create"
+              ? false
+              : !isActionConditionEmpty(detail.condition),
+          );
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
         } else if (
@@ -648,14 +633,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   };
 
   const handleSubmit = async () => {
-    if (unsupportedCondition) {
-      void message.error(t("knowledgeNetwork.actionTypeConditionPreviewOnly"));
-      return;
-    }
-    if (unsupportedOperation) {
-      void message.error(t("knowledgeNetwork.actionOperationUnavailable"));
-      return;
-    }
     const resolvedBasic = await syncBasicValueFromForm();
     if (!resolvedBasic) {
       return;
@@ -717,9 +694,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           : (resolvedBasic.actionKind ?? "create"),
       affect,
       color: resolvedBasic.color,
-      condition: !isObjectBoundOperation
-        ? undefined
-        : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
+      condition:
+        !isObjectBoundOperation || (isObjectOperation && resolvedBasic.actionKind === "create")
+          ? undefined
+          : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
       description: resolvedBasic.description,
       executionConfig: normalizedExecution,
       id: resolvedBasic.id,
@@ -749,14 +727,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           : undefined,
       );
     } catch (error) {
-      if (error instanceof ActionTypeConditionUnsupportedError) {
-        void message.error(t("knowledgeNetwork.actionTypeConditionPreviewOnly"));
-        return;
-      }
-      if (error instanceof ActionTypeOperationUnsupportedError) {
-        void message.error(t("knowledgeNetwork.actionOperationUnavailable"));
-        return;
-      }
       const refusal = readDeclarationRefusal(error);
       if (refusal) {
         // Shown above the basic info, where the aliases and lifecycle are.
@@ -1024,9 +994,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                 t(
                                   operationKind === "relation"
                                     ? "knowledgeNetwork.actionRelationConditionsHint"
-                                    : watchedActionKind === "create"
-                                      ? "knowledgeNetwork.actionTypeApplicableConditionCreateHint"
-                                      : "knowledgeNetwork.actionTypeApplicableConditionHint",
+                                    : "knowledgeNetwork.actionTypeApplicableConditionHint",
                                   {
                                     objectTypeName: watchedObjectTypeId
                                       ? currentObjectTypeName
@@ -1105,13 +1073,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                   propertyOptions={otherPropertyOptions}
                                 />
                               </Form.Item>
-                            ) : null}
-                            {unsupportedCondition ? (
-                              <Alert
-                                message={t("knowledgeNetwork.actionTypeConditionPreviewOnly")}
-                                showIcon
-                                type="info"
-                              />
                             ) : null}
                           </div>
                         ),
@@ -1274,7 +1235,6 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     ? undefined
     : {
         save: {
-          disabled: unsupportedOperation || unsupportedCondition,
           loading: submitting,
           onClick: () => {
             void handleSubmit();

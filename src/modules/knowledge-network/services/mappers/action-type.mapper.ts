@@ -5,6 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import {
+  parsePrecisionPreservingJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
+
 import type {
   ActionTypeActionSource,
   ActionTypeAffect,
@@ -52,7 +57,8 @@ export type BackendActionSource = {
 
 export type BackendActionParameter = {
   name: string;
-  value?: string;
+  type?: string;
+  value?: unknown;
   value_from?: "property" | "input" | "const" | "source_identity" | "target_identity";
 };
 
@@ -146,33 +152,37 @@ function toBackendActionSource(
 function toBackendActionParameters(
   parameters?: ActionTypeExecutionParameter[],
 ): BackendActionParameter[] | undefined {
-  const nextParameters = (parameters ?? [])
+  const result = (parameters ?? [])
+    .filter((item) => item.name.trim())
     .map((item) => {
-      const valueFrom = item.valueFrom ?? "input";
-      const value =
-        valueFrom === "property" ? (item.value ?? item.sourcePropertyName ?? "") : item.value;
-
-      return {
-        name: item.name.trim(),
-        value:
-          valueFrom === "input" ||
-          valueFrom === "source_identity" ||
-          valueFrom === "target_identity"
-            ? undefined
-            : value,
-        value_from: valueFrom,
-      };
-    })
-    .filter(
-      (item) =>
-        item.name.length > 0 &&
-        (item.value_from === "input" ||
-          item.value_from === "source_identity" ||
-          item.value_from === "target_identity" ||
-          Boolean(item.value?.trim())),
-    );
-
-  return nextParameters.length > 0 ? nextParameters : undefined;
+      const source = item.valueFrom ?? "input";
+      let value: unknown;
+      if (source === "property") value = item.value ?? item.sourcePropertyName;
+      if (source === "const") {
+        value = item.value;
+        if (
+          typeof value === "string" &&
+          [
+            "boolean",
+            "bool",
+            "integer",
+            "int",
+            "int32",
+            "int64",
+            "long",
+            "number",
+            "double",
+            "float",
+            "array",
+            "object",
+          ].includes(item.type?.toLowerCase() ?? "")
+        ) {
+          value = parsePrecisionPreservingJSON(value);
+        }
+      }
+      return { name: item.name.trim(), type: item.type, value_from: source, value };
+    });
+  return result.length ? result : undefined;
 }
 
 function mapActionSourceKind(type?: BackendActionSource["type"]): ActionTypeSourceKind {
@@ -226,8 +236,15 @@ export function mapActionTypeExecutionConfigFromBackend(
     .filter((entry) => entry.name)
     .map((entry) => ({
       name: entry.name,
-      sourcePropertyName: entry.value_from === "property" ? (entry.value ?? "") : "",
-      value: entry.value,
+      type: entry.type,
+      sourcePropertyName:
+        entry.value_from === "property" && typeof entry.value === "string" ? entry.value : "",
+      value:
+        entry.value === undefined
+          ? undefined
+          : typeof entry.value === "string"
+            ? entry.value
+            : transformPrecisionSafeJSONRequest(entry.value),
       valueFrom: entry.value_from ?? "input",
     }));
 

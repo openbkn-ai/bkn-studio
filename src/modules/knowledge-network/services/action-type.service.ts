@@ -7,7 +7,7 @@
 
 import { getActionTypeOperationKind } from "../utils/action-type-operation";
 import { getActionTypeToolboxMetadataType } from "./action-type-tool.service";
-import type { ActionTypeOperationConfig, ActionTypeOperationKind } from "../types/action-type";
+import type { ActionTypeOperationKind } from "../types/action-type";
 
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
@@ -49,6 +49,8 @@ import {
   toBackendActionTypeUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers";
 import {
+  buildMockObjectTypeDetail,
+  mockRelationTypes,
   cancelMockActionTypeExecutionLog,
   cloneActionTypeExecutionConfig,
   completeMockActionTypeExecutionLog,
@@ -75,68 +77,13 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
-import { hasReferencedConditionValue } from "@/modules/knowledge-network/utils/action-type-condition";
+import type { ActionExecutionInput, ActionExecutionSchema } from "../utils/action-execution-input";
 
-// Enable only when the target bkn-backend has deployed the operation_config contract.
-const operationConfigSupported =
-  import.meta.env.VITE_ACTION_TYPE_OPERATION_CONFIG_ENABLED === "true";
-
-export function canPersistActionTypeCondition(
-  condition?: KnowledgeNetworkActionTypeMutationPayload["condition"] | null,
-) {
-  return useMock || operationConfigSupported || !hasReferencedConditionValue(condition);
-}
-
-export class ActionTypeConditionUnsupportedError extends Error {
-  constructor() {
-    super(
-      "This server does not support property or runtime parameter references in action conditions",
-    );
-    this.name = "ActionTypeConditionUnsupportedError";
-  }
-}
-
-/** Legacy servers cannot persist relation semantics or referenced condition values. */
-export function canPersistActionTypeOperation(
-  input: Pick<KnowledgeNetworkActionTypeMutationPayload, "operationConfig" | "objectTypeId">,
-): boolean {
-  return (
-    useMock ||
-    operationConfigSupported ||
-    !input.operationConfig ||
-    input.operationConfig.type === "object" ||
-    (input.operationConfig.type === "tool" && !input.objectTypeId)
-  );
-}
-
-export class ActionTypeOperationUnsupportedError extends Error {
-  constructor() {
-    super("Action operation configuration is not supported by this server");
-    this.name = "ActionTypeOperationUnsupportedError";
-  }
-}
-
-function assertActionTypeOperationSupported(input: KnowledgeNetworkActionTypeMutationPayload) {
-  if (!canPersistActionTypeOperation(input)) throw new ActionTypeOperationUnsupportedError();
-  if (
-    !useMock &&
-    !operationConfigSupported &&
-    input.executionConfig?.parameters.some(
-      (parameter) =>
-        parameter.valueFrom === "source_identity" || parameter.valueFrom === "target_identity",
-    )
-  )
-    throw new ActionTypeOperationUnsupportedError();
-  if (!canPersistActionTypeCondition(input.condition))
-    throw new ActionTypeConditionUnsupportedError();
-}
-
-function supportedOperationConfig(
-  input: KnowledgeNetworkActionTypeMutationPayload,
-): ActionTypeOperationConfig | undefined {
-  if (!operationConfigSupported) return undefined;
-  return input.operationConfig ?? { type: input.objectTypeId ? "object" : "tool" };
+function requireActionOperation(input: KnowledgeNetworkActionTypeMutationPayload) {
+  if (!input.operationConfig)
+    throw new Error("operation_config is required; migrate existing actions before editing");
 }
 
 function resolveActionTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
@@ -288,23 +235,19 @@ export async function listKnowledgeNetworkActionTypePage(
     });
   }
 
-  const requiresLocalFilter = Boolean(
-    query.operationKind ||
-    query.relationOperation ||
-    query.independentOnly ||
-    query.executionToolCategory,
-  );
+  const requiresLocalFilter = Boolean(query.independentOnly || query.executionToolCategory);
   const response = await http.get<BackendListResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types`,
     {
       params: {
         action_type: query.actionKind ? toBackendActionTypeEnum(query.actionKind) : undefined,
         direction: query.direction ?? "desc",
-        // The legacy API has no operation-kind filter. Filter its complete authorized result
-        // before pagination so categories cannot silently lose rows between server pages.
+        // Tool categories still require toolbox metadata; operation filters are applied by the server.
         limit: requiresLocalFilter ? -1 : query.limit,
         name_pattern: query.namePattern?.trim() || undefined,
         object_type_id: query.objectTypeId || undefined,
+        operation_kind: query.operationKind,
+        relation_operation: query.relationOperation,
         offset: requiresLocalFilter ? 0 : query.offset,
         sort: query.sort ?? "update_time",
       },
@@ -461,10 +404,104 @@ export async function listKnowledgeNetworkActionTypeExecutionResults(
   }
 }
 
+/** Discovery returns the execution contract without scanning objects. */
+export async function getActionTypeExecutionSchema(
+  networkId: string,
+  actionTypeId: string,
+): Promise<ActionExecutionSchema> {
+  if (useMock) {
+    const detail = await getKnowledgeNetworkActionTypeDetail(networkId, actionTypeId);
+    if (!detail?.operationConfig) throw new Error("Action execution schema is unavailable");
+    const fields: Record<string, ActionExecutionSchema> = {};
+    const required: string[] = [];
+    const valueSchema = (type?: string): ActionExecutionSchema => ({
+      type: ["integer", "number", "boolean", "array", "object"].includes(type ?? "")
+        ? type
+        : "string",
+    });
+    const identity = (id: string): ActionExecutionSchema => {
+      const object = buildMockObjectTypeDetail(networkId, id);
+      if (!object?.primaryKeys?.length) throw new Error("Object identity is unavailable");
+      return {
+        type: "object",
+        title: object.name,
+        required: object.primaryKeys,
+        properties: Object.fromEntries(
+          object.primaryKeys.map((key) => {
+            const property = object.dataProperties.find((item) => item.name === key);
+            return [key, { ...valueSchema(property?.type), title: property?.displayName || key }];
+          }),
+        ),
+      };
+    };
+    const parameters = detail.executionConfig.parameters.filter(
+      (item) => item.valueFrom === "input",
+    );
+    if (parameters.length) {
+      fields.dynamic_params = {
+        type: "object",
+        properties: Object.fromEntries(
+          parameters.map((item) => [item.name, valueSchema(item.type)]),
+        ),
+        required: parameters.map((item) => item.name),
+      };
+      required.push("dynamic_params");
+    }
+    if (detail.operationConfig.type === "relation") {
+      const relationId = detail.operationConfig.relationTypeId;
+      const relation = (mockRelationTypes[networkId] ?? []).find((item) => item.id === relationId);
+      if (!relation) throw new Error("Relation is unavailable");
+      fields.relation_target = {
+        type: "object",
+        properties: {
+          source_identity: identity(relation.sourceObjectTypeId),
+          target_identity: identity(relation.targetObjectTypeId),
+        },
+        required: ["source_identity", "target_identity"],
+      };
+      required.push("relation_target");
+    } else if (detail.operationConfig.type === "object") {
+      if (detail.actionKind === "create") {
+        const object = buildMockObjectTypeDetail(networkId, detail.objectTypeId);
+        fields.object_input = {
+          type: "object",
+          title: object?.name,
+          properties: Object.fromEntries(
+            (object?.dataProperties ?? []).map((item) => [
+              item.name,
+              { ...valueSchema(item.type), title: item.displayName || item.name },
+            ]),
+          ),
+        };
+      } else {
+        fields._instance_identities = {
+          type: "array",
+          minItems: 1,
+          items: identity(detail.objectTypeId),
+        };
+        required.push("_instance_identities");
+      }
+    }
+    return { type: "object", properties: fields, required };
+  }
+  const response = await http.post<{ execution_schema?: ActionExecutionSchema }>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
+    {},
+    { headers: { "x-http-method-override": "GET" }, params: await resolveKnReadParams(networkId) },
+  );
+  if (
+    response.data.execution_schema?.type !== "object" ||
+    !response.data.execution_schema.properties
+  ) {
+    throw new Error("Action execution schema is unavailable");
+  }
+  return response.data.execution_schema;
+}
+
 export async function executeKnowledgeNetworkActionTypeNow(
   networkId: string,
   actionTypeId: string,
-  dynamicParams?: Record<string, unknown>,
+  input: ActionExecutionInput = {},
 ) {
   if (useMock) {
     const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
@@ -483,9 +520,11 @@ export async function executeKnowledgeNetworkActionTypeNow(
 
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
-    dynamicParams && Object.keys(dynamicParams).length > 0 ? { dynamic_params: dynamicParams } : {},
-    // The action runs as defined in the version on screen.
-    { params: await resolveKnReadParams(networkId) },
+    input,
+    {
+      params: await resolveKnReadParams(networkId),
+      transformRequest: [transformPrecisionSafeJSONRequest],
+    },
   );
 
   return response.data;
@@ -505,7 +544,7 @@ export async function createKnowledgeNetworkActionType(
   networkId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
-  assertActionTypeOperationSupported(input);
+  requireActionOperation(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -543,15 +582,10 @@ export async function createKnowledgeNetworkActionType(
   const response = await http.post<SingleEntryResponse<BackendActionType> | Array<{ id?: string }>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types`,
     {
-      entries: [
-        toBackendActionTypeCreateEntry({
-          ...input,
-          operationConfig: supportedOperationConfig(input),
-        }),
-      ],
+      entries: [toBackendActionTypeCreateEntry(input)],
     },
     // The form shows the refusal itself, with the definitions it names.
-    { skipErrorToast: true },
+    { skipErrorToast: true, transformRequest: [transformPrecisionSafeJSONRequest] },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
@@ -568,7 +602,7 @@ export async function updateKnowledgeNetworkActionType(
   actionTypeId: string,
   input: KnowledgeNetworkActionTypeMutationPayload,
 ) {
-  assertActionTypeOperationSupported(input);
+  requireActionOperation(input);
   if (useMock) {
     const relatedObject = (mockObjectTypes[networkId] ?? []).find(
       (item) => item.id === input.objectTypeId,
@@ -605,11 +639,8 @@ export async function updateKnowledgeNetworkActionType(
 
   const response = await http.put<SingleEntryResponse<BackendActionType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
-    toBackendActionTypeUpdatePayload({
-      ...input,
-      operationConfig: supportedOperationConfig(input),
-    }),
-    { skipErrorToast: true },
+    toBackendActionTypeUpdatePayload(input),
+    { skipErrorToast: true, transformRequest: [transformPrecisionSafeJSONRequest] },
   );
 
   const record = unwrapSingleEntryResponse(response.data);

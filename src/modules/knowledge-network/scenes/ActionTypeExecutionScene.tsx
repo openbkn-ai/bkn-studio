@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { getActionTypeDynamicParameters } from "../utils/action-type-dynamic-params";
+import type { ActionExecutionInput } from "../utils/action-execution-input";
+
 import {
   EditOutlined,
   PlayCircleOutlined,
@@ -53,7 +56,6 @@ import type {
   ActionTypeActionSource,
   ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import {
   getActionSourceDisplayName,
@@ -289,14 +291,14 @@ export function ActionTypeExecutionScene() {
     }
   };
 
-  const executeNow = async (dynamicParams?: Record<string, unknown>) => {
+  const executeNow = async (input?: ActionExecutionInput) => {
     if (!detail || !canExecute) {
       return false;
     }
 
     setExecuting(true);
     try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, dynamicParams);
+      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input);
       void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
       setTaskRefreshToken((value) => value + 1);
       setActiveTab("tasks");
@@ -314,13 +316,7 @@ export function ActionTypeExecutionScene() {
       return;
     }
 
-    const dynamicParameters = getActionTypeDynamicParameters(detail.executionConfig.parameters);
-    if (dynamicParameters.length > 0) {
-      setExecuteModalOpen(true);
-      return;
-    }
-
-    void executeNow();
+    setExecuteModalOpen(true);
   };
 
   const renderRunPanel = () => {
@@ -522,7 +518,8 @@ export function ActionTypeExecutionScene() {
       )}
       {detail ? (
         <ActionTypeExecuteModal
-          actionSource={detail.executionConfig.actionSource}
+          networkId={networkId}
+          actionTypeId={detail.id}
           actionTypeName={detail.name}
           onCancel={() => setExecuteModalOpen(false)}
           onSubmit={async (dynamicParams) => {
@@ -533,7 +530,6 @@ export function ActionTypeExecutionScene() {
             return succeeded;
           }}
           open={executeModalOpen}
-          parameters={getActionTypeDynamicParameters(detail.executionConfig.parameters)}
           submitting={executing}
         />
       ) : null}

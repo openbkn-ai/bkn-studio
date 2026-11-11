@@ -129,6 +129,7 @@ export function ActionTypeListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const lastSyncedSearchRef = useRef(searchParams.toString());
   const { modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
@@ -370,6 +371,12 @@ export function ActionTypeListPanel({
   }, [searchParams]);
 
   useEffect(() => {
+    const currentSearch = searchParams.toString();
+    if (currentSearch !== lastSyncedSearchRef.current) {
+      // Let URL-driven state updates settle before writing state back to the URL.
+      lastSyncedSearchRef.current = currentSearch;
+      return;
+    }
     const nextParams = new URLSearchParams(searchParams);
     const setOrDelete = (key: string, value: string, fallback: string) => {
       if (value !== fallback) nextParams.set(key, value);
@@ -399,6 +406,7 @@ export function ActionTypeListPanel({
       writeKnowledgeNetworkGraphSelection(nextParams);
     }
     if (nextParams.toString() !== searchParams.toString()) {
+      lastSyncedSearchRef.current = nextParams.toString();
       setSearchParams(nextParams, { replace: true });
     }
   }, [
@@ -903,8 +911,8 @@ export function ActionTypeListPanel({
                         const nextParams = new URLSearchParams(searchParams);
                         if (value === "all") nextParams.delete("executionToolCategory");
                         else nextParams.set("executionToolCategory", value);
+                        nextParams.delete("page");
                         setSearchParams(nextParams, { replace: true });
-                        setPage(1);
                       }}
                       options={[
                         { label: t("common.all"), value: "all" },
