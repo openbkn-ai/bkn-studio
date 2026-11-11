@@ -25,7 +25,6 @@ import {
   LengthInputs,
   RangeInputs,
 } from "@/modules/knowledge-network/components/value-type/RangeInputs";
-import { ValueTypeFormDrawer } from "@/modules/knowledge-network/components/value-type/ValueTypeFormDrawer";
 import { describeValueTypeRules } from "@/modules/knowledge-network/components/value-type/value-type-text";
 import type {
   ObjectTypeDataProperty,
@@ -78,7 +77,19 @@ export type PropertyDeclarationContext = {
 /** What a type change cleared, which the section says until the drawer closes. */
 export type ClearedByTypeChange = { names: ClearedDeclarationName[]; type: string };
 
-type ValueTypeFormTarget = { readOnly: boolean; valueType?: ValueType } | null;
+/**
+ * A value type to create, edit or view from the declarations. The data property drawer shows its
+ * form in place of the property's, so no second drawer opens over it.
+ */
+export type ValueTypeFormRequest = {
+  /** The base type a new value type starts with. */
+  defaultBaseType?: string;
+  /** Called with the value type's ID once it is saved. */
+  onSaved: (valueTypeId: string) => void;
+  readOnly: boolean;
+  /** The value type to edit or view; absent, a new one is made. */
+  valueType?: ValueType;
+};
 
 /** The property's own rules that naming a value type cleared, said until the drawer closes. */
 type ClearedByValueType = { names: ClearedDeclarationName[]; valueType: string };
@@ -93,6 +104,7 @@ export function PropertyDeclarationsSection({
   context,
   form,
   onOpenChange,
+  onOpenValueType,
   open,
   primaryKey,
   propertyType,
@@ -101,6 +113,8 @@ export function PropertyDeclarationsSection({
   context: PropertyDeclarationContext;
   form: FormInstance<ObjectTypeDataProperty>;
   onOpenChange: (open: boolean) => void;
+  /** Shows the form of a value type in the drawer, in place of the property's. */
+  onOpenValueType: (request: ValueTypeFormRequest) => void;
   open: boolean;
   primaryKey: boolean;
   propertyType?: string;
@@ -109,7 +123,6 @@ export function PropertyDeclarationsSection({
   const declarations = Form.useWatch("declarations", { form, preserve: true });
   const name = Form.useWatch("name", { form, preserve: true });
   const displayName = Form.useWatch("displayName", { form, preserve: true });
-  const [valueTypeForm, setValueTypeForm] = useState<ValueTypeFormTarget>(null);
   const [clearedByValueType, setClearedByValueType] = useState<ClearedByValueType | null>(null);
   const [timezoneSearch, setTimezoneSearch] = useState("");
 
@@ -152,14 +165,22 @@ export function PropertyDeclarationsSection({
     setConstraints(withValueType(current, next));
   };
 
-  const handleValueTypeSaved = async (savedId: string) => {
-    const isNew = !valueTypeForm?.valueType;
+  const handleValueTypeSaved = async (savedId: string, isNew: boolean) => {
     const list = await context.reloadValueTypes();
     const saved = list.find((item) => item.id === savedId);
     // A new value type made from here is the one the property meant to name.
     if (isNew && saved && valueTypesForPropertyType([saved], propertyType).length) {
       handleValueTypeChange(saved.id, saved.name);
     }
+  };
+
+  const openValueTypeForm = (readOnly: boolean, valueType?: ValueType) => {
+    onOpenValueType({
+      defaultBaseType: propertyType,
+      onSaved: (savedId) => void handleValueTypeSaved(savedId, !valueType),
+      readOnly,
+      valueType,
+    });
   };
 
   const ownNames = [name ?? "", displayName ?? ""].filter(Boolean);
@@ -175,12 +196,7 @@ export function PropertyDeclarationsSection({
       )}
       <Typography.Link
         className={styles.summaryLink}
-        onClick={() =>
-          setValueTypeForm({
-            readOnly: !context.canModifyValueTypes,
-            valueType: selectedValueType,
-          })
-        }
+        onClick={() => openValueTypeForm(!context.canModifyValueTypes, selectedValueType)}
       >
         {t(`${PREFIX}.valueTypeView`)}
       </Typography.Link>
@@ -292,7 +308,7 @@ export function PropertyDeclarationsSection({
                 className={styles.labelLink}
                 onClick={(event) => {
                   event.preventDefault();
-                  setValueTypeForm({ readOnly: false });
+                  openValueTypeForm(false);
                 }}
               >
                 <PlusOutlined /> {t(`${PREFIX}.valueTypeCreate`)}
@@ -391,37 +407,26 @@ export function PropertyDeclarationsSection({
   );
 
   return (
-    <>
-      <Collapse
-        activeKey={open ? [PANEL_KEY] : []}
-        className={styles.section}
-        items={[
-          {
-            children: body,
-            extra: <span className={styles.note}>{t(`${PREFIX}.note`)}</span>,
-            forceRender: true,
-            key: PANEL_KEY,
-            label: (
-              <span className={styles.title}>
-                {t(`${PREFIX}.title`)}
-                {declared ? null : (
-                  <Tag className={styles.undeclared}>{t(`${PREFIX}.undeclared`)}</Tag>
-                )}
-              </span>
-            ),
-          },
-        ]}
-        onChange={(keys) => onOpenChange((Array.isArray(keys) ? keys : [keys]).includes(PANEL_KEY))}
-      />
-      <ValueTypeFormDrawer
-        defaultBaseType={propertyType}
-        networkId={context.networkId}
-        onClose={() => setValueTypeForm(null)}
-        onSaved={(savedId) => void handleValueTypeSaved(savedId)}
-        open={valueTypeForm !== null}
-        readOnly={valueTypeForm?.readOnly}
-        valueType={valueTypeForm?.valueType}
-      />
-    </>
+    <Collapse
+      activeKey={open ? [PANEL_KEY] : []}
+      className={styles.section}
+      items={[
+        {
+          children: body,
+          extra: <span className={styles.note}>{t(`${PREFIX}.note`)}</span>,
+          forceRender: true,
+          key: PANEL_KEY,
+          label: (
+            <span className={styles.title}>
+              {t(`${PREFIX}.title`)}
+              {declared ? null : (
+                <Tag className={styles.undeclared}>{t(`${PREFIX}.undeclared`)}</Tag>
+              )}
+            </span>
+          ),
+        },
+      ]}
+      onChange={(keys) => onOpenChange((Array.isArray(keys) ? keys : [keys]).includes(PANEL_KEY))}
+    />
   );
 }
