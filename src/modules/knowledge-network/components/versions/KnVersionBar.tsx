@@ -42,6 +42,69 @@ type KnVersionBarProps = {
   versioning: KnVersioning;
 };
 
+/** The one way out to everything else about versions, under the picker's list. */
+function useVersionsLink(networkId: string) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const popupRender = (menu: ReactElement) => (
+    <>
+      {menu}
+      <div className={styles.pickerActions}>
+        <Button
+          block
+          onClick={() => {
+            setPickerOpen(false);
+            void navigate(`/knowledge-network/workspace/${networkId}/versions`);
+          }}
+          size="small"
+          type="text"
+        >
+          {t("knowledgeNetwork.versions.title")}
+        </Button>
+      </div>
+    </>
+  );
+  return { onOpenChange: setPickerOpen, open: pickerOpen, popupRender };
+}
+
+/**
+ * A network without versions yet is what it holds now: its running v1. Its first edit keeps
+ * that as v1 and starts a draft, and the full picker takes over.
+ */
+export function KnUnversionedBar({ networkId }: { networkId: string }) {
+  const { t } = useTranslation();
+  const link = useVersionsLink(networkId);
+  const select = (
+    <Select
+      {...link}
+      aria-label={t("knowledgeNetwork.versions.viewing")}
+      className={styles.viewSelect}
+      options={[
+        {
+          label: `${knVersionName(1)} (${t("knowledgeNetwork.versions.status.running")})`,
+          value: "1",
+        },
+      ]}
+      popupMatchSelectWidth={false}
+      prefix={<BranchesOutlined />}
+      value="1"
+      variant="borderless"
+    />
+  );
+  return (
+    <KnVersionSlotPortal
+      fallback={
+        <ShellTrailPortal fallback={<div className={styles.bar}>{select}</div>}>
+          {select}
+        </ShellTrailPortal>
+      }
+    >
+      <span className={styles.picker}>{select}</span>
+    </KnVersionSlotPortal>
+  );
+}
+
 /**
  * Which version of a versioned network is on screen, as a quiet picker beside the network's
  * title on the overview, and after the top bar's trail elsewhere. A draft that matches the running version reads as that version; only unpublished
@@ -57,9 +120,8 @@ export function KnVersionBar({
   versioning,
 }: KnVersionBarProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [publishOpen, setPublishOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const link = useVersionsLink(networkId);
   const versions = useReadableKnVersions(networkId, versioning.running_version);
   const draft = versioning.draft;
   const base = draft?.base_version ?? 0;
@@ -96,37 +158,15 @@ export function KnVersionBar({
     );
   };
 
-  // One way out to everything else about versions, under the list, as GitHub does for branches.
-  const popupRender = (menu: ReactElement) => (
-    <>
-      {menu}
-      <div className={styles.pickerActions}>
-        <Button
-          block
-          onClick={() => {
-            setPickerOpen(false);
-            void navigate(`/knowledge-network/workspace/${networkId}/versions`);
-          }}
-          size="small"
-          type="text"
-        >
-          {t("knowledgeNetwork.versions.title")}
-        </Button>
-      </div>
-    </>
-  );
-
   const select = (
     <Select
       aria-label={t("knowledgeNetwork.versions.viewing")}
       className={styles.viewSelect}
       labelRender={({ label, value }) => (value === "draft" ? draftLabel() : label)}
+      {...link}
       onChange={(value) => onViewChange(parseKnVersionView(value))}
-      onOpenChange={setPickerOpen}
-      open={pickerOpen}
       options={options}
       popupMatchSelectWidth={false}
-      popupRender={popupRender}
       prefix={<BranchesOutlined />}
       value={isDraft ? "draft" : viewValue}
       variant="borderless"

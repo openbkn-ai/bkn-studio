@@ -97,7 +97,7 @@ export const versionsPart = {
       retention: "社区版保留规则自动清理",
     },
     notStarted:
-      "这个知识网络还没有版本，当前内容就是运行中的内容。在 Studio 里做第一次修改后，当前内容成为 v1，修改写入草稿，发布后生效。",
+      "当前内容就是运行中的 v1。在 Studio 里做第一次修改后，修改写入草稿，发布后成为 v2。",
     publish: {
       title: "发布版本",
       action: "发布",

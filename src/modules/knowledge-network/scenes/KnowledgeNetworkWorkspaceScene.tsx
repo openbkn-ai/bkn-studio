@@ -36,7 +36,10 @@ import type {
   KnowledgeNetworkWorkspaceSceneProps,
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
-import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import {
+  KnUnversionedBar,
+  KnVersionBar,
+} from "@/modules/knowledge-network/components/versions/KnVersionBar";
 import { KnVersionSlotProvider } from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
 import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
@@ -523,6 +526,8 @@ export function KnowledgeNetworkWorkspaceScene({
                 versioning={versioning}
                 view={versionView}
               />
+            ) : detail && section !== "versions" ? (
+              <KnUnversionedBar networkId={activeNetworkId} />
             ) : null}
             {detailError && !childMetricDetailHandlesLoadState ? (
               <Alert

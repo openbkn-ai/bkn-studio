@@ -35,7 +35,10 @@ vi.mock("@/modules/knowledge-network/components/versions/KnDiffModal", () => ({
   KnDiffModal: () => null,
 }));
 
-import { KnVersionBar } from "@/modules/knowledge-network/components/versions/KnVersionBar";
+import {
+  KnUnversionedBar,
+  KnVersionBar,
+} from "@/modules/knowledge-network/components/versions/KnVersionBar";
 import {
   KnVersionActionHost,
   KnVersionSlotHost,
@@ -119,6 +122,16 @@ describe("KnVersionBar", () => {
     expect(screen.getByText("knowledgeNetwork.versions.title")).toBeTruthy();
     expect(screen.queryByText("knowledgeNetwork.versions.viewChanges")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.versions.discard")).toBeNull();
+  });
+
+  it("shows a network without versions as its running v1, with nothing to publish", () => {
+    render(<KnUnversionedBar networkId="kn-1" />);
+    expect(screen.getByText("v1 (knowledgeNetwork.versions.status.running)")).toBeTruthy();
+    expect(screen.queryByText("main")).toBeNull();
+    expect(screen.queryByText(/knowledgeNetwork\.versions\.publish\.action/)).toBeNull();
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    expect(screen.getByText("knowledgeNetwork.versions.title")).toBeTruthy();
   });
 
   it("sits beside the network's title when the section shows one", () => {

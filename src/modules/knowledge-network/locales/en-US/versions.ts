@@ -101,7 +101,7 @@ export const versionsPart = {
       retention: "Purged by the retention rule",
     },
     notStarted:
-      "This knowledge network has no versions yet: what it holds now is what is running. Your first edit in Studio makes it v1 and goes to a draft, which takes effect when you publish.",
+      "What this knowledge network holds now is its running v1. Your first edit in Studio goes to a draft, which becomes v2 when you publish.",
     publish: {
       title: "Publish a version",
       action: "Publish",
