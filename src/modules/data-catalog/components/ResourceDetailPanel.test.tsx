@@ -128,7 +128,7 @@ describe("ResourceDetailPanel", () => {
     });
   });
 
-  it.each(["binary", "other", "json", "point", "shape", "future_type"])(
+  it.each(["binary", "other", "json", "point", "shape", "ip", "future_type"])(
     "disables enabling %s fields and explains the restriction",
     async (type) => {
       render(
@@ -178,41 +178,44 @@ describe("ResourceDetailPanel", () => {
     });
   });
 
-  it("rejects unsupported enabled history on save and allows turning it off", async () => {
-    const { container } = render(
-      <MemoryRouter>
-        <ResourceDetailPanel
-          active
-          canEdit
-          catalog={null}
-          resource={{
-            ...resource,
-            schema: [{ ...resource.schema[0], type: "binary", filterable: true }],
-          }}
-        />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
-    fireEvent.change(container.querySelector("textarea")!, {
-      target: { value: "new description" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
-    await waitFor(() =>
-      expect(messageMock.error).toHaveBeenCalledWith(
-        "dataCatalog.resource.unsupportedFilterableField",
-      ),
-    );
-    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
-    const toggle = screen.getByRole("switch");
-    expect(toggle).not.toBeDisabled();
-    fireEvent.click(toggle);
-    expect(toggle).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
-    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
-    expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
-      schema: [{ filterable: false }],
-    });
-  });
+  it.each(["binary", "ip"])(
+    "rejects unsupported enabled %s history on save and allows turning it off",
+    async (type) => {
+      const { container } = render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit
+            catalog={null}
+            resource={{
+              ...resource,
+              schema: [{ ...resource.schema[0], type, filterable: true }],
+            }}
+          />
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+      fireEvent.change(container.querySelector("textarea")!, {
+        target: { value: "new description" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() =>
+        expect(messageMock.error).toHaveBeenCalledWith(
+          "dataCatalog.resource.unsupportedFilterableField",
+        ),
+      );
+      expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+      const toggle = screen.getByRole("switch");
+      expect(toggle).not.toBeDisabled();
+      fireEvent.click(toggle);
+      expect(toggle).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
+      expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
+        schema: [{ filterable: false }],
+      });
+    },
+  );
 
   it("restores the filtering switch when editing is cancelled", () => {
     render(
