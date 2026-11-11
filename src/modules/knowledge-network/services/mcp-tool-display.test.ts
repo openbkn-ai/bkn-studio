@@ -78,8 +78,8 @@ describe("toolDisplayOf", () => {
 
     expect(display).toMatchObject({
       name: "SQL data query",
-      groupKey: "data",
-      groupLabel: "Data resources and SQL",
+      groupKey: "query",
+      groupLabel: "Knowledge network data queries",
       fromServer: false,
     });
   });
@@ -87,7 +87,20 @@ describe("toolDisplayOf", () => {
   it("keeps the localized title even when the server omits the group metadata", () => {
     const display = toolDisplayOf("run_sql", tool("run_sql", { title: "Run SQL" }));
 
-    expect(display).toMatchObject({ name: "Run SQL", groupKey: "data", fromServer: false });
+    expect(display).toMatchObject({ name: "Run SQL", groupKey: "query", fromServer: false });
+  });
+
+  it("groups unknown SQL tools with SQL queries while keeping resource tools separate", () => {
+    expect(toolDisplayOf("run_sql_v2")).toMatchObject({
+      groupKey: toolDisplayOf("run_sql").groupKey,
+      name: "SQL data query",
+    });
+    expect(toolDisplayOf("describe_resource_v2")).toMatchObject({ groupKey: "resource" });
+    expect(toolDisplayOf("list_catalogs")).toMatchObject({ groupKey: "resource" });
+    expect(toolDisplayOf("run_sql_v2", tool("run_sql_v2", { group: "custom" }))).toMatchObject({
+      groupKey: "custom",
+      fromServer: true,
+    });
   });
 
   it("keeps the lifecycle / execution / skill tools in their own groups when the server sends no metadata", () => {
@@ -101,11 +114,11 @@ describe("toolDisplayOf", () => {
       name: "View call receipt",
     });
     expect(toolDisplayOf("list_action_execution")).toMatchObject({
-      groupKey: "logic",
+      groupKey: "action",
       name: "Action execution history",
     });
     expect(toolDisplayOf("query_metric")).toMatchObject({
-      groupKey: "logic",
+      groupKey: "query",
       name: "Metric data query",
     });
     expect(toolDisplayOf("read_skill_file")).toMatchObject({
@@ -128,6 +141,31 @@ describe("toolDisplayOf", () => {
     expect(toolDisplayOf("bkn_some_future_trace_tool")).toMatchObject({ groupKey: "lifecycle" });
   });
 
+  it.each([
+    ["bkn_eval_list_suites", "List evaluation suites"],
+    ["bkn_eval_start_run", "Start evaluation run"],
+    ["bkn_eval_next_case", "Get next evaluation case"],
+    ["bkn_eval_submit_result", "Submit case result"],
+    ["bkn_eval_get_progress", "View evaluation progress"],
+  ])("gives %s its own evaluation title when server display fields are absent", (name, title) => {
+    for (const extra of [{}, { group: "evaluation" }]) {
+      expect(toolDisplayOf(name, tool(name, extra))).toMatchObject({
+        name: title,
+        groupKey: "evaluation",
+        groupLabel: "Quality evaluation",
+      });
+      expect(toolDisplayOf(name, tool(name, extra)).groupDescription).toEqual(expect.any(String));
+    }
+  });
+
+  it("keeps future evaluation tools out of the session lifecycle group", () => {
+    expect(toolDisplayOf("bkn_eval_cancel_run")).toMatchObject({
+      name: "bkn_eval_cancel_run",
+      groupKey: "evaluation",
+      groupLabel: "Quality evaluation",
+    });
+  });
+
   it("falls back to the tool name for a tool no side knows", () => {
     expect(toolDisplayOf("brand_new_capability").name).toBe("MCP capability");
     expect(
@@ -140,6 +178,42 @@ describe("toolDisplayOf", () => {
 });
 
 describe("buildMcpToolGroups", () => {
+  it("renders provider evaluation titles and sorts the workflow instead of tool IDs", () => {
+    const entries = [
+      ["bkn_eval_list_suites", "查找测试集"],
+      ["bkn_eval_start_run", "发起评测"],
+      ["bkn_eval_next_case", "领取下一条用例"],
+      ["bkn_eval_submit_result", "提交用例结果"],
+      ["bkn_eval_get_progress", "查看评测进度"],
+    ];
+    const tools = entries.map(([name, title], index) =>
+      tool(name, { title, group: "evaluation", groupTitle: "质量评测", order: 810 + index * 10 }),
+    );
+    const groups = groupsOf(tools.reverse());
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe("质量评测");
+    expect(groups[0].items.map(({ display }) => display.name)).toEqual(
+      entries.map(([, title]) => title),
+    );
+    expect(groups[0].items.map(({ item }) => item.name)).toEqual(entries.map(([name]) => name));
+  });
+
+  it("keeps legacy evaluation tools in workflow order without server metadata", () => {
+    const names = [
+      "bkn_eval_list_suites",
+      "bkn_eval_start_run",
+      "bkn_eval_next_case",
+      "bkn_eval_submit_result",
+      "bkn_eval_get_progress",
+    ];
+    const groups = groupsOf([...names].reverse().map((name) => tool(name)));
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].key).toBe("evaluation");
+    expect(groups[0].items.map(({ item }) => item.name)).toEqual(names);
+  });
+
   it("orders groups and tools by the server order", () => {
     const groups = groupsOf(serverTools);
 
@@ -186,7 +260,12 @@ describe("buildMcpToolGroups", () => {
       tool("list_resources"),
     ]);
 
-    expect(groups.map((group) => group.key)).toEqual(["network", "model", "data"]);
-    expect(groups[2].items.map(({ item }) => item.name)).toEqual(["list_resources", "run_sql"]);
+    expect(groups.map((group) => group.key)).toEqual(["discovery", "query", "resource"]);
+    expect(groups[0].items.map(({ item }) => item.name)).toEqual([
+      "get_kn_detail",
+      "search_schema",
+    ]);
+    expect(groups[1].items.map(({ item }) => item.name)).toEqual(["run_sql"]);
+    expect(groups[2].items.map(({ item }) => item.name)).toEqual(["list_resources"]);
   });
 });

@@ -1,0 +1,94 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-bg-container);
+}
+
+.barRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.barSpacer {
+  flex: 1;
+}
+
+.viewSelect {
+  min-width: 200px;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 24px;
+}
+
+.summaryLabel {
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  font-size: 12px;
+}
+
+.summaryValue {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.diff {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diffEntries {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.changeList {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.changeOld {
+  margin-left: 8px;
+  color: var(--ant-color-error, #ff4d4f);
+  text-decoration: line-through;
+}
+
+.changeNew {
+  margin-left: 8px;
+  color: var(--ant-color-success, #52c41a);
+}
+
+.problemList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.notes {
+  max-width: 280px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -38,6 +38,10 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
+import {
+  AiConversationPanel,
+  type AiConversationMessage,
+} from "@/modules/knowledge-network/components/shared/AiConversationPanel";
 import { AiPromptComposer } from "@/modules/knowledge-network/components/shared/AiPromptComposer";
 import { ObjectMetricConditionBuilder } from "@/modules/knowledge-network/components/object-metric/ObjectMetricConditionBuilder";
 import { AtomicInstanceExpressionBuilder } from "@/modules/knowledge-network/components/object-metric/AtomicInstanceExpressionBuilder";
@@ -151,6 +155,7 @@ import {
   objectMetricText,
 } from "@/modules/knowledge-network/lib/object-metric-text";
 import { useTranslation } from "react-i18next";
+import { useKnVersioned } from "@/modules/knowledge-network/hooks/useKnVersionView";
 
 type UnitQuantityKind = ObjectMetricUnitQuantityKind;
 
@@ -1346,13 +1351,14 @@ function withNavigationContext(
 }
 
 export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
-  useTranslation();
+  const { t } = useTranslation();
   const params = useParams<{ metricId: string; networkId: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { message, runtimeConfig } = useAppServices();
   const networkId = params.networkId ?? "";
+  const knVersioned = useKnVersioned(networkId);
   const metricId = params.metricId;
   const requestedMetricType = parseMetricType(searchParams.get("metricType"));
   const requestedObjectTypeId = searchParams.get("objectTypeId") ?? "";
@@ -1440,9 +1446,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const aiUndoPendingRef = useRef<ObjectMetricAiEditableSnapshot | null>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiThreadRef = useRef<{ scope: string; threadId: string } | null>(null);
-  const [aiConversation, setAiConversation] = useState<
-    Array<{ content: string; id: string; role: "assistant" | "user"; tone?: "error" }>
-  >([]);
+  const [aiConversation, setAiConversation] = useState<AiConversationMessage[]>([]);
 
   useEffect(
     () => () => {
@@ -3154,12 +3158,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       saved.definition.id,
       saved.definition.version,
     );
-    await publishObjectMetricV1(
-      networkId,
-      validated?.definition.id ?? saved.definition.id,
-      validated?.definition.version ?? saved.definition.version,
-    );
-    void message.success(objectMetricText("mbf73c8faca59"));
+    if (knVersioned) {
+      // The network's publish takes a validated metric live; a metric-level publish is not needed.
+      void message.success(t("knowledgeNetwork.versions.metricValidated"));
+    } else {
+      await publishObjectMetricV1(
+        networkId,
+        validated?.definition.id ?? saved.definition.id,
+        validated?.definition.version ?? saved.definition.version,
+      );
+      void message.success(objectMetricText("mbf73c8faca59"));
+    }
     if (navigationContext) {
       returnWithMetric(saved.definition.id);
       return;
@@ -5311,27 +5320,51 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 {objectMetricText("m5329e3f0ee46")}
               </Button>
               <Button loading={saving} onClick={() => void publish()} type="primary">
-                {objectMetricText("m5c5fd681a047")}
+                {knVersioned
+                  ? t("knowledgeNetwork.versions.metricSaveAndValidate")
+                  : objectMetricText("m5c5fd681a047")}
               </Button>
             </div>
           </Section>
         </Form>
       </div>
       {aiOpen ? (
-        <aside aria-label={objectMetricText("m1a09e582c302")} className={styles.aiPanel}>
-          <div className={styles.aiPanelHeader}>
-            <div className={styles.aiDialogTitle}>
-              <span className={styles.aiDialogTitleIcon} aria-hidden="true">
-                <ThunderboltOutlined />
-              </span>
-              <div>
-                <strong>{objectMetricText("m1a09e582c302")}</strong>
-                <span>
-                  {metricTypeNames[metricType]} · {ownerObjectName}
-                </span>
-              </div>
-            </div>
-            <div className={styles.aiPanelActions}>
+        <AiConversationPanel
+          ariaLabel={objectMetricText("m1a09e582c302")}
+          as="aside"
+          className={styles.aiPanel}
+          composer={
+            <AiPromptComposer
+              checking={aiChecking}
+              inputLabel={objectMetricText("m15a3900b6bf9")}
+              generating={aiGenerating}
+              model={{
+                ariaLabel: objectMetricText("aiAnswerModel"),
+                defaultLabel: objectMetricText("aiPlatformDefaultModel"),
+                id: aiModelId,
+                loading: aiModelsLoading,
+                locked: Boolean(aiThreadRef.current),
+                onChange: setAiModelId,
+                options: aiModels,
+                unavailable: aiModelsUnavailable,
+                unavailableLabel: objectMetricText("aiModelListUnavailable"),
+              }}
+              onStop={stopAiGeneration}
+              onSubmit={(prompt) => void generateWithAi(prompt)}
+              placeholder={objectMetricText("m7d7fca1df843")}
+              promptRequest={aiPromptRequest}
+              sendLabel={objectMetricText("m24d9e58a6e44")}
+              stopLabel={objectMetricText("mca4d973c0b00")}
+            />
+          }
+          contentTestId="metric-ai-scroll-content"
+          description={objectMetricText("madf4b42e777b")}
+          examples={aiExamples}
+          examplesLabel={objectMetricText("m0d53f08678d8")}
+          generating={aiGenerating}
+          generatingText={objectMetricText("m800e5eb6c8b5")}
+          headerActions={
+            <>
               {aiConversation.length ? (
                 <Button
                   disabled={aiGenerating || aiChecking}
@@ -5367,150 +5400,90 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 }}
                 type="text"
               />
-            </div>
-          </div>
-          <div
-            className={`${styles.aiPanelContent} ${!aiConversation.length && !aiGenerating ? styles.aiPanelContentEmpty : ""}`}
-            data-testid="metric-ai-scroll-content"
-          >
-            {!aiConversation.length && !aiGenerating ? (
-              <p className={styles.aiDialogIntro}>{objectMetricText("madf4b42e777b")}</p>
-            ) : (
-              <div className={styles.aiConversation} aria-live="polite">
-                {aiConversation.map((item) => (
-                  <div
-                    className={`${styles.aiMessage} ${
-                      item.role === "user" ? styles.aiMessageUser : styles.aiMessageAssistant
-                    } ${item.tone === "error" ? styles.aiMessageError : ""}`}
-                    key={item.id}
-                  >
-                    {item.content}
-                  </div>
-                ))}
-                {aiGenerating ? (
-                  <div className={`${styles.aiMessage} ${styles.aiMessageAssistant}`}>
-                    <span className={styles.aiThinking}>
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                    {objectMetricText("m800e5eb6c8b5")}
-                  </div>
-                ) : null}
-              </div>
-            )}
-            {aiProposal && !aiGenerating ? (
-              <div className={styles.aiProposal}>
-                <strong>{objectMetricText("aiProposalTitle")}</strong>
-                <p>{objectMetricText("aiProposalHint")}</p>
-                {objectMetricAiChanges(aiProposal.intent).map((change) => {
-                  const before = objectMetricAiPreviousValue(change.path, aiProposal.baseState);
-                  const beforeText = before === undefined ? "—" : JSON.stringify(before);
-                  const afterText = JSON.stringify(change.value);
-                  const linkedPaths = change.path.startsWith("derived.base_metric_")
-                    ? ["derived.base_metric_id", "derived.base_metric_version"]
-                    : [change.path];
-                  return (
-                    <Checkbox
-                      checked={aiProposal.selectedPaths.includes(change.path)}
-                      key={change.path}
-                      onChange={(event) =>
-                        setAiProposal((current) =>
-                          current
-                            ? {
-                                ...current,
-                                selectedPaths: event.target.checked
-                                  ? [...new Set([...current.selectedPaths, ...linkedPaths])]
-                                  : current.selectedPaths.filter(
-                                      (path) => !linkedPaths.includes(path),
-                                    ),
-                              }
-                            : current,
-                        )
-                      }
-                    >
-                      <span className={styles.aiProposalField}>
-                        {objectMetricAiProposalFieldLabel(change.path)}
-                      </span>
-                      <span className={styles.aiProposalDiff}>
-                        <span className={styles.aiProposalValue} title={beforeText}>
-                          {objectMetricText("aiProposalBefore")}: {beforeText}
-                        </span>
-                        <span className={styles.aiProposalValue} title={afterText}>
-                          {objectMetricText("aiProposalAfter")}: {afterText}
-                        </span>
-                      </span>
-                      {aiProposal.reasons[change.path] ? (
-                        <span className={styles.aiProposalReason}>
-                          {aiProposal.reasons[change.path]}
-                        </span>
-                      ) : null}
-                    </Checkbox>
-                  );
-                })}
-                <Space>
-                  <Button
-                    disabled={!aiProposal.selectedPaths.length}
-                    onClick={applyAiProposal}
-                    type="primary"
-                  >
-                    {objectMetricText("aiProposalApply")}
-                  </Button>
-                  <Button onClick={() => setAiProposal(undefined)}>
-                    {objectMetricText("aiProposalReject")}
-                  </Button>
-                </Space>
-              </div>
-            ) : null}
-            {aiUndo && !aiProposal && !aiGenerating ? (
-              <div className={styles.aiUndo}>
-                <span>{objectMetricText("aiProposalApplied")}</span>
-                <Button onClick={undoAiApplication} size="small">
-                  {objectMetricText("aiProposalUndo")}
-                </Button>
-              </div>
-            ) : null}
-            {!aiConversation.length ? (
-              <div className={styles.aiDialogExamples}>
-                <span>{objectMetricText("m0d53f08678d8")}</span>
-                {aiExamples.map((example) => (
-                  <button
-                    key={example}
-                    onClick={() =>
-                      setAiPromptRequest((current) => ({
-                        revision: (current?.revision ?? 0) + 1,
-                        value: example,
-                      }))
+            </>
+          }
+          messages={aiConversation}
+          onExample={(example) =>
+            setAiPromptRequest((current) => ({
+              revision: (current?.revision ?? 0) + 1,
+              value: example,
+            }))
+          }
+          subtitle={`${metricTypeNames[metricType]} · ${ownerObjectName}`}
+          title={objectMetricText("m1a09e582c302")}
+        >
+          {aiProposal && !aiGenerating ? (
+            <div className={styles.aiProposal}>
+              <strong>{objectMetricText("aiProposalTitle")}</strong>
+              <p>{objectMetricText("aiProposalHint")}</p>
+              {objectMetricAiChanges(aiProposal.intent).map((change) => {
+                const before = objectMetricAiPreviousValue(change.path, aiProposal.baseState);
+                const beforeText = before === undefined ? "—" : JSON.stringify(before);
+                const afterText = JSON.stringify(change.value);
+                const linkedPaths = change.path.startsWith("derived.base_metric_")
+                  ? ["derived.base_metric_id", "derived.base_metric_version"]
+                  : [change.path];
+                return (
+                  <Checkbox
+                    checked={aiProposal.selectedPaths.includes(change.path)}
+                    key={change.path}
+                    onChange={(event) =>
+                      setAiProposal((current) =>
+                        current
+                          ? {
+                              ...current,
+                              selectedPaths: event.target.checked
+                                ? [...new Set([...current.selectedPaths, ...linkedPaths])]
+                                : current.selectedPaths.filter(
+                                    (path) => !linkedPaths.includes(path),
+                                  ),
+                            }
+                          : current,
+                      )
                     }
-                    type="button"
                   >
-                    {example}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className={styles.aiDialogComposer}>
-            <AiPromptComposer
-              checking={aiChecking}
-              inputLabel={objectMetricText("m15a3900b6bf9")}
-              generating={aiGenerating}
-              model={{
-                id: aiModelId,
-                loading: aiModelsLoading,
-                locked: Boolean(aiThreadRef.current),
-                onChange: setAiModelId,
-                options: aiModels,
-                unavailable: aiModelsUnavailable,
-              }}
-              onStop={stopAiGeneration}
-              onSubmit={(prompt) => void generateWithAi(prompt)}
-              placeholder={objectMetricText("m7d7fca1df843")}
-              promptRequest={aiPromptRequest}
-              sendLabel={objectMetricText("m24d9e58a6e44")}
-            />
-          </div>
-        </aside>
+                    <span className={styles.aiProposalField}>
+                      {objectMetricAiProposalFieldLabel(change.path)}
+                    </span>
+                    <span className={styles.aiProposalDiff}>
+                      <span className={styles.aiProposalValue} title={beforeText}>
+                        {objectMetricText("aiProposalBefore")}: {beforeText}
+                      </span>
+                      <span className={styles.aiProposalValue} title={afterText}>
+                        {objectMetricText("aiProposalAfter")}: {afterText}
+                      </span>
+                    </span>
+                    {aiProposal.reasons[change.path] ? (
+                      <span className={styles.aiProposalReason}>
+                        {aiProposal.reasons[change.path]}
+                      </span>
+                    ) : null}
+                  </Checkbox>
+                );
+              })}
+              <Space>
+                <Button
+                  disabled={!aiProposal.selectedPaths.length}
+                  onClick={applyAiProposal}
+                  type="primary"
+                >
+                  {objectMetricText("aiProposalApply")}
+                </Button>
+                <Button onClick={() => setAiProposal(undefined)}>
+                  {objectMetricText("aiProposalReject")}
+                </Button>
+              </Space>
+            </div>
+          ) : null}
+          {aiUndo && !aiProposal && !aiGenerating ? (
+            <div className={styles.aiUndo}>
+              <span>{objectMetricText("aiProposalApplied")}</span>
+              <Button onClick={undoAiApplication} size="small">
+                {objectMetricText("aiProposalUndo")}
+              </Button>
+            </div>
+          ) : null}
+        </AiConversationPanel>
       ) : null}
       <Drawer
         rootClassName={metricTheme.scope}

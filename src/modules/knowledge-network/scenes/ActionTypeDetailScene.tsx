@@ -33,6 +33,8 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import { DeprecatedBanner } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedBanner";
+import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
 import styles from "./ActionTypeDetailScene.module.css";
 
 export function ActionTypeDetailScene() {
@@ -45,6 +47,7 @@ export function ActionTypeDetailScene() {
     networkId: string;
   }>();
   const [detail, setDetail] = useState<ActionTypeDetail | null>(null);
+  const showDeleteError = useDefinitionDeleteRefusal();
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +82,12 @@ export function ActionTypeDetailScene() {
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        await deleteKnowledgeNetworkActionType(networkId, actionTypeId);
+        try {
+          await deleteKnowledgeNetworkActionType(networkId, actionTypeId);
+        } catch (deleteError) {
+          showDeleteError(deleteError, [detail]);
+          return;
+        }
         void message.success(t("common.success"));
         void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
       },
@@ -184,6 +192,11 @@ export function ActionTypeDetailScene() {
         title={detail.name}
       >
         <div className={styles.contentPanel}>
+          <DeprecatedBanner
+            declarations={detail.declarations}
+            kind="action_type"
+            networkId={networkId}
+          />
           <ActionTypeOverviewPanel
             canResolveActionSource={canResolveActionSource}
             detail={detail}

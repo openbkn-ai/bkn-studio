@@ -81,6 +81,7 @@ const source = {
   schema: [
     {
       name: "id",
+      filterable: true,
       originalName: "id",
       displayName: "Order ID",
       type: "integer",
@@ -303,6 +304,9 @@ describe("ViewEditorScene", () => {
       target: { value: "orders_view" },
     });
     fireEvent.click(screen.getByRole("switch", { name: "common.status" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: "dataCatalog.resource.fieldFilterableLabel" }),
+    );
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
       target: { value: "Order Number" },
     });
@@ -320,6 +324,7 @@ describe("ViewEditorScene", () => {
               name: "id",
               originalName: "id",
               displayName: "Order Number",
+              filterable: false,
             }),
           ],
         }),
@@ -330,6 +335,48 @@ describe("ViewEditorScene", () => {
     };
     expect(createPayload.schema[0]).not.toHaveProperty("features");
   }, 20_000);
+
+  it.each([false, true])(
+    "guards unsupported view field filtering and permits repairing enabled=%s history",
+    async (filterable) => {
+      const schema = [{ ...source.schema[0], type: "binary", filterable }];
+      const view = {
+        ...source,
+        id: "view-1",
+        category: "logical_view",
+        logicalType: "derived",
+        name: "orders_view",
+        expectedUpdateTime: 42,
+        schema,
+        logicalViewDefinition: { sourceResourceId: "source-1" },
+      } as CatalogResource;
+      getResourceMock.mockImplementation((id: string) =>
+        Promise.resolve(id === "view-1" ? view : { ...source, schema }),
+      );
+      renderEditor({ resourceId: "view-1" });
+      await screen.findByDisplayValue("orders_view");
+      const toggle = screen.getByRole("switch", {
+        name: "dataCatalog.resource.fieldFilterableLabel",
+      });
+      if (filterable) {
+        expect(toggle).not.toBeDisabled();
+        fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+        expect(
+          await screen.findByText("dataCatalog.resource.unsupportedFilterableField"),
+        ).toBeTruthy();
+        expect(updateViewMock).not.toHaveBeenCalled();
+        fireEvent.click(toggle);
+      }
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseEnter(toggle.parentElement!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "dataCatalog.resource.filterableTypeUnsupported",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      await waitFor(() => expect(updateViewMock).toHaveBeenCalledOnce());
+      expect(updateViewMock.mock.calls[0]?.[1]).toMatchObject({ schema: [{ filterable: false }] });
+    },
+  );
 
   it("returns to type selection without losing the draft", async () => {
     renderEditor({ catalogId: "cat-1" });
@@ -573,10 +620,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
       ...fields,
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
@@ -595,11 +642,11 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], name: "a".repeat(256) }],
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -617,10 +664,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     let sourceReads = 0;
     getResourceMock.mockImplementation((id: string) => {
@@ -641,10 +688,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     let sourceReads = 0;
     getResourceMock.mockImplementation((id: string) => {
@@ -669,10 +716,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : { ...source, catalogId: "cat-other" }),
@@ -704,13 +751,13 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       enabled: false,
       name: "orders_view",
       tags: ["orders"],
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], features: [] }],
-      logicDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
     } as CatalogResource;
     const sourceWithoutDistinctDisplayName = {
       ...source,
@@ -779,9 +826,9 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "id", operation: "==", value: 1 },
       },
@@ -810,11 +857,11 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
       schema: [{ ...source.schema[0], displayName: undefined, features: [] }],
-      logicDefinition: { sourceResourceId: "source-1" },
+      logicalViewDefinition: { sourceResourceId: "source-1" },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -895,10 +942,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: {
           operation: "and",
@@ -959,10 +1006,10 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
-        logicDefinition: {
+        logicalViewDefinition: {
           sourceResourceId: source.id,
           filterCondition: {
             field: "at",
@@ -1007,10 +1054,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "text_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: source.id,
         filterCondition: { field: "body", operation: "prefix", value: "word" },
       },
@@ -1060,7 +1107,7 @@ describe("ViewEditorScene", () => {
       })),
     ),
   ])(
-    "preserves an existing $filterCondition.operation definition with indexed=$indexed while editing metadata",
+    "requires explicit removal of $filterCondition.operation with indexed=$indexed before saving metadata",
     async ({ filterCondition, indexed }) => {
       const indexedSource: CatalogResource = {
         ...source,
@@ -1077,10 +1124,10 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
-        logicDefinition: { sourceResourceId: "source-1", filterCondition },
+        logicalViewDefinition: { sourceResourceId: "source-1", filterCondition },
       };
       getResourceMock.mockImplementation((id: string) =>
         Promise.resolve(id === "view-1" ? view : indexedSource),
@@ -1089,18 +1136,26 @@ describe("ViewEditorScene", () => {
       await screen.findByDisplayValue("orders_view");
       expect(screen.getByText("dataCatalog.viewEditor.unsupportedFilter")).toBeTruthy();
       expect(
-        screen.getByRole("textbox", { name: "dataCatalog.viewEditor.fixedFilter" }),
+        screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" }),
       ).toHaveValue(JSON.stringify(filterCondition, null, 2));
       fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
         target: { value: "Order Number" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+      const save = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+      expect(save).toBeDisabled();
+      fireEvent.click(save);
+      expect(updateViewMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+      expect(save).toBeEnabled();
+      expect(screen.getByText("dataCatalog.filter.noConditions")).toBeTruthy();
+      fireEvent.click(save);
       await waitFor(() =>
         expect(updateViewMock).toHaveBeenCalledWith(
           "view-1",
-          expect.objectContaining({ filterCondition }),
+          expect.objectContaining({ filterCondition: null }),
         ),
       );
+      expect(view.logicalViewDefinition?.filterCondition).toEqual(filterCondition);
     },
   );
 
@@ -1119,10 +1174,10 @@ describe("ViewEditorScene", () => {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1", filterCondition },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition },
     };
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : stringSource),
@@ -1143,16 +1198,23 @@ describe("ViewEditorScene", () => {
     );
   });
 
-  it("preserves an unsupported existing filter while editing display names", async () => {
-    const filter = { field: "id", operation: "knn_vector", value: [1, 2] };
+  it("requires explicit removal of a nested unsupported node and keeps supported siblings", async () => {
+    const incompatible = { field: "id", operation: "knn_vector", value: [1, 2] };
+    const filter = {
+      operation: "and",
+      sub_conditions: [
+        { field: "id", operation: ">=", value: 1 },
+        { operation: "or", sub_conditions: [incompatible, { field: "id", operation: "null" }] },
+      ],
+    };
     const view = {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
     } as CatalogResource;
     getResourceMock.mockImplementation((id: string) =>
       Promise.resolve(id === "view-1" ? view : source),
@@ -1163,15 +1225,94 @@ describe("ViewEditorScene", () => {
     fireEvent.change(screen.getByLabelText("dataCatalog.viewEditor.displayName 1"), {
       target: { value: "Order Number" },
     });
+    const save = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(updateViewMock).not.toHaveBeenCalled();
+    const json = screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" });
+    expect(json).toHaveValue(JSON.stringify(incompatible, null, 2));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [
+              { field: "id", operation: ">=", value_from: "const", value: 1 },
+              { operation: "or", sub_conditions: [{ field: "id", operation: "null" }] },
+            ],
+          },
+        }),
+      ),
+    );
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
+  });
+
+  it("requires explicit removal of an emptied nested group after deleting its incompatible child", async () => {
+    const filter = {
+      operation: "and",
+      sub_conditions: [
+        { field: "id", operation: ">=", value: 1 },
+        { operation: "or", sub_conditions: [{ field: "id", operation: "custom", value: 2 }] },
+      ],
+    };
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(screen.getByText("dataCatalog.filter.errors.emptyGroup")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    expect(updateViewMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeGroup" }));
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
     await waitFor(() =>
       expect(updateViewMock).toHaveBeenCalledWith(
         "view-1",
         expect.objectContaining({
-          filterCondition: filter,
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [{ field: "id", operation: ">=", value_from: "const", value: 1 }],
+          },
         }),
       ),
     );
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
+  });
+
+  it("does not persist incompatible-node deletion when editing is cancelled", async () => {
+    const filter = { field: "id", operation: "custom", value: 2 };
+    const view: CatalogResource = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: filter },
+    };
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : source),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.cancel" }));
+    expect(updateViewMock).not.toHaveBeenCalled();
+    expect(view.logicalViewDefinition?.filterCondition).toEqual(filter);
   });
 
   it.each(["source", "local_index"] as const)(
@@ -1184,11 +1325,11 @@ describe("ViewEditorScene", () => {
         ...source,
         id: "view-1",
         category: "logical_view",
-        logicType: "derived",
+        logicalType: "derived",
         name: "orders_view",
         expectedUpdateTime: 42,
         schema,
-        logicDefinition: {
+        logicalViewDefinition: {
           sourceResourceId: "source-1",
           filterCondition: { field: "wide", operation: "==", value: " -09007199254740993 " },
         },
@@ -1226,15 +1367,55 @@ describe("ViewEditorScene", () => {
     },
   );
 
+  it("saves a fixed ordinary condition using the managed schema despite a disabled source switch", async () => {
+    const schema = [{ ...source.schema[0], filterable: false }];
+    const view = {
+      ...source,
+      id: "view-1",
+      category: "logical_view",
+      logicalType: "derived",
+      name: "orders_view",
+      expectedUpdateTime: 42,
+      schema,
+      logicalViewDefinition: {
+        sourceResourceId: "source-1",
+        filterCondition: { field: "id", operation: ">=", value: 10 },
+      },
+    } as CatalogResource;
+    const indexedSource = {
+      ...source,
+      localIndexName: "idx_orders",
+      localIndexStatus: "available",
+      schema,
+    } as CatalogResource;
+    getResourceMock.mockImplementation((id: string) =>
+      Promise.resolve(id === "view-1" ? view : indexedSource),
+    );
+    renderEditor({ resourceId: "view-1" });
+    await screen.findByDisplayValue("orders_view");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.viewEditor.save" }));
+    await waitFor(() =>
+      expect(updateViewMock).toHaveBeenCalledWith(
+        "view-1",
+        expect.objectContaining({
+          filterCondition: {
+            operation: "and",
+            sub_conditions: [{ field: "id", operation: ">=", value: 10, value_from: "const" }],
+          },
+        }),
+      ),
+    );
+  });
+
   it("lets an existing view repair a Text filter after its table gains an index", async () => {
     const view = {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       schema: [{ name: "notes", originalName: "notes", type: "text", displayName: "Notes" }],
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "notes", operation: "==", value: "open" },
       },
@@ -1271,15 +1452,15 @@ describe("ViewEditorScene", () => {
     );
   });
 
-  it("keeps an unsupported filter blocked after its source schema changes", async () => {
+  it("still validates the latest source schema after an incompatible filter is explicitly deleted", async () => {
     const view = {
       ...source,
       id: "view-1",
       category: "logical_view",
-      logicType: "derived",
+      logicalType: "derived",
       name: "orders_view",
       expectedUpdateTime: 42,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: "source-1",
         filterCondition: { field: "id", operation: "knn_vector", value: [1, 2] },
       },
@@ -1294,6 +1475,11 @@ describe("ViewEditorScene", () => {
     await screen.findByDisplayValue("orders_view");
 
     const saveButton = screen.getByRole("button", { name: "dataCatalog.viewEditor.save" });
+    expect(saveButton).toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(sourceReads).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
     expect(await screen.findByText("dataCatalog.viewEditor.sourceSchemaChanged")).toBeTruthy();
     fireEvent.click(saveButton);

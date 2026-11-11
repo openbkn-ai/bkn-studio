@@ -6,6 +6,7 @@
  */
 
 import { networkPart } from "./network";
+import { versionsPart } from "./versions";
 import { conceptgroupPart } from "./concept-group";
 import { objecttypePart } from "./object-type";
 import { relationtypePart } from "./relation-type";
@@ -16,6 +17,8 @@ import { capabilityPart } from "./capability";
 import { packageImportPart } from "./package-import";
 import { declarationsPart } from "./declarations";
 import { propertyDeclarationsPart } from "./property-declarations";
+import { definitionDeclarationsPart } from "./definition-declarations";
+import { relationDeclarationsPart } from "./relation-declarations";
 import { valueTypesPart } from "./value-types";
 import { knowledgeBasePart } from "./knowledge-base";
 import { propertyAuthorizationPart } from "./property-authorization";
@@ -25,10 +28,12 @@ import { cypherQueryPart } from "./cypher-query";
 import { graphOverviewPart } from "./graph-overview";
 import { sampleExperiencePart } from "./sample-experience";
 import { appDevelopmentPart } from "./app-development";
+import { evalPart } from "@/modules/knowledge-network/eval/locales/zh-CN";
 
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
     ...networkPart,
+    ...versionsPart,
     ...conceptgroupPart,
     ...objecttypePart,
     ...relationtypePart,
@@ -39,6 +44,8 @@ export const knowledgeNetworkZhCN = {
     ...packageImportPart,
     ...declarationsPart,
     ...propertyDeclarationsPart,
+    ...definitionDeclarationsPart,
+    ...relationDeclarationsPart,
     ...valueTypesPart,
     ...knowledgeBasePart,
     ...propertyAuthorizationPart,
@@ -48,5 +55,6 @@ export const knowledgeNetworkZhCN = {
     ...graphOverviewPart,
     ...sampleExperiencePart,
     ...appDevelopmentPart,
+    ...evalPart,
   },
 } as const;

@@ -9,6 +9,7 @@ import { http } from "@/framework/request/http";
 import { buildLogicPropertyTrialBody } from "@/modules/knowledge-network/lib/build-logic-property-trial-request";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import type { ObjectTypeLogicProperty } from "@/modules/knowledge-network/types/knowledge-network";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 
 export type ObjectTypeLogicPropertyTrialRequest = {
   dynamicParams?: Record<string, Record<string, unknown>>;
@@ -75,6 +76,7 @@ async function invokeLogicPropertyTrial(
     }),
     {
       headers: { "X-HTTP-Method-Override": "GET" },
+      params: await resolveKnReadParams(request.networkId),
       skipErrorToast: true,
     },
   );

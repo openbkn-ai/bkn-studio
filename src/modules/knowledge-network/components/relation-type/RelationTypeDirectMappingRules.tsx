@@ -14,37 +14,27 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
-  KnowledgeNetworkObjectTypeRecord,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { type RelationTypeMappingReaders, createEmptyPropertyMapping } from "./mapping-utils";
-import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
 import styles from "./RelationTypeDirectMappingRules.module.css";
 import {
   RelationTypePropertySelect,
   type RelationTypePropertyOption,
 } from "./RelationTypePropertySelect";
 
-type MappingTableRow =
-  | {
-      key: string;
-      rowType: "object";
-      sourceValue?: string;
-      targetValue?: string;
-    }
-  | {
-      index: number;
-      key: string;
-      rowType: "property";
-      sourceValue?: string;
-      targetValue?: string;
-    };
+type MappingTableRow = {
+  index: number;
+  key: string;
+  sourceValue?: string;
+  targetValue?: string;
+};
 
+/** The join field pairs of a direct relation; its ends are chosen above them. */
 type RelationTypeDirectMappingRulesProps = {
   networkId: string;
-  objectTypes: KnowledgeNetworkObjectTypeRecord[];
   /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
   readers?: RelationTypeMappingReaders;
   value: RelationTypeMappingConfig;
@@ -66,7 +56,6 @@ function mapPropertyOptions(
 
 export function RelationTypeDirectMappingRules({
   networkId,
-  objectTypes,
   readers,
   value,
   onChange,
@@ -121,56 +110,16 @@ export function RelationTypeDirectMappingRules({
     void loadPropertyOptions(value.targetObjectTypeId, "target");
   }, [loadPropertyOptions, value.targetObjectTypeId]);
 
-  const tableRows = useMemo<MappingTableRow[]>(() => {
-    const rows: MappingTableRow[] = [
-      {
-        key: "object-row",
-        rowType: "object",
-        sourceValue: value.sourceObjectTypeId,
-        targetValue: value.targetObjectTypeId,
-      },
-    ];
-
-    value.propertyMappings.forEach((mapping, index) => {
-      rows.push({
+  const tableRows = useMemo<MappingTableRow[]>(
+    () =>
+      value.propertyMappings.map((mapping, index) => ({
         index,
         key: `property-row-${index}`,
-        rowType: "property",
         sourceValue: mapping.sourcePropertyName,
         targetValue: mapping.targetPropertyName,
-      });
-    });
-
-    return rows;
-  }, [value]);
-
-  const handleSourceObjectChange = (nextSourceObjectTypeId: string) => {
-    updateMappingRules({
-      sourceObjectTypeId: nextSourceObjectTypeId,
-      propertyMappings: value.propertyMappings.map((item) => ({
-        ...item,
-        sourcePropertyName: "",
       })),
-    });
-  };
-
-  const handleTargetObjectChange = (nextTargetObjectTypeId: string) => {
-    updateMappingRules({
-      targetObjectTypeId: nextTargetObjectTypeId,
-      propertyMappings: value.propertyMappings.map((item) => ({
-        ...item,
-        targetPropertyName: "",
-      })),
-    });
-  };
-
-  const handleClearObjects = () => {
-    updateMappingRules({
-      sourceObjectTypeId: "",
-      targetObjectTypeId: "",
-      propertyMappings: value.propertyMappings.map(() => createEmptyPropertyMapping()),
-    });
-  };
+    [value],
+  );
 
   const handlePropertyChange = (index: number, patch: Partial<RelationTypePropertyMapping>) => {
     updateMappingRules({
@@ -181,11 +130,6 @@ export function RelationTypeDirectMappingRules({
   };
 
   const handleDeleteRow = (row: MappingTableRow) => {
-    if (row.rowType === "object") {
-      handleClearObjects();
-      return;
-    }
-
     if (value.propertyMappings.length === 1) {
       handlePropertyChange(row.index, {
         sourcePropertyName: "",
@@ -203,72 +147,40 @@ export function RelationTypeDirectMappingRules({
 
   const columns: TableProps<MappingTableRow>["columns"] = [
     {
-      dataIndex: "rowType",
-      key: "rowType",
-      title: "",
-      width: 150,
-      render: (rowType: MappingTableRow["rowType"]) =>
-        rowType === "object"
-          ? t("knowledgeNetwork.relationTypeMappingObjectRow")
-          : t("knowledgeNetwork.relationTypeMappingPropertyRow"),
-    },
-    {
       dataIndex: "sourceValue",
       key: "sourceValue",
       title: t("knowledgeNetwork.relationTypeMappingSourcePoint"),
-      width: "42%",
-      render: (cellValue: string | undefined, row) =>
-        row.rowType === "object" ? (
-          <RelationTypeObjectTypeSelect
-            // The caller's object types are all listed: nothing is looked up in the network.
-            networkId={readers ? undefined : networkId}
-            objectTypes={objectTypes}
-            onChange={(nextValue) => handleSourceObjectChange(nextValue ?? "")}
-            placeholder={t("knowledgeNetwork.relationTypeSourceObjectPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ) : (
-          <RelationTypePropertySelect
-            disabled={!value.sourceObjectTypeId}
-            fields={sourcePropertyOptions}
-            onChange={(nextValue) =>
-              handlePropertyChange(row.index, {
-                sourcePropertyName: nextValue ?? "",
-              })
-            }
-            placeholder={t("knowledgeNetwork.relationTypeMappingSourcePropertyPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ),
+      render: (cellValue: string | undefined, row) => (
+        <RelationTypePropertySelect
+          disabled={!value.sourceObjectTypeId}
+          fields={sourcePropertyOptions}
+          onChange={(nextValue) =>
+            handlePropertyChange(row.index, {
+              sourcePropertyName: nextValue ?? "",
+            })
+          }
+          placeholder={t("knowledgeNetwork.relationTypeMappingSourcePropertyPlaceholder")}
+          value={cellValue || undefined}
+        />
+      ),
     },
     {
       dataIndex: "targetValue",
       key: "targetValue",
       title: t("knowledgeNetwork.relationTypeMappingTargetPoint"),
-      width: "42%",
-      render: (cellValue: string | undefined, row) =>
-        row.rowType === "object" ? (
-          <RelationTypeObjectTypeSelect
-            // The caller's object types are all listed: nothing is looked up in the network.
-            networkId={readers ? undefined : networkId}
-            objectTypes={objectTypes}
-            onChange={(nextValue) => handleTargetObjectChange(nextValue ?? "")}
-            placeholder={t("knowledgeNetwork.relationTypeTargetObjectPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ) : (
-          <RelationTypePropertySelect
-            disabled={!value.targetObjectTypeId}
-            fields={targetPropertyOptions}
-            onChange={(nextValue) =>
-              handlePropertyChange(row.index, {
-                targetPropertyName: nextValue ?? "",
-              })
-            }
-            placeholder={t("knowledgeNetwork.relationTypeMappingTargetPropertyPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ),
+      render: (cellValue: string | undefined, row) => (
+        <RelationTypePropertySelect
+          disabled={!value.targetObjectTypeId}
+          fields={targetPropertyOptions}
+          onChange={(nextValue) =>
+            handlePropertyChange(row.index, {
+              targetPropertyName: nextValue ?? "",
+            })
+          }
+          placeholder={t("knowledgeNetwork.relationTypeMappingTargetPropertyPlaceholder")}
+          value={cellValue || undefined}
+        />
+      ),
     },
     {
       align: "center",

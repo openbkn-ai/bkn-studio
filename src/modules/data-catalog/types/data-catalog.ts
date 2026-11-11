@@ -38,6 +38,8 @@ export type ResourceSchemaField = {
   displayName?: string;
   /** Field description (backend description). */
   description?: string;
+  /** Effective filtering switch supplied by Vega; independent of projection and index features. */
+  filterable?: boolean;
   /** Field-level index features, such as full text and vectors. */
   features?: ResourceFieldFeature[];
   name: string;
@@ -90,9 +92,9 @@ export type CatalogResource = {
   localIndexName?: string;
   /** Authoritative query availability of the Resource's local index. */
   localIndexStatus: ResourceLocalIndexStatus;
-  /** Present on a logic view detail response. List results may only carry logicType. */
-  logicDefinition?: DerivedLogicDefinition;
-  logicType?: "derived" | "composite";
+  /** Present on a logic view detail response. List results may only carry logicalType. */
+  logicalViewDefinition?: DerivedLogicalViewDefinition;
+  logicalType?: "derived" | "composite";
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
@@ -146,7 +148,7 @@ export type ResourceUpdateInput = ResourceCreateInput & {
   expectedUpdateTime: number;
 };
 
-export type DerivedLogicDefinition = {
+export type DerivedLogicalViewDefinition = {
   sourceResourceId: string;
   filterCondition?: Record<string, unknown> | null;
 };

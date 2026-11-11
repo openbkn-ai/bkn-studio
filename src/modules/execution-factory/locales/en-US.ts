@@ -816,6 +816,118 @@ export const executionFactoryEnUS = {
     workbenchFunctionList: "Function list - {{count}}",
     workbenchFunctionListEmptyFiltered: "No matching functions",
     workbenchFilterFunctions: "Filter functions…",
+    callGuide: {
+      open: "How to call",
+      title: "How to call",
+      httpTitle: "Call over HTTP",
+      httpPrerequisite: "The toolbox must be published and the tool enabled.",
+      httpCypherIdentity:
+        "A Cypher function queries the network as the caller: objects and properties the caller cannot see are out of its reach too.",
+      httpToken:
+        "Authenticate with the OAuth access token you get by logging in, in place of $TOKEN; openbkn auth token prints it. This endpoint does not take an API key (bak_…).",
+      httpEnvelopeFunction:
+        "The request body is an envelope: all of the function's arguments go in body, with sample values from each input's example or type; a top-level timeout (seconds) caps how long to wait.",
+      httpEnvelopeOpenapi:
+        "The request body is an envelope: parameters go in header, query, path and body by where the HTTP request carries them, and the platform forwards them to the target API.",
+      responseTitle: "Result",
+      responseEnvelope:
+        "Whenever the tool ran, the HTTP status is 200; read status_code for the outcome and body for the content.",
+      responseCypherValue:
+        "Single value: body is {value}; value is null when there is no row, and status_code is 400 when there is more than one.",
+      responseCypherTable:
+        "Table: body is {columns, entries, limited}; when the statement has no LIMIT and there are more than 1000 rows, the first 1000 come back with limited true.",
+      responsePython:
+        "body is the sandbox's run: what the handler returns is in body.result, beside stdout, stderr, exit_code and the like.",
+      responseOpenapi: "status_code, headers and body are the target API's own response.",
+      agentTitle: "Let an Agent call it",
+      agentMount:
+        "Once the toolbox is mounted on a knowledge network, an Agent finds this tool through Context Loader's search_capabilities and calls it with execute_tool. The call runs inside a managed interaction: open one with bkn_start_interaction, then pass the conversation_id and interaction_id it returns to execute_tool as bkn_context. The commands below take the same two steps; replace $KN_ID with the network it is mounted on, and $CONVERSATION_ID and $INTERACTION_ID with what the first step returns. Right after mounting, wait a few seconds for the network's proxy grants to sync before calling.",
+      bindTitle: "Use it in a knowledge network",
+      bindLogicValue:
+        "A Cypher function returning a single value suits a logic property: picking it fills the result path with $.value and binds each parameter named like an object property to that property.",
+      bindLogic:
+        "Pick this tool in an object type's logic property to evaluate it with the object's property values.",
+      bindAction: "Pick this tool as an action type's way of running.",
+    },
+    cypherFunction: {
+      newPython: "Python function",
+      newCypher: "Cypher function",
+      logic: "Cypher statement",
+      network: "Knowledge network",
+      networkRequired: "Choose the knowledge network the statement queries.",
+      shape: "Returns",
+      shapeValue: "Single value",
+      shapeTable: "Table",
+      shapeValueHint:
+        "Single value: the statement returns one column and at most one row, giving {value}; with no row, value is null. Usable as a logic property's value.",
+      shapeTableHint: "Table: every row, as {columns, entries, limited}.",
+      notices: {
+        positional:
+          "Saving accepts only named parameters ($name). Rename positional ones such as $0.",
+        "row-count-parameter": "LIMIT and SKIP take an integer, not a $parameter.",
+        "limit-too-large": "LIMIT cannot exceed {{max}}.",
+        "table-default-limit":
+          "Without LIMIT, at most {{rows}} rows come back; when there are more, limited is true in the result so the caller knows it is partial.",
+        "value-unordered-limit":
+          "LIMIT 1 without ORDER BY picks an arbitrary row, which can differ from one call to the next. Add ORDER BY, or aggregate with count(), max() and the like.",
+      },
+      consoleNote: "Queries the chosen network as you · read-only, not persisted",
+      paramsHint:
+        "Parameters follow the statement's $name references. The type decides how a call's value is converted; change it here.",
+      noNetworkRun: "Choose the knowledge network to query first.",
+      noStatementRun: "Write a Cypher statement first.",
+      ai: {
+        open: "Generate with AI",
+        title: "Generate the Cypher statement with AI",
+        description: "What should this function look up",
+        placeholder: "For example: count a supplier's purchase orders by supplier code",
+        needNetwork: "First choose the knowledge network the statement queries, above.",
+        shapeValueHint:
+          "The function returns a single value: the statement will return one column and at most one row.",
+        shapeTableHint:
+          "The function returns a table: the statement will return the property columns needed.",
+        working: "Generating; the Agent tries the statement before handing it over…",
+        workingTool: "Generating: {{name}}",
+        noQuery: "The Agent's answer holds no usable statement. Here is what it said.",
+        result: "Generated statement (tried)",
+        parameters: "Parameters",
+        example: "example",
+        generate: "Generate",
+        regenerate: "Generate again",
+        apply: "Replace the statement",
+        message: {
+          request:
+            "Write the statement of a Cypher function. What the function does: {{description}}",
+          contract:
+            "This is a function to be called, not a one-off query. These terms come before your general rules:",
+          parameters:
+            "Write the values a caller passes as $name parameters (for example $supplier_code), never as fixed values; name them in lowercase English with underscores, after the property compared.",
+          trial:
+            "When trying it with run_cypher, keep the $name parameters as written and pass sample values in parameters; find real values with search_instance.",
+          shapeValue:
+            "The function returns a single value: the statement returns one column and at most one row, for example with count(), sum() or max(), or ORDER BY … LIMIT 1; no nodes or relationships, and it need not draw as a graph.",
+          shapeTable:
+            "The function returns a table: return the property columns a caller needs, not whole nodes or relationships, and it need not draw as a graph. Write no LIMIT unless the description asks for the first N rows: without one the platform returns at most 1000 rows and sets limited when there were more, while a LIMIT you write cuts the rows without the caller knowing.",
+          answer:
+            'Hand over a cypher code block, then a json code block listing every parameter, for example [{"name": "supplier_code", "type": "string", "description": "supplier code, such as S001", "example": "S001"}]; type is string, number, boolean or array, and example is the value you tried.',
+          existing:
+            "The function already has these parameters; keep the same names where they fit:",
+        },
+      },
+      problems: {
+        missing: "Missing parameters: {{names}}",
+        type: "Parameter {{name}} cannot be converted to {{expected}}",
+        nullInList: "Parameter {{name}} has a null in its list",
+        notObject: "The test input must be a JSON object",
+        columns: "A single value has one column; this statement returns {{total}}.",
+        graph:
+          "A single value cannot be a node, relationship, map or list (column {{column}}). Return a property, or use Table.",
+        rows: "A single value has at most one row; this statement returns {{total}}.",
+        rowsMore: "A single value has at most one row; this statement returns more than {{total}}.",
+      },
+    },
+    workbenchInputDescriptionRequired:
+      'Input {{params}} of "{{name}}" has no description. Say what the value has to be, not just its type, so Agents know what to send.',
     workbenchNewFunction: "New Function",
     workbenchUnnamedFunction: "Unnamed function",
     workbenchDeleteFunction: "Delete function",

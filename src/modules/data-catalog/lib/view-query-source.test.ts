@@ -7,7 +7,27 @@
 
 import { describe, expect, it } from "vitest";
 
-import { fixedFilterSourceBlockReason } from "./view-query-source";
+import { fixedFilterSourceBlockReason, sourceFilterQueryPath } from "./view-query-source";
+
+describe("sourceFilterQueryPath", () => {
+  it.each([
+    [null, "source"],
+    [{ category: "table", localIndexStatus: "unavailable" }, "source"],
+    [
+      { category: "table", localIndexStatus: "unavailable", localIndexName: "idx_orders" },
+      "source",
+    ],
+    [{ category: "table", localIndexStatus: "available" }, "source"],
+    [{ category: "table", localIndexStatus: "available", localIndexName: "" }, "source"],
+    [
+      { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
+      "managed_local_index",
+    ],
+    [{ category: "index", localIndexStatus: "unavailable" }, "local_index"],
+  ] as const)("uses %j as the %s channel", (source, expected) => {
+    expect(sourceFilterQueryPath(source)).toBe(expected);
+  });
+});
 
 describe("fixedFilterSourceBlockReason", () => {
   it.each([undefined, null])("allows an absent fixed filter (%s)", (filter) => {

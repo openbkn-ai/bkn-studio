@@ -9,6 +9,7 @@ import { http } from "@/framework/request/http";
 import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import { mockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
 import { syncKnowledgeNetworkStatistics } from "@/modules/knowledge-network/services/mock/state";
+import { resolveKnReadParams } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import { useMock, wait } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   inferObjectMetricOutputShapeV1,
@@ -466,7 +467,7 @@ export async function queryObjectMetricDataV1(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data`,
     query,
     {
-      params: { branch: "main", version },
+      params: { ...(await resolveKnReadParams(networkId)), version },
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
@@ -500,7 +501,7 @@ export async function trialObjectMetricDataV1(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial`,
     { definition: canonicalDefinition, query },
     {
-      params: { branch: "main" },
+      params: await resolveKnReadParams(networkId),
       skipErrorToast: true,
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
@@ -521,7 +522,7 @@ export async function queryObjectMetricDrillThroughV1(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/${metricId}/data/drill-through`,
     { query, bucket_key: bucketKey, page_size: 100, cursor },
     {
-      params: { branch: "main", version },
+      params: { ...(await resolveKnReadParams(networkId)), version },
       skipErrorToast: true,
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
@@ -542,7 +543,7 @@ export async function trialObjectMetricDrillThroughV1(
     `/ontology-query/v1/knowledge-networks/${networkId}/object-metrics/trial/drill-through`,
     { definition: canonicalDefinition, query, bucket_key: bucketKey, page_size: 100, cursor },
     {
-      params: { branch: "main" },
+      params: await resolveKnReadParams(networkId),
       skipErrorToast: true,
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,

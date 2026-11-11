@@ -5,9 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* eslint-disable react-refresh/only-export-components */
-
-import { Alert, Modal, Typography } from "antd";
+import { Alert, Typography } from "antd";
 
 import type { TFunction } from "i18next";
 
@@ -111,25 +109,4 @@ export function LabDestructiveImpactAlert({
       </Typography.Paragraph>
     </div>
   );
-}
-
-export function openLabDestructiveConfirm(params: {
-  action: LabDestructiveAction;
-  context: LabDestructiveConfirmContext;
-  title: string;
-  okText: string;
-  onOk: () => void | Promise<void>;
-  t: TFunction;
-}) {
-  Modal.confirm({
-    cancelText: params.t("common.cancel"),
-    content: (
-      <LabDestructiveImpactAlert action={params.action} context={params.context} t={params.t} />
-    ),
-    okButtonProps: { danger: true },
-    okText: params.okText,
-    onOk: params.onOk,
-    title: params.title,
-    width: 520,
-  });
 }

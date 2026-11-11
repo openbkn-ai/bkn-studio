@@ -13,6 +13,10 @@ import type { FunctionParameterDef } from "@/modules/execution-factory/types/fun
  */
 
 function sampleValue(parameter: FunctionParameterDef): unknown {
+  // A value the parameter was tried with (a Cypher function made from a data query) beats a blank.
+  if (parameter.example !== undefined && parameter.example !== null) {
+    return parameter.example;
+  }
   switch (parameter.type) {
     case "number":
     case "integer":

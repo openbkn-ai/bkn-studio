@@ -31,3 +31,15 @@
   display: inline-flex;
   gap: 12px;
 }
+
+.formTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -20,6 +20,7 @@ export function buildModelingPreviewGraph(
   return {
     nodes: objectTypes.map((item) => ({
       color: item.color || "#1677ff",
+      ...(item.declarations ? { declarations: item.declarations } : {}),
       icon: item.icon,
       id: item.id,
       name: item.name,
@@ -29,6 +30,7 @@ export function buildModelingPreviewGraph(
         (item) => nodeIdSet.has(item.sourceObjectTypeId) && nodeIdSet.has(item.targetObjectTypeId),
       )
       .map((item) => ({
+        ...(item.definitionDeclarations ? { declarations: item.definitionDeclarations } : {}),
         id: item.id,
         name: item.name,
         sourceId: item.sourceObjectTypeId,

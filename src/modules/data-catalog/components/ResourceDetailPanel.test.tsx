@@ -69,6 +69,7 @@ const resource: CatalogResource = {
   schema: [
     {
       name: "id",
+      filterable: true,
       originalDescription: "Source order identifier",
       originalName: "source_order_id",
       originalType: "varchar(64)",
@@ -104,6 +105,129 @@ describe("ResourceDetailPanel", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("edits and saves only the filtering switch while keeping the field in the schema", async () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active canEdit catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("dataCatalog.resource.filterableEnabled")).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    const toggle = screen.getByRole("switch", {
+      name: "dataCatalog.resource.fieldFilterableLabel",
+    });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
+    expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
+      schema: [{ name: "id", filterable: false, originalName: "source_order_id" }],
+    });
+  });
+
+  it.each(["binary", "other", "json", "point", "shape", "ip", "future_type"])(
+    "disables enabling %s fields and explains the restriction",
+    async (type) => {
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit
+            catalog={null}
+            resource={{
+              ...resource,
+              schema: [{ ...resource.schema[0], type, filterable: false }],
+            }}
+          />
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+      const toggle = screen.getByRole("switch");
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseEnter(toggle.parentElement!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "dataCatalog.resource.filterableTypeUnsupported",
+      );
+    },
+  );
+
+  it("allows enabling supported fields that are explicitly disabled", async () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            schema: [{ ...resource.schema[0], filterable: false }],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    expect(screen.getByRole("switch")).not.toBeDisabled();
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
+    expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
+      schema: [{ filterable: true }],
+    });
+  });
+
+  it.each(["binary", "ip"])(
+    "rejects unsupported enabled %s history on save and allows turning it off",
+    async (type) => {
+      const { container } = render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit
+            catalog={null}
+            resource={{
+              ...resource,
+              schema: [{ ...resource.schema[0], type, filterable: true }],
+            }}
+          />
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+      fireEvent.change(container.querySelector("textarea")!, {
+        target: { value: "new description" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() =>
+        expect(messageMock.error).toHaveBeenCalledWith(
+          "dataCatalog.resource.unsupportedFilterableField",
+        ),
+      );
+      expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+      const toggle = screen.getByRole("switch");
+      expect(toggle).not.toBeDisabled();
+      fireEvent.click(toggle);
+      expect(toggle).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
+      expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
+        schema: [{ filterable: false }],
+      });
+    },
+  );
+
+  it("restores the filtering switch when editing is cancelled", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active canEdit catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    expect(screen.getByText("dataCatalog.resource.filterableEnabled")).toBeTruthy();
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
 
   it("renders the refreshed resource supplied by the workspace without another request", async () => {
@@ -472,8 +596,8 @@ describe("ResourceDetailPanel", () => {
           resource={{
             ...resource,
             category: "logical_view",
-            logicType: "derived",
-            logicDefinition: {
+            logicalType: "derived",
+            logicalViewDefinition: {
               sourceResourceId: "source-orders",
               filterCondition: {
                 operation: "and",
@@ -515,6 +639,119 @@ describe("ResourceDetailPanel", () => {
     expect(filterCard.queryByRole("button")).toBeNull();
   });
 
+  it("keeps supported detail conditions visible beside incompatible nested JSON", () => {
+    const incompatible = { field: "id", operation: "custom", extra: { preserved: true } };
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicalType: "derived",
+            logicalViewDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [
+                  { field: "amount", operation: ">", value: 1000 },
+                  {
+                    operation: "or",
+                    sub_conditions: [incompatible, { field: "id", operation: "not_null" }],
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const card = within(screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!);
+    expect(card.getByText("1000")).toBeTruthy();
+    expect(card.getByText("dataCatalog.filter.and")).toBeTruthy();
+    expect(card.getByText("dataCatalog.filter.or")).toBeTruthy();
+    expect(card.getByText("not_null")).toBeTruthy();
+    expect(card.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" })).toHaveValue(
+      JSON.stringify(incompatible, null, 2),
+    );
+    expect(card.queryByRole("button", { name: "dataCatalog.filter.removeUnsupported" })).toBeNull();
+    expect(card.getByRole("button", { name: "dataCatalog.filter.expandJSON" })).toBeTruthy();
+  });
+
+  it.each([
+    { category: "index", localIndexStatus: "unavailable", localIndexName: undefined },
+    { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
+  ] as const)(
+    "uses the index channel to show a legacy before condition for $category",
+    async (sourceState) => {
+      const filter = { field: "at", operation: "before", value: [3, "2026-10-30T00:00:00Z"] };
+      getCatalogResourceMock.mockResolvedValue({
+        ...resource,
+        ...sourceState,
+        id: "source-orders",
+        schema: [{ name: "at", displayName: "Order Time", type: "datetime" }],
+      });
+      render(
+        <MemoryRouter>
+          <ResourceDetailPanel
+            active
+            canEdit={false}
+            catalog={null}
+            resource={{
+              ...resource,
+              category: "logical_view",
+              logicalType: "derived",
+              logicalViewDefinition: { sourceResourceId: "source-orders", filterCondition: filter },
+            }}
+          />
+        </MemoryRouter>,
+      );
+      expect(
+        await screen.findByText("dataCatalog.filter.unsupportedReasons.legacyCondition"),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" }),
+      ).toHaveValue(JSON.stringify(filter, null, 2));
+    },
+  );
+
+  it("keeps a current before condition readable on the index channel", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...resource,
+      id: "source-orders",
+      category: "index",
+      schema: [{ name: "at", displayName: "Order Time", type: "datetime" }],
+    });
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logical_view",
+            logicalType: "derived",
+            logicalViewDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                field: "at",
+                operation: "before",
+                value: [3, "week"],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Order Time")).toBeTruthy();
+    const card = within(screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!);
+    expect(card.getByText("before")).toBeTruthy();
+    expect(card.queryByRole("textbox")).toBeNull();
+  });
+
   it("uses source schema labels for fixed filters on hidden source fields", async () => {
     getCatalogResourceMock.mockResolvedValue({
       ...resource,
@@ -530,9 +767,9 @@ describe("ResourceDetailPanel", () => {
           resource={{
             ...resource,
             category: "logical_view",
-            logicType: "derived",
+            logicalType: "derived",
             schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-orders",
               filterCondition: { field: "internal_score", operation: ">", value: 10 },
             },

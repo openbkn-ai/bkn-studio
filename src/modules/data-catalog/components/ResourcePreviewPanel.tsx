@@ -190,11 +190,11 @@ function ResourcePreviewContent({
     resource.category === "table" &&
     resource.localIndexStatus === "available" &&
     Boolean(resource.localIndexName);
-  const isDerivedView = resource.category === "logical_view" && resource.logicType === "derived";
-  const sourceId = resource.logicDefinition?.sourceResourceId;
+  const isDerivedView = resource.category === "logical_view" && resource.logicalType === "derived";
+  const sourceId = resource.logicalViewDefinition?.sourceResourceId;
   const invalidViewMetadata =
     resource.category === "logical_view" &&
-    ((resource.logicType !== "derived" && resource.logicType !== "composite") ||
+    ((resource.logicalType !== "derived" && resource.logicalType !== "composite") ||
       (isDerivedView &&
         (typeof sourceId !== "string" ||
           !sourceId.trim() ||
@@ -202,7 +202,7 @@ function ResourcePreviewContent({
             resource.sourceMetadata?.sourceCategory !== "index"))));
   const isTableView = isDerivedView && resource.sourceMetadata?.sourceCategory === "table";
   const sourceBlockReason = isTableView
-    ? fixedFilterSourceBlockReason(resource.logicDefinition?.filterCondition)
+    ? fixedFilterSourceBlockReason(resource.logicalViewDefinition?.filterCondition)
     : null;
   const canSwitchSource =
     hasLocalIndex ||
@@ -236,14 +236,20 @@ function ResourcePreviewContent({
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
   const queryPath: FilterQueryPath =
-    resource.category === "dataset" ||
-    resource.category === "index" ||
     (resource.category === "table" && !queriesSource) ||
-    (resource.category === "logical_view" &&
-      (resource.sourceMetadata?.sourceCategory === "index" ||
-        (!ignoreLocalIndex && (viewHasLocalIndex || result?.querySource === "local_index"))))
-      ? "local_index"
-      : "source";
+    (resource.category === "dataset" &&
+      resource.localIndexStatus === "available" &&
+      Boolean(resource.localIndexName)) ||
+    (isTableView &&
+      !ignoreLocalIndex &&
+      (viewHasLocalIndex || result?.querySource === "local_index"))
+      ? "managed_local_index"
+      : resource.category === "dataset" ||
+          resource.category === "index" ||
+          (resource.category === "logical_view" &&
+            resource.sourceMetadata?.sourceCategory === "index")
+        ? "local_index"
+        : "source";
   const activeFilter =
     filterValidationError(appliedFilter, resource.schema, queryPath) === null
       ? appliedFilter
@@ -458,7 +464,7 @@ function ResourcePreviewContent({
   const fetched = offset + rows.length;
   const totalUnreliable =
     !appliedFilter.children.length &&
-    !resource.logicDefinition?.filterCondition &&
+    !resource.logicalViewDefinition?.filterCondition &&
     rows.length === pageSize &&
     resourceCountAsBigInt(backendTotal) < BigInt(fetched);
   const total = totalUnreliable

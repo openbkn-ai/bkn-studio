@@ -13,7 +13,10 @@ import {
   cypherSuggestions,
   type CypherCompletionSchema,
 } from "@/modules/knowledge-network/cypher/cypher-completion";
+import { scanCypherParameters } from "@/modules/knowledge-network/cypher/cypher-parameters";
 import type { CypherErrorMark } from "@/modules/knowledge-network/cypher/error-mark";
+
+import styles from "./CypherEditor.module.css";
 
 type MonacoApi = Parameters<OnMount>[1];
 type EditorInstance = Parameters<OnMount>[0];
@@ -22,6 +25,8 @@ export type CypherEditorHandle = {
   /** Inserts text at the cursor and focuses the editor. */
   insert: (text: string) => void;
   focus: () => void;
+  /** The selected text and everything before it, or null when nothing is selected. */
+  selection: () => { text: string; before: string } | null;
 };
 
 const MARKER_OWNER = "cypher-run";
@@ -30,7 +35,7 @@ const MIN_HEIGHT = 48;
 
 /**
  * Cypher editor on Monaco: highlighting, completion of the network's labels, relationship types
- * and properties, Ctrl/⌘ + Enter to run, Ctrl/⌘ + ↑ / ↓ through history, and a squiggle where
+ * and properties, `$name` parameters set apart, Ctrl/⌘ + Enter to run, Ctrl/⌘ + ↑ / ↓ through history, and a squiggle where
  * the last run failed.
  */
 export const CypherEditor = forwardRef<
@@ -47,6 +52,8 @@ export const CypherEditor = forwardRef<
     /** The least height it takes, however short the text; enlarged editors start taller. */
     minHeight?: number;
     ariaLabel: string;
+    /** Shows the statement without letting it be changed, for a reader without edit rights. */
+    readOnly?: boolean;
   }
 >(function CypherEditor(
   {
@@ -59,6 +66,7 @@ export const CypherEditor = forwardRef<
     maxHeight,
     minHeight = MIN_HEIGHT,
     ariaLabel,
+    readOnly = false,
   },
   ref,
 ) {
@@ -83,6 +91,21 @@ export const CypherEditor = forwardRef<
       editor.focus();
     },
     focus: () => editorRef.current?.focus(),
+    selection: () => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      const range = editor?.getSelection();
+      if (!model || !range || range.isEmpty()) return null;
+      return {
+        text: model.getValueInRange(range),
+        before: model.getValueInRange({
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: range.startLineNumber,
+          endColumn: range.startColumn,
+        }),
+      };
+    },
   }));
 
   useEffect(() => () => disposables.current.forEach((item) => item.dispose()), []);
@@ -119,6 +142,27 @@ export const CypherEditor = forwardRef<
         if (event.contentHeightChanged) setContentHeight(event.contentHeight);
       }),
     );
+    // Monaco's Cypher grammar reads `$name` as a plain identifier; color the parameters the
+    // scanner finds, so what is colored is exactly what the parameter table lists.
+    const parameterMarks = editor.createDecorationsCollection();
+    const markParameters = () => {
+      const model = editor.getModel();
+      if (!model) return;
+      parameterMarks.set(
+        scanCypherParameters(model.getValue()).spans.map((span) => {
+          const start = model.getPositionAt(span.start);
+          const end = model.getPositionAt(span.end);
+          return {
+            range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
+            options: { inlineClassName: styles.parameter },
+          };
+        }),
+      );
+    };
+    markParameters();
+    disposables.current.push(editor.onDidChangeModelContent(markParameters), {
+      dispose: () => parameterMarks.clear(),
+    });
     const { KeyCode, KeyMod } = monaco;
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => onRunRef.current());
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.UpArrow, () => onHistoryRef.current(true));
@@ -185,6 +229,8 @@ export const CypherEditor = forwardRef<
           scrollbar: { alwaysConsumeMouseWheel: false },
           fixedOverflowWidgets: true,
           tabSize: 2,
+          readOnly,
+          domReadOnly: readOnly,
         }}
         value={value}
       />

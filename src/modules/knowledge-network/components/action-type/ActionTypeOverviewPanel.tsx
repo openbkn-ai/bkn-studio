@@ -6,9 +6,15 @@
  */
 
 import { Tag } from "antd";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  actionTypeOperationLabelKey,
+  getActionTypeOperationKind,
+} from "../../utils/action-type-operation";
+import { getKnowledgeNetworkRelationTypeDetail } from "../../services/relation-type.service";
+import type { RelationTypeDetail } from "../../types/relation-type";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { ActionTypeExecutionConfigTable } from "@/modules/knowledge-network/components/action-type/ActionTypeExecutionConfigTable";
 import type {
@@ -18,6 +24,7 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import { DefinitionAliases } from "@/modules/knowledge-network/components/definition-declarations/DefinitionAliases";
 import styles from "./ActionTypeOverviewPanel.module.css";
 
 type ActionTypeOverviewPanelProps = {
@@ -47,7 +54,15 @@ function getActionKindLabel(
 function formatConditionLabel(
   condition: ActionTypeCondition | undefined,
   t: (key: string) => string,
-) {
+): string {
+  if (condition?.operation === "and" || condition?.operation === "or") {
+    const separator = t(
+      condition.operation === "and"
+        ? "knowledgeNetwork.actionTypeConditionGroupAnd"
+        : "knowledgeNetwork.actionTypeConditionGroupOr",
+    );
+    return `(${(condition.subConditions ?? []).map((item) => formatConditionLabel(item, t)).join(` ${separator} `)})`;
+  }
   if (!condition?.field || !condition.operation) {
     return t("knowledgeNetwork.actionTypeEmptyValue");
   }
@@ -64,7 +79,13 @@ function formatConditionLabel(
   }
 
   return valueLabel
-    ? `${condition.field} ${operationLabel} ${valueLabel}`
+    ? `${condition.field} ${operationLabel} ${
+        condition.valueFrom === "property"
+          ? `${t("knowledgeNetwork.actionTypeExecutionValueFromProperty")}（${valueLabel}）`
+          : condition.valueFrom === "input"
+            ? `${t("knowledgeNetwork.actionTypeExecutionValueFromInput")}（${valueLabel}）`
+            : valueLabel
+      }`
     : `${condition.field} ${operationLabel}`;
 }
 
@@ -107,6 +128,27 @@ export function ActionTypeOverviewPanel({
   );
   const actionKindLabel = getActionKindLabel(detail.actionKind, t);
   const conditionLabel = formatConditionLabel(detail.condition, t);
+  const operationKind = getActionTypeOperationKind(detail);
+  const isObjectOperation = operationKind === "object";
+  const relationConfig =
+    detail.operationConfig?.type === "relation" ? detail.operationConfig : undefined;
+  const [relation, setRelation] = useState<RelationTypeDetail | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setRelation(null);
+    if (relationConfig?.relationTypeId) {
+      void getKnowledgeNetworkRelationTypeDetail(networkId, relationConfig.relationTypeId)
+        .then((result) => {
+          if (!cancelled) setRelation(result);
+        })
+        .catch(() => {
+          /* Retain the declared ID when the relation is unavailable. */
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, relationConfig?.relationTypeId]);
   return (
     <div className={styles.page}>
       <div className={styles.overviewGrid}>
@@ -127,6 +169,14 @@ export function ActionTypeOverviewPanel({
                     <span className={styles.emptyValue}>{t("knowledgeNetwork.noTags")}</span>
                   )}
                 </div>
+              </div>
+              <div>
+                <span>{t("knowledgeNetwork.definitionDeclarations.aliases")}</span>
+                <DefinitionAliases
+                  aliases={detail.declarations?.aliases}
+                  emptyClassName={styles.emptyValue}
+                  rowClassName={styles.tagRow}
+                />
               </div>
               <div>
                 <span>{t("knowledgeNetwork.color")}</span>
@@ -154,35 +204,72 @@ export function ActionTypeOverviewPanel({
         </section>
 
         <section className={`${styles.panel} ${styles.rulePanel}`}>
-          <h2>{t("knowledgeNetwork.actionTypeRuleConfig")}</h2>
+          <h2>
+            {t("knowledgeNetwork.actionOperationConfiguration")} ·{" "}
+            {t(actionTypeOperationLabelKey(operationKind))}
+          </h2>
           <div className={styles.ruleList}>
-            <section className={styles.ruleSection}>
-              <div className={styles.ruleHeading}>
-                <span>1</span>
-                <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
-              </div>
-              <div className={styles.infoGrid}>
-                <div>
-                  <span>{t("knowledgeNetwork.actionTypeObject")}</span>
-                  <ObjectTypeCell
-                    emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
-                    objectType={boundObjectType}
-                  />
+            {relationConfig ? (
+              <section className={styles.ruleSection}>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionRelationType")}</span>
+                    <strong>{relation?.name || relationConfig.relationTypeId}</strong>
+                  </div>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeTargetObject")}</span>
+                    <strong>{detail.objectTypeName || detail.objectTypeId}</strong>
+                  </div>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionRelationOperation")}</span>
+                    <strong>
+                      {t(
+                        relationConfig.relationOperation === "create"
+                          ? "knowledgeNetwork.actionRelationCreate"
+                          : "knowledgeNetwork.actionRelationDelete",
+                      )}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionRelationCurrentCondition")}</span>
+                    <strong>{formatConditionLabel(detail.condition, t)}</strong>
+                  </div>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionRelationOtherCondition")}</span>
+                    <strong>{formatConditionLabel(relationConfig.otherObjectCondition, t)}</strong>
+                  </div>
                 </div>
-                <div>
-                  <span>{t("knowledgeNetwork.actionTypeKind")}</span>
-                  <strong>{actionKindLabel}</strong>
+              </section>
+            ) : null}
+            {!isObjectOperation ? null : (
+              <section className={styles.ruleSection}>
+                <div className={styles.ruleHeading}>
+                  <span>1</span>
+                  <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
                 </div>
-                <div className={styles.fullWidthItem}>
-                  <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
-                  <strong>{conditionLabel}</strong>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeObject")}</span>
+                    <ObjectTypeCell
+                      emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                      objectType={boundObjectType}
+                    />
+                  </div>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeKind")}</span>
+                    <strong>{actionKindLabel}</strong>
+                  </div>
+                  <div className={styles.fullWidthItem}>
+                    <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
+                    <strong>{conditionLabel}</strong>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             <section className={styles.ruleSection}>
               <div className={styles.ruleHeading}>
-                <span>2</span>
+                <span>{!isObjectOperation ? 1 : 2}</span>
                 <h4>{t("knowledgeNetwork.actionTypeExecutionTool")}</h4>
               </div>
               <ActionTypeExecutionConfigTable
@@ -192,27 +279,29 @@ export function ActionTypeOverviewPanel({
               />
             </section>
 
-            <section className={styles.ruleSection}>
-              <div className={styles.ruleHeading}>
-                <span>3</span>
-                <h4>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</h4>
-              </div>
-              <div className={styles.infoGrid}>
-                <div>
-                  <span>{t("knowledgeNetwork.actionTypeAffectedObject")}</span>
-                  <ObjectTypeCell
-                    emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
-                    objectType={affectedObjectType}
-                  />
+            {!isObjectOperation ? null : (
+              <section className={styles.ruleSection}>
+                <div className={styles.ruleHeading}>
+                  <span>3</span>
+                  <h4>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</h4>
                 </div>
-                <div className={styles.fullWidthItem}>
-                  <span>{t("knowledgeNetwork.actionTypeAffectDescription")}</span>
-                  <strong>
-                    {detail.affect?.comment || t("knowledgeNetwork.actionTypeEmptyValue")}
-                  </strong>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeAffectedObject")}</span>
+                    <ObjectTypeCell
+                      emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                      objectType={affectedObjectType}
+                    />
+                  </div>
+                  <div className={styles.fullWidthItem}>
+                    <span>{t("knowledgeNetwork.actionTypeAffectDescription")}</span>
+                    <strong>
+                      {detail.affect?.comment || t("knowledgeNetwork.actionTypeEmptyValue")}
+                    </strong>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
           </div>
         </section>
       </div>

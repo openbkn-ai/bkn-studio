@@ -170,6 +170,7 @@ export function OverviewOntologyBlock({
         color: colorOfType.get(node.id) ?? DEFAULT_COLOR,
         conceptGroupIds: node.conceptGroups?.map((group) => group.id) ?? [],
         conceptGroupNames: node.conceptGroups?.map((group) => group.name) ?? [],
+        declarations: node.declarations,
         description: "",
         hasIndex: node.indexStatus?.state === "available",
         icon: node.icon,
@@ -186,6 +187,7 @@ export function OverviewOntologyBlock({
     const names = new Map(graph.nodes.map((node) => [node.id, node.name]));
     return graph.edges.map((edge) => ({
       color: DEFAULT_COLOR,
+      definitionDeclarations: edge.declarations,
       description: "",
       id: edge.id,
       mappingMode: edge.mappingMode ?? "direct",
@@ -495,6 +497,9 @@ export function OverviewOntologyBlock({
           onExpandNode={(id) => {
             void expandNode(id);
           }}
+          // Relations between the same two types, such as one and the deprecated one it replaces,
+          // each show as their own line.
+          parallelEdges
           relationTypes={relationTypes}
         />
       </Spin>

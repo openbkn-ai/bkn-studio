@@ -18,41 +18,31 @@ import {
   listObjectTypeResourceFields,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
-  KnowledgeNetworkObjectTypeRecord,
   ObjectTypeDataSource,
   RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { type RelationTypeMappingReaders, createEmptyResourceMapping } from "./mapping-utils";
-import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
 import styles from "./RelationTypeResourceMappingRules.module.css";
 import {
   RelationTypePropertySelect,
   type RelationTypePropertyOption,
 } from "./RelationTypePropertySelect";
 
-type ResourceTableRow =
-  | {
-      resourceValue?: string;
-      key: string;
-      rowType: "object";
-      sourceValue?: string;
-      targetValue?: string;
-    }
-  | {
-      resourceSource?: string;
-      resourceTarget?: string;
-      index: number;
-      key: string;
-      rowType: "property";
-      sourceValue?: string;
-      targetValue?: string;
-    };
+type ResourceTableRow = {
+  index: number;
+  key: string;
+  resourceSource?: string;
+  resourceTarget?: string;
+  sourceValue?: string;
+  targetValue?: string;
+};
 
 type RelationTypeResourceMappingRulesProps = {
+  /** Asked before the backing resource changes; false keeps the current one. */
+  beforeResourceChange?: (resource: ObjectTypeDataSource) => Promise<boolean>;
   networkId: string;
-  objectTypes: KnowledgeNetworkObjectTypeRecord[];
   /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
   readers?: RelationTypeMappingReaders;
   value: RelationTypeMappingConfig;
@@ -73,8 +63,8 @@ function mapPropertyOptions(
 }
 
 export function RelationTypeResourceMappingRules({
+  beforeResourceChange,
   networkId,
-  objectTypes,
   readers,
   value,
   onChange,
@@ -152,31 +142,18 @@ export function RelationTypeResourceMappingRules({
     void loadResourcePropertyOptions(value.backingDataSourceId);
   }, [loadResourcePropertyOptions, value.backingDataSourceId]);
 
-  const tableRows = useMemo<ResourceTableRow[]>(() => {
-    const rows: ResourceTableRow[] = [
-      {
-        resourceValue: value.backingDataSourceName || value.backingDataSourceId,
-        key: "object-row",
-        rowType: "object",
-        sourceValue: value.sourceObjectTypeId,
-        targetValue: value.targetObjectTypeId,
-      },
-    ];
-
-    value.resourceMappings.forEach((mapping, index) => {
-      rows.push({
-        resourceSource: mapping.resourceSourcePropertyName,
-        resourceTarget: mapping.resourceTargetPropertyName,
+  const tableRows = useMemo<ResourceTableRow[]>(
+    () =>
+      value.resourceMappings.map((mapping, index) => ({
         index,
         key: `property-row-${index}`,
-        rowType: "property",
+        resourceSource: mapping.resourceSourcePropertyName,
+        resourceTarget: mapping.resourceTargetPropertyName,
         sourceValue: mapping.sourceObjectPropertyName,
         targetValue: mapping.targetObjectPropertyName,
-      });
-    });
-
-    return rows;
-  }, [value]);
+      })),
+    [value],
+  );
 
   const clearResourceSideMappings = (
     mappings: RelationTypeResourceRowMapping[],
@@ -187,41 +164,11 @@ export function RelationTypeResourceMappingRules({
       resourceTargetPropertyName: "",
     }));
 
-  const handleSourceObjectChange = (nextSourceObjectTypeId: string) => {
-    updateMappingRules({
-      sourceObjectTypeId: nextSourceObjectTypeId,
-      resourceMappings: value.resourceMappings.map((item) => ({
-        ...item,
-        sourceObjectPropertyName: "",
-      })),
-    });
-  };
-
-  const handleTargetObjectChange = (nextTargetObjectTypeId: string) => {
-    updateMappingRules({
-      targetObjectTypeId: nextTargetObjectTypeId,
-      resourceMappings: value.resourceMappings.map((item) => ({
-        ...item,
-        targetObjectPropertyName: "",
-      })),
-    });
-  };
-
   const handleResourceChange = (resource: ObjectTypeDataSource) => {
     updateMappingRules({
       backingDataSourceId: resource.id,
       backingDataSourceName: resource.name,
       resourceMappings: clearResourceSideMappings(value.resourceMappings),
-    });
-  };
-
-  const handleClearObjects = () => {
-    updateMappingRules({
-      backingDataSourceId: "",
-      backingDataSourceName: "",
-      sourceObjectTypeId: "",
-      targetObjectTypeId: "",
-      resourceMappings: value.resourceMappings.map(() => createEmptyResourceMapping()),
     });
   };
 
@@ -237,11 +184,6 @@ export function RelationTypeResourceMappingRules({
   };
 
   const handleDeleteRow = (row: ResourceTableRow) => {
-    if (row.rowType === "object") {
-      handleClearObjects();
-      return;
-    }
-
     if (value.resourceMappings.length === 1) {
       handleResourceMappingChange(row.index, createEmptyResourceMapping());
       return;
@@ -260,55 +202,25 @@ export function RelationTypeResourceMappingRules({
       key: "sourceValue",
       title: t("knowledgeNetwork.relationTypeMappingSourcePoint"),
       width: "24%",
-      render: (cellValue: string | undefined, row) =>
-        row.rowType === "object" ? (
-          <RelationTypeObjectTypeSelect
-            // The caller's object types are all listed: nothing is looked up in the network.
-            networkId={readers ? undefined : networkId}
-            objectTypes={objectTypes}
-            onChange={(nextValue) => handleSourceObjectChange(nextValue ?? "")}
-            placeholder={t("knowledgeNetwork.relationTypeSourceObjectPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ) : (
-          <RelationTypePropertySelect
-            disabled={!value.sourceObjectTypeId}
-            fields={sourcePropertyOptions}
-            onChange={(nextValue) =>
-              handleResourceMappingChange(row.index, {
-                sourceObjectPropertyName: nextValue ?? "",
-              })
-            }
-            placeholder={t("knowledgeNetwork.relationTypeMappingSourcePropertyPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ),
+      render: (cellValue: string | undefined, row) => (
+        <RelationTypePropertySelect
+          disabled={!value.sourceObjectTypeId}
+          fields={sourcePropertyOptions}
+          onChange={(nextValue) =>
+            handleResourceMappingChange(row.index, {
+              sourceObjectPropertyName: nextValue ?? "",
+            })
+          }
+          placeholder={t("knowledgeNetwork.relationTypeMappingSourcePropertyPlaceholder")}
+          value={cellValue || undefined}
+        />
+      ),
     },
     {
-      dataIndex: "resourceValue",
-      key: "resourceValue",
+      key: "resource",
       title: t("knowledgeNetwork.relationTypeResourceColumn"),
       width: "40%",
-      render: (cellValue: string | undefined, row) => {
-        if (row.rowType === "object") {
-          return (
-            <button
-              className={styles.resourcePicker}
-              onClick={() => setResourceModalOpen(true)}
-              type="button"
-            >
-              <span
-                className={
-                  cellValue ? styles.resourcePickerValue : styles.resourcePickerPlaceholder
-                }
-              >
-                {cellValue || t("knowledgeNetwork.relationTypeChooseResource")}
-              </span>
-              <DownOutlined style={{ color: "var(--color-text-disabled)", fontSize: 12 }} />
-            </button>
-          );
-        }
-
+      render: (_cellValue: unknown, row) => {
         return (
           <div className={styles.resourcePropertyPair}>
             <div className={styles.resourcePropertyPairItem}>
@@ -346,29 +258,19 @@ export function RelationTypeResourceMappingRules({
       key: "targetValue",
       title: t("knowledgeNetwork.relationTypeMappingTargetPoint"),
       width: "24%",
-      render: (cellValue: string | undefined, row) =>
-        row.rowType === "object" ? (
-          <RelationTypeObjectTypeSelect
-            // The caller's object types are all listed: nothing is looked up in the network.
-            networkId={readers ? undefined : networkId}
-            objectTypes={objectTypes}
-            onChange={(nextValue) => handleTargetObjectChange(nextValue ?? "")}
-            placeholder={t("knowledgeNetwork.relationTypeTargetObjectPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ) : (
-          <RelationTypePropertySelect
-            disabled={!value.targetObjectTypeId}
-            fields={targetPropertyOptions}
-            onChange={(nextValue) =>
-              handleResourceMappingChange(row.index, {
-                targetObjectPropertyName: nextValue ?? "",
-              })
-            }
-            placeholder={t("knowledgeNetwork.relationTypeMappingTargetPropertyPlaceholder")}
-            value={cellValue || undefined}
-          />
-        ),
+      render: (cellValue: string | undefined, row) => (
+        <RelationTypePropertySelect
+          disabled={!value.targetObjectTypeId}
+          fields={targetPropertyOptions}
+          onChange={(nextValue) =>
+            handleResourceMappingChange(row.index, {
+              targetObjectPropertyName: nextValue ?? "",
+            })
+          }
+          placeholder={t("knowledgeNetwork.relationTypeMappingTargetPropertyPlaceholder")}
+          value={cellValue || undefined}
+        />
+      ),
     },
     {
       align: "center",
@@ -386,8 +288,27 @@ export function RelationTypeResourceMappingRules({
     },
   ];
 
+  const resourceName = value.backingDataSourceName || value.backingDataSourceId;
+
   return (
     <div className={styles.root}>
+      <div className={styles.resourceRow}>
+        <span className={styles.resourceLabel}>
+          {t("knowledgeNetwork.relationTypeResourceColumn")}
+        </span>
+        <button
+          className={styles.resourcePicker}
+          onClick={() => setResourceModalOpen(true)}
+          type="button"
+        >
+          <span
+            className={resourceName ? styles.resourcePickerValue : styles.resourcePickerPlaceholder}
+          >
+            {resourceName || t("knowledgeNetwork.relationTypeChooseResource")}
+          </span>
+          <DownOutlined style={{ color: "var(--color-text-disabled)", fontSize: 12 }} />
+        </button>
+      </div>
       <Table<ResourceTableRow>
         bordered
         className={styles.mappingTable}
@@ -414,8 +335,17 @@ export function RelationTypeResourceMappingRules({
         networkId={networkId}
         onCancel={() => setResourceModalOpen(false)}
         onOk={(resource) => {
-          handleResourceChange(resource);
           setResourceModalOpen(false);
+          void (async () => {
+            if (
+              beforeResourceChange &&
+              resource.id !== value.backingDataSourceId &&
+              !(await beforeResourceChange(resource))
+            ) {
+              return;
+            }
+            handleResourceChange(resource);
+          })();
         }}
         open={resourceModalOpen}
         selectedId={value.backingDataSourceId || undefined}

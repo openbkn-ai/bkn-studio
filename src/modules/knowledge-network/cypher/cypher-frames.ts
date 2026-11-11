@@ -29,6 +29,8 @@ export type CypherFrame = {
   createdAt: number;
   /** The query run, or "" while the Agent is still writing it. */
   query: string;
+  /** Values sent for the query's `$name` parameters. */
+  parameters?: Record<string, unknown>;
   status: CypherFrameStatus;
   /** Set when the Agent wrote the query: the question, its answer and the thread to continue. */
   ai?: { question: string; answer?: string; threadId?: string; tools?: string[] };

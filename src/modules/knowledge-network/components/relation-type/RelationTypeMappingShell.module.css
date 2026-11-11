@@ -6,31 +6,66 @@
  */
 
 .shell {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
   margin: 0 auto;
   max-width: 1000px;
   width: 100%;
 }
 
-.modeField {
-  margin-bottom: 0;
-}
-
-.modeField :global(.ant-form-item-label > label) {
-  color: var(--color-text-primary);
-  white-space: normal;
-}
-
-.modeField :global(.ant-radio-group) {
+.modeOptions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 24px;
+  gap: 8px 24px;
 }
 
-.modeField :global(.ant-radio-wrapper) {
+.modeOptions :global(.ant-radio-wrapper) {
   margin-inline-end: 0;
-  white-space: nowrap;
 }
 
-.rulesPanel {
-  margin-top: 24px;
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ends {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.endField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.endField > span {
+  color: var(--color-text-primary);
+}
+
+.endArrow {
+  padding-bottom: 9px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .ends {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .endArrow {
+    display: none;
+  }
 }

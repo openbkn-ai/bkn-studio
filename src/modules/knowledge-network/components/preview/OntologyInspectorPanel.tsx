@@ -11,8 +11,13 @@ import { CloseOutlined, DeploymentUnitOutlined } from "@ant-design/icons";
 import { Spin, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
+import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
+import { definitionDetailPath } from "@/modules/knowledge-network/components/definition-declarations/definition-path";
+import { useDefinitionName } from "@/modules/knowledge-network/components/definition-declarations/use-definition-name";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import type { DefinitionDeclarations } from "@/modules/knowledge-network/types/declarations";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeRecord,
@@ -21,6 +26,30 @@ import type {
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 
 import styles from "./OntologyInspectorPanel.module.css";
+
+/** What replaces a deprecated object type, in one short line; its reason shows on the tag. */
+function Replacement({
+  declarations,
+  networkId,
+}: {
+  declarations: DefinitionDeclarations | undefined;
+  networkId: string;
+}) {
+  const { t } = useTranslation();
+  const lifecycle = declarations?.lifecycle;
+  const replacedBy = lifecycle?.status === "deprecated" ? lifecycle.replacedBy : undefined;
+  const definition = replacedBy ? { id: replacedBy, kind: "object_type" as const } : undefined;
+  const name = useDefinitionName(networkId, definition);
+  if (!definition) {
+    return null;
+  }
+  return (
+    <div className={styles.replacement}>
+      {t("knowledgeNetwork.definitionDeclarations.bannerReplacedBy")}
+      <Link to={definitionDetailPath(networkId, definition)}>{name || definition.id}</Link>
+    </div>
+  );
+}
 
 type OntologyInspectorPanelProps = {
   networkId: string;
@@ -103,7 +132,9 @@ export function OntologyInspectorPanel({
               onClick={() => onSelect(item.id)}
             >
               <span className={styles.dot} style={{ background: item.color || "#2e68ff" }} />
-              <span className={styles.legendName}>{item.name}</span>
+              <span className={styles.legendName}>
+                <DeprecatedName declarations={item.declarations}>{item.name}</DeprecatedName>
+              </span>
               {hasIndexedLegend(item) ? <span className={styles.legendIndexed} /> : null}
             </button>
           ))}
@@ -122,8 +153,11 @@ export function OntologyInspectorPanel({
       <div className={styles.head}>
         <span className={styles.headDot} style={{ background: entity.color || "#2e68ff" }} />
         <div className={styles.headTitle}>
-          <strong>{entity.name}</strong>
-          <span>{resolveIndexLabel(entity)}</span>
+          <DeprecatedName declarations={entity.declarations}>
+            <strong>{entity.name}</strong>
+          </DeprecatedName>
+          <span className={styles.headMeta}>{resolveIndexLabel(entity)}</span>
+          <Replacement declarations={entity.declarations} networkId={networkId} />
         </div>
         <button
           type="button"
@@ -193,11 +227,19 @@ export function OntologyInspectorPanel({
             const other = objectTypes.find((item) => item.id === otherId);
             return (
               <div key={relation.id} className={styles.relRow}>
-                <span className={styles.relVerb}>{relation.name}</span>
+                <span className={styles.relVerb}>
+                  <DeprecatedName declarations={relation.definitionDeclarations}>
+                    <span className={styles.relName} title={relation.name}>
+                      {relation.name}
+                    </span>
+                  </DeprecatedName>
+                </span>
                 <span className={styles.relArrow}>{out ? "→" : "←"}</span>
                 <span className={styles.relTarget}>
                   <span className={styles.dot} style={{ background: other?.color || "#999" }} />
-                  {otherName}
+                  <span className={styles.relTargetName} title={otherName}>
+                    {otherName}
+                  </span>
                 </span>
               </div>
             );

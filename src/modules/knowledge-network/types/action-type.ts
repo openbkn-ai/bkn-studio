@@ -5,6 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { DefinitionDeclarationEdit, DefinitionDeclarations } from "./declarations";
+
+export type ActionTypeOperationKind = "object" | "relation" | "tool";
+
+export type ActionTypeOperationConfig =
+  | { type: "object" | "tool" }
+  | {
+      type: "relation";
+      relationTypeId: string;
+      relationOperation: "create" | "delete";
+      anchorRole?: "source" | "target";
+      otherObjectCondition?: ActionTypeCondition;
+    };
+
 export type KnowledgeNetworkActionTypeKind = "create" | "update" | "delete" | "notify";
 
 export type ActionTypeConditionOperation =
@@ -29,7 +43,8 @@ export type ActionTypeCondition = {
   operation?: ActionTypeConditionOperation;
   subConditions?: ActionTypeCondition[];
   value?: string | string[];
-  valueFrom?: "const";
+  /** For references, value is a property name or an action runtime parameter name. */
+  valueFrom?: "const" | "property" | "input";
 };
 
 export type ActionTypeAffect = {
@@ -38,6 +53,8 @@ export type ActionTypeAffect = {
 };
 
 export type ActionTypeSourceKind = "manual" | "mcp" | "tool";
+
+export type ActionTypeExecutionToolCategory = "openapi" | "function" | "mcp";
 
 export type ActionTypeActionSource = {
   boxId?: string;
@@ -49,7 +66,8 @@ export type ActionTypeActionSource = {
   type: ActionTypeSourceKind;
 };
 
-export type ActionTypeExecutionParameterValueFrom = "const" | "input" | "property";
+export type ActionTypeExecutionParameterValueFrom =
+  "const" | "input" | "property" | "source_identity" | "target_identity";
 
 export type ActionTypeExecutionParameter = {
   description?: string;
@@ -69,8 +87,12 @@ export type ActionTypeExecutionConfig = {
 };
 
 export type KnowledgeNetworkActionTypeRecord = {
+  actionSource?: ActionTypeActionSource;
+  operationConfig?: ActionTypeOperationConfig;
   actionKind: KnowledgeNetworkActionTypeKind;
   color: string;
+  /** Its aliases and lifecycle; absent when it declares neither. */
+  declarations?: DefinitionDeclarations;
   description: string;
   id: string;
   name: string;
@@ -89,10 +111,13 @@ export type ActionTypeDetail = KnowledgeNetworkActionTypeRecord & {
 };
 
 export type KnowledgeNetworkActionTypeMutationPayload = {
+  operationConfig?: ActionTypeOperationConfig;
   actionKind: KnowledgeNetworkActionTypeKind;
   affect?: ActionTypeAffect;
   color: string;
   condition?: ActionTypeCondition;
+  /** The aliases and lifecycle the form edits; absent on a save that does not edit them. */
+  definitionDeclarationEdit?: DefinitionDeclarationEdit;
   description: string;
   executionConfig?: ActionTypeExecutionConfig;
   id?: string;

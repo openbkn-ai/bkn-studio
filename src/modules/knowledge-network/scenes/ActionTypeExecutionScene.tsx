@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { getActionTypeDynamicParameters } from "../utils/action-type-dynamic-params";
+import type { ActionExecutionInput } from "../utils/action-execution-input";
+
 import {
   EditOutlined,
   PlayCircleOutlined,
@@ -14,6 +17,9 @@ import {
 import { Alert, Card, Descriptions, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/relation-type.service";
+import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/relation-type";
+import { validateActionRelationBindings } from "@/modules/knowledge-network/utils/action-type-operation";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -50,9 +56,9 @@ import type {
   ActionTypeActionSource,
   ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import {
+  firstInvalidActionConstantParameter,
   getActionSourceDisplayName,
   getReadableActionSourceDisplayName,
 } from "@/modules/knowledge-network/utils/action-type-execution";
@@ -75,6 +81,29 @@ export function ActionTypeExecutionScene() {
     networkId: string;
   }>();
   const [detail, setDetail] = useState<ActionTypeDetail | null>(null);
+  const [selectedRelation, setSelectedRelation] =
+    useState<KnowledgeNetworkRelationTypeRecord | null>(null);
+  const relationTypeId =
+    detail?.operationConfig?.type === "relation"
+      ? detail.operationConfig.relationTypeId
+      : undefined;
+  const [relationBindingError, setRelationBindingError] = useState<string | null>(null);
+  const [relationIdentityError, setRelationIdentityError] = useState<string | null>(null);
+  useEffect(() => {
+    setSelectedRelation(null);
+    if (!relationTypeId) return;
+    let cancelled = false;
+    void getKnowledgeNetworkRelationTypeDetail(networkId, relationTypeId)
+      .then((relation) => {
+        if (!cancelled) setSelectedRelation(relation);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedRelation(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, relationTypeId]);
   const [resolvedRunActionSource, setResolvedRunActionSource] = useState<
     ActionTypeActionSource | undefined
   >();
@@ -220,7 +249,9 @@ export function ActionTypeExecutionScene() {
         executionSchemaState.loaded && executionSchemaState.parameterCount === 0,
     });
     if (validationErrorKey) {
-      const validationError = t(validationErrorKey);
+      const validationError = t(validationErrorKey, {
+        name: firstInvalidActionConstantParameter(executionValue.parameters) ?? "",
+      });
       setExecutionSourceError(
         validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );
@@ -230,11 +261,21 @@ export function ActionTypeExecutionScene() {
     setExecutionSourceError(null);
 
     const normalizedExecution = normalizeActionTypeExecutionConfig(executionValue);
+    if (detail.operationConfig?.type === "relation") {
+      const bindingError =
+        relationIdentityError ?? validateActionRelationBindings(normalizedExecution.parameters);
+      if (bindingError) {
+        setRelationBindingError(t(bindingError));
+        return;
+      }
+    }
+    setRelationBindingError(null);
 
     setSubmitting(true);
     try {
       await updateKnowledgeNetworkActionType(networkId, actionTypeId, {
         actionKind: detail.actionKind,
+        operationConfig: detail.operationConfig,
         affect: detail.affect,
         color: detail.color,
         condition: detail.condition,
@@ -253,14 +294,14 @@ export function ActionTypeExecutionScene() {
     }
   };
 
-  const executeNow = async (dynamicParams?: Record<string, unknown>) => {
+  const executeNow = async (input?: ActionExecutionInput) => {
     if (!detail || !canExecute) {
       return false;
     }
 
     setExecuting(true);
     try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, dynamicParams);
+      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input);
       void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
       setTaskRefreshToken((value) => value + 1);
       setActiveTab("tasks");
@@ -278,13 +319,7 @@ export function ActionTypeExecutionScene() {
       return;
     }
 
-    const dynamicParameters = getActionTypeDynamicParameters(detail.executionConfig.parameters);
-    if (dynamicParameters.length > 0) {
-      setExecuteModalOpen(true);
-      return;
-    }
-
-    void executeNow();
+    setExecuteModalOpen(true);
   };
 
   const renderRunPanel = () => {
@@ -378,11 +413,19 @@ export function ActionTypeExecutionScene() {
           onParameterSchemaStateChange={setExecutionSchemaState}
           onChange={(nextValue) => {
             setExecutionValue(nextValue);
+            setRelationBindingError(null);
             if (getActionSourceDisplayName(nextValue.actionSource) || nextValue.sourceName.trim()) {
               setExecutionSourceError(null);
             }
           }}
           sourceError={executionSourceError}
+          parameterError={relationBindingError}
+          onRelationValidationChange={setRelationIdentityError}
+          relationBinding={
+            detail?.operationConfig?.type === "relation"
+              ? { relation: selectedRelation }
+              : undefined
+          }
           value={executionValue}
         />
       </div>
@@ -478,7 +521,8 @@ export function ActionTypeExecutionScene() {
       )}
       {detail ? (
         <ActionTypeExecuteModal
-          actionSource={detail.executionConfig.actionSource}
+          networkId={networkId}
+          actionTypeId={detail.id}
           actionTypeName={detail.name}
           onCancel={() => setExecuteModalOpen(false)}
           onSubmit={async (dynamicParams) => {
@@ -489,7 +533,6 @@ export function ActionTypeExecutionScene() {
             return succeeded;
           }}
           open={executeModalOpen}
-          parameters={getActionTypeDynamicParameters(detail.executionConfig.parameters)}
           submitting={executing}
         />
       ) : null}

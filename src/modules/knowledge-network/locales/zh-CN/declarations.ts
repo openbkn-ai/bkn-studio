@@ -9,7 +9,7 @@ export const declarationsPart = {
   declarations: {
     field: {
       aliases: "别名",
-      cardinality: "基数",
+      cardinality: "关系基数",
       constraints: "取值约束",
       fallback_for: "替代路径",
       importance: "重要程度",

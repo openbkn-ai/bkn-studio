@@ -250,6 +250,11 @@
   background: var(--color-interface-panel-bg);
   color: var(--color-text-secondary);
 }
+
+.fieldStatusUnknown {
+  color: var(--color-text-muted);
+}
+
 .statusTagProcessing {
   border-color: var(--color-info-border);
   background: var(--color-info-bg);

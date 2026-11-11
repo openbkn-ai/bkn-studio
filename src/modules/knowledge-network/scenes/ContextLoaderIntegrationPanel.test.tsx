@@ -9,12 +9,21 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createInstance } from "i18next";
+
+import { contextLoaderPanelPart as zh } from "../locales/zh-CN/context-loader-panel";
+import { contextLoaderPanelPart as en } from "../locales/en-US/context-loader-panel";
+import { mcpOpsFrom } from "../services/context-loader.service";
 
 import { ContextLoaderIntegrationPanel } from "./ContextLoaderIntegrationPanel";
 
+const translation = vi.hoisted(() => ({
+  t: vi.fn<(key: string, options?: { defaultValue?: string }) => string>((key) => key),
+}));
+
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: translation.t }),
 }));
 
 type PanelProps = ComponentProps<typeof ContextLoaderIntegrationPanel>;
@@ -65,7 +74,7 @@ function renderPanel(overrides: Partial<PanelProps>) {
     appKeyValue: "",
     ...overrides,
   };
-  render(
+  return render(
     <MemoryRouter>
       <ContextLoaderIntegrationPanel {...props} />
     </MemoryRouter>,
@@ -74,6 +83,69 @@ function renderPanel(overrides: Partial<PanelProps>) {
 
 afterEach(() => {
   cleanup();
+  translation.t.mockImplementation((key) => key);
+});
+
+describe("ContextLoaderIntegrationPanel tool catalog", () => {
+  it.each(["zh-CN", "en-US"])(
+    "renders the agreed groups and descriptions in %s",
+    async (locale) => {
+      const i18n = createInstance();
+      await i18n.init({
+        lng: locale,
+        resources: {
+          "zh-CN": { translation: { knowledgeNetwork: zh } },
+          "en-US": { translation: { knowledgeNetwork: en } },
+        },
+      });
+      translation.t.mockImplementation((key, options) => i18n.t(key, options ?? {}));
+      const names = [
+        "bkn_start_interaction",
+        "search_schema",
+        "query_object_instance",
+        "execute_action",
+        "list_skills",
+        "execute_tool",
+        "run_code",
+        "bkn_eval_list_suites",
+      ];
+      const toolDefs = names.map((name) => ({
+        name,
+        inputSchema: { type: "object", properties: {} },
+      }));
+      const ops = mcpOpsFrom(toolDefs);
+      const { container } = renderPanel({
+        activeOps: ops,
+        op: ops[0],
+        selectedId: names[0],
+        toolDefs,
+        currentTool: toolDefs[0],
+      });
+      const keys = [
+        "lifecycle",
+        "discovery",
+        "query",
+        "action",
+        "skill",
+        "tool",
+        "execution",
+        "evaluation",
+      ] as const;
+      const groups = container.querySelectorAll('details[class*="toolTreeGroup"]');
+      const expected =
+        locale === "zh-CN" ? zh.contextLoaderPanel.toolGroups : en.contextLoaderPanel.toolGroups;
+
+      expect(groups).toHaveLength(keys.length);
+      keys.forEach((key, index) => {
+        expect(groups[index].querySelector("summary span")?.textContent).toBe(expected[key].label);
+        expect(groups[index].querySelector("div")?.textContent).toBe(expected[key].description);
+      });
+      expect(expected.query.label).toBe(
+        locale === "zh-CN" ? "知识网络数据查询" : "Knowledge network data queries",
+      );
+      expect(expected.tool.label).toBe(locale === "zh-CN" ? "工具" : "Tools");
+    },
+  );
 });
 
 describe("ContextLoaderIntegrationPanel server instructions", () => {

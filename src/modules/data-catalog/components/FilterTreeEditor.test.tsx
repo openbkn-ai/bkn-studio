@@ -10,6 +10,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { describe, expect, it, vi } from "vitest";
 
 import type { FilterGroup, FilterRule } from "@/modules/data-catalog/lib/filter-tree";
+import { parseFilterTree } from "@/modules/data-catalog/lib/filter-tree";
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 
 import { FilterTreeEditor } from "./FilterTreeEditor";
 
@@ -30,6 +32,92 @@ const filter: FilterGroup = {
 };
 
 describe("FilterTreeEditor field labels", () => {
+  it("edits SQL LIKE patterns unchanged and shows the pattern hint", () => {
+    render(
+      <FilterTreeEditor
+        fields={fields}
+        onChange={vi.fn()}
+        value={{
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "rule", field: "status", operation: "like", value: "%ab_c\\%" }],
+        }}
+      />,
+    );
+    expect(screen.getByDisplayValue("%ab_c\\%")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.filter.likePatternHint")).toBeTruthy();
+  });
+
+  it.each(["broken-condition", "null", "42", '{"operation":"and"}', "", "line\nbreak"])(
+    "retains an invalid string node as a JSON string and allows its explicit deletion: %j",
+    (raw) => {
+      const tree = parseFilterTree({
+        operation: "and",
+        sub_conditions: [{ field: "amount", operation: ">", value: 1000 }, raw],
+      });
+      const changed = vi.fn();
+      render(<FilterTreeEditor fields={fields} onChange={changed} value={tree} />);
+      expect(
+        screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" }),
+      ).toHaveValue(JSON.stringify(raw));
+      expect(screen.getByText("dataCatalog.filter.unsupportedReasons.invalidNode")).toBeTruthy();
+      expect(changed).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+      expect(changed).toHaveBeenCalledWith({ ...tree, children: [tree.children[0]] });
+    },
+  );
+  it("shows only the incompatible node as precise read-only JSON and removes it explicitly", () => {
+    const raw = parsePrecisionPreservingJSON(
+      '{"field":"amount","operation":"custom","value":9007199254740993}',
+    );
+    const tree = parseFilterTree({
+      operation: "and",
+      sub_conditions: [
+        { field: "amount", operation: ">", value: 1000 },
+        { operation: "or", sub_conditions: [raw, { field: "status", operation: "null" }] },
+      ],
+    });
+    const changed = vi.fn();
+    const view = render(<FilterTreeEditor fields={fields} readOnly value={tree} />);
+    expect(screen.getByText("1000")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.filter.or")).toBeTruthy();
+    const json = screen.getByRole("textbox", { name: "dataCatalog.filter.unsupportedNode" });
+    expect(json).toHaveAttribute("readonly");
+    expect(json).toHaveAttribute("rows", "2");
+    expect((json as HTMLTextAreaElement).value).toContain('"value": 9007199254740993');
+    const expand = screen.getByRole("button", { name: "dataCatalog.filter.expandJSON" });
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    expect(expand).toHaveAttribute("aria-controls", json.id);
+    fireEvent.click(expand);
+    const collapse = screen.getByRole("button", { name: "dataCatalog.filter.collapseJSON" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    expect(changed).not.toHaveBeenCalled();
+    expect((json as HTMLTextAreaElement).value).toContain('"value": 9007199254740993');
+    fireEvent.click(collapse);
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getByText("dataCatalog.filter.unsupportedReasons.unsupportedOperation"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.filter.removeUnsupported" }),
+    ).toBeNull();
+    view.rerender(<FilterTreeEditor fields={fields} onChange={changed} value={tree} />);
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.filter.removeUnsupported" }));
+    expect(changed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        children: [
+          tree.children[0],
+          expect.objectContaining({
+            operation: "or",
+            children: [expect.objectContaining({ operation: "null" })],
+          }),
+        ],
+      }),
+    );
+    expect(tree.children[1]).toMatchObject({
+      children: [expect.objectContaining({ kind: "unsupported" }), expect.anything()],
+    });
+  });
   it("keeps Text presence conditions available without a keyword Feature", () => {
     render(
       <FilterTreeEditor

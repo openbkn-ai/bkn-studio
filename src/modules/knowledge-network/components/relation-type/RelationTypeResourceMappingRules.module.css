@@ -69,3 +69,15 @@
 .root {
   width: 100%;
 }
+
+.resourceRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 360px;
+}
+
+.resourceLabel {
+  color: var(--color-text-primary);
+}

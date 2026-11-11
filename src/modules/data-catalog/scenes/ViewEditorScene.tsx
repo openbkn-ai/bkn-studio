@@ -13,7 +13,7 @@ import {
   PartitionOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Alert, Form, Input, Select, Spin, Steps, Switch, Tag } from "antd";
+import { Alert, Form, Input, Select, Spin, Steps, Switch, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -21,21 +21,21 @@ import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import {
-  formatPrecisionSafeJSON,
-  transformPrecisionSafeJSONRequest,
-} from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
+  canEnableFieldFiltering,
+  findUnsupportedFilterableField,
+} from "@/modules/data-catalog/lib/field-filterability";
+import {
   emptyFilterGroup,
   filterToBackend,
   filterValidationError,
-  type FilterQueryPath,
-  parseFilterCondition,
+  parseFilterTree,
+  hasUnsupportedFilterNodes,
   type FilterGroup,
 } from "@/modules/data-catalog/lib/filter-tree";
 import {
@@ -50,6 +50,7 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
+import { sourceFilterQueryPath } from "@/modules/data-catalog/lib/view-query-source";
 import { getCatalog, hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 import {
   normalizeVegaTag,
@@ -87,20 +88,12 @@ function isUsableSource(resource: CatalogResource) {
   );
 }
 
-function sourceFilterQueryPath(resource: CatalogResource | null): FilterQueryPath {
-  return resource?.category === "index" ||
-    (resource?.category === "table" &&
-      resource.localIndexStatus === "available" &&
-      resource.localIndexName)
-    ? "local_index"
-    : "source";
-}
-
 function draftField(field: ResourceSchemaField): ResourceSchemaField {
   return {
     name: field.name,
     originalName: field.originalName || field.name,
     type: field.type,
+    filterable: field.filterable,
     displayName: field.displayName || field.name,
   };
 }
@@ -126,7 +119,7 @@ export function ViewEditorScene({
   const tagErrorMessage = (error: VegaTagError) => t(`dataCatalog.viewEditor.tagErrors.${error}`);
   const [fields, setFields] = useState<ResourceSchemaField[]>([]);
   const [filter, setFilter] = useState<FilterGroup>(emptyFilterGroup);
-  const [unsupportedFilter, setUnsupportedFilter] = useState(false);
+  const unsupportedFilter = hasUnsupportedFilterNodes(filter);
   const [filterNeedsReview, setFilterNeedsReview] = useState(false);
   const [fieldToAdd, setFieldToAdd] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -200,8 +193,8 @@ export function ViewEditorScene({
         const currentView = resourceId ? await getCatalogResource(resourceId) : null;
         const targetId = currentView?.catalogId ?? catalogId;
         const target = targetId ? await getCatalog(targetId, { skipErrorToast: true }) : null;
-        const currentSource = currentView?.logicDefinition?.sourceResourceId
-          ? await getCatalogResource(currentView.logicDefinition.sourceResourceId)
+        const currentSource = currentView?.logicalViewDefinition?.sourceResourceId
+          ? await getCatalogResource(currentView.logicalViewDefinition.sourceResourceId)
           : null;
         if (cancelled) return;
         setCatalog(target);
@@ -217,22 +210,18 @@ export function ViewEditorScene({
             displayName: field.displayName || field.name,
           })) ?? [];
         setFields(viewFields);
-        const existingFilter = currentView?.logicDefinition?.filterCondition;
-        const parsed = parseFilterCondition(existingFilter, sourceFilterQueryPath(currentSource));
-        const cannotEditFilter = Boolean(existingFilter) && parsed === null;
-        const existingFilterError =
-          parsed && currentSource
-            ? filterValidationError(
-                parsed,
-                currentSource.schema,
-                sourceFilterQueryPath(currentSource),
-              )
-            : null;
-        setFilter(parsed ?? emptyFilterGroup());
-        setUnsupportedFilter(cannotEditFilter);
+        const existingFilter = currentView?.logicalViewDefinition?.filterCondition;
+        const parsed = parseFilterTree(existingFilter, sourceFilterQueryPath(currentSource));
+        const existingFilterError = currentSource
+          ? filterValidationError(
+              parsed,
+              currentSource.schema,
+              sourceFilterQueryPath(currentSource),
+            )
+          : null;
+        setFilter(parsed);
         setFilterNeedsReview(
           Boolean(existingFilter) &&
-            parsed !== null &&
             (!currentSource ||
               existingFilterError === "invalidField" ||
               existingFilterError === "unsupportedOperation"),
@@ -244,7 +233,7 @@ export function ViewEditorScene({
           tags: currentView?.tags ?? [],
           sourceId: currentSource?.id,
           fields: viewFields,
-          filter: parsed ?? emptyFilterGroup(),
+          filter: parsed,
         });
       } catch (cause) {
         if (!cancelled) setError(extractRequestErrorMessage(cause));
@@ -418,6 +407,16 @@ export function ViewEditorScene({
       setError(tagErrorMessage(tagError));
       return;
     }
+    const unsupported = findUnsupportedFilterableField(fields);
+    if (unsupported) {
+      setError(
+        t("dataCatalog.resource.unsupportedFilterableField", {
+          name: unsupported.name,
+          type: unsupported.type,
+        }),
+      );
+      return;
+    }
     const names = fields.map((field) => field.name.trim());
     const displayNames = fields.map((field) => field.displayName?.trim() ?? "");
     if (
@@ -434,9 +433,7 @@ export function ViewEditorScene({
       setError(t("dataCatalog.viewEditor.invalidFields"));
       return;
     }
-    const filterError = unsupportedFilter
-      ? null
-      : filterValidationError(filter, sourceFields, sourceFilterQueryPath(source));
+    const filterError = filterValidationError(filter, sourceFields, sourceFilterQueryPath(source));
     if (filterError) {
       setError(t(`dataCatalog.filter.errors.${filterError}`));
       return;
@@ -467,18 +464,11 @@ export function ViewEditorScene({
         const latest = latestFields.get(field.originalName || field.name);
         return !latest || latest.type !== field.type;
       });
-      const filterBindingChanged = unsupportedFilter
-        ? sourceFields.some((field) => {
-            const latest = latestFields.get(field.originalName || field.name);
-            return !latest || latest.type !== field.type;
-          })
-        : filterValidationError(
-            filter,
-            latestSource.schema,
-            sourceFilterQueryPath(latestSource),
-          ) !== null;
+      const filterBindingChanged =
+        filterValidationError(filter, latestSource.schema, sourceFilterQueryPath(latestSource)) !==
+        null;
       if (outputBindingChanged || filterBindingChanged) {
-        if (!unsupportedFilter) setSource(latestSource);
+        setSource(latestSource);
         setError(t("dataCatalog.viewEditor.sourceSchemaChanged"));
         return;
       }
@@ -491,12 +481,15 @@ export function ViewEditorScene({
           name: field.name.trim(),
           originalName: field.originalName,
           type: field.type,
+          filterable: field.filterable,
           displayName: field.displayName?.trim(),
         })),
         sourceResourceId: source.id,
-        filterCondition: unsupportedFilter
-          ? view?.logicDefinition?.filterCondition
-          : filterToBackend(filter, latestSource.schema, sourceFilterQueryPath(latestSource)),
+        filterCondition: filterToBackend(
+          filter,
+          latestSource.schema,
+          sourceFilterQueryPath(latestSource),
+        ),
         tags: tags.map(normalizeVegaTag),
       };
       const saved =
@@ -540,8 +533,8 @@ export function ViewEditorScene({
     resourceId &&
     (!view ||
       view.category !== "logical_view" ||
-      view.logicType !== "derived" ||
-      !view.logicDefinition)
+      view.logicalType !== "derived" ||
+      !view.logicalViewDefinition)
   ) {
     return (
       <section className={styles.page}>
@@ -819,6 +812,7 @@ export function ViewEditorScene({
                             <th>{t("dataCatalog.viewEditor.outputName")}</th>
                             <th>{t("dataCatalog.viewEditor.displayName")}</th>
                             <th>{t("dataCatalog.viewEditor.fieldType")}</th>
+                            <th>{t("dataCatalog.resource.fieldFilterable")}</th>
                             <th aria-label="Actions" />
                           </tr>
                         </thead>
@@ -898,6 +892,35 @@ export function ViewEditorScene({
                                   ) : null}
                                 </td>
                                 <td>{field.type}</td>
+                                <td>
+                                  <Tooltip
+                                    title={
+                                      !canEnableFieldFiltering(field.type)
+                                        ? t("dataCatalog.resource.filterableTypeUnsupported", {
+                                            type: field.type,
+                                          })
+                                        : undefined
+                                    }
+                                  >
+                                    <span>
+                                      <Switch
+                                        aria-label={t("dataCatalog.resource.fieldFilterableLabel", {
+                                          name: field.name,
+                                        })}
+                                        checked={field.filterable === true}
+                                        disabled={
+                                          saving ||
+                                          (!canEnableFieldFiltering(field.type) &&
+                                            field.filterable !== true)
+                                        }
+                                        onChange={(filterable) =>
+                                          updateField(index, { filterable })
+                                        }
+                                        size="small"
+                                      />
+                                    </span>
+                                  </Tooltip>
+                                </td>
                                 <td className={styles.fieldActions}>
                                   <AppButton
                                     aria-label={t("dataCatalog.viewEditor.moveUp")}
@@ -958,41 +981,26 @@ export function ViewEditorScene({
                     {unsupportedFilter ? (
                       <Alert
                         message={t("dataCatalog.viewEditor.unsupportedFilter")}
-                        description={
-                          <Input.TextArea
-                            readOnly
-                            aria-label={t("dataCatalog.viewEditor.fixedFilter")}
-                            autoSize={{ minRows: 3, maxRows: 12 }}
-                            value={formatPrecisionSafeJSON(
-                              transformPrecisionSafeJSONRequest(
-                                view?.logicDefinition?.filterCondition,
-                              ),
-                            )}
-                          />
-                        }
+                        showIcon
+                        type="error"
+                      />
+                    ) : null}
+                    {filterNeedsReview ? (
+                      <Alert
+                        message={t("dataCatalog.viewEditor.filterNeedsReview")}
                         showIcon
                         type="warning"
                       />
-                    ) : (
-                      <>
-                        {filterNeedsReview ? (
-                          <Alert
-                            message={t("dataCatalog.viewEditor.filterNeedsReview")}
-                            showIcon
-                            type="warning"
-                          />
-                        ) : null}
-                        <FilterTreeEditor
-                          fields={sourceFields}
-                          onChange={(next) => {
-                            setFilter(next);
-                            setFilterNeedsReview(false);
-                          }}
-                          queryPath={sourceFilterQueryPath(source)}
-                          value={filter}
-                        />
-                      </>
-                    )}
+                    ) : null}
+                    <FilterTreeEditor
+                      fields={sourceFields}
+                      onChange={(next) => {
+                        setFilter(next);
+                        setFilterNeedsReview(false);
+                      }}
+                      queryPath={sourceFilterQueryPath(source)}
+                      value={filter}
+                    />
                   </section>
                 </div>
               </Form>
@@ -1013,7 +1021,9 @@ export function ViewEditorScene({
         ) : null}
         <AppButton onClick={returnToPrevious}>{t("dataCatalog.viewEditor.cancel")}</AppButton>
         <AppButton
-          disabled={!resourceId && currentStep === 0 && selectedType !== "derived"}
+          disabled={
+            unsupportedFilter || (!resourceId && currentStep === 0 && selectedType !== "derived")
+          }
           loading={saving}
           onClick={() => {
             if (!resourceId && currentStep === 0) {

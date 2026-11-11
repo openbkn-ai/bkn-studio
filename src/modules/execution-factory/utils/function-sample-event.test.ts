@@ -62,4 +62,16 @@ describe("buildSampleEvent", () => {
   it("treats an array without a declared item as empty", () => {
     expect(JSON.parse(buildSampleEvent([{ name: "tags", type: "array" }]))).toEqual({ tags: [] });
   });
+
+  it("fills a parameter with its example when it has one", () => {
+    expect(
+      JSON.parse(
+        buildSampleEvent([
+          { name: "code", type: "string", example: "00104068" },
+          { name: "ids", type: "array", example: [1, 2] },
+          { name: "min", type: "number" },
+        ]),
+      ),
+    ).toEqual({ code: "00104068", ids: [1, 2], min: 0 });
+  });
 });

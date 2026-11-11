@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { ObjectTypeAuthorizationPage } from "@/modules/knowledge-network/routes/lazy-pages";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { KnowledgeNetworkChildModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkChildModifyRouteGate";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
 import { knowledgeNetworkStandaloneRoutes } from "@/modules/knowledge-network/routes/standalone-routes";
@@ -40,6 +41,19 @@ function objectMetricsRouteChild(path: string): ReactElement {
 }
 
 describe("knowledge network standalone routes", () => {
+  it("keeps unlicensed Eval behind the Professional gate without mounting its API consumers", () => {
+    const gate = routeChild("/knowledge-network/workspace/:networkId/evals") as ReactElement<{
+      capability: string;
+      minEdition: string;
+      mountLockedContent: boolean;
+    }>;
+
+    expect(gate.type).toBe(RequireEdition);
+    expect(gate.props.capability).toBe(CAPABILITIES.EVAL);
+    expect(gate.props.minEdition).toBe("professional");
+    expect(gate.props.mountLockedContent).toBe(false);
+  });
+
   it("keeps object-type base authorization available without the property capability", () => {
     expect(
       routeChild("/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization")

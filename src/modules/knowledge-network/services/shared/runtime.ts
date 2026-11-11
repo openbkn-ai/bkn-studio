@@ -8,6 +8,8 @@
 import { triggerBrowserDownload } from "@/framework/download/file-download";
 import { readErrorCode } from "@/framework/request/error-message";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+// Installs the version handling every definition request of a versioned network goes through.
+import "@/modules/knowledge-network/services/shared/kn-version-context";
 import { throwIfDeclarationsWouldBeCleared } from "@/modules/knowledge-network/services/shared/declaration-errors";
 import type {
   KnowledgeNetworkListQuery,

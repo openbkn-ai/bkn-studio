@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { findUnsupportedFilterableField } from "@/modules/data-catalog/lib/field-filterability";
 import { http } from "@/framework/request/http";
 import {
   throwMockRequestError,
@@ -20,6 +21,7 @@ import {
   isNumericFilterType,
   isTemporalFilterType,
   parseFilterCondition,
+  sqlLikePatternRegex,
 } from "@/modules/data-catalog/lib/filter-tree";
 import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal";
 import i18n from "@/app/locales/i18n";
@@ -36,11 +38,12 @@ import {
   mockStartScan,
   mockQuerySourceRows,
   mockQuerySourceFulltext,
+  withMockFilterability,
 } from "@/modules/data-catalog/services/mock-db";
 import type {
   CatalogResource,
   CatalogDiscoverRecord,
-  DerivedLogicDefinition,
+  DerivedLogicalViewDefinition,
   DerivedViewInput,
   DerivedViewUpdateInput,
   ResourceCategory,
@@ -74,6 +77,7 @@ type BackendSchemaField = {
   description?: string;
   display_name?: string;
   features?: BackendFieldFeature[] | null;
+  filterable?: boolean;
   name?: string;
   original_description?: string;
   original_name?: string;
@@ -177,6 +181,7 @@ function mapSchemaFieldToBackend(field: ResourceSchemaField): BackendSchemaField
     name: field.name,
     original_name: field.name,
     type: field.type,
+    filterable: field.filterable,
     features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)),
   };
 }
@@ -197,6 +202,7 @@ function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchem
 
   return {
     ...base,
+    filterable: field.filterable,
     description,
     display_name: displayName,
     features: field.features?.map((feature) => mapFeatureToBackend(feature, field.name)) ?? [],
@@ -213,6 +219,7 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
 
   return {
     attributes: field.attributes,
+    filterable: field.filterable,
     name,
     type: field.type ?? field.original_type ?? "string",
     displayName: displayName && displayName !== name ? displayName : undefined,
@@ -237,7 +244,7 @@ type BackendResourceSummary = {
   last_discover_time?: number;
   index_name?: string;
   local_status?: string;
-  logic_type?: string;
+  logical_type?: string;
   name: string;
   operations?: string[];
   schema?: string;
@@ -256,7 +263,7 @@ type BackendResourceDetailFields = {
   row_count?: number | string;
   estimated_row_count?: number | string;
   schema_definition?: BackendSchemaField[] | null;
-  logic_definition?: {
+  logical_view_definition?: {
     source_resource_id?: string;
     filter_condition?: Record<string, unknown> | null;
   } | null;
@@ -285,18 +292,19 @@ function transformResourceDetailResponse(data: unknown): unknown {
   if (typeof data !== "string" || !response || typeof response !== "object") return response;
 
   const safeEntries = (response as { entries?: BackendResource[] }).entries;
-  if (!safeEntries?.some((entry) => entry.logic_definition?.filter_condition)) return response;
+  if (!safeEntries?.some((entry) => entry.logical_view_definition?.filter_condition))
+    return response;
 
   // Keep stored condition literals precise regardless of the editor's capabilities.
   // Numeric constants and string literals must remain distinct on a complete PUT.
   const preciseEntries = (parsePrecisionPreservingJSON(data) as { entries?: BackendResource[] })
     .entries;
   safeEntries.forEach((entry, index) => {
-    const condition = entry.logic_definition?.filter_condition;
+    const condition = entry.logical_view_definition?.filter_condition;
     if (!condition) return;
-    const preciseCondition = preciseEntries?.[index]?.logic_definition?.filter_condition;
-    if (!preciseCondition || !entry.logic_definition) return;
-    entry.logic_definition.filter_condition = preciseCondition;
+    const preciseCondition = preciseEntries?.[index]?.logical_view_definition?.filter_condition;
+    if (!preciseCondition || !entry.logical_view_definition) return;
+    entry.logical_view_definition.filter_condition = preciseCondition;
   });
   return response;
 }
@@ -321,11 +329,11 @@ function formatTimestamp(value?: number) {
   return formatMockTimestamp(value);
 }
 
-function normalizeCategory(value?: string, logicType?: string): ResourceCategory {
+function normalizeCategory(value?: string, logicalType?: string): ResourceCategory {
   if (value === "logical_view" || value === "dataset" || value === "index") {
     return value;
   }
-  if (logicType) {
+  if (logicalType) {
     return "logical_view";
   }
   return "table";
@@ -410,7 +418,7 @@ function mapResource(
     name: item.name,
     operations: item.operations,
     tags: item.tags ?? [],
-    category: normalizeCategory(item.category, item.logic_type),
+    category: normalizeCategory(item.category, item.logical_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
     enabled: item.enabled ?? true,
@@ -421,14 +429,14 @@ function mapResource(
     rowCountTime: item.row_count_time,
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
-    logicType:
-      item.logic_type === "derived" || item.logic_type === "composite"
-        ? item.logic_type
+    logicalType:
+      item.logical_type === "derived" || item.logical_type === "composite"
+        ? item.logical_type
         : undefined,
-    logicDefinition: item.logic_definition?.source_resource_id
+    logicalViewDefinition: item.logical_view_definition?.source_resource_id
       ? {
-          sourceResourceId: item.logic_definition.source_resource_id,
-          filterCondition: item.logic_definition.filter_condition,
+          sourceResourceId: item.logical_view_definition.source_resource_id,
+          filterCondition: item.logical_view_definition.filter_condition,
         }
       : undefined,
     sourceMetadata: mapSourceMetadata(item.source_metadata),
@@ -452,6 +460,7 @@ function mapDerivedViewSchema(field: ResourceSchemaField): BackendSchemaField {
     name: field.name,
     original_name: field.originalName,
     type: field.type,
+    filterable: field.filterable,
     display_name: field.displayName?.trim(),
     ...(field.features === undefined
       ? {}
@@ -465,7 +474,7 @@ function mapDerivedViewSchema(field: ResourceSchemaField): BackendSchemaField {
 
 function mapDerivedDefinition(
   sourceResourceId: string,
-  filterCondition?: DerivedLogicDefinition["filterCondition"],
+  filterCondition?: DerivedLogicalViewDefinition["filterCondition"],
 ) {
   return {
     source_resource_id: sourceResourceId,
@@ -609,7 +618,30 @@ export async function getCatalogResources(ids: string[]) {
   return resources;
 }
 
+function validateFieldFilterability(schema: readonly ResourceSchemaField[]) {
+  const unsupported = findUnsupportedFilterableField(schema);
+  if (unsupported) {
+    throw new Error(
+      i18n.t("dataCatalog.resource.unsupportedFilterableField", {
+        name: unsupported.name,
+        type: unsupported.type,
+      }),
+    );
+  }
+}
+
+function validateMockUpdateFilterability(schema: readonly ResourceSchemaField[]) {
+  if (schema.some((field) => typeof field.filterable !== "boolean")) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "schema_definition fields require a boolean filterable",
+    );
+  }
+}
+
 export async function createCatalogResource(input: ResourceCreateInput) {
+  validateFieldFilterability(input.schema);
   if (useMock) {
     const resource: CatalogResource = {
       id: `res-${mockSlug(10)}`,
@@ -621,14 +653,15 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       enabled: true,
       localIndexStatus: "unavailable",
       operations: ["view_detail", "query_data", "delete"],
-      schema:
+      schema: withMockFilterability(
         input.schema.length > 0
           ? input.schema
           : [
-              { name: "id", type: "bigint" },
-              { name: "name", type: "varchar(128)" },
+              { name: "id", type: "integer" },
+              { name: "name", type: "string" },
               { name: "updated_at", type: "datetime" },
             ],
+      ),
       columnCount: input.schema.length > 0 ? input.schema.length : 3,
       rowCount: input.category === "dataset" ? 0 : null,
       expectedUpdateTime: Date.now(),
@@ -680,7 +713,9 @@ export async function updateCatalogResource(
   input: ResourceUpdateInput,
   options: { skipErrorToast?: boolean } = {},
 ) {
+  validateFieldFilterability(input.schema);
   if (useMock) {
+    validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
@@ -747,6 +782,7 @@ export async function updateCatalogResource(
 
 /** Derived views use a dedicated write path so generic resource field mapping cannot lose source bindings. */
 export async function createDerivedView(input: DerivedViewInput): Promise<CatalogResource> {
+  validateFieldFilterability(input.schema);
   if (useMock) {
     const source = mockResources.find((item) => item.id === input.sourceResourceId);
     if (!source || (source.category !== "table" && source.category !== "index")) {
@@ -756,6 +792,17 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
         "Invalid source resource.",
       );
     }
+    const schema = withMockFilterability(
+      input.schema.map((field) => ({
+        ...field,
+        filterable:
+          field.filterable ??
+          source.schema.find(
+            (sourceField) => (sourceField.originalName || sourceField.name) === field.originalName,
+          )?.filterable,
+      })),
+    );
+    validateFieldFilterability(schema);
     const timestamp = Date.now();
     const resource: CatalogResource = {
       catalogId: input.catalogId,
@@ -766,15 +813,15 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       expectedUpdateTime: timestamp,
       id: `res-${mockSlug(10)}`,
       localIndexStatus: "unavailable",
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: input.sourceResourceId,
         filterCondition: mockResponseFilterCondition(input.filterCondition),
       },
-      logicType: "derived",
+      logicalType: "derived",
       name: input.name,
       operations: ["view_detail", "query_data", "delete"],
       rowCount: null,
-      schema: input.schema,
+      schema,
       sourceIdentifier: "",
       sourceMetadata: { sourceCategory: source.category },
       tags: input.tags,
@@ -792,8 +839,8 @@ export async function createDerivedView(input: DerivedViewInput): Promise<Catalo
       category: "logical_view",
       description: input.description,
       enabled: input.enabled,
-      logic_type: "derived",
-      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      logical_type: "derived",
+      logical_view_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
       name: input.name,
       schema_definition: input.schema.map(mapDerivedViewSchema),
       tags: input.tags,
@@ -814,10 +861,12 @@ export async function updateDerivedView(
   id: string,
   input: DerivedViewUpdateInput,
 ): Promise<CatalogResource | null> {
+  validateFieldFilterability(input.schema);
   if (useMock) {
+    validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     const current = mockResources[index];
-    if (!current || current.category !== "logical_view" || current.logicType !== "derived") {
+    if (!current || current.category !== "logical_view" || current.logicalType !== "derived") {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "View not found.");
     }
     validateMockExpectedUpdateTime(input.expectedUpdateTime);
@@ -831,7 +880,7 @@ export async function updateDerivedView(
       description: input.description,
       enabled: input.enabled,
       expectedUpdateTime: timestamp,
-      logicDefinition: {
+      logicalViewDefinition: {
         sourceResourceId: input.sourceResourceId,
         filterCondition: mockResponseFilterCondition(input.filterCondition),
       },
@@ -860,8 +909,8 @@ export async function updateDerivedView(
       description: input.description,
       enabled: input.enabled,
       expected_update_time: input.expectedUpdateTime,
-      logic_type: "derived",
-      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      logical_type: "derived",
+      logical_view_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
       name: input.name,
       schema_definition: input.schema.map(mapDerivedViewSchema),
       tags: input.tags,
@@ -1067,6 +1116,16 @@ function mockBinaryContent(row: number, byteLength: number) {
 function assertMockFilterSupported(condition: unknown): void {
   if (!condition || typeof condition !== "object" || Array.isArray(condition)) return;
   const node = condition as Record<string, unknown>;
+  if (
+    ["like", "not_like"].includes(String(node.operation)) &&
+    (typeof node.value !== "string" || sqlLikePatternRegex(node.value) === null)
+  ) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "LIKE patterns require a string without an incomplete trailing escape.",
+    );
+  }
   // Do not silently simulate backend-specific search or calendar semantics as an empty result.
   if (
     ["regex", "match", "match_phrase", "multi_match", "knn_vector", "before", "current"].includes(
@@ -1168,10 +1227,8 @@ function mockFilterMatches(
       return !String(actual).startsWith(String(expected));
     case "like":
     case "not_like": {
-      const literal = String(expected).replace(/\\([%_\\])/g, "$1");
-      return node.operation === "like"
-        ? String(actual).includes(literal)
-        : !String(actual).includes(literal);
+      const matches = sqlLikePatternRegex(String(expected))!.test(String(actual));
+      return node.operation === "like" ? matches : !matches;
     }
     case "contain":
     case "not_contain": {
@@ -1199,8 +1256,8 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const source = resource.logicDefinition?.sourceResourceId
-      ? mockResources.find((item) => item.id === resource.logicDefinition?.sourceResourceId)
+    const source = resource.logicalViewDefinition?.sourceResourceId
+      ? mockResources.find((item) => item.id === resource.logicalViewDefinition?.sourceResourceId)
       : null;
     const physicalResource = source ?? resource;
     const usesLocalIndex =
@@ -1212,7 +1269,7 @@ export async function previewCatalogResource(
       physicalResource.category === "dataset" ||
       physicalResource.category === "index" ||
       usesLocalIndex;
-    const fixed = resource.logicDefinition?.filterCondition;
+    const fixed = resource.logicalViewDefinition?.filterCondition;
     const dynamic = query.filterCondition;
     const fulltextDemo =
       resource.id === "res-query-source-fulltext-view" &&

@@ -40,6 +40,10 @@ type ActionTypeExecutionConfigTableProps = {
 
 function getParameterValueFromKey(valueFrom: ActionTypeParamTableRow["valueFrom"]) {
   switch (valueFrom) {
+    case "source_identity":
+      return "knowledgeNetwork.actionRelationSourceIdentity";
+    case "target_identity":
+      return "knowledgeNetwork.actionRelationTargetIdentity";
     case "const":
       return "knowledgeNetwork.actionTypeExecutionValueFromConst";
     case "property":
@@ -279,6 +283,13 @@ export function ActionTypeExecutionConfigTable({
         }
 
         const valueFrom = record.valueFrom ?? "input";
+        if (valueFrom === "source_identity" || valueFrom === "target_identity") {
+          return t(
+            valueFrom === "source_identity"
+              ? "knowledgeNetwork.actionRelationIdentityFromSource"
+              : "knowledgeNetwork.actionRelationIdentityFromTarget",
+          );
+        }
         if (valueFrom === "property") {
           const propertyName = record.value || "";
           return (

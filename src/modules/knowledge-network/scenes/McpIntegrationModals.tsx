@@ -208,6 +208,7 @@ export function McpSetupModal({
         <McpConnectionSecurity
           protocol={protocol}
           authMode={authMode}
+          client={activeTab}
           likelySelfSigned={isLikelySelfSignedMcpHost(mcpUrl)}
           allowInsecureTls={allowInsecureTls}
           onAllowInsecureTlsChange={setAllowInsecureTls}

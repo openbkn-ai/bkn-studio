@@ -48,6 +48,8 @@ export default defineConfig(({ mode }) => {
     "";
   const safeProxyTarget =
     env.VITE_SAFE_PROXY_TARGET?.trim() || process.env.VITE_SAFE_PROXY_TARGET?.trim() || "";
+  const bknAgentProxyTarget =
+    env.VITE_BKN_AGENT_TARGET?.trim() || process.env.VITE_BKN_AGENT_TARGET?.trim() || "";
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
@@ -151,6 +153,15 @@ export default defineConfig(({ mode }) => {
           ? {}
           : {
               // Hybrid dev: local BKN services (must precede the generic /api proxy).
+              ...(env.VITE_EVAL_BACKEND_TARGET
+                ? {
+                    "^/api/bkn-backend/v1/(?:knowledge-networks/[^/]+/evals|eval-mcp)(?:/|$)": {
+                      changeOrigin: true,
+                      secure: false,
+                      target: env.VITE_EVAL_BACKEND_TARGET,
+                    },
+                  }
+                : {}),
               ...(env.VITE_BKN_BACKEND_TARGET
                 ? {
                     "/api/bkn-backend": {
@@ -178,6 +189,17 @@ export default defineConfig(({ mode }) => {
                       changeOrigin: true,
                       secure: false,
                       target: safeProxyTarget,
+                    },
+                  }
+                : {}),
+              ...(bknAgentProxyTarget
+                ? {
+                    "/api/bkn-agent": {
+                      changeOrigin: true,
+                      secure: false,
+                      timeout: 300_000,
+                      proxyTimeout: 300_000,
+                      target: bknAgentProxyTarget,
                     },
                   }
                 : {}),

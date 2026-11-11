@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
   LOGIC_RESULT_PATH_PLACEHOLDER,
+  bindCypherParametersToProperties,
   buildToolLogicParameterSettings,
   isToolLogicBindingComplete,
   normalizeFunctionParameterSources,
@@ -240,5 +241,24 @@ describe("readLogicAttributeToolBinding", () => {
       toolId: "tool-1",
     });
     expect(isToolLogicBindingComplete(readLogicAttributeToolBinding(allValues))).toBe(true);
+  });
+});
+
+describe("bindCypherParametersToProperties", () => {
+  it("binds unbound parameters named like a property to that property and leaves the rest", () => {
+    const settings = [
+      { id: "1", name: "supplier_code", valueFrom: "input" as const },
+      { id: "2", name: "min_qty", valueFrom: "input" as const },
+      { id: "3", name: "region", valueFrom: "const" as const, value: "east" },
+      { id: "4", name: "plant", valueFrom: "input" as const, value: "P1" },
+    ];
+    expect(
+      bindCypherParametersToProperties(settings, new Set(["supplier_code", "region", "plant"])),
+    ).toEqual([
+      { id: "1", name: "supplier_code", valueFrom: "property", value: "supplier_code" },
+      { id: "2", name: "min_qty", valueFrom: "input" },
+      { id: "3", name: "region", valueFrom: "const", value: "east" },
+      { id: "4", name: "plant", valueFrom: "input", value: "P1" },
+    ]);
   });
 });

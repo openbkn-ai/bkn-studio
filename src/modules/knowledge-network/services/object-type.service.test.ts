@@ -14,6 +14,17 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
+// The version on screen; each ontology-query call must carry it.
+vi.mock(
+  "@/modules/knowledge-network/services/shared/kn-version-context",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/modules/knowledge-network/services/shared/kn-version-context")
+    >()),
+    resolveKnReadParams: () => Promise.resolve({ kn_version: "draft" }),
+  }),
+);
+
 describe("object-type.service · getObjectTypeSampleData", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -48,6 +59,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       "/ontology-query/v1/knowledge-networks/kn-1/object-types/purchase_order/sample-data",
       {
         params: {
+          kn_version: "draft",
           limit: 20,
           need_total: true,
           offset: 0,
@@ -115,6 +127,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       },
       {
         headers: { "X-HTTP-Method-Override": "GET" },
+        params: { kn_version: "draft" },
         skipErrorToast: true,
         transformResponse: transformPrecisionSafeJSONResponse,
       },

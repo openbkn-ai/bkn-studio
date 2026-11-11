@@ -62,9 +62,20 @@
   line-height: 22px;
 }
 
+.ruleHint {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0 0 16px;
+}
+
+.objectTypeName {
+  font-weight: 700;
+}
+
 .ruleIndex {
   align-items: center;
-  background: #1677ff;
+  background: var(--color-text-link);
   border-radius: 50%;
   color: var(--color-text-inverse);
   display: inline-flex;
@@ -104,21 +115,6 @@
   padding: 12px 14px 4px !important;
 }
 
-.labelWithHelp {
-  align-items: center;
-  display: inline-flex;
-  gap: 4px;
-}
-
-.helpIcon {
-  color: var(--color-text-secondary);
-  font-size: 14px;
-}
-
-.helpIcon:hover {
-  color: var(--color-text-link);
-}
-
 .loadError {
   margin: 24px auto;
   max-width: 900px;
@@ -135,4 +131,16 @@
   display: flex;
   justify-content: center;
   min-height: 320px;
+}
+
+.operationHeading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.operationHeading h3 {
+  margin: 0;
 }

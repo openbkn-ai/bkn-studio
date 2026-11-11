@@ -1,0 +1,201 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.result {
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.conditions,
+.filters,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.conditions {
+  justify-content: space-between;
+}
+.conditions label,
+.filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.baselineSelect {
+  width: 240px;
+}
+.surface {
+  min-width: 0;
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-surface);
+  scroll-margin-top: 16px;
+}
+.sectionHeader {
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+.filters {
+  padding: 12px 16px;
+  border-block-end: 1px solid var(--color-border-secondary);
+}
+.filters :global(.ant-select) {
+  width: 150px;
+}
+.search {
+  width: 240px;
+  max-width: 100%;
+}
+.agentHeader {
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentHeader > span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.metricButton {
+  height: auto;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.rate,
+.changeButtons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rate .metricButton {
+  font-size: 18px;
+  font-weight: 600;
+}
+.rate > span {
+  font-size: 12px;
+}
+.positive {
+  color: var(--color-success-text);
+}
+.negative {
+  color: var(--color-error-text);
+}
+.secondary {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.timing {
+  font-variant-numeric: tabular-nums;
+}
+.timing small {
+  display: block;
+  color: var(--color-text-secondary);
+}
+.focus {
+  padding: 8px 16px;
+}
+.caseName {
+  max-width: 100%;
+  white-space: normal;
+  text-align: start;
+  height: auto;
+  padding: 0;
+}
+.resultCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  padding: 4px 0;
+}
+.resultCell :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+.caseDetails {
+  min-width: 0;
+}
+.caseDetails :global(.ant-table-cell) {
+  vertical-align: top;
+}
+.sharedInput {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding: 12px 0;
+}
+.sharedInput details {
+  flex-basis: 100%;
+}
+.answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 0 !important;
+}
+.code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--color-fill-secondary);
+  font-size: 12px;
+}
+.caseDetails summary {
+  cursor: pointer;
+  color: var(--color-text-link);
+}
+.assertions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.assertions li {
+  overflow-wrap: anywhere;
+}
+.textButton {
+  padding: 0;
+  height: auto;
+}
+@media (max-width: 640px) {
+  .conditions label {
+    max-width: 100%;
+  }
+  .baselineSelect {
+    max-width: 100%;
+  }
+}
+
+.caseName > span {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.agentHeader > strong,
+.agentHeader > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

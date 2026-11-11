@@ -153,6 +153,7 @@ describe("AgentConfigListScene", () => {
   it("localizes all shipped names and updates them when the language changes", async () => {
     const names = [
       ["studio_smart_qa", "Studio智能问答", "Studio Smart Q&A"],
+      ["eval_assistant", "质量评测助手", "Quality Evaluation Assistant"],
       ["cypher_generation", "Cypher生成", "Cypher Generation"],
       ["graph_explorer", "图探索", "Graph Explorer"],
       [

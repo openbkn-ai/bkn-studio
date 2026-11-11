@@ -7,6 +7,120 @@
 
 export const systemAdminEnUS = {
   systemAdmin: {
+    sso: {
+      sync: {
+        title: "Directory sync",
+        scopeHint:
+          "Synchronize users and departments from one Casdoor organization. Deleted users are disabled locally. Local administrative disablement and memberships from other sources are preserved. This workflow does not immediately revoke existing tokens.",
+        close: "Close",
+        run: "Sync now",
+        save: "Save sync configuration",
+        saved: "Sync configuration saved. Enabling it schedules an initial full sync.",
+        queued: "Sync queued. Refresh the status to see the result.",
+        enabled: "Enable directory sync",
+        organization: "Casdoor organization name",
+        organizationFormat: "Use up to 100 letters, digits, underscores, dots or hyphens.",
+        interval: "Reconciliation interval (seconds, 60–86400)",
+        secret: "Webhook secret",
+        secretKept: "Configured. Leave blank to keep it, or enter a new value to rotate it.",
+        secretHint:
+          "Set a random 32–256 character secret and use it in Casdoor's X-SSO-Sync-Key header.",
+        generate: "Generate random secret",
+        webhook: "Receiver URL",
+        webhookHint:
+          "Configure POST with application/json and the X-SSO-Sync-Key header. Remove empty header names. Private-network receivers require a global administrator to configure a built-in organization webhook with single-organization filtering disabled; the receiver filters the target organization. Route the URL to bkn-safe. Casdoor may take about 30 seconds to deliver an event.",
+        state: "Job state",
+        running: "Running",
+        idle: "Waiting",
+        lastSuccess: "Last successful sync",
+        lastError: "Last error",
+        unknownError: "Synchronization failed. Check the service logs.",
+        users: "Users scanned",
+        departments: "Departments scanned (including organization root)",
+        disabledUsers: "Disabled or externally blocked users in this run",
+        retainedDepartments: "Deleted departments retained due to local memberships or children",
+        SSO_DIRECTORY_READ_FAILED:
+          "Directory read or commit failed. Check application permissions, network and sync configuration. No partial changes were committed.",
+        SSO_DIRECTORY_CHANGED:
+          "The directory changed during the scan. No changes were committed; a retry is scheduled.",
+        SSO_SYNC_LEASE_LOST:
+          "Configuration or job ownership changed during the run. The job will be rescheduled.",
+      },
+      useDatabaseSecret: "Use database secret",
+      errors: {
+        INVALID_PARAMETER:
+          "The configuration is incomplete or invalid. Check the highlighted field.",
+        RESOURCE_EXISTED: "This provider ID already exists.",
+        RESOURCE_NOT_FOUND: "The provider no longer exists. Refresh the list.",
+        SSO_IDENTITY_BOUND:
+          "This provider has linked users. Create a new provider to use another issuer.",
+        SSO_DISCOVERY_FAILED:
+          "Cannot load valid OIDC discovery. Check the URL, issuer and connectivity.",
+        SSO_JWKS_FAILED:
+          "Cannot load usable RS256 signing keys. Check the identity provider signing configuration.",
+        INTERNAL_ERROR: "The operation failed. Retry or contact an administrator.",
+      },
+      title: "Single sign-on",
+      description: "Manage identity providers, browser sign-in and API token exchange.",
+      add: "Add identity provider",
+      edit: "Edit",
+      save: "Save",
+      cancel: "Cancel",
+      refresh: "Refresh",
+      test: "Test connection",
+      saved: "Identity provider saved",
+      testPassed: "Discovery and signing keys passed. Verify an actual sign-in next.",
+      invalidField: "Invalid configuration. Check this field.",
+      required: "This field is required.",
+      idFormat: "Use lowercase letters, digits and hyphens, up to 64 characters.",
+      generic: "Generic OIDC",
+      yes: "Yes",
+      no: "No",
+      actions: "Actions",
+      enable: "Enable",
+      disable: "Disable",
+      enableConfirm: "Enable this provider?",
+      disableConfirm: "Disable this provider?",
+      defaultConfirm: "Use this provider as the default sign-in?",
+      defaultHint:
+        "This replaces the current default. Verify sign-in first and keep a local administrator sign-in path.",
+      previous: "Previous",
+      next: "Next",
+      total: "{{count}} identity providers",
+      total_one: "{{count}} identity provider",
+      total_other: "{{count}} identity providers",
+      secretKept: "A secret is configured. Leave blank to keep it, or enter a replacement.",
+      secretHint:
+        "Enter the identity provider application secret. It is never displayed after saving.",
+      envSecret:
+        "This provider uses an environment secret first. Updating the database secret does not override it.",
+      callbackHint: "Copy the callback URL and register it with the identity provider.",
+      exchangeHint:
+        "Separate application IDs, audiences and scopes with spaces. External and issued scopes are configured separately.",
+      advanced: "Departments and advanced settings",
+      httpHint: "Allow HTTP only in trusted test environments. Use HTTPS for normal deployments.",
+      testHint:
+        "Tests discovery and RS256 public keys, not client credentials, user identity or department API permissions.",
+      id: "Provider ID",
+      display_name: "Display name",
+      adapter: "Provider type",
+      issuer: "Issuer URL",
+      discovery_url: "OIDC discovery URL",
+      client_id: "Client ID",
+      client_secret: "Client secret",
+      redirect_uri: "Sign-in callback URL",
+      scopes: "Sign-in scopes",
+      department_claim: "Department claim",
+      allowed_client_ids: "Allowed external client IDs",
+      exchange_audience: "External token audience",
+      external_required_scope: "Required external scopes",
+      hydra_issue_scope: "OpenBKN token scopes",
+      enabled: "Enable provider",
+      login_enabled: "Browser sign-in",
+      exchange_enabled: "API token exchange",
+      default_for_login: "Default sign-in provider",
+      allow_insecure_http: "Allow HTTP",
+    },
     userPicker: {
       allOrganizations: "All organizations",
       allUsers: "All users",
@@ -1315,6 +1429,7 @@ export const systemAdminEnUS = {
         "bkn-project-concept-extraction": "Project - Concept Extraction",
         graph_explorer: "Graph Explorer",
         studio_smart_qa: "Studio Smart Q&A",
+        eval_assistant: "Quality Evaluation Assistant",
         cypher_generation: "Cypher Generation",
         business_provenance_claim_attribution: "Business Provenance Claim Attribution",
         business_provenance_optimizer: "Knowledge Network Optimizer",
@@ -1325,6 +1440,8 @@ export const systemAdminEnUS = {
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
       },
       builtinDescriptions: {
+        eval_assistant:
+          "Helps inspect evaluation rules, cases, suites, run results and findings, and proposes controlled actions for confirmation.",
         "bkn-project-document-extraction":
           "Extracts file records, objects within documents, facts and events from confirmed models, keeping source evidence for review.",
         "bkn-project-concept-extraction":

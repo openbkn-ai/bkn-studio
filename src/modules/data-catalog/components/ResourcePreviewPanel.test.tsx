@@ -118,9 +118,9 @@ const tableView: CatalogResource = {
   ...resource,
   id: "table-view",
   category: "logical_view",
-  logicType: "derived",
+  logicalType: "derived",
   sourceMetadata: { sourceCategory: "table" },
-  logicDefinition: {
+  logicalViewDefinition: {
     sourceResourceId: "source-1",
     // Fixed conditions can reference fields that the view does not publish.
     filterCondition: { field: "hidden_id", operation: ">", value: 3 },
@@ -131,7 +131,7 @@ const tableView: CatalogResource = {
 const viewResource: CatalogResource = {
   ...tableView,
   id: resource.id,
-  logicDefinition: { sourceResourceId: "source-1" },
+  logicalViewDefinition: { sourceResourceId: "source-1" },
 };
 
 describe("ResourcePreviewPanel", () => {
@@ -139,6 +139,127 @@ describe("ResourcePreviewPanel", () => {
     vi.clearAllMocks();
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
   });
+
+  it.each([
+    { category: "table", status: "available", type: "string", fulltext: true, allowed: true },
+    { category: "table", status: "available", type: "text", fulltext: false, allowed: true },
+    { category: "table", status: "available", type: "string", fulltext: false, allowed: false },
+    { category: "table", status: "stale", type: "string", fulltext: true, allowed: false },
+    { category: "table", status: "unavailable", type: "string", fulltext: true, allowed: false },
+    { category: "index", status: "available", type: "text", fulltext: true, allowed: false },
+    { category: "dataset", status: "available", type: "text", fulltext: false, allowed: true },
+    { category: "logical_view", status: "available", type: "text", fulltext: true, allowed: true },
+    {
+      category: "logical_view",
+      status: "available",
+      type: "text",
+      fulltext: false,
+      allowed: true,
+    },
+    {
+      category: "logical_view",
+      status: "available",
+      type: "string",
+      fulltext: false,
+      allowed: false,
+    },
+  ] as const)(
+    "keeps source filterability separate from $category $status $type fulltext=$fulltext (allowed=$allowed)",
+    async ({ category, status, type, fulltext, allowed }) => {
+      Object.assign(testFilterRule, {
+        field: "body",
+        operation: "match",
+        value: "invoice",
+        valueFrom: "const",
+      });
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [],
+        total: 0,
+        querySource: "local_index",
+      });
+      const sample: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        category,
+        localIndexName: "idx_body",
+        localIndexStatus: status,
+        schema: [
+          {
+            name: "body",
+            type,
+            filterable: false,
+            features: fulltext ? [{ featureType: "fulltext" }] : [],
+          },
+        ],
+      };
+      render(<ResourcePreviewPanel active resource={sample} />);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      if (allowed) {
+        await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          filterCondition: {
+            sub_conditions: [{ field: "body", operation: "match", value: "invoice" }],
+          },
+        });
+      } else {
+        expect(
+          await screen.findByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
+
+  it.each([
+    { category: "table", status: "available", allowed: true },
+    { category: "dataset", status: "available", allowed: true },
+    { category: "logical_view", status: "available", allowed: true },
+    { category: "table", status: "stale", allowed: false },
+    { category: "table", status: "unavailable", allowed: false },
+    { category: "index", status: "available", allowed: false },
+  ] as const)(
+    "uses local schema for ordinary filtering in $category $status (allowed=$allowed)",
+    async ({ category, status, allowed }) => {
+      Object.assign(testFilterRule, {
+        field: "id",
+        operation: ">=",
+        value: "10",
+        valueFrom: "const",
+      });
+      previewCatalogResourceMock.mockResolvedValue({
+        rows: [],
+        total: 0,
+        querySource: "local_index",
+      });
+      const sample: CatalogResource = {
+        ...(category === "logical_view" ? tableView : resource),
+        category,
+        localIndexName: "idx_id",
+        localIndexStatus: status,
+        schema: [{ name: "id", type: "integer", filterable: false }],
+      };
+      render(<ResourcePreviewPanel active resource={sample} />);
+      await screen.findByText("dataCatalog.preview.dataSourceIndex");
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      if (allowed) {
+        await waitFor(() => expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2));
+        expect(previewCatalogResourceMock.mock.lastCall?.[1]).toMatchObject({
+          filterCondition: {
+            sub_conditions: [{ field: "id", operation: ">=", value: 10 }],
+          },
+        });
+      } else {
+        expect(
+          await screen.findByText("dataCatalog.filter.errors.unsupportedOperation"),
+        ).toBeInTheDocument();
+        expect(previewCatalogResourceMock).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 
   it("switches a table-derived view between index and source without losing its switch or fixed filter", async () => {
     previewCatalogResourceMock.mockImplementation(
@@ -191,7 +312,7 @@ describe("ResourcePreviewPanel", () => {
       offset: 0,
     });
     expect(previewCatalogResourceMock).toHaveBeenCalledTimes(5);
-    expect(tableView.logicDefinition?.filterCondition).toEqual({
+    expect(tableView.logicalViewDefinition?.filterCondition).toEqual({
       field: "hidden_id",
       operation: ">",
       value: 3,
@@ -208,7 +329,7 @@ describe("ResourcePreviewPanel", () => {
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
     const editor = screen.getByRole("button", { name: "set-test-filter" });
-    expect(editor).toHaveAttribute("data-query-path", "local_index");
+    expect(editor).toHaveAttribute("data-query-path", "managed_local_index");
     let rejectSource!: (error: Error) => void;
     const sourcePreview = new Promise((_resolve, reject) => {
       rejectSource = reject;
@@ -227,7 +348,7 @@ describe("ResourcePreviewPanel", () => {
     expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
-    expect(editor).toHaveAttribute("data-query-path", "local_index");
+    expect(editor).toHaveAttribute("data-query-path", "managed_local_index");
   });
 
   it("removes an unsupported additional filter when a view switches to source", async () => {
@@ -264,7 +385,7 @@ describe("ResourcePreviewPanel", () => {
       limit: 10,
       offset: 0,
     });
-    expect(tableView.logicDefinition?.filterCondition).toEqual({
+    expect(tableView.logicalViewDefinition?.filterCondition).toEqual({
       field: "hidden_id",
       operation: ">",
       value: 3,
@@ -284,7 +405,7 @@ describe("ResourcePreviewPanel", () => {
           active
           resource={{
             ...tableView,
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: {
                 operation: "and",
@@ -366,7 +487,7 @@ describe("ResourcePreviewPanel", () => {
     render(
       <ResourcePreviewPanel
         active
-        resource={{ ...tableView, logicDefinition: { sourceResourceId: "source-1" } }}
+        resource={{ ...tableView, logicalViewDefinition: { sourceResourceId: "source-1" } }}
       />,
     );
     await screen.findByText("dataCatalog.preview.dataSourceIndex");
@@ -440,10 +561,13 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it.each([
-    { name: "view type", change: { logicType: undefined } },
+    { name: "view type", change: { logicalType: undefined } },
     { name: "source category", change: { sourceMetadata: undefined } },
-    { name: "source reference", change: { logicDefinition: undefined } },
-    { name: "nonempty source reference", change: { logicDefinition: { sourceResourceId: " " } } },
+    { name: "source reference", change: { logicalViewDefinition: undefined } },
+    {
+      name: "nonempty source reference",
+      change: { logicalViewDefinition: { sourceResourceId: " " } },
+    },
   ] as const)(
     "reports incomplete view details when $name is missing without querying rows",
     async ({ change }) => {
@@ -571,7 +695,7 @@ describe("ResourcePreviewPanel", () => {
         resource={{
           ...tableView,
           schema: [{ name: "published", originalName: "wide", type: "large_integer" }],
-          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+          logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
         }}
       />,
     );
@@ -623,7 +747,7 @@ describe("ResourcePreviewPanel", () => {
           resource={{
             ...tableView,
             schema: [{ name: "published", originalName, type: "large_integer" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: fixed,
             },
@@ -677,7 +801,7 @@ describe("ResourcePreviewPanel", () => {
             { name: "number_alias", originalName: "CODE", type: "large_integer" },
             { name: "text_alias", originalName: "LABEL", type: "string" },
           ],
-          logicDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
+          logicalViewDefinition: { sourceResourceId: "source-1", filterCondition: fixed },
         }}
       />,
     );
@@ -1696,7 +1820,7 @@ describe("ResourcePreviewPanel", () => {
         resource={{
           ...viewResource,
           columnCount: 1,
-          logicDefinition: {
+          logicalViewDefinition: {
             sourceResourceId: "source-1",
             filterCondition: { field: "id", operation: ">", value: 10 },
           },
@@ -2426,7 +2550,7 @@ describe("ResourcePreviewPanel", () => {
             ...tableView,
             sourceMetadata: { sourceCategory },
             schema: [{ name: "status", type: "string" }],
-            logicDefinition: {
+            logicalViewDefinition: {
               sourceResourceId: "source-1",
               filterCondition: { field: "status", operation, value: "long value" },
             },
