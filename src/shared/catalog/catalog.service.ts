@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { filterMockOperations } from "@/framework/runtime/mock-user";
 import {
   throwMockRequestError,
   validateMockExpectedUpdateTime,
@@ -120,6 +121,10 @@ function sortMockCatalogs(catalogs: CatalogRecord[], query: CatalogListQuery) {
   });
 }
 
+function projectMockCatalog(catalog: CatalogRecord): CatalogRecord {
+  return { ...catalog, operations: filterMockOperations(catalog.operations ?? []) };
+}
+
 export async function listCatalogs(
   query: CatalogListQuery,
   options: { skipErrorToast?: boolean } = {},
@@ -130,7 +135,7 @@ export async function listCatalogs(
     const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: sorted.slice(startIndex, startIndex + query.pageSize),
+      items: sorted.slice(startIndex, startIndex + query.pageSize).map(projectMockCatalog),
       total: filtered.length,
     });
   }
@@ -199,7 +204,8 @@ export async function listCatalogConnectorTypeStats(
 
 export async function getCatalog(id: string, options?: { skipErrorToast?: boolean }) {
   if (useMock) {
-    return wait(findMockCatalog(id));
+    const catalog = findMockCatalog(id);
+    return wait(catalog ? projectMockCatalog(catalog) : null);
   }
 
   const response = await http.get<{ entries: BackendCatalog[] }>(

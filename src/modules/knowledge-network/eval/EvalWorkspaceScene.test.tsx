@@ -1295,18 +1295,25 @@ it("filters disabled Cases on the server while preserving the network Case total
   render(
     <EvalWorkspaceScene networkId="supply_ontology_hand" activeTab="cases" onTabChange={vi.fn()} />,
   );
-  await waitFor(() => expect(listEvalCases).toHaveBeenCalled());
-  expect(await screen.findByRole("tab", { name: "测试集管理" })).toBeTruthy();
-  expect(screen.getByRole("tab", { name: /^用例库（44）/ })).toBeTruthy();
-  fireEvent.mouseDown(screen.getByText("全部状态"));
+  const manager = within(screen.getByTestId("eval-case-manager"));
+  expect(screen.getByText("测试集管理").closest('[role="tab"]')).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(await manager.findByText(/^用例库（44）/)).toBeTruthy();
+  fireEvent.mouseDown(manager.getByText("全部状态"));
   fireEvent.click(
     await screen.findByText("未启用", { selector: ".ant-select-item-option-content" }),
   );
   await waitFor(() =>
     expect(listEvalCases).toHaveBeenCalledWith("supply_ontology_hand", "", undefined, "disabled"),
   );
-  expect(await screen.findByText("共 43 条")).toBeTruthy();
-  expect(screen.getByRole("tab", { name: "测试集管理" })).toBeTruthy();
+  expect(await manager.findByText("共 43 条")).toBeTruthy();
+  expect(manager.getByText(/^用例库（44）/)).toBeTruthy();
+  expect(screen.getByText("测试集管理").closest('[role="tab"]')).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 });
 it("keeps the total Case count when a search narrows the list", async () => {
   const firstPage = await vi.mocked(listEvalCases)("supply_ontology_hand", "", undefined);

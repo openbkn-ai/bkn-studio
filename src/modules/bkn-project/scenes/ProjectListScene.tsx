@@ -15,6 +15,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
+import { getMockUserRole } from "@/framework/runtime/mock-user";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
@@ -43,6 +44,9 @@ export function ProjectListScene() {
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const currentUserId = runtimeConfig.currentUser.id;
+  // Only the local viewer scenario is read-only. Project creation has no independent
+  // permission point; real deployments continue to rely on the backend's network checks.
+  const canCreateProject = getMockUserRole() !== "viewer";
 
   const [keyword, setKeyword] = useState("");
   const [name, setName] = useState("");
@@ -278,9 +282,11 @@ export function ProjectListScene() {
           <h2 className={styles.title}>{t("bknProject.title")}</h2>
           <p className={styles.intro}>{t("bknProject.description")}</p>
         </div>
-        <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
-          {t("bknProject.list.create")}
-        </AppButton>
+        {canCreateProject ? (
+          <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
+            {t("bknProject.list.create")}
+          </AppButton>
+        ) : null}
       </div>
 
       <div className={styles.toolbar}>
@@ -360,15 +366,17 @@ export function ProjectListScene() {
         </div>
       ) : null}
 
-      <NewProjectModal
-        catalogs={catalogs}
-        catalogsError={catalogsError}
-        networks={networks}
-        networksError={networksError}
-        onCancel={() => setCreateOpen(false)}
-        onCreated={handleCreated}
-        open={createOpen}
-      />
+      {canCreateProject ? (
+        <NewProjectModal
+          catalogs={catalogs}
+          catalogsError={catalogsError}
+          networks={networks}
+          networksError={networksError}
+          onCancel={() => setCreateOpen(false)}
+          onCreated={handleCreated}
+          open={createOpen}
+        />
+      ) : null}
     </section>
   );
 }
