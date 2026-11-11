@@ -53,6 +53,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
       "collect(x) gathers each group into a list and {k: v} builds a map; collect cannot be returned beside count, sum and the like, so count in a query of its own.",
       "Arithmetic + - * / %: dividing two integers is refused, so multiply one side by 1.0 for a fraction; % takes integers.",
       "CASE WHEN … THEN … ELSE … END and coalesce(a, b): the branches are all numbers or all non-numbers.",
+      "Scalar functions: round(x), round(x, 2), abs(x), toInteger(x) (truncated toward zero), toFloat(x), toUpper(s), toLower(s) and toString(x), wherever CASE may stand. A decimal and its sum() come back as strings; toFloat(...) or round(..., n) gives a number.",
       "DISTINCT and ORDER BY apply to properties, aggregates and returned columns, not to nodes and relationships themselves, which already group by identity. After an aggregate or DISTINCT, order only by a returned value.",
       "UNION ALL puts the rows of several queries together, and UNION also returns repeated rows once; the two are not mixed. Every part returns the same columns by name and order (align them with AS), may carry its own ORDER BY and LIMIT, and returns values only, not nodes, relationships or collect.",
     ],
@@ -111,7 +112,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     rules: [
       "When object types are bound to a dataset or an index rather than a SQL data source, or a query spans more than one data source, the server reads each object type's data and joins it in memory, so only the basic forms work.",
       "Available: MATCH, several hops, OPTIONAL MATCH; WHERE; returning properties and aggregates, ORDER BY, SKIP, LIMIT; WITH filtering after an aggregate and filtering by an earlier stage's values; returning nodes, relationships and derived edges, drawn as on a SQL data source; UNION / UNION ALL, each part read on its own.",
-      "Refused: CASE, coalesce; totals over groups, comparing two lists, passing nodes to the next MATCH; collect.",
+      "Refused: CASE, coalesce, scalar functions; totals over groups, comparing two lists, passing nodes to the next MATCH; collect.",
       "A read that is too large or times out is refused (ReadBudgetExceeded); narrow it with conditions or LIMIT. Only relation types join by key: two nodes connected only by an equality such as a.code = b.code are read in full and combined pairwise, which easily exceeds the limit, and the plan gives no warning for it.",
     ],
     notes: ["On a dataset: filter, group and sort"],
@@ -120,7 +121,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "Not supported",
     rules: [
       "UNWIND, variable-length paths [:R*1..3], XOR, exponentiation ^, relationship properties r.x.",
-      "Function calls other than date() / datetime() / localdatetime(), coalesce(), size() (on a list a WITH collected) and the aggregates.",
+      "Function calls other than date() / datetime() / localdatetime(), coalesce(), the scalar functions above, size() (on a list a WITH collected) and the aggregates, such as sqrt(), trim() or substring().",
       "MATCH after a second WITH; collect after a WITH that aggregates (except the second WITH's collect when comparing two lists).",
       "DISTINCT on nodes or relationships (RETURN DISTINCT n, collect(DISTINCT n)) and ordering by them; collect beside count, sum and other aggregates.",
     ],
