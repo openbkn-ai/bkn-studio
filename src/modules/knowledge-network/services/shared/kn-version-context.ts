@@ -25,7 +25,8 @@ import type { KnVersioning, KnVersionView } from "@/modules/knowledge-network/ty
  *   with the ETag of the definition that was read, or `expected_draft_revision`;
  * - a write while an older version or the running version is on screen is refused locally.
  *
- * Networks without versioning pass through unchanged.
+ * A network without versioning is read as it is (its main branch). An edit to it names the draft
+ * as well: the backend versions the network on that first draft write, so it is re-read after.
  */
 
 const NETWORK_PATH = /^\/bkn-backend\/v1\/knowledge-networks\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/;
@@ -51,6 +52,8 @@ type KnVersionContext = {
 type KnRequestConfig = InternalAxiosRequestConfig & {
   _knProbe?: boolean;
   _knSkip?: boolean;
+  /** A draft write to a network without versioning, which versions it. */
+  _knVersions?: boolean;
 };
 
 declare module "axios" {
@@ -317,6 +320,8 @@ export function knVersionQuery(knId: string): Record<string, string> {
   return kn_version === undefined ? {} : { kn_version };
 }
 
+const WRITE_METHODS = new Set(["post", "put", "patch", "delete"]);
+
 function etagKey(knId: string, rest: string) {
   return `${knId}\u0000${rest}`;
 }
@@ -367,11 +372,17 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
 
   const method = (config.method ?? "get").toLowerCase();
   const context = await ensureKnVersionContext(target.knId);
+  const existingParams = (config.params ?? {}) as Record<string, unknown>;
   if (!context.versioned) {
+    // Its first edit in Studio goes to the draft, which turns versioning on for it; the backend
+    // asks no precondition of that write, since only main could be read before.
+    if (context.canDraft && WRITE_METHODS.has(method)) {
+      config.params = { ...existingParams, branch: "draft" };
+      config._knVersions = true;
+    }
     return config;
   }
 
-  const existingParams = (config.params ?? {}) as Record<string, unknown>;
   if (method === "get" || method === "head") {
     if (existingParams.kn_version === undefined && context.view !== "running") {
       config.params = { ...withoutBranch(existingParams), kn_version: String(context.view) };
@@ -453,6 +464,13 @@ function observeResponse(response: AxiosResponse): AxiosResponse {
   const config = response.config as KnRequestConfig;
   const target = parseNetworkPath(config.url);
   if (!target) {
+    return response;
+  }
+
+  if (config._knVersions && contexts.get(target.knId)?.versioned === false) {
+    // The network has versioning now: learn its versions and its draft before the next request.
+    forgetKnVersionContext(target.knId);
+    void ensureKnVersionContext(target.knId);
     return response;
   }
 

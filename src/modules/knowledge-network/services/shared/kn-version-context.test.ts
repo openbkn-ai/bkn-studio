@@ -78,16 +78,35 @@ describe("kn version context", () => {
   const request = (method: string, url: string) =>
     seen.filter((config) => config.method === method && config.url === url);
 
-  it("leaves a network without versioning alone", async () => {
+  it("versions a network without versioning on its first edit", async () => {
     routes[`GET ${NETWORK}`] = { data: { id: "kn-1", operations: ["modify"] } };
 
+    // Its main branch is read as it is.
     await http.get(`${NETWORK}/object-types`, { params: { branch: "main" } });
-    await http.put(`${NETWORK}/object-types/ot-1`, {});
-
     const [read] = request("get", `${NETWORK}/object-types`);
     expect(read.params).toEqual({ branch: "main" });
+
+    // The edit names the draft, which versions the network; it has nothing to match yet.
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.put(`${NETWORK}/object-types/ot-1`, {});
     const [write] = request("put", `${NETWORK}/object-types/ot-1`);
+    expect(write.params).toEqual({ branch: "draft" });
     expect(write.headers.has("If-Match")).toBe(false);
+
+    // Then it is learnt again, and read and edited as a versioned network.
+    await vi.waitFor(() => expect(request("get", NETWORK)).toHaveLength(2));
+    await http.get(`${NETWORK}/object-types`);
+    expect(request("get", `${NETWORK}/object-types`)[1].params).toEqual({ kn_version: "draft" });
+  });
+
+  it("leaves the writes of a reader to a network without versioning alone", async () => {
+    routes[`GET ${NETWORK}`] = { data: { id: "kn-1", operations: ["view_detail"] } };
+
+    await http.put(`${NETWORK}/object-types/ot-1`, {});
+
+    const [write] = request("put", `${NETWORK}/object-types/ot-1`);
+    expect(write.params).toBeUndefined();
+    expect(request("get", NETWORK)).toHaveLength(1);
   });
 
   it("reads the draft of a versioned network and drops the branch", async () => {
