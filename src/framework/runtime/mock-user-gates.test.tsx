@@ -5,11 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "@/app/providers/AppProviders";
+import i18n from "@/app/locales/i18n";
 import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import {
   consoleNavigation,
@@ -24,6 +25,12 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { createRuntimeConfig } from "@/framework/runtime/config";
 import { AntdProviders } from "@/framework/ui/AntdProviders";
+import { ExecutionUnitCardMenu } from "@/modules/execution-factory/components/execution-unit/ExecutionUnitCardMenu";
+import { executionFactoryRoutes } from "@/modules/execution-factory/routes";
+
+vi.mock("@/modules/execution-factory/pages/CatalogListPage", () => ({
+  CatalogListPage: () => <p>market catalog page</p>,
+}));
 
 // The entitlement service evaluates mock mode once, when the module loads.
 vi.hoisted(() => vi.stubEnv("VITE_USE_MOCK", "true"));
@@ -136,4 +143,79 @@ describe("mock edition and user gate matrix", () => {
     vi.stubEnv("VITE_MOCK_EDITION", "enterprise");
     expect(filterNavByCapability([entry], await fetchEntitlement())[0].locked).not.toBe(true);
   });
+
+  it.each(["admin", "viewer"])(
+    "%s can browse the market, while installation and sync remain administrator-only",
+    async (role) => {
+      vi.stubEnv("VITE_MOCK_USER", role);
+      const config = createRuntimeConfig();
+      const { permissions, isSuperAdmin } = config.currentUser;
+      const navigation = filterNavByPermission(consoleNavigation, permissions, isSuperAdmin);
+      const market = navigation
+        .find((item) => item.key === "execution-factory")
+        ?.children?.find((item) => item.key === "all-execution-units");
+      expect(market?.path).toBe("/execution-factory/catalog");
+
+      const route = executionFactoryRoutes.find(
+        (item) => item.path === "execution-factory/catalog",
+      );
+      if (!route) throw new Error("The market route must be registered");
+      const onAction = vi.fn();
+      render(
+        <AppProviders runtimeConfig={config} updateLocale={vi.fn()}>
+          <AntdProviders runtimeConfig={config}>
+            <MemoryRouter initialEntries={["/execution-factory/catalog"]}>
+              <Routes>
+                <Route path={route.path} element={route.element} />
+                <Route path={DEFAULT_APP_ENTRY_PATH} element={<p>home</p>} />
+              </Routes>
+              <ExecutionUnitCardMenu
+                activeTab="toolbox"
+                item={{ id: "market-toolbox", name: "Market toolbox", installedInDomain: false }}
+                marketMode
+                onAction={onAction}
+              />
+              <ExecutionUnitCardMenu
+                activeTab="toolbox"
+                item={{
+                  id: "installed-toolbox",
+                  name: "Installed toolbox",
+                  installedInDomain: true,
+                }}
+                marketMode
+                onAction={onAction}
+              />
+            </MemoryRouter>
+          </AntdProviders>
+        </AppProviders>,
+      );
+      expect(await screen.findByText("market catalog page")).toBeTruthy();
+      const install = screen.queryByRole("button", {
+        name: (name) => name.includes(i18n.t("executionFactory.marketIntroduce")),
+      });
+      const sync = screen.queryByRole("button", {
+        name: (name) => name.includes(i18n.t("executionFactory.marketSync")),
+      });
+      if (role === "viewer") {
+        expect(install).toBeNull();
+        expect(sync).toBeNull();
+        expect(onAction).not.toHaveBeenCalled();
+      } else {
+        if (!install || !sync)
+          throw new Error("Administrator market actions must remain available");
+        fireEvent.click(install);
+        fireEvent.click(sync);
+        expect(onAction).toHaveBeenNthCalledWith(
+          1,
+          "install",
+          expect.objectContaining({ id: "market-toolbox" }),
+        );
+        expect(onAction).toHaveBeenNthCalledWith(
+          2,
+          "install",
+          expect.objectContaining({ id: "installed-toolbox" }),
+        );
+      }
+    },
+  );
 });

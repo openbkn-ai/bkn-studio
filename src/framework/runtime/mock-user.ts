@@ -26,6 +26,7 @@ export function getMockViewerUser(): RuntimeUser {
       "execution-factory:tool:view",
       "execution-factory:mcp:view",
       "execution-factory:skill:view",
+      "execution-factory:catalog:view",
     ],
     roles: ["viewer"],
   };

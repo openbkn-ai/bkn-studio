@@ -47,7 +47,9 @@ describe("mock runtime users", () => {
       "execution-factory:tool:view",
       "execution-factory:mcp:view",
       "execution-factory:skill:view",
+      "execution-factory:catalog:view",
     ]);
+    expect(viewer.permissions).not.toContain("execution-factory:catalog:install");
     expect(defaultDevPermissions).toEqual(expect.arrayContaining(viewer.permissions));
     // Project fixtures continue to belong to the administrator, not to the viewer.
     expect(defaultDevRuntimeUser.roles).toEqual(["admin"]);
