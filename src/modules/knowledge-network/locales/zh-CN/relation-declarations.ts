@@ -94,6 +94,8 @@ export const relationDeclarationsPart = {
     sentenceEnd: "。",
     sentenceSeparator: "；",
     separator: "、",
+    advanced: "高级设置",
+    advancedNote: "重要程度、替代路径",
     title: "关系声明",
     verification: "关联依据",
     verificationShort: {

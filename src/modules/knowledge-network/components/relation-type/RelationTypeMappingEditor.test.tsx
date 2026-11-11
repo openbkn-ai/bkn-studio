@@ -50,6 +50,8 @@ vi.mock(
   }),
 );
 
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+
 import {
   createDefaultRelationTypeMappingValues,
   type RelationPropertyChange,
@@ -209,5 +211,95 @@ describe("RelationTypeMappingEditor with stored relation properties", () => {
 
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("RelationTypeMappingEditor ends", () => {
+  const readers = {
+    readObjectTypeProperties: vi.fn().mockResolvedValue([]),
+    readResourceFields: vi.fn().mockResolvedValue([]),
+  };
+  const objectTypes = ["orders", "customers", "stores"].map(
+    (id) => ({ color: "#1677ff", id, name: id }) as KnowledgeNetworkObjectTypeRecord,
+  );
+
+  it("chooses the ends above the rules, with the semantics between them", () => {
+    renderWithoutAntdStyles(
+      <RelationTypeMappingEditor
+        networkId="n1"
+        objectTypes={objectTypes}
+        onChange={vi.fn()}
+        readers={readers}
+        semantics={<p>relation semantics</p>}
+        value={values("direct")}
+      />,
+    );
+
+    const order = [
+      screen.getByText("knowledgeNetwork.relationTypeConfigEnds"),
+      screen.getByRole("combobox", { name: "knowledgeNetwork.relationTypeMappingSourcePoint" }),
+      screen.getByText("relation semantics"),
+      screen.getByText("knowledgeNetwork.relationTypeConfigRules"),
+    ];
+    order.slice(1).forEach((node, index) => {
+      expect(
+        order[index].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+  });
+
+  it("clears the fields on the side of an end that changes, and only those", async () => {
+    const onChange = vi.fn();
+    const start = values("direct");
+    renderWithoutAntdStyles(
+      <RelationTypeMappingEditor
+        networkId="n1"
+        objectTypes={objectTypes}
+        onChange={onChange}
+        readers={readers}
+        value={{
+          ...start,
+          mappingRules: {
+            ...start.mappingRules,
+            propertyMappings: [{ sourcePropertyName: "customer_id", targetPropertyName: "id" }],
+          },
+        }}
+      />,
+    );
+
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "knowledgeNetwork.relationTypeMappingTargetPoint" }),
+    );
+    fireEvent.click((await screen.findAllByTitle("stores"))[0]);
+
+    expect(onChange).toHaveBeenCalled();
+    expect(onChange.mock.calls[0][0]).toMatchObject({
+      mappingRules: {
+        propertyMappings: [{ sourcePropertyName: "customer_id", targetPropertyName: "" }],
+        sourceObjectTypeId: "orders",
+        targetObjectTypeId: "stores",
+      },
+    });
+  });
+
+  it("keeps the ends when the mapping mode changes", async () => {
+    const onChange = vi.fn();
+    renderWithoutAntdStyles(
+      <RelationTypeMappingEditor
+        networkId="n1"
+        objectTypes={objectTypes}
+        onChange={onChange}
+        readers={readers}
+        value={values("direct")}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.relationTypeResourceMappingOption"));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange.mock.calls[0][0]).toMatchObject({
+      mappingMode: "resource",
+      mappingRules: { sourceObjectTypeId: "orders", targetObjectTypeId: "customers" },
+    });
   });
 });

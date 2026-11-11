@@ -99,6 +99,8 @@ export const relationDeclarationsPart = {
     sentenceEnd: ".",
     sentenceSeparator: ". ",
     separator: ", ",
+    advanced: "Advanced settings",
+    advancedNote: "Importance, fallback path",
     title: "Relation declarations",
     verification: "Join basis",
     verificationShort: {
