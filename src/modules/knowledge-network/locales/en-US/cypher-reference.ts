@@ -41,6 +41,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
       "IN takes a list: a.code IN ['A', 'B'], or a parameter IN $list; over an empty list IN matches no row and NOT … IN matches every row.",
       "Strings: STARTS WITH, CONTAINS, ENDS WITH, on string properties only, matched as a literal substring; % and _ are not wildcards.",
       "Nulls: IS NULL, IS NOT NULL; never = null.",
+      "Optional conditions: ($code IS NULL OR a.code = $code) filters by $code when it has a value and drops the condition when it is null or left out; it goes in the WHERE of a MATCH, an OPTIONAL MATCH or a WITH, and a WHERE of only $code IS NULL is refused.",
       "Combine with AND, OR, NOT and parentheses; no XOR. Dates are written date('2026-08-13'); against a date or timestamp property a string such as '2026-08-13' or '2026-08-13T09:30:00' works too, and any other form (such as '2026/08/13') is an error.",
     ],
     notes: ["", "", ""],

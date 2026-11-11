@@ -17,10 +17,11 @@ import type { CypherResult } from "@/modules/knowledge-network/cypher/graph-valu
 
 /**
  * The inputs a statement's `$name` parameters call for, in first-use order. A parameter already
- * declared keeps its type, description and example; a new one is a required string, or a number
- * when the statement uses it as SKIP or LIMIT; one the statement no longer uses is dropped. Every
- * input is required: bkn-backend has no optional parameter, a statement using `$name` fails
- * without one.
+ * declared keeps its type, description and example; a new one is a string, or a number when the
+ * statement uses it as SKIP or LIMIT; one the statement no longer uses is dropped. An input is
+ * required unless the statement tests it with `$name IS NULL`, which is how it makes a condition
+ * optional, as in `($code IS NULL OR s.code = $code)`: such an input starts optional and keeps what
+ * the author chose.
  */
 export function syncCypherInputs(
   inputs: readonly FunctionParameterDef[],
@@ -28,26 +29,31 @@ export function syncCypherInputs(
 ): FunctionParameterDef[] {
   const byName = new Map(inputs.map((input) => [input.name ?? "", input]));
   const scan = scanCypherParameters(code);
-  const rowCounts = rowCountParameters(code, scan.spans);
+  const text = blankCypherLiterals(code);
+  // Parameters written right after SKIP or LIMIT, which bkn-backend binds as row counts.
+  const rowCounts = parametersWhere(scan.spans, (span) =>
+    /\b(SKIP|LIMIT)\s+$/i.test(text.slice(0, span.start)),
+  );
+  // Parameters tested with `$name IS NULL` or `$name IS NOT NULL`.
+  const tested = parametersWhere(scan.spans, (span) =>
+    /^\s*IS\s+(NOT\s+)?NULL\b/i.test(text.slice(span.end)),
+  );
   return scan.names.map((name) => {
     const existing = byName.get(name);
-    if (existing) return { ...existing, required: true };
+    if (existing) return { ...existing, required: tested.has(name) ? existing.required : true };
     const type = rowCounts.has(name) ? "number" : "string";
-    return { name, type, required: true, description: "" };
+    return { name, type, required: !tested.has(name), description: "" };
   });
 }
 
-/** The parameters a statement writes right after SKIP or LIMIT, which bkn-backend binds as row counts. */
-function rowCountParameters(
-  code: string,
-  spans: ReturnType<typeof scanCypherParameters>["spans"],
+type ParameterSpan = ReturnType<typeof scanCypherParameters>["spans"][number];
+
+/** The names of the parameters with a use that passes `keep`. */
+function parametersWhere(
+  spans: readonly ParameterSpan[],
+  keep: (span: ParameterSpan) => boolean,
 ): Set<string> {
-  const text = blankCypherLiterals(code);
-  return new Set(
-    spans
-      .filter((span) => /\b(SKIP|LIMIT)\s+$/i.test(text.slice(0, span.start)))
-      .map((span) => span.name),
-  );
+  return new Set(spans.filter(keep).map((span) => span.name));
 }
 
 /** Rows bkn-backend returns when the statement writes no LIMIT (CYPHER_DEFAULT_LIMIT). */
@@ -150,7 +156,8 @@ export function cypherArguments(
     const name = input.name ?? "";
     const value = record[name];
     if (value === undefined || value === null) {
-      missing.push(name);
+      // An optional input left out is not sent: the statement tests it with $name IS NULL.
+      if (input.required !== false) missing.push(name);
       continue;
     }
     if (input.type === "array") {

@@ -900,7 +900,7 @@ export const executionFactoryEnUS = {
           contract:
             "This is a function to be called, not a one-off query. These terms come before your general rules:",
           parameters:
-            "Write the values a caller passes as $name parameters (for example $supplier_code), never as fixed values; name them in lowercase English with underscores, after the property compared.",
+            "Write the values a caller passes as $name parameters (for example $supplier_code), never as fixed values; name them in lowercase English with underscores, after the property compared. When the description says a condition may be left out, write it as ($name IS NULL OR condition), which does not filter when the value is not given.",
           trial:
             "When trying it with run_cypher, keep the $name parameters as written and pass sample values in parameters; find real values with search_instance.",
           shapeValue:
