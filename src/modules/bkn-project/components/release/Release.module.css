@@ -138,3 +138,116 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
 }
+
+/* A choice the owner makes in one click: a bordered button with its consequence below. */
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--color-primary-border);
+}
+
+.choice:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.choiceTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The three steps of publishing: done, current, still to come. */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+
+.stepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+.stepDone {
+  color: var(--color-text-secondary);
+}
+
+.stepDone .stepNumber {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.stepCurrent {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.stepCurrent .stepNumber {
+  border-color: var(--color-action-primary);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
+}
+
+/* Labels and values in two columns. */
+.keyValues {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.keyValues dt {
+  color: var(--color-text-secondary);
+}
+
+.keyValues dd {
+  margin: 0;
+}
+
+.regressionBar {
+  width: 120px;
+}
+
+.versionName {
+  font-weight: 600;
+}
+
+.mutedRow {
+  color: var(--color-text-tertiary);
+}
+
+.small {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

@@ -32,11 +32,25 @@ vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
   useAccountDirectory: () => new Map(),
 }));
 
-const listReleasesMock = vi.hoisted(() => vi.fn());
+const getProjectVersionsMock = vi.hoisted(() => vi.fn());
+const getRegressionMock = vi.hoisted(() => vi.fn());
 vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/release.service")>()),
-  listReleases: listReleasesMock,
+  getProjectVersions: getProjectVersionsMock,
+  getRegression: getRegressionMock,
 }));
+
+/** The versions of a network that has none published yet. */
+const noVersions = {
+  entries: [],
+  prepared: null,
+  versioning: {
+    draft: { baseVersion: 0, hasChanges: false, outdated: false },
+    fullHistory: true,
+    previousVersion: 0,
+    runningVersion: 0,
+  },
+};
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
@@ -176,7 +190,8 @@ describe("ProjectReleasePage", () => {
     getDraftMock.mockResolvedValue(draft);
     getProjectStatusMock.mockResolvedValue(status());
     getOntologyCheckMock.mockResolvedValue(check());
-    listReleasesMock.mockResolvedValue([]);
+    getProjectVersionsMock.mockResolvedValue(noVersions);
+    getRegressionMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -211,7 +226,7 @@ describe("ProjectReleasePage", () => {
     expect(section.getByText("找不到对应记录只作提示，不影响校验结果。")).toBeInTheDocument();
   });
 
-  it("publishes and lists the network's versions beside the check, reading them again after", async () => {
+  it("prepares the release and lists the network's versions beside the check, reading them again", async () => {
     getProjectStatusMock.mockResolvedValue(
       status({
         nextActions: [
@@ -225,15 +240,24 @@ describe("ProjectReleasePage", () => {
         ],
       }),
     );
-    listReleasesMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue([]);
+    getProjectVersionsMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue(noVersions);
     renderRelease();
 
-    expect(await screen.findByRole("button", { name: "发布审核 v1.0.0" })).toBeInTheDocument();
-    const versions = within(screen.getByRole("region", { name: "版本" }));
+    expect(await screen.findByRole("button", { name: "审查并准备发布" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "把确认后的本体发布为网络的新版本。发布后智能体、MCP 和评测立即使用新版本，不用切换。",
+      ),
+    ).toBeInTheDocument();
+    const versions = within(screen.getByRole("region", { name: /^版本/ }));
     expect(await versions.findByText("版本列表暂时读取不到")).toBeInTheDocument();
-    expect(listReleasesMock).toHaveBeenCalledWith("n");
+    expect(getProjectVersionsMock).toHaveBeenCalledWith("p1");
     fireEvent.click(versions.getByRole("button", { name: /重\s*试/ }));
     expect(await versions.findByText("还没有发布过版本。")).toBeInTheDocument();
+    // The first release: nothing runs yet.
+    expect(
+      screen.getByText("网络还没有发布过。发布后，智能体和 MCP 才能读到这个本体。"),
+    ).toBeInTheDocument();
   });
 
   it("explains issues and counts that were not made, without raw reasons", async () => {
@@ -391,7 +415,7 @@ describe("ProjectReleasePage", () => {
     expect(getProjectStatusMock).toHaveBeenCalledTimes(1);
 
     await act(() => vi.advanceTimersByTimeAsync(CHECK_POLL_MS));
-    expect(await screen.findByRole("button", { name: "发布审核 v1.0.0" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "审查并准备发布" })).toBeInTheDocument();
     expect(getProjectStatusMock).toHaveBeenCalledTimes(2);
   });
 
