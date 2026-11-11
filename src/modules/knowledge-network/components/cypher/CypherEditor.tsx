@@ -52,6 +52,8 @@ export const CypherEditor = forwardRef<
     /** The least height it takes, however short the text; enlarged editors start taller. */
     minHeight?: number;
     ariaLabel: string;
+    /** Shows the statement without letting it be changed, for a reader without edit rights. */
+    readOnly?: boolean;
   }
 >(function CypherEditor(
   {
@@ -64,6 +66,7 @@ export const CypherEditor = forwardRef<
     maxHeight,
     minHeight = MIN_HEIGHT,
     ariaLabel,
+    readOnly = false,
   },
   ref,
 ) {
@@ -226,6 +229,8 @@ export const CypherEditor = forwardRef<
           scrollbar: { alwaysConsumeMouseWheel: false },
           fixedOverflowWidgets: true,
           tabSize: 2,
+          readOnly,
+          domReadOnly: readOnly,
         }}
         value={value}
       />
