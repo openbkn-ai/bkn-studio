@@ -336,8 +336,11 @@ export async function getLatestRelease(knId: string): Promise<ProjectRelease | n
 export type ExistingNetworkStart = {
   actionTypes: number;
   catalogIds: string[];
+  conceptGroups: number;
+  functions: number;
   objectTypes: number;
   relationTypes: number;
+  skills: number;
 };
 
 /** Reads what a project created on the existing network would start from. */
@@ -357,7 +360,10 @@ export async function getExistingNetworkStart(networkId: string): Promise<Existi
     catalogIds: Array.from(
       new Set(resources.map((resource) => resource.catalogId).filter(Boolean)),
     ),
+    conceptGroups: statistics?.conceptGroupsTotal ?? 0,
+    functions: statistics?.functionsTotal ?? 0,
     objectTypes: statistics?.objectTypesTotal ?? objectTypes.length,
     relationTypes: statistics?.relationTypesTotal ?? 0,
+    skills: statistics?.skillsTotal ?? 0,
   };
 }

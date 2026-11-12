@@ -170,6 +170,27 @@ describe("IndexReadiness", () => {
     expect(section().queryByText(/vega|boom/)).toBeNull();
   });
 
+  it("says when a ready index was built, even when the project started no build of it", async () => {
+    const builtTime = new Date(2026, 10, 12, 9, 30).getTime();
+    getOntologyIndexMock.mockResolvedValue(
+      readiness([
+        // Indexed before the model was confirmed: no build of the project's, yet built.
+        item("customers", { build: null, builtTime }),
+        item("orders", { builtTime }),
+        item("lots", { build: null }),
+        // Its index still serves, but building it again failed: that is what the row says.
+        item("parts", { build: { outcome: "failed", reason: "boom", time: 1 }, builtTime }),
+      ]),
+    );
+    renderIndex();
+
+    expect(await screen.findByText("4 / 4 张表的索引可用")).toBeInTheDocument();
+    expect(section().getByText("没能开始构建，可以稍后重新构建。")).toBeInTheDocument();
+    expect(section().getAllByText("2026/11/12 09:30 构建完成")).toHaveLength(2);
+    // Nothing known of it: still a dash.
+    expect(section().getByText("-")).toBeInTheDocument();
+  });
+
   it("warns when build tasks cannot be seen, and says when nothing is adopted", async () => {
     getOntologyIndexMock.mockResolvedValueOnce(readiness([item("customers")], false));
     const view = renderIndex();

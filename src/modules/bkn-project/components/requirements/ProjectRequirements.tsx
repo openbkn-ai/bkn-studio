@@ -49,6 +49,7 @@ import {
   editItem,
   getRequirements,
   listDocuments,
+  NETWORK_DOCUMENT_ID,
   removeItem,
   REQUIREMENTS_POLL_MS,
   resolveConflict,
@@ -239,9 +240,12 @@ export function ProjectRequirements({
 
   const citing = useMemo(
     () => ({
+      // The network's own background is cited as such, never as a removed document.
       documentName: (documentId: string) =>
-        documents.find((document) => document.id === documentId)?.name ??
-        t(`${PREFIX}.removedDocument`),
+        documentId === NETWORK_DOCUMENT_ID
+          ? t("bknProject.networkExisting.background.name")
+          : (documents.find((document) => document.id === documentId)?.name ??
+            t(`${PREFIX}.removedDocument`)),
       openDocument: (documentId: string, range?: { end: number; start: number }) =>
         setViewing({ documentId, range }),
     }),

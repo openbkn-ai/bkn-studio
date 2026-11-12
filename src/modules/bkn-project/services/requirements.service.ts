@@ -433,6 +433,29 @@ export async function getDocument(
   };
 }
 
+/** The id of the network's own background: its description and SKILL.md, read only. */
+export const NETWORK_DOCUMENT_ID = "network";
+
+/**
+ * The network's own background, which runs read and cite beside the documents; null when the
+ * network has none, as a new network does.
+ */
+export async function getNetworkBackground(
+  projectId: string,
+): Promise<RequirementDocumentContent | null> {
+  if (useMock) {
+    return wait(null);
+  }
+  try {
+    return await getDocument(projectId, NETWORK_DOCUMENT_ID);
+  } catch (error) {
+    if (isRequestNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 /** Uploads documents; each file says how it went. */
 export async function uploadDocuments(projectId: string, files: File[]): Promise<UploadResult[]> {
   if (useMock) {

@@ -22,6 +22,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { ExistingDot } from "@/modules/bkn-project/components/existing/ExistingMark";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import { UNDERSTANDING_STATUS_TONE } from "@/modules/bkn-project/components/publish/messages";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
@@ -29,11 +30,16 @@ import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { RequirementDocuments } from "@/modules/bkn-project/components/requirements/RequirementDocuments";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getUnderstanding } from "@/modules/bkn-project/services/publish.service";
-import { listDocuments } from "@/modules/bkn-project/services/requirements.service";
+import {
+  getNetworkBackground,
+  listDocuments,
+  NETWORK_DOCUMENT_ID,
+} from "@/modules/bkn-project/services/requirements.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { UnderstandingCatalog, UnderstandingTable } from "@/modules/bkn-project/types/publish";
 import type { RequirementDocument } from "@/modules/bkn-project/types/requirements";
+import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import { RESOURCE_TABS, type ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
@@ -126,6 +132,40 @@ export function ProjectResources({
     void loadDraft();
     void loadDocuments();
   }, [loadDocuments, loadDraft]);
+
+  // The network's own background, read only: null on a new network, or while it cannot be read.
+  const [background, setBackground] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    getNetworkBackground(project.id)
+      .then((document) => active && setBackground(Boolean(document)))
+      .catch(() => active && setBackground(null));
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
+
+  // The knowledge bases mounted on the network, which are the project's sources too.
+  const [networkBases, setNetworkBases] = useState<string[]>([]);
+  useEffect(() => {
+    if (kbMode !== "enabled") {
+      return undefined;
+    }
+    let active = true;
+    listKnowledgeNetworkCapabilities(project.knId, {
+      limit: 100,
+      mountedOnly: true,
+      type: "knowledge_base",
+    })
+      .then(
+        (result) =>
+          active && setNetworkBases(result.entries.map((item) => item.name || item.capabilityId)),
+      )
+      .catch(() => active && setNetworkBases([]));
+    return () => {
+      active = false;
+    };
+  }, [kbMode, project.knId]);
   // The catalogs' tables change with the catalogs.
   useEffect(() => {
     void loadUnderstanding();
@@ -247,8 +287,10 @@ export function ProjectResources({
     <Citing.Provider
       value={{
         documentName: (documentId) =>
-          documents?.find((document) => document.id === documentId)?.name ??
-          t(`${PREFIX}.tabs.documents`),
+          documentId === NETWORK_DOCUMENT_ID
+            ? t("bknProject.networkExisting.background.name")
+            : (documents?.find((document) => document.id === documentId)?.name ??
+              t(`${PREFIX}.tabs.documents`)),
         openDocument: (documentId, range) => setViewing({ documentId, range }),
       }}
     >
@@ -397,6 +439,25 @@ export function ProjectResources({
                             <p className={styles.muted}>{t(`${PREFIX}.knowledgeBases.preview`)}</p>
                           }
                         >
+                          {networkBases.length ? (
+                            <section className={styles.existing} data-testid="network-bases">
+                              <span className={styles.existingTitle}>
+                                <ExistingDot />
+                                {t("bknProject.networkExisting.knowledgeBases.title")}
+                              </span>
+                              <p className={styles.muted}>
+                                {t("bknProject.networkExisting.knowledgeBases.description")}
+                              </p>
+                              <ul className={styles.existingList}>
+                                {networkBases.map((name) => (
+                                  <li key={name}>
+                                    <ExistingDot />
+                                    {name}
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          ) : null}
                           {KnowledgeBaseResources ? (
                             <KnowledgeBaseResources
                               key={project.id}
@@ -420,6 +481,30 @@ export function ProjectResources({
               label: tabLabel(t(`${PREFIX}.tabs.documents`), documents?.length, false),
               children: (
                 <div className={styles.documents}>
+                  {background ? (
+                    <div className={styles.existing} data-testid="network-background">
+                      <span className={styles.existingTitle}>
+                        <ExistingDot />
+                        {t("bknProject.networkExisting.background.title")}
+                      </span>
+                      <p className={styles.muted}>
+                        {t("bknProject.networkExisting.background.description")}
+                      </p>
+                      <div className={styles.existingRow}>
+                        <span>
+                          <ExistingDot />
+                          {t("bknProject.networkExisting.background.name")}
+                        </span>
+                        <AppButton
+                          onClick={() => setViewing({ documentId: NETWORK_DOCUMENT_ID })}
+                          size="small"
+                          type="link"
+                        >
+                          {t("bknProject.networkExisting.background.view")}
+                        </AppButton>
+                      </div>
+                    </div>
+                  ) : null}
                   {documentsFailed && documents === null ? (
                     <Alert
                       action={

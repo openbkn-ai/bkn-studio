@@ -38,6 +38,8 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import { DataSourceHealth } from "@/modules/bkn-project/components/DataSourceHealth";
+import { ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
+import { useNetworkExisting } from "@/modules/bkn-project/components/existing/useNetworkExisting";
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
@@ -78,6 +80,8 @@ type StatTile = {
   action?: { label: string; onClick: () => void };
   /** A short figure beside the link, under the main one: the card keeps its figure on one line. */
   note?: string;
+  /** What the network already had of it, after a blue dot; only on an existing network. */
+  existing?: string;
   /** The icon block's colour: a theme token. */
   color: string;
   icon: ReactNode;
@@ -232,8 +236,44 @@ export function ProjectOverview({
     };
   }, [drafting, project.id]);
 
+  // What the network already had: each tile counts it with what the project adds, and says how
+  // much of it is the network's. null on a new network, whose tiles read as before.
+  const existing = useNetworkExisting(project.id, project.knId);
+
   const ready = draft?.status === "ready" ? draft : null;
   const graph = useMemo(() => (ready ? draftGraph(ready) : null), [ready]);
+  // The model's items the project adds, leaving out the network's own when the draft lists them.
+  const added = useMemo(
+    () =>
+      existing && graph
+        ? {
+            objects: graph.nodes.filter((node) => !existing.objectTypeIds.has(node.id)).length,
+            relations: graph.edges.filter((edge) => !existing.relationTypeIds.has(edge.id)).length,
+          }
+        : null,
+    [existing, graph],
+  );
+  const existingConcepts =
+    existing && concepts
+      ? concepts.concepts.filter(
+          (concept) =>
+            concept.item &&
+            (existing.objectTypeIds.has(concept.item.id) ||
+              existing.relationTypeIds.has(concept.item.id)),
+        ).length
+      : 0;
+  const existingIndexes = existing?.index?.objectTypes ?? [];
+  const existingKinetic = existing?.statistics
+    ? {
+        actions: existing.statistics.actionTypesTotal,
+        functions: existing.statistics.functionsTotal,
+        skills: existing.statistics.skillsTotal,
+      }
+    : null;
+  const runningVersionName =
+    versions?.versioning.runningVersion && existing
+      ? versionNameIn(t, versions.entries, versions.versioning.runningVersion)
+      : null;
   const pending = ready
     ? ready.items.objectTypes.filter((item) => item.needsIdentity).length +
       relationsWithUnadoptedEnds(ready).length
@@ -263,6 +303,7 @@ export function ProjectOverview({
       },
       color: "var(--color-info-text)",
       icon: <DatabaseOutlined />,
+      ...(existing?.background ? { existing: t("bknProject.networkExisting.tiles.sources") } : {}),
       key: "sources",
       label: t("bknProject.workspace.sections.resources"),
       sub: t("bknProject.overview.tiles.sourcesSub"),
@@ -275,6 +316,9 @@ export function ProjectOverview({
       },
       color: "var(--color-primary-600)",
       icon: <BulbOutlined />,
+      ...(existingConcepts
+        ? { existing: t("bknProject.networkExisting.tiles.concepts", { count: existingConcepts }) }
+        : {}),
       key: "concepts",
       label: t("bknProject.workspace.sections.concepts"),
       // The community image has no knowledge base to draw them from.
@@ -312,19 +356,39 @@ export function ProjectOverview({
           ? "bknProject.overview.tiles.ontologyAdoptedSub"
           : "bknProject.overview.tiles.ontologySub",
       ),
-      ...(graph
-        ? { note: t("bknProject.overview.tiles.ontologyRelations", { count: graph.edges.length }) }
-        : {}),
-      value: graph
-        ? t("bknProject.overview.tiles.ontologyValue", { count: graph.nodes.length })
-        : draft && draft.status !== "ready"
-          ? t(`bknProject.model.status.${draft.status}`)
-          : PLACEHOLDER,
+      ...(existing
+        ? {
+            // New and existing together: the figure counts both, the line says how much is whose.
+            existing: t("bknProject.networkExisting.tiles.ontology", {
+              added: added?.objects ?? 0,
+              existing: existing.objectTypeIds.size,
+            }),
+            note: t("bknProject.overview.tiles.ontologyRelations", {
+              count: existing.relationTypeIds.size + (added?.relations ?? 0),
+            }),
+          }
+        : graph
+          ? {
+              note: t("bknProject.overview.tiles.ontologyRelations", { count: graph.edges.length }),
+            }
+          : {}),
+      value: existing
+        ? t("bknProject.overview.tiles.ontologyValue", {
+            count: existing.objectTypeIds.size + (added?.objects ?? 0),
+          })
+        : graph
+          ? t("bknProject.overview.tiles.ontologyValue", { count: graph.nodes.length })
+          : draft && draft.status !== "ready"
+            ? t(`bknProject.model.status.${draft.status}`)
+            : PLACEHOLDER,
     },
     {
       action: { label: t("bknProject.overview.tiles.kineticAction"), onClick: () => go("kinetic") },
       color: "var(--color-warning-text)",
       icon: <FunctionOutlined />,
+      ...(existingKinetic
+        ? { existing: t("bknProject.networkExisting.tiles.kinetic", existingKinetic) }
+        : {}),
       key: "kinetic",
       label: t("bknProject.workspace.sections.kinetic"),
       ...(kinetic?.total
@@ -343,7 +407,9 @@ export function ProjectOverview({
             linked: kinetic.linked,
             total: kinetic.total,
           })
-        : PLACEHOLDER,
+        : existingKinetic
+          ? t("bknProject.networkExisting.tiles.kineticValue", { count: existingKinetic.actions })
+          : PLACEHOLDER,
     },
     {
       action: {
@@ -374,6 +440,14 @@ export function ProjectOverview({
       action: { label: t("bknProject.overview.tiles.buildAction"), onClick: () => go("build") },
       color: "var(--color-info-text)",
       icon: <BuildOutlined />,
+      ...(existingIndexes.length
+        ? {
+            existing: t("bknProject.networkExisting.tiles.build", {
+              ready: existingIndexes.filter((item) => item.state === "ready").length,
+              total: existingIndexes.length,
+            }),
+          }
+        : {}),
       key: "build",
       label: t("bknProject.workspace.sections.build"),
       sub: t(
@@ -392,6 +466,13 @@ export function ProjectOverview({
       action: { label: t("bknProject.overview.tiles.releaseAction"), onClick: () => go("release") },
       color: "var(--color-success-text)",
       icon: <RocketOutlined />,
+      ...(runningVersionName
+        ? {
+            existing: t("bknProject.networkExisting.tiles.release", {
+              version: runningVersionName,
+            }),
+          }
+        : {}),
       key: "release",
       label: t("bknProject.workspace.sections.release"),
       sub: t("bknProject.overview.tiles.releaseSub"),
@@ -498,6 +579,7 @@ export function ProjectOverview({
       </section>
 
       <DataSourceHealth
+        draftVersion={draft ? `${draft.status}:${draft.updateTime}` : undefined}
         onGoToModel={() => go("model")}
         onGoToResources={() => go("resources", "catalogs")}
         onProjectChange={onProjectChange}
@@ -516,6 +598,7 @@ export function ProjectOverview({
               <dd>
                 <p>{tile.label}</p>
                 <p>{tile.value}</p>
+                {tile.existing ? <ExistingLine>{tile.existing}</ExistingLine> : null}
               </dd>
             </dl>
             {tile.action && tile.note ? (

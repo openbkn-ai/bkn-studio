@@ -18,6 +18,10 @@ const getNetworkMock = vi.hoisted(() => vi.fn());
 const getLatestReleaseMock = vi.hoisted(() => vi.fn());
 const getDraftMock = vi.hoisted(() => vi.fn());
 const getProjectVersionsMock = vi.hoisted(() => vi.fn());
+const getExistingDefinitionsMock = vi.hoisted(() => vi.fn());
+const getExistingIndexMock = vi.hoisted(() => vi.fn());
+const getNetworkBackgroundMock = vi.hoisted(() => vi.fn());
+const getStatisticsMock = vi.hoisted(() => vi.fn());
 
 /** The versions of the project's network, running the given one. */
 const versionsRunning = (runningVersion: number, label = "") => ({
@@ -134,7 +138,15 @@ const getOntologyIndexMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getExistingIndex: getExistingIndexMock,
   getOntologyIndex: getOntologyIndexMock,
+}));
+
+vi.mock("@/modules/knowledge-network/services/network.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/network.service")
+  >()),
+  getKnowledgeNetworkStatistics: getStatisticsMock,
 }));
 
 // Kinetic modeling is tested on its own.
@@ -187,6 +199,7 @@ vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   getDraft: getDraftMock,
+  getExistingDefinitions: getExistingDefinitionsMock,
 }));
 
 const getRequirementsMock = vi.hoisted(() => vi.fn());
@@ -198,6 +211,7 @@ vi.mock("@/modules/bkn-project/services/kinetic.service", () => ({
 
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  getNetworkBackground: getNetworkBackgroundMock,
   getRequirements: getRequirementsMock,
 }));
 
@@ -294,7 +308,71 @@ describe("ProjectWorkspaceScene", () => {
     getDraftMock.mockResolvedValue(null);
     getOntologyIndexMock.mockResolvedValue(null);
     getProjectVersionsMock.mockResolvedValue(versionsRunning(1, "v1.0.0"));
+    // A new network by default: it has nothing of its own.
+    getExistingDefinitionsMock.mockResolvedValue({ objectTypes: [], relationTypes: [] });
+    getExistingIndexMock.mockResolvedValue({ counts: {}, objectTypes: [], tasksVisible: true });
+    getNetworkBackgroundMock.mockResolvedValue(null);
+    getStatisticsMock.mockResolvedValue(null);
     directoryMock.clear();
+  });
+
+  it("counts what an existing network has with what the project adds, marked with a dot", async () => {
+    getDraftMock.mockResolvedValue(draftWithDecisions());
+    getExistingDefinitionsMock.mockResolvedValue({
+      objectTypes: [{ id: "regions" }, { id: "plants" }],
+      relationTypes: [{ id: "plant_region" }],
+    });
+    getExistingIndexMock.mockResolvedValue({
+      counts: {},
+      objectTypes: [{ state: "ready" }, { state: "not_built" }],
+      tasksVisible: true,
+    });
+    getNetworkBackgroundMock.mockResolvedValue({ id: "network" });
+    getStatisticsMock.mockResolvedValue({ actionTypesTotal: 7, functionsTotal: 4, skillsTotal: 2 });
+    renderScene();
+
+    // Two of the network's and the draft's two adopted object types, one relation of each.
+    expect(
+      await screen.findByText('bknProject.networkExisting.tiles.ontology:{"added":2,"existing":2}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.overview.tiles.ontologyValue:{"count":4}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.overview.tiles.ontologyRelations:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'bknProject.networkExisting.tiles.kinetic:{"actions":7,"functions":4,"skills":2}',
+      ),
+    ).toBeInTheDocument();
+    // No kinetic need yet: the figure is the network's action types.
+    expect(
+      screen.getByText('bknProject.networkExisting.tiles.kineticValue:{"count":7}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.networkExisting.tiles.build:{"ready":1,"total":2}'),
+    ).toBeInTheDocument();
+    expect(screen.getByText("bknProject.networkExisting.tiles.sources")).toBeInTheDocument();
+    expect(
+      screen.getByText('bknProject.networkExisting.tiles.release:{"version":"v1.0.0"}'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("network-existing-dot")).toHaveLength(5);
+  });
+
+  it("shows a project on a new network exactly as before: nothing marked as the network's", async () => {
+    getDraftMock.mockResolvedValue(draftWithDecisions());
+    renderScene();
+
+    expect(
+      await screen.findByText('bknProject.overview.tiles.ontologyValue:{"count":2}'),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(getExistingDefinitionsMock).toHaveBeenCalledWith("p1"));
+    expect(screen.queryByTestId("network-existing-line")).toBeNull();
+    // Nothing else of the network is read for a new one.
+    expect(getStatisticsMock).not.toHaveBeenCalled();
+    expect(getExistingIndexMock).not.toHaveBeenCalled();
+    expect(getNetworkBackgroundMock).not.toHaveBeenCalled();
   });
 
   it("links the network, its running version and the latest release to their workspaces", async () => {

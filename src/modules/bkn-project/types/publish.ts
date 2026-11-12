@@ -189,6 +189,8 @@ export type IndexBuild = {
 
 export type IndexItem = {
   build: IndexBuild | null;
+  /** When the table's index was last built, whoever started it; absent when unknown. */
+  builtTime?: number;
   /** No update field: the identity's fields stand in, so the index refreshes only by a full build. */
   fullRebuildOnly: boolean;
   id: string;

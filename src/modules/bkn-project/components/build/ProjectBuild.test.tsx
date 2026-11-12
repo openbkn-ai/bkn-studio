@@ -50,6 +50,12 @@ vi.mock("@/modules/bkn-project/components/release/IndexReadiness", () => ({
   IndexReadiness: ({ canRun }: { canRun: boolean }) => <div>indexes {canRun ? "run" : "view"}</div>,
 }));
 
+vi.mock("@/modules/bkn-project/components/build/ExistingIndexes", () => ({
+  ExistingIndexes: ({ projectId }: { projectId: string }) => (
+    <div>network indexes of {projectId}</div>
+  ),
+}));
+
 import { ProjectBuild } from "./ProjectBuild";
 
 const project = { archived: false, id: "p1", knId: "orders" } as Project;
