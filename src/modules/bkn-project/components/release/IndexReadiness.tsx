@@ -169,10 +169,11 @@ export function IndexReadiness({
       title: t("bknProject.release.index.stateColumn"),
     },
     {
-      // A ready index says when it was built, whoever built it: a table already indexed when the
-      // model was confirmed started no build of the project's.
+      // An index says when it was built, whoever built it: a table already indexed when the model
+      // was confirmed started no build of the project's. A build that did not start says why.
       render: (_value, item) =>
-        item.builtTime && (item.state === "ready" || !item.build) ? (
+        item.builtTime &&
+        (!item.build || item.build.outcome === "created" || item.build.outcome === "existing") ? (
           <span className={styles.muted}>
             {t("bknProject.release.index.builtAt", {
               time: dayjs(item.builtTime).format("YYYY/MM/DD HH:mm"),
