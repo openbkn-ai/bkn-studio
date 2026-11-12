@@ -33,17 +33,6 @@
   overflow-wrap: anywhere;
 }
 
-.dot {
-  background: var(--color-primary);
-  border-radius: 50%;
-  display: inline-block;
-  flex: none;
-  height: 8px;
-  margin-right: 6px;
-  vertical-align: middle;
-  width: 8px;
-}
-
 .name {
   overflow-wrap: anywhere;
 }

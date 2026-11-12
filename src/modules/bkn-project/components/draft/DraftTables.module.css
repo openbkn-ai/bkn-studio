@@ -167,3 +167,16 @@
   margin: 0;
   padding-left: 16px;
 }
+
+.existingActions {
+  align-items: center;
+  display: inline-flex;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.existingOpen {
+  color: var(--color-text-link);
+  display: inline-flex;
+  padding: 0 4px;
+}

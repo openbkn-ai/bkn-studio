@@ -41,7 +41,12 @@ vi.mock("@/modules/knowledge-network/components/preview/OntologyGraphView", () =
         </button>
       ) : null}
       {graph.nodes.map((node) => (
-        <span data-color={node.color} data-faded={String(Boolean(node.faded))} key={node.id}>
+        <span
+          data-color={node.color}
+          data-faded={String(Boolean(node.faded))}
+          data-marked={String(Boolean(node.marked))}
+          key={node.id}
+        >
           {node.id}
         </span>
       ))}
@@ -126,5 +131,16 @@ describe("DraftConceptGraph", () => {
 
     renderGraph();
     expect(screen.queryByRole("button", { name: "click a relation" })).toBeNull();
+  });
+
+  it("marks what the network already has, and says what the mark means", () => {
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.objectTypes[0].existing = true;
+    renderGraph(undefined, draft);
+    const node = (id: string) =>
+      screen.getAllByText(id).find((element) => element.dataset.marked !== undefined)!;
+    expect(node(draft.items.objectTypes[0].id).dataset.marked).toBe("true");
+    expect(node(draft.items.objectTypes[1].id).dataset.marked).toBe("false");
+    expect(screen.getAllByText("bknProject.model.existing.mark").length).toBeGreaterThan(0);
   });
 });

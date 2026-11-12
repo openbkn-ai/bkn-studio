@@ -87,6 +87,8 @@ export type KnowledgeNetworkPreviewNode = {
   declarations?: DefinitionDeclarations;
   /** Drawn faint: a type shown for context that is not part of the model, such as a draft's. */
   faded?: boolean;
+  /** Drawn with a small dot at its top left, such as a type a draft holds from its network. */
+  marked?: boolean;
   icon?: string;
   id: string;
   indexStatus?: ObjectTypeIndexStatus;

@@ -23,6 +23,11 @@ export const DESCRIPTION_MAX = 1000;
 
 export type EditableItem = DraftObjectType | DraftRelationType | DraftValueType;
 
+/** What the network already has: read only in the draft, edited in the knowledge network. */
+export function isExisting(item: EditableItem): boolean {
+  return "existing" in item && item.existing === true;
+}
+
 const DRAFT_ERROR_PREFIX = "BknProject.Draft.";
 
 /** The draft error bkn-project answered, without its prefix ("Stale"), if it answered one. */

@@ -590,15 +590,37 @@ export function ProjectModel({
     onChooseIdentity: setChoosingIdentity,
     onEdit: (kind, item) => setEditing({ item, kind }),
     onRestore: (field) => restore(field, objectNames[field.objectType] ?? field.objectType),
+    networkId: project.knId,
   };
+  // What the network already has is in the draft beside what drafting adds, read only.
+  const existingObjects = items.objectTypes.filter((item) => item.existing).length;
+  const existingRelations = items.relationTypes.filter((item) => item.existing).length;
+  const holdsExisting = existingObjects + existingRelations > 0;
+  const existingObjectIds = new Set(
+    items.objectTypes.filter((item) => item.existing).map((item) => item.id),
+  );
+  const existingRelationIds = new Set(
+    items.relationTypes.filter((item) => item.existing).map((item) => item.id),
+  );
   // A ready draft of a project in use opens an object type in the editor; otherwise its details.
   const editable = draft.status === "ready" && !project.archived;
   const openEditor = (id: string) => {
+    // What the network already has opens read only: it is edited in the knowledge network.
+    if (existingObjectIds.has(id)) {
+      setOpenId(id);
+      return;
+    }
     setOpenId(null);
     setRelationPanel(null);
     setPanelId(id);
   };
+  // A link may ask to edit what the network already has: it is shown read only instead.
+  const existingPanel = panelId !== null && existingObjectIds.has(panelId);
+  const shownId = openId ?? (existingPanel ? panelId : null);
   const openRelation = (id: string | null) => {
+    if (id && existingRelationIds.has(id)) {
+      return;
+    }
     closePanel();
     setRelationPanel({ id });
   };
@@ -666,10 +688,21 @@ export function ProjectModel({
         </LightStatusTag>
         <span className={styles.summary}>
           {draft.status === "ready"
-            ? t("bknProject.model.summary", {
-                objects: items.objectTypes.length,
-                relations: items.relationTypes.length,
-              })
+            ? holdsExisting
+              ? t("bknProject.model.summaryWithExisting", {
+                  newObjects: t("bknProject.model.countObjects", {
+                    count: items.objectTypes.length - existingObjects,
+                  }),
+                  newRelations: t("bknProject.model.countRelations", {
+                    count: items.relationTypes.length - existingRelations,
+                  }),
+                  objects: t("bknProject.model.countObjects", { count: existingObjects }),
+                  relations: t("bknProject.model.countRelations", { count: existingRelations }),
+                })
+              : t("bknProject.model.summary", {
+                  objects: items.objectTypes.length,
+                  relations: items.relationTypes.length,
+                })
             : null}
           {draft.status === "ready" && pending ? (
             // Leads to the list of what waits, each with the action that settles it.
@@ -704,11 +737,22 @@ export function ProjectModel({
         />
       ) : null}
       {understanding}
-      <ExistingDefinitions
-        networkId={project.knId}
-        projectId={project.id}
-        skippedTables={draft.items.existingTables}
-      />
+      {holdsExisting ? (
+        draft.items.existingTables?.length ? (
+          <span className={styles.existingHint}>
+            {t("bknProject.model.existing.skippedHint", {
+              count: draft.items.existingTables.length,
+            })}
+          </span>
+        ) : null
+      ) : (
+        // A draft made before it held what the network has shows it beside the draft.
+        <ExistingDefinitions
+          networkId={project.knId}
+          projectId={project.id}
+          skippedTables={draft.items.existingTables}
+        />
+      )}
       {draft.status === "drafting" ? (
         <EmptyStatePanel
           description={t("bknProject.model.drafting.description")}
@@ -813,9 +857,17 @@ export function ProjectModel({
           <DraftObjectDrawer
             catalogNames={catalogNames}
             excluded={items.excluded}
-            objectType={items.objectTypes.find((item) => item.id === openId) ?? null}
-            onClose={() => setOpenId(null)}
-            onEdit={editable ? openEditor : undefined}
+            objectType={items.objectTypes.find((item) => item.id === shownId) ?? null}
+            onClose={() => {
+              setOpenId(null);
+              // One a link asked to edit is shown read only; closing it drops the link.
+              if (existingPanel) {
+                closePanel();
+              }
+            }}
+            onEdit={
+              editable && !(shownId && existingObjectIds.has(shownId)) ? openEditor : undefined
+            }
           />
           {relationPanel && editable ? (
             <RelationTypePanel
@@ -830,7 +882,7 @@ export function ProjectModel({
               relationTypeId={relationPanel.id}
             />
           ) : null}
-          {panelId && editable ? (
+          {panelId && editable && !existingPanel ? (
             <ObjectTypePanel
               draft={draft}
               key={`${panelId}`}
