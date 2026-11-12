@@ -15,12 +15,20 @@ const {
   listDataConnectDiscoverSchedulesMock,
   listDataConnectDiscoverTasksMock,
   listSemanticUnderstandingTasksMock,
+  getSemanticTaskMock,
+  applySemanticTaskMock,
+  getCatalogMock,
+  getResourceMock,
 } = vi.hoisted(() => ({
   modalConfirmMock: vi.fn(),
   listCatalogsMock: vi.fn(),
   listDataConnectDiscoverSchedulesMock: vi.fn(),
   listDataConnectDiscoverTasksMock: vi.fn(),
   listSemanticUnderstandingTasksMock: vi.fn(),
+  getSemanticTaskMock: vi.fn(),
+  applySemanticTaskMock: vi.fn(),
+  getCatalogMock: vi.fn(),
+  getResourceMock: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -51,10 +59,18 @@ vi.mock("@/modules/data-connect/services/discover.service", () => ({
 vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", () => ({
   deleteSemanticUnderstandingTask: vi.fn(),
   listSemanticUnderstandingTasks: listSemanticUnderstandingTasksMock,
+  getSemanticUnderstandingTask: getSemanticTaskMock,
+  applySemanticUnderstandingTask: applySemanticTaskMock,
 }));
 
-vi.mock("@/shared/catalog", () => ({
+vi.mock("@/shared/catalog", async (original) => ({
+  ...(await original<typeof import("@/shared/catalog")>()),
   listCatalogs: listCatalogsMock,
+  getCatalog: getCatalogMock,
+}));
+vi.mock("@/modules/data-catalog/services/resource.service", async (original) => ({
+  ...(await original<typeof import("@/modules/data-catalog/services/resource.service")>()),
+  getCatalogResource: getResourceMock,
 }));
 
 import { deleteDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
@@ -180,6 +196,53 @@ describe("TaskManagementTaskPanels", () => {
 
     await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
     expect(screen.getAllByText("dataCatalog.taskManagement.semantic.empty")).toHaveLength(1);
+  });
+
+  it("refreshes application state when a pending apply succeeds after closing the drawer", async () => {
+    const task = {
+      ...runningTask("semantic"),
+      scope: "resource",
+      resourceId: "resource-1",
+      id: "saved-task",
+      status: "completed",
+      confidence: 0.9,
+      resultJson: "{}",
+    };
+    const applied = { ...task, applied: true };
+    let complete!: (value: typeof applied) => void;
+    listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [task], total: 1 });
+    getSemanticTaskMock.mockResolvedValue(task);
+    getCatalogMock.mockResolvedValue({ operations: ["task_manage", "resource_manage"] });
+    getResourceMock.mockResolvedValue({ operations: ["modify"] });
+    applySemanticTaskMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    render(
+      <MemoryRouter>
+        <SemanticUnderstandingTaskListPanel />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "saved-task" }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.taskManagement.semantic.applyResult",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [applied], total: 1 });
+    await act(async () => {
+      complete(applied);
+      await Promise.resolve();
+    });
+    await waitFor(() =>
+      expect(screen.getByText("saved-task").closest("tr")).toHaveTextContent(
+        "dataCatalog.taskManagement.applied.applied",
+      ),
+    );
+    expect(listSemanticUnderstandingTasksMock).toHaveBeenCalledTimes(2);
   });
 
   it.each([

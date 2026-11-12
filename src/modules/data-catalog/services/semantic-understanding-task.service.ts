@@ -5,9 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { z } from "zod";
+
 import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
-import { mockCatalogName, mockResources } from "@/modules/data-catalog/services/mock-db";
+import { throwMockRequestError } from "@/framework/request/mock-error";
+import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import {
+  emitMockChange,
+  formatMockTimestamp,
+  mockCatalogName,
+  mockResources,
+} from "@/modules/data-catalog/services/mock-db";
 import { isValidSemanticUnderstandingSampleRows } from "@/modules/data-catalog/components/semantic-understanding-task-validation";
 
 export type SemanticUnderstandingTaskStatus =
@@ -304,6 +313,250 @@ let mockTasks: SemanticUnderstandingTask[] = [
   },
 ];
 
+type ApplySemanticUnderstandingMode = "fill_empty" | "force";
+
+const mockSchemaField = z.object({
+  name: z.string(),
+  type: z.string(),
+  original_name: z.string().optional(),
+  original_type: z.string().optional(),
+  original_description: z.string().optional(),
+  attributes: z.record(z.string(), z.unknown()).nullish(),
+});
+const mockResourceSnapshot = z.object({
+  id: z.string(),
+  category: z.string(),
+  source_identifier: z.string(),
+  schema: z.string().optional(),
+  schema_definition: z.array(mockSchemaField),
+});
+const mockSemanticMetadata = z.object({
+  display_name: z.string().optional(),
+  description: z.string().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+const mockSemanticResult = z.object({
+  resource: mockSemanticMetadata,
+  fields: z.array(mockSemanticMetadata.extend({ name: z.string() })),
+});
+
+function mockSemanticSnapshot(resource: CatalogResource) {
+  return {
+    id: resource.id,
+    category: resource.category,
+    source_identifier: resource.sourceIdentifier,
+    schema: resource.schemaName ?? "",
+    schema_definition: resource.schema.map((field) => ({
+      name: field.name,
+      type: field.type,
+      original_name: field.originalName,
+      original_type: field.originalType,
+      original_description: field.originalDescription,
+      attributes: field.attributes,
+    })),
+  };
+}
+
+function mockSemanticSuggestions(resource: CatalogResource) {
+  return {
+    resource: {},
+    fields: resource.schema.map((field) => ({
+      name: field.name,
+      description: i18n.t("dataCatalog.taskManagement.semantic.mock.fieldDescription", {
+        field: field.name,
+      }),
+    })),
+  };
+}
+
+// Mock comparisons use the same participating schema fields as Vega. The backend
+// remains authoritative for fingerprint validation in connected mode.
+function canonicalMockSemanticValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalMockSemanticValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([key, item]) => [key, canonicalMockSemanticValue(item)]),
+    );
+  return value;
+}
+
+function mockSemanticSchemaKey(snapshot: z.infer<typeof mockResourceSnapshot>) {
+  return JSON.stringify(
+    canonicalMockSemanticValue({
+      ...snapshot,
+      schema: snapshot.schema ?? "",
+      schema_definition: snapshot.schema_definition
+        .map((field) => ({
+          ...field,
+          original_name: field.original_name ?? "",
+          original_type: field.original_type ?? "",
+          original_description: field.original_description ?? "",
+          attributes: field.attributes ?? {},
+        }))
+        .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0)),
+    }),
+  );
+}
+
+// Construct demo fixtures with source snapshots at initialization. Application
+// never repairs a saved task from the current resource.
+for (const task of mockTasks) {
+  const resource = mockResources.find((item) => item.id === task.resourceId);
+  if (task.status !== "completed" || task.applyMode !== "dry_run" || !resource) continue;
+  const input = JSON.parse(task.input ?? "{}") as Record<string, unknown>;
+  task.input = JSON.stringify({ ...input, resource: mockSemanticSnapshot(resource) });
+  const result = JSON.parse(task.resultJson ?? "{}") as Record<string, unknown>;
+  task.resultJson = JSON.stringify({ ...result, ...mockSemanticSuggestions(resource) });
+}
+
+export async function applySemanticUnderstandingTask(
+  id: string,
+  applyMode: ApplySemanticUnderstandingMode,
+): Promise<SemanticUnderstandingTask> {
+  if (!useMock) {
+    const response = await http.post<BackendSemanticUnderstandingTask>(
+      `/vega-backend/v1/semantic-understanding-tasks/${encodeURIComponent(id)}/apply`,
+      { apply_mode: applyMode },
+      { skipErrorToast: true },
+    );
+    return mapSemanticUnderstandingTask(response.data);
+  }
+  if (applyMode !== "fill_empty" && applyMode !== "force") {
+    throwMockRequestError(
+      400,
+      "VegaBackend.InvalidParameter.RequestBody",
+      "Invalid application mode.",
+    );
+  }
+  const task = mockTasks.find((item) => item.id === id);
+  if (!task)
+    throwMockRequestError(404, "VegaBackend.SemanticUnderstandingTask.NotFound", "Task not found.");
+  if (
+    task.status !== "completed" ||
+    task.scope !== "resource" ||
+    task.applyMode !== "dry_run" ||
+    !task.resultJson
+  ) {
+    throwMockRequestError(
+      409,
+      "VegaBackend.SemanticUnderstandingTask.NotApplicable",
+      "This task cannot be applied.",
+    );
+  }
+  if (task.applied) return { ...task };
+  if (task.confidence < task.confidenceThreshold) {
+    throwMockRequestError(
+      409,
+      "VegaBackend.SemanticUnderstandingTask.ConfidenceBelowThreshold",
+      "Confidence is below the original threshold.",
+    );
+  }
+  const resource = mockResources.find((item) => item.id === task.resourceId);
+  if (!resource) throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
+  let snapshot: z.infer<typeof mockResourceSnapshot>, result: z.infer<typeof mockSemanticResult>;
+  try {
+    const input = z.object({ resource: mockResourceSnapshot }).parse(JSON.parse(task.input ?? ""));
+    snapshot = input.resource;
+  } catch {
+    throwMockRequestError(
+      409,
+      "VegaBackend.SemanticUnderstandingTask.SchemaMismatch",
+      "Saved schema snapshot is invalid.",
+    );
+  }
+  try {
+    result = mockSemanticResult.parse(JSON.parse(task.resultJson));
+  } catch {
+    throwMockRequestError(
+      409,
+      "VegaBackend.SemanticUnderstandingTask.InvalidResult",
+      "Saved semantic output is invalid.",
+    );
+  }
+  if (
+    task.catalogId !== resource.catalogId ||
+    mockSemanticSchemaKey(snapshot) !== mockSemanticSchemaKey(mockSemanticSnapshot(resource))
+  ) {
+    throwMockRequestError(
+      409,
+      "VegaBackend.SemanticUnderstandingTask.SchemaMismatch",
+      "Resource schema changed; create a new semantic-understanding task.",
+    );
+  }
+  const names = new Set<string>();
+  for (const field of result.fields) {
+    if (names.has(field.name) || !resource.schema.some((item) => item.name === field.name)) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.SemanticUnderstandingTask.InvalidResult",
+        "Saved semantic fields do not match the resource schema.",
+      );
+    }
+    names.add(field.name);
+  }
+  const updatedFields: string[] = [];
+  const nextSchema = resource.schema.map((field) => {
+    const suggestion = result.fields.find((item) => item.name === field.name);
+    if (
+      !suggestion ||
+      (suggestion.confidence !== undefined && suggestion.confidence < task.confidenceThreshold)
+    )
+      return field;
+    const next = { ...field };
+    if (
+      suggestion.display_name &&
+      (applyMode === "force" || !field.displayName || field.displayName === field.name)
+    )
+      next.displayName = suggestion.display_name;
+    if (
+      suggestion.description &&
+      (applyMode === "force" ||
+        !field.description ||
+        field.description === field.originalDescription)
+    )
+      next.description = suggestion.description;
+    if (next.displayName !== field.displayName || next.description !== field.description)
+      updatedFields.push(field.name);
+    return next;
+  });
+  const nextName =
+    result.resource.display_name &&
+    (applyMode === "force" || !resource.name || resource.name === resource.sourceIdentifier)
+      ? result.resource.display_name
+      : resource.name;
+  const nextDescription =
+    result.resource.description &&
+    (applyMode === "force" ||
+      !resource.description ||
+      resource.description === resource.sourceMetadata?.originalDescription)
+      ? result.resource.description
+      : resource.description;
+  const resourceUpdated = nextName !== resource.name || nextDescription !== resource.description;
+  const metadataChanged = resourceUpdated || updatedFields.length > 0;
+  if (metadataChanged) {
+    resource.name = nextName;
+    resource.description = nextDescription;
+    resource.schema = nextSchema;
+    resource.expectedUpdateTime = Date.now();
+    resource.updateTime = formatMockTimestamp(resource.expectedUpdateTime);
+  }
+  const nextTask = {
+    ...task,
+    applied: true,
+    applyDetailJson: JSON.stringify({
+      apply_mode: applyMode,
+      resource_updated: resourceUpdated,
+      updated_fields: updatedFields,
+      ...(!metadataChanged ? { reason: "no_resource_changes" } : {}),
+    }),
+  };
+  mockTasks = mockTasks.map((item) => (item.id === id ? nextTask : item));
+  if (metadataChanged) emitMockChange();
+  return { ...nextTask };
+}
+
 export async function listSemanticUnderstandingTasks(
   filters: SemanticUnderstandingTaskListFilters,
   window: { limit: number; offset: number },
@@ -379,6 +632,7 @@ export async function createResourceSemanticUnderstandingTask(
       startTime: now,
       finishTime: now,
       input: JSON.stringify({
+        ...(resource ? { resource: mockSemanticSnapshot(resource) } : {}),
         options: {
           language: payload.language ?? i18n.resolvedLanguage ?? i18n.language,
           apply_mode: payload.applyMode,
@@ -391,6 +645,7 @@ export async function createResourceSemanticUnderstandingTask(
           field_total: resource?.schema.length ?? 0,
         },
         summary: "Mock semantic-understanding task completed.",
+        ...(resource ? mockSemanticSuggestions(resource) : {}),
       }),
     };
     mockTasks = [task, ...mockTasks];

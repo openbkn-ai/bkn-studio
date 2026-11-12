@@ -6,16 +6,22 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Drawer, Empty, Table } from "antd";
-import { useEffect, useState } from "react";
+import { Alert, Descriptions, Drawer, Empty, Select, Space, Table } from "antd";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import {
+  applySemanticUnderstandingTask,
   getSemanticUnderstandingTask,
   type SemanticUnderstandingTask,
 } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { getCatalog, hasCatalogOperation } from "@/shared/catalog";
+import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import { getSemanticUnderstandingWarnings } from "./semantic-understanding-warnings";
@@ -24,6 +30,8 @@ import sharedStyles from "./shared.module.css";
 const EMPTY_VALUE = "-";
 
 type Props = {
+  canApply?: boolean;
+  onApplied?: () => void;
   onClose: () => void;
   open: boolean;
   taskId: string;
@@ -109,15 +117,43 @@ function getFieldDetails(value?: string): FieldApplyDetail[] {
     : [];
 }
 
-export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }: Props) {
+export function SemanticUnderstandingTaskDetailDrawer({
+  canApply,
+  onApplied,
+  onClose,
+  open,
+  taskId,
+}: Props) {
   const { t } = useTranslation();
   const [task, setTask] = useState<SemanticUnderstandingTask | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [allowedToApply, setAllowedToApply] = useState(false);
+  const [applyMode, setApplyMode] = useState<"fill_empty" | "force">("fill_empty");
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyOutcome, setApplyOutcome] = useState<"applied" | "unchanged" | null>(null);
+  const requestRef = useRef(0);
+  const applyingRef = useRef(false);
+  const onAppliedRef = useRef(onApplied);
+
+  useEffect(() => {
+    onAppliedRef.current = onApplied;
+    return () => {
+      onAppliedRef.current = undefined;
+    };
+  }, [onApplied]);
 
   useEffect(() => {
     if (!open) return;
     let active = true;
+    const loadRequestId = ++requestRef.current;
+    applyingRef.current = false;
+    setApplying(false);
+    setAllowedToApply(false);
+    setApplyMode("fill_empty");
+    setApplyError(null);
+    setApplyOutcome(null);
     void (async () => {
       setLoading(true);
       setLoadError(null);
@@ -125,6 +161,23 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
       try {
         const nextTask = await getSemanticUnderstandingTask(taskId);
         if (active) setTask(nextTask);
+        if (canApply !== undefined) {
+          if (active) setAllowedToApply(canApply);
+        } else if (
+          nextTask?.scope === "resource" &&
+          nextTask.applyMode === "dry_run" &&
+          nextTask.resourceId
+        ) {
+          const [catalog, resource] = await Promise.all([
+            getCatalog(nextTask.catalogId, { skipErrorToast: true }),
+            getCatalogResource(nextTask.resourceId),
+          ]);
+          if (active)
+            setAllowedToApply(
+              hasCatalogOperation(catalog, "task_manage") &&
+                hasCatalogResourceOperation(resource, "modify"),
+            );
+        }
       } catch (error) {
         if (active) setLoadError(extractRequestErrorMessage(error));
       } finally {
@@ -133,8 +186,47 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
     })();
     return () => {
       active = false;
+      requestRef.current = loadRequestId + 1;
     };
-  }, [open, taskId]);
+  }, [canApply, open, taskId]);
+
+  async function handleApply() {
+    if (
+      !task ||
+      task.id !== taskId ||
+      !allowedToApply ||
+      applyingRef.current ||
+      !open ||
+      task.applied ||
+      task.confidence < task.confidenceThreshold
+    )
+      return;
+    const requestId = requestRef.current;
+    applyingRef.current = true;
+    setApplying(true);
+    setApplyError(null);
+    setApplyOutcome(null);
+    try {
+      const nextTask = await applySemanticUnderstandingTask(task.id, applyMode);
+      // Refresh the current owner even when its drawer was closed or switched.
+      onAppliedRef.current?.();
+      if (requestId !== requestRef.current) return;
+      setTask(nextTask);
+      const detail = jsonObject(nextTask.applyDetailJson);
+      const unchanged =
+        detail?.reason === "no_resource_changes" ||
+        (detail?.resource_updated === false &&
+          (!Array.isArray(detail.updated_fields) || detail.updated_fields.length === 0));
+      setApplyOutcome(unchanged ? "unchanged" : "applied");
+    } catch (error) {
+      if (requestId === requestRef.current) setApplyError(extractRequestErrorMessage(error));
+    } finally {
+      if (requestId === requestRef.current) {
+        applyingRef.current = false;
+        setApplying(false);
+      }
+    }
+  }
 
   if (!task) {
     return (
@@ -168,6 +260,16 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
   const quality = getQuality(task.confidenceDetailJson, task.resultJson);
   const warnings = getSemanticUnderstandingWarnings(t, task.confidenceDetailJson, task.resultJson);
   const fieldDetails = getFieldDetails(task.applyDetailJson);
+  const canApplyResult =
+    allowedToApply &&
+    task.id === taskId &&
+    task.scope === "resource" &&
+    task.applyMode === "dry_run" &&
+    task.status === "completed" &&
+    !task.applied &&
+    Boolean(task.resultJson?.trim());
+  const belowThreshold = task.confidence < task.confidenceThreshold;
+  const actualApplyMode = jsonObject(task.applyDetailJson)?.apply_mode;
 
   const fieldDetailColumns = [
     { dataIndex: "name", title: t("dataCatalog.taskManagement.semantic.fields.field") },
@@ -203,6 +305,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
       width={640}
     >
       <div className={styles.drawerContent}>
+        {loadError ? <Alert message={loadError} showIcon type="error" /> : null}
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
           <div className={styles.statusRow}>
@@ -238,6 +341,63 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
             </div>
           ) : null}
         </section>
+
+        {canApplyResult ? (
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>
+              {t("dataCatalog.taskManagement.semantic.applyResult")}
+            </h3>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <Space wrap>
+                <Select<"fill_empty" | "force">
+                  aria-label={t("dataCatalog.taskManagement.semantic.applicationMode")}
+                  disabled={applying || belowThreshold}
+                  onChange={setApplyMode}
+                  options={[
+                    {
+                      value: "fill_empty",
+                      label: t("dataCatalog.taskManagement.applyMode.fillEmpty"),
+                    },
+                    { value: "force", label: t("dataCatalog.taskManagement.applyMode.force") },
+                  ]}
+                  value={applyMode}
+                  style={{ minWidth: 180 }}
+                />
+                <AppButton
+                  disabled={belowThreshold}
+                  loading={applying}
+                  onClick={() => void handleApply()}
+                  type="primary"
+                >
+                  {t("dataCatalog.taskManagement.semantic.applyResult")}
+                </AppButton>
+              </Space>
+              <Alert
+                showIcon
+                type={belowThreshold ? "warning" : "info"}
+                message={t(
+                  belowThreshold
+                    ? "dataCatalog.taskManagement.semantic.belowThreshold"
+                    : applyMode === "force"
+                      ? "dataCatalog.taskManagement.semantic.forceDescription"
+                      : "dataCatalog.taskManagement.semantic.fillEmptyDescription",
+                )}
+              />
+            </Space>
+          </section>
+        ) : null}
+        {applyError ? <Alert showIcon type="error" message={applyError} /> : null}
+        {applyOutcome ? (
+          <Alert
+            showIcon
+            type={applyOutcome === "applied" ? "success" : "info"}
+            message={t(
+              applyOutcome === "applied"
+                ? "dataCatalog.taskManagement.semantic.applySuccess"
+                : "dataCatalog.taskManagement.semantic.applyUnchanged",
+            )}
+          />
+        ) : null}
 
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
@@ -298,6 +458,13 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
                 )}
               </span>
             </Descriptions.Item>
+            {actualApplyMode === "fill_empty" || actualApplyMode === "force" ? (
+              <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.applicationMode")}>
+                {t(
+                  `dataCatalog.taskManagement.applyMode.${actualApplyMode === "force" ? "force" : "fillEmpty"}`,
+                )}
+              </Descriptions.Item>
+            ) : null}
             <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.applyDetail")}>
               {jsonDetail(task.applyDetailJson)}
             </Descriptions.Item>

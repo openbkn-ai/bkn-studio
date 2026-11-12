@@ -870,13 +870,14 @@ export function SemanticUnderstandingTaskListPanel() {
           setPage(nextPage);
         }}
       />
-      {detailTaskId ? (
-        <SemanticUnderstandingTaskDetailDrawer
-          onClose={() => setDetailTaskId(null)}
-          open
-          taskId={detailTaskId}
-        />
-      ) : null}
+      <SemanticUnderstandingTaskDetailDrawer
+        onApplied={() => {
+          void load();
+        }}
+        onClose={() => setDetailTaskId(null)}
+        open={Boolean(detailTaskId)}
+        taskId={detailTaskId ?? ""}
+      />
     </TaskPanel>
   );
 }
