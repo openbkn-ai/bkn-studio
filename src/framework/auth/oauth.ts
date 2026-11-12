@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 import CryptoJS from "crypto-js";
-import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
+import { buildAppPath, getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
 import { normalizeSupportedLocale, resolveSupportedLocale } from "@/framework/i18n/locale";
 import { getRuntimeConfig } from "@/framework/runtime/config";
@@ -46,6 +46,7 @@ export const OAUTH_CALLBACK_PATH = getAppCallbackPath();
 const STATE_KEY = "bkn_oauth_state";
 const VERIFIER_KEY = "bkn_oauth_verifier";
 const RETURN_TO_KEY = "bkn_oauth_return_to";
+const LOCAL_LOGIN_KEY = "bkn_oauth_local_login";
 const CSRF_RETRY_KEY = "bkn_oauth_csrf_retried";
 const CSRF_ORIGINAL_ERROR_KEY = "bkn_oauth_original_error";
 const FLOW_LOCK_KEY = "bkn_oauth_flow_lock";
@@ -315,6 +316,7 @@ export function buildAuthorizationRequestURL(
   codeChallenge: string,
   state: string,
   requestedLocale?: string | null,
+  localLogin = false,
 ) {
   const locale = normalizeSupportedLocale(requestedLocale) ?? resolveSupportedLocale();
   const params = new URLSearchParams({
@@ -329,6 +331,11 @@ export function buildAuthorizationRequestURL(
     ui_locales: locale,
   });
 
+  if (localLogin) {
+    params.set("login_hint", "openbkn:local");
+    params.set("prompt", "login");
+  }
+
   return `${gatewayOrigin()}${AUTHORIZE_PATH}?${params.toString()}`;
 }
 
@@ -342,6 +349,7 @@ async function startLogin(requestedLocale?: string | null) {
     await computeCodeChallenge(verifier),
     state,
     requestedLocale,
+    window.sessionStorage.getItem(LOCAL_LOGIN_KEY) === "1",
   );
 
   // Claim the browser's login CSRF cookie before navigating; other tabs stop
@@ -351,6 +359,13 @@ async function startLogin(requestedLocale?: string | null) {
 }
 
 export async function beginLogin(returnTo?: string, requestedLocale?: string | null) {
+  const localLogin = window.location.pathname.replace(/\/+$/, "") === buildAppPath("/local-login");
+  if (localLogin) {
+    window.sessionStorage.setItem(LOCAL_LOGIN_KEY, "1");
+    returnTo = getAppHomePath();
+  } else {
+    window.sessionStorage.removeItem(LOCAL_LOGIN_KEY);
+  }
   const safeReturnTo = getSafeReturnTo(returnTo);
   if (safeReturnTo && !isOAuthCallbackPath(safeReturnTo)) {
     window.sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo);
@@ -456,6 +471,7 @@ export async function completeLogin(search = window.location.search) {
 
   window.sessionStorage.removeItem(STATE_KEY);
   window.sessionStorage.removeItem(VERIFIER_KEY);
+  window.sessionStorage.removeItem(LOCAL_LOGIN_KEY);
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
   releaseFlowLock();

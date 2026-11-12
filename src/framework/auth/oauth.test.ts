@@ -82,6 +82,21 @@ describe("oauth", () => {
     expect(authorizationURL.searchParams.get("ui_locales")).toBe("en-US");
   });
 
+  it("marks local login requests and forces a fresh login", () => {
+    const url = new URL(
+      buildAuthorizationRequestURL("challenge", "state", "zh-CN", true),
+      window.location.origin,
+    );
+    expect(url.searchParams.get("login_hint")).toBe("openbkn:local");
+    expect(url.searchParams.get("prompt")).toBe("login");
+    const normal = new URL(
+      buildAuthorizationRequestURL("challenge", "state"),
+      window.location.origin,
+    );
+    expect(normal.searchParams.has("login_hint")).toBe(false);
+    expect(normal.searchParams.has("prompt")).toBe(false);
+  });
+
   it("rejects the callback when the state does not match", async () => {
     window.sessionStorage.setItem("bkn_oauth_state", "expected");
     window.sessionStorage.setItem("bkn_oauth_verifier", "verifier");
