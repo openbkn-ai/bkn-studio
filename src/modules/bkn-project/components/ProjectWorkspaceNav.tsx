@@ -32,6 +32,8 @@ import {
 // The knowledge network workspace's side navigation: the project's looks and behaves the same.
 import kn from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
 
+import styles from "./ProjectWorkspaceNav.module.css";
+
 type NavGroup = { sections: ProjectSection[]; titleKey?: string };
 
 const NAV_GROUPS: NavGroup[] = [
@@ -103,22 +105,24 @@ export function ProjectWorkspaceNav({
                     aria-current={section === active ? "page" : undefined}
                     // Named by its page alone: the count beside it is not part of the name.
                     aria-label={label}
-                    className={section === active ? kn.sideItemActive : kn.sideItem}
+                    className={`${section === active ? kn.sideItemActive : kn.sideItem} ${styles.item}`}
                     key={section}
                     onClick={() => void navigate(projectSectionPath(projectId, section))}
                     title={label}
                     type="button"
                   >
-                    <span className={kn.sideItemMeta}>
+                    <span className={`${kn.sideItemMeta} ${styles.meta}`}>
                       {ICONS[section]}
                       {collapsed ? null : KNOWLEDGE_BASE_SECTIONS.includes(section) ? (
-                        <BknProjectKbBadge>{label}</BknProjectKbBadge>
+                        <span className={styles.label}>
+                          <BknProjectKbBadge>{label}</BknProjectKbBadge>
+                        </span>
                       ) : (
-                        <span>{label}</span>
+                        <span className={styles.label}>{label}</span>
                       )}
                     </span>
                     {!collapsed && count !== undefined ? (
-                      <span className={kn.sideItemStatus}>
+                      <span className={`${kn.sideItemStatus} ${styles.status}`}>
                         <span className={kn.sideItemCount}>{count}</span>
                       </span>
                     ) : null}

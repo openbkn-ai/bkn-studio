@@ -508,8 +508,8 @@ export function ProjectOverview({
       {/* One card per step of the flow, in the order a project is built. */}
       <div className={styles.steps} data-region="stats">
         {tiles.map((tile) => (
-          <div className={kn.overviewStatCard} key={tile.key} title={tile.sub}>
-            <dl className={kn.overviewStatDefinition}>
+          <div className={styles.statCard} key={tile.key} title={tile.sub}>
+            <dl className={styles.statDefinition}>
               <dt className={kn.overviewStatIcon} style={{ backgroundColor: tile.color }}>
                 {tile.icon}
               </dt>
@@ -526,11 +526,7 @@ export function ProjectOverview({
                 </AppButton>
               </div>
             ) : tile.action ? (
-              <AppButton
-                className={kn.overviewStatAction}
-                onClick={tile.action.onClick}
-                type="link"
-              >
+              <AppButton className={styles.statAction} onClick={tile.action.onClick} type="link">
                 {tile.action.label}
               </AppButton>
             ) : (
