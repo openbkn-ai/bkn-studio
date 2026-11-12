@@ -144,9 +144,16 @@ describe("ConfirmDraft", () => {
     expect(dialog.getByText(/确认后会自动校验数据/)).toBeInTheDocument();
 
     expect(okButton()).toBeDisabled();
+    // The button that cannot be pressed says what to do first.
+    expect(
+      dialog.getByText("先决定上面这些项：去采纳，或勾选“暂不纳入这些项”"),
+    ).toBeInTheDocument();
     fireEvent.click(dialog.getByText("暂不纳入这些项"));
     expect(okButton()).toBeDisabled();
+    expect(dialog.queryByText("先决定上面这些项：去采纳，或勾选“暂不纳入这些项”")).toBeNull();
+    expect(dialog.getByText("勾选上面的选项后才能确认")).toBeInTheDocument();
     fireEvent.click(dialog.getByText("知道这些表没有参与起草，仍然确认"));
+    expect(dialog.queryByText("勾选上面的选项后才能确认")).toBeNull();
     fireEvent.click(okButton());
 
     await waitFor(() =>

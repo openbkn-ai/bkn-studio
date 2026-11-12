@@ -5,11 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, ExportOutlined } from "@ant-design/icons";
 import { Switch, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import {
@@ -33,8 +34,10 @@ import {
 import {
   type AdoptBlocker,
   type EditableItem,
+  isExisting,
   restorable,
 } from "@/modules/bkn-project/components/draft/edit";
+import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import type {
   DraftExcludedField,
   DraftItemKind,
@@ -45,6 +48,7 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import { cardinalityKey } from "@/modules/bkn-project/components/relation-type/relation-values";
+import { networkObjectTypePath } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./DraftTables.module.css";
 
@@ -70,6 +74,8 @@ export type DraftItemActions = {
   onChooseIdentity: (objectType: DraftObjectType) => void;
   onEdit: (kind: DraftItemKind, item: EditableItem) => void;
   onRestore: (field: DraftExcludedField) => void;
+  /** The project's network, where what it already has is opened. */
+  networkId?: string;
 };
 
 function AdoptSwitch({
@@ -82,6 +88,20 @@ function AdoptSwitch({
   kind: DraftItemKind;
 }) {
   const { t } = useTranslation();
+  if (isExisting(item)) {
+    return (
+      <Tooltip title={t("bknProject.model.existing.readOnly")}>
+        <span>
+          <Switch
+            aria-label={t("bknProject.model.actions.adoptItem", { name: item.name })}
+            checked={item.adopted}
+            disabled
+            size="small"
+          />
+        </span>
+      </Tooltip>
+    );
+  }
   const blocker = actions.archived ? "archived" : actions.adoptBlocker(kind, item);
   // A switch that cannot be turned says why, so people know what to do first.
   return (
@@ -107,17 +127,62 @@ function editColumn<T extends EditableItem>(
   return {
     key: "edit",
     width: 56,
-    render: (_value, record) => (
-      <AppButton
-        aria-label={t("bknProject.model.actions.edit", { name: record.name })}
-        disabled={actions.archived || actions.busy}
-        icon={<EditOutlined />}
-        onClick={() => actions.onEdit(kind, record)}
-        size="small"
-        type="text"
-      />
-    ),
+    render: (_value, record) =>
+      isExisting(record) ? (
+        <ExistingActions actions={actions} item={record} kind={kind} />
+      ) : (
+        <AppButton
+          aria-label={t("bknProject.model.actions.edit", { name: record.name })}
+          disabled={actions.archived || actions.busy}
+          icon={<EditOutlined />}
+          onClick={() => actions.onEdit(kind, record)}
+          size="small"
+          type="text"
+        />
+      ),
   };
+}
+
+/**
+ * An item the network already has: not edited here, and an object type is opened in the
+ * knowledge network.
+ */
+function ExistingActions({
+  actions,
+  item,
+  kind,
+}: {
+  actions: DraftItemActions;
+  item: EditableItem;
+  kind: DraftItemKind;
+}) {
+  const { t } = useTranslation();
+  return (
+    <span className={styles.existingActions}>
+      <Tooltip title={t("bknProject.model.existing.readOnly")}>
+        <span>
+          <AppButton
+            aria-label={t("bknProject.model.actions.edit", { name: item.name })}
+            disabled
+            icon={<EditOutlined />}
+            size="small"
+            type="text"
+          />
+        </span>
+      </Tooltip>
+      {kind === "object_types" && actions.networkId ? (
+        <Tooltip title={t("bknProject.model.existing.open")}>
+          <Link
+            aria-label={t("bknProject.model.existing.open")}
+            className={styles.existingOpen}
+            to={networkObjectTypePath(actions.networkId, item.id)}
+          >
+            <ExportOutlined />
+          </Link>
+        </Tooltip>
+      ) : null}
+    </span>
+  );
 }
 
 /** The identity of an object type with its basis, its counts and their warnings. */
@@ -242,7 +307,10 @@ export function DraftObjectsTable({
       key: "name",
       render: (value: string, record) => (
         <button className={styles.link} onClick={() => onOpen(record.id)} type="button">
-          <strong>{value}</strong>
+          <strong>
+            {record.existing ? <ExistingMark /> : null}
+            {value}
+          </strong>
           {record.description ? <span className={styles.muted}>{record.description}</span> : null}
         </button>
       ),
@@ -263,7 +331,7 @@ export function DraftObjectsTable({
       render: (_value, record) => (
         <div className={styles.evidence}>
           <IdentityEvidence compact objectType={record} />
-          {(!record.document || record.document.role === "entity") && (
+          {(!record.document || record.document.role === "entity") && !record.existing && (
             <AppButton
               aria-label={t(
                 record.needsIdentity
@@ -345,12 +413,15 @@ export function DraftRelationsTable({
       dataIndex: "name",
       key: "name",
       render: (value: string, record) =>
-        onOpen ? (
+        onOpen && !record.existing ? (
           <button className={styles.link} onClick={() => onOpen(record.id)} type="button">
             <strong>{value}</strong>
           </button>
         ) : (
-          <strong>{value}</strong>
+          <strong>
+            {record.existing ? <ExistingMark /> : null}
+            {value}
+          </strong>
         ),
     },
     {
@@ -390,7 +461,10 @@ export function DraftRelationsTable({
       title: t("bknProject.model.columns.confidence"),
       key: "confidence",
       render: (_value, record) =>
-        record.document ? (
+        record.existing ? (
+          // Not drafted: the network has it as it is.
+          <span className={styles.muted}>{t("bknProject.model.existing.mark")}</span>
+        ) : record.document ? (
           <div className={styles.evidence}>
             <span className={styles.muted}>{record.document.reason}</span>
             {/* What the professional edition can say of the documents behind it. */}

@@ -249,6 +249,35 @@ describe("ProjectConcepts", () => {
     await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
   });
 
+  it("shows what the network already has as found there, read only and marked", async () => {
+    service.getConcepts.mockResolvedValue(
+      concepts({
+        concepts: [
+          concept({
+            item: { adopted: true, id: "supply_sales_order", kind: "object_types" },
+            key: "object_types/supply_sales_order",
+            name: "销售订单",
+            sources: [
+              { documentIds: [], id: "supply_sales_order", kind: "network", name: "销售订单" },
+              { documentIds: [], id: "t_orders", kind: "table", name: "orders" },
+            ],
+            state: "in_model",
+            suggestedBecause: "network",
+          }),
+        ],
+      }),
+    );
+    renderConcepts();
+
+    const order = await row("销售订单");
+    expect(order.getByText(/^bknProject\.concepts\.source\.network/)).toBeInTheDocument();
+    expect(order.getByText("bknProject.concepts.because.network")).toBeInTheDocument();
+    expect(order.getAllByRole("img", { name: "bknProject.model.existing.mark" })).toHaveLength(2);
+    // Judged and merged in the knowledge network, not here.
+    expect(order.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
+    expect(order.queryByRole("combobox", { name: /mergeIntoOf/ })).toBeNull();
+  });
+
   it("leads from a kinetic concept to kinetic modeling", async () => {
     renderConcepts();
 

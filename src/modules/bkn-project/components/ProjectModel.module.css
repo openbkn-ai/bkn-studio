@@ -142,3 +142,22 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+.existingHint {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.confirmFooter {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.confirmWaiting {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin-right: auto;
+  text-align: left;
+}

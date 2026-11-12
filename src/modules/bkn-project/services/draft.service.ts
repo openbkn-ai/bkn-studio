@@ -258,6 +258,7 @@ type BackendObjectType = {
   adopted: boolean;
   description: string;
   display_key: string;
+  existing?: boolean;
   id: string;
   incremental_key?: string;
   key: BackendKey;
@@ -292,6 +293,7 @@ type BackendRelationType = {
   adopted: boolean;
   cardinality: string;
   description: string;
+  existing?: boolean;
   evidence: {
     computed: boolean;
     hit_rate: number;
@@ -378,6 +380,7 @@ const mapObjectType = (item: BackendObjectType): DraftObjectType => ({
   aliases: item.aliases ?? [],
   description: item.description,
   displayKey: item.display_key,
+  ...(item.existing ? { existing: true } : {}),
   id: item.id,
   incrementalKey: item.incremental_key ?? "",
   key: mapKey(item.key),
@@ -423,6 +426,7 @@ const mapRelationType = (item: BackendRelationType): DraftRelationType => ({
     rows: item.evidence.rows,
     sourceDistinct: item.evidence.source_distinct,
   },
+  ...(item.existing ? { existing: true } : {}),
   id: item.id,
   linkTable: item.link_table ? mapTable(item.link_table) : undefined,
   mapping: (item.mapping ?? []).map(mapMapping),

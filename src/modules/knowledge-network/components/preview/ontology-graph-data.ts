@@ -65,6 +65,8 @@ const FADED_OPACITY = 0.35;
 /** Characters of a name drawn under its disc. */
 const NAME_CHARS = 10;
 const INDEX_BADGE_COLOR = "#34d399";
+/** A marked type's dot when no theme colour is given: the light theme's primary. */
+const MARK_BADGE_COLOR = "#2563eb";
 /** Font sizes of names, as drawn at 100% and kept on screen when zoomed out. */
 const NAME_FONT = 11;
 const HUB_NAME_FONT = 12;
@@ -259,6 +261,8 @@ export type OntologyDecorationInput = {
   positions?: OntologyLayout["positions"];
   selectedId: string | null;
   indexedIds: Set<string>;
+  /** The colour of a marked type's dot; the theme's primary colour when not given. */
+  markColor?: string;
   edgeLabelsVisible: boolean;
   /** The toolbar's object type names switch; the selected type is named either way. */
   nodeLabelsVisible?: boolean;
@@ -475,6 +479,16 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
     };
   };
 
+  const markBadge = (id: string) => {
+    const inset = radiusOf(id) * (1 - Math.SQRT1_2);
+    return {
+      ...indexBadge(id),
+      placement: "left-top" as const,
+      fill: input.markColor ?? MARK_BADGE_COLOR,
+      offsetX: inset,
+    };
+  };
+
   const nodes: NodeData[] = graph.nodes.map((node) => {
     const selected = node.id === selectedId;
     const dim = selectedId !== null && !selected && !neighbours.has(node.id);
@@ -483,8 +497,12 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       id: node.id,
       style: {
         labelText: nodeNames.get(node.id) ?? "",
-        // A small green dot on the disc's edge at its top right: the object type has an index.
-        badges: indexedIds.has(node.id) ? [indexBadge(node.id)] : [],
+        // A small green dot on the disc's edge at its top right: the object type has an index;
+        // one in the primary colour at its top left marks it, as a draft marks its network's types.
+        badges: [
+          ...(indexedIds.has(node.id) ? [indexBadge(node.id)] : []),
+          ...(node.marked ? [markBadge(node.id)] : []),
+        ],
       },
     };
   });

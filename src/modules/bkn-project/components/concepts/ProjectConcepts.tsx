@@ -26,6 +26,7 @@ import {
   type RevisionPreview,
 } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { askConcepts } from "@/modules/bkn-project/services/ask.service";
 import {
@@ -104,9 +105,15 @@ function becauseKey(code: string) {
     "stem_match",
     "link_table",
     "manual",
+    "network",
   ].includes(code)
     ? code
     : "other";
+}
+
+/** A concept of what the network already has: read only here. */
+function inNetwork(concept: Concept) {
+  return concept.sources.some((source) => source.kind === "network");
 }
 
 type Filter = "all" | ConceptState;
@@ -444,6 +451,7 @@ export function ProjectConcepts({
   const sources = useMemo(() => {
     const seen = {
       document: new Set<string>(),
+      network: new Set<string>(),
       requirement: new Set<string>(),
       table: new Set<string>(),
     };
@@ -516,9 +524,10 @@ export function ProjectConcepts({
   const ready = concepts.draftUpdateTime > 0;
   const editable = canEdit && ready && busy === null;
   // A requirement concept is judged in the specification, while no run rewrites it.
+  // What the network already has is judged in the knowledge network, not here.
   const judgeable = (concept: Concept) =>
     concept.item
-      ? editable
+      ? editable && !inNetwork(concept)
       : canEdit && busy === null && concepts.requirementUpdateTime > 0 && !extractingRequirements;
   const pending = concepts.counts.pending ?? 0;
   const total = concepts.concepts.length;
@@ -565,6 +574,7 @@ export function ProjectConcepts({
       render: (_value, concept) => (
         <div className={styles.cell}>
           <span className={styles.name}>
+            {inNetwork(concept) ? <ExistingMark /> : null}
             {concept.ai ? (
               <span
                 aria-label={t(`${PREFIX}.aiMark`)}
@@ -612,6 +622,7 @@ export function ProjectConcepts({
         <div className={styles.cell}>
           {concept.sources.map((source, index) => (
             <span key={`${source.kind}-${source.id}-${index}`}>
+              {source.kind === "network" ? <ExistingMark /> : null}
               {t(`${PREFIX}.source.${source.kind}`, { name: source.name })}
             </span>
           ))}
@@ -700,8 +711,8 @@ export function ProjectConcepts({
                     {t(`${PREFIX}.confirm`)}
                   </AppButton>
                 ) : null}
-                {/* A concept others were merged into stays where it is. */}
-                {concept.merged.length ? null : (
+                {/* A concept others were merged into stays where it is, as does the network's. */}
+                {concept.merged.length || inNetwork(concept) ? null : (
                   <Select<string>
                     aria-label={t(`${PREFIX}.mergeIntoOf`, { name: concept.name })}
                     className={styles.merge}

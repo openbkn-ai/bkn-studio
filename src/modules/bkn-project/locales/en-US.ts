@@ -221,6 +221,7 @@ export const bknProjectEnUS = {
         table: "Table: {{name}}",
         document: "Knowledge-base file",
         requirement: "Requirement: {{name}}",
+        network: "Already in the network",
       },
       because: {
         table_entity: "From a business table",
@@ -234,6 +235,7 @@ export const bknProjectEnUS = {
         manual: "Made by you",
         document: "Found in knowledge-base files",
         requirement: "Named in the requirement documents",
+        network: "The knowledge network already has it",
         other: "Suggested when extracting",
       },
       destination: {
@@ -338,9 +340,21 @@ export const bknProjectEnUS = {
       },
       summary:
         "Drafted from the tables of the project's data catalogs: {{objects}} object types, {{relations}} relation types.",
+      summaryWithExisting:
+        "The network already has {{objects}} and {{relations}}; this draft adds {{newObjects}} and {{newRelations}}.",
+      countObjects: "{{count}} object types",
+      countObjects_one: "{{count}} object type",
+      countObjects_other: "{{count}} object types",
+      countRelations: "{{count}} relation types",
+      countRelations_one: "{{count}} relation type",
+      countRelations_other: "{{count}} relation types",
       existing: {
         title: "Already in the network",
         mark: "Already in the network",
+        readOnly: "Edit what the network already has in the knowledge network",
+        skippedHint: "The {{count}} tables the network already uses were not drafted again.",
+        skippedHint_one: "The {{count}} table the network already uses was not drafted again.",
+        skippedHint_other: "The {{count}} tables the network already uses were not drafted again.",
         summary:
           "The network already has {{objects}} object types and {{relations}} relation types. Confirming keeps them as they are; edit them in the knowledge network.",
         skipped: "Drafting left out {{count}} tables the network already uses: {{tables}}.",
@@ -1312,6 +1326,9 @@ export const bknProjectEnUS = {
         undecidedTitle_other:
           "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedAccept: "Leave these items out for now",
+        waitingUndecided:
+          "Decide on the items above first: adopt them, or tick “Leave these items out for now”",
+        waitingAccept: "Tick the options above to confirm",
         undecidedItem: "{{name}}: {{because}}",
         neededBy: "Left out, these questions cannot be answered:",
         partialTitle: "{{count}} tables could not be read, so drafting left them out",

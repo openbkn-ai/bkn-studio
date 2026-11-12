@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
+import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import type {
   ExistingDefinitions as Existing,
@@ -22,15 +23,10 @@ import styles from "./ExistingDefinitions.module.css";
 
 const PREFIX = "bknProject.model.existing";
 
-/** The blue dot that marks what the network already has. */
-export function ExistingMark() {
-  const { t } = useTranslation();
-  return <span aria-label={t(`${PREFIX}.mark`)} className={styles.dot} role="img" />;
-}
-
 /**
- * What the project's network already has, beside the draft: kept on the network as it is, so read
- * only here and opened in the network's workspace. Nothing shows on a new network.
+ * What the project's network already has, before the draft holds it: kept on the network as it
+ * is, so read only here and opened in the network's workspace. Nothing shows on a new network.
+ * Once drafted, the draft lists these among its own items.
  */
 export function ExistingDefinitions({
   networkId,
