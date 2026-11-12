@@ -12,6 +12,7 @@ import { useSearchParams } from "react-router-dom";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { BknProjectKbBadge, BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import { extensionProjectKnowledgeBaseBuilds } from "@/framework/extension/registry";
+import { ExistingIndexes } from "@/modules/bkn-project/components/build/ExistingIndexes";
 import { IndexReadiness } from "@/modules/bkn-project/components/release/IndexReadiness";
 import type { Project } from "@/modules/bkn-project/types/project";
 import { BUILD_TABS, type BuildTab } from "@/modules/bkn-project/types/workspace";
@@ -54,6 +55,8 @@ export function ProjectBuild({
             <div className={styles.tab}>
               <p className={styles.muted}>{t(`${PREFIX}.structured.description`)}</p>
               <IndexReadiness canRun={canRun} projectId={project.id} />
+              {/* What the network already indexes: shown, not built, here. */}
+              <ExistingIndexes projectId={project.id} />
             </div>
           ),
         },

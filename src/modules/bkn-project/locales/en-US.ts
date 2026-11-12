@@ -86,7 +86,7 @@ export const bknProjectEnUS = {
       existing: "Use an existing network",
       existingDescription: "Revise an existing network; the baseline is its live version",
       existingStart:
-        "It has {{objects}} object types, {{relations}} relation types and {{actions}} action types, which concept modeling and kinetic modeling start from.",
+        "It has {{groups}} concept groups, {{objects}} object types, {{relations}} relation types, {{actions}} action types, {{functions}} functions and {{skills}} Skills. Every step starts from them and marks them as already in the network.",
       catalogsFromNetwork:
         "The data catalogs the network reads are selected; add or remove as needed.",
       networkPlaceholder: "Select a knowledge network",
@@ -305,6 +305,41 @@ export const bknProjectEnUS = {
         parts: "{{names}}",
         nothing: "(none)",
         failed: "Could not adopt this suggestion; try again later",
+      },
+    },
+    networkExisting: {
+      index: {
+        title: "Indexes already in the network",
+        description:
+          "Object types the network already has read these tables. The knowledge network keeps their indexes: they are shown here and need no build in the project.",
+        summary: "{{ready}} / {{total}} table indexes ready",
+      },
+      background: {
+        title: "Business background already in the network",
+        description:
+          "The knowledge network's description and SKILL.md, read only. Concept extraction and scenario generation read and cite them too; edit them in the knowledge network.",
+        name: "Network description and SKILL.md",
+        view: "View",
+        loadFailed: "The network's business background cannot be read right now",
+      },
+      knowledgeBases: {
+        title: "Knowledge bases mounted on the network",
+        description:
+          "These knowledge bases are mounted on the knowledge network and are the project's sources too, read only.",
+      },
+      tiles: {
+        sources: "Business background in the network",
+        concepts: "{{count}} already in the network",
+        concepts_one: "{{count}} already in the network",
+        concepts_other: "{{count}} already in the network",
+        ontology: "{{existing}} in the network, {{added}} new",
+        kinetic:
+          "In the network: {{actions}} action types, {{functions}} functions, {{skills}} skills",
+        kineticValue: "{{count}} action types",
+        kineticValue_one: "{{count}} action type",
+        kineticValue_other: "{{count}} action types",
+        build: "In the network: {{ready}} / {{total}} table indexes ready",
+        release: "The network runs {{version}}",
       },
     },
     build: {
@@ -2757,6 +2792,7 @@ export const bknProjectEnUS = {
         table: "Table",
         stateColumn: "Index",
         buildColumn: "Last build",
+        builtAt: "Built {{time}}",
         state: {
           ready: "Ready",
           readyRebuilding: "Ready, rebuilding",

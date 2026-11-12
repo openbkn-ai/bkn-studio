@@ -163,6 +163,7 @@ type BackendIndex = {
   object_types:
     | {
         build?: { outcome: IndexBuild["outcome"]; reason?: string; task_id?: string; time: number };
+        built_time?: number;
         full_rebuild_only?: boolean;
         id: string;
         missing?: string[];
@@ -361,6 +362,7 @@ function mapIndex(index: BackendIndex): ProjectIndex {
             time: item.build.time,
           }
         : null,
+      ...(item.built_time ? { builtTime: item.built_time } : {}),
       fullRebuildOnly: item.full_rebuild_only ?? false,
       id: item.id,
       missing: item.missing ?? [],
@@ -926,6 +928,21 @@ export async function getOntologyIndex(projectId: string): Promise<ProjectIndex 
     }
     throw error;
   }
+}
+
+/**
+ * The indexes of the tables the network's existing object types read: the network keeps them, so
+ * they are shown, never built, here. Empty on a new network.
+ */
+export async function getExistingIndex(projectId: string): Promise<ProjectIndex> {
+  if (useMock) {
+    return wait({ counts: {}, objectTypes: [], tasksVisible: true });
+  }
+  const response = await http.get<BackendIndex>(
+    `${projectPath(projectId)}/ontology/existing/index`,
+    { skipErrorToast: true },
+  );
+  return mapIndex(response.data);
 }
 
 /** Builds again, as the caller, the indexes the last confirmation could not start; owner only. */

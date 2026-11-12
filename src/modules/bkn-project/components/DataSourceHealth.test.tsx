@@ -140,6 +140,37 @@ describe("DataSourceHealth", () => {
     expect(screen.queryByText("数据来源")).toBeNull();
   });
 
+  it("reads the tables again once the draft changes, as when the model is confirmed", async () => {
+    const notBound: DataSources = {
+      ...ok,
+      tables: { affected: [], missing: 0, state: "not_bound", total: 0 },
+    };
+    getProjectStatusMock.mockResolvedValueOnce(status(notBound)).mockResolvedValueOnce(status(ok));
+    const view = renderWithoutAntdStyles(
+      <DataSourceHealth
+        draftVersion="ready:1"
+        onGoToModel={vi.fn()}
+        onGoToResources={vi.fn()}
+        onProjectChange={vi.fn()}
+        project={project}
+      />,
+    );
+    expect(await screen.findByText("还没有采用的条目")).toBeInTheDocument();
+
+    view.rerender(
+      <DataSourceHealth
+        draftVersion="ready:2"
+        onGoToModel={vi.fn()}
+        onGoToResources={vi.fn()}
+        onProjectChange={vi.fn()}
+        project={project}
+      />,
+    );
+
+    expect(await screen.findByText("11 张，都能查到数据")).toBeInTheDocument();
+    expect(getProjectStatusMock).toHaveBeenCalledTimes(2);
+  });
+
   it("names the items whose tables are gone by their names, and leads the owner on", async () => {
     getProjectStatusMock.mockResolvedValue(
       status(

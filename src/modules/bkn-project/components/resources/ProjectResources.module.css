@@ -56,3 +56,37 @@
   color: var(--color-text-secondary);
   font-size: 13px;
 }
+
+/* What the network already has: read only, after a blue dot, never on a coloured background. */
+.existing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.existingTitle {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.existingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.existingList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
