@@ -340,6 +340,41 @@ describe("ProjectListScene", () => {
     expect(listCatalogsMock).toHaveBeenCalledTimes(1);
   });
 
+  it("names a catalog past the first page, and never says one is unreadable when the list failed", async () => {
+    listProjectsMock.mockResolvedValue({
+      items: [project({ catalogIds: ["c501"] })],
+      nextCursor: null,
+      total: 1,
+    });
+    const first = Array.from({ length: 500 }, (_, index) => ({
+      id: `c${index}`,
+      name: `C${index}`,
+    }));
+    listCatalogsMock.mockResolvedValueOnce({ items: first, total: 502 }).mockResolvedValueOnce({
+      items: [
+        { id: "c501", name: "MES" },
+        { id: "c502", name: "WMS" },
+      ],
+      total: 502,
+    });
+    const view = renderScene();
+
+    expect(await within(await waitFor(() => card("Orders"))).findByText("MES")).toBeInTheDocument();
+    expect(listCatalogsMock).toHaveBeenCalledTimes(2);
+    expect(listCatalogsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 500 }),
+      expect.anything(),
+    );
+    view.unmount();
+
+    listCatalogsMock.mockReset().mockRejectedValue(new Error("down"));
+    renderScene();
+    expect(
+      await screen.findByText('bknProject.list.card.catalogNamesUnavailable:{"count":1}'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/unreadableCatalogs|c501/)).toBeNull();
+  });
+
   it("reads the catalogs again when the dialog opens after they failed", async () => {
     listProjectsMock.mockResolvedValue({ items: [], nextCursor: null, total: 0 });
     listCatalogsMock
