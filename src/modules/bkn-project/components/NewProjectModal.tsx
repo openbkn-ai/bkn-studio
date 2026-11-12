@@ -211,12 +211,22 @@ export function NewProjectModal({
                 showSearch
               />
             </Form.Item>
-            {start && start.objectTypes + start.relationTypes + start.actionTypes > 0 ? (
+            {start &&
+            start.conceptGroups +
+              start.objectTypes +
+              start.relationTypes +
+              start.actionTypes +
+              start.functions +
+              start.skills >
+              0 ? (
               <div className={styles.start}>
                 {t("bknProject.create.existingStart", {
                   actions: start.actionTypes,
+                  functions: start.functions,
+                  groups: start.conceptGroups,
                   objects: start.objectTypes,
                   relations: start.relationTypes,
+                  skills: start.skills,
                 })}
               </div>
             ) : null}

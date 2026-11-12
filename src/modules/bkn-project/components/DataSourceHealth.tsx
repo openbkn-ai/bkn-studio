@@ -7,7 +7,7 @@
 
 import { DeploymentUnitOutlined, FolderOpenOutlined, TableOutlined } from "@ant-design/icons";
 import { Alert } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -52,11 +52,17 @@ const SOURCES = ["network", "catalogs", "tables"] as const;
  * back and what the owner can do about it.
  */
 export function DataSourceHealth({
+  draftVersion,
   onGoToModel,
   onGoToResources,
   onProjectChange,
   project,
 }: {
+  /**
+   * Changes whenever the draft does, as when it is done drafting or is confirmed: the tables the
+   * project binds are read again then, not only when the page opens.
+   */
+  draftVersion?: string;
   onGoToModel: () => void;
   /** Opens the requirements and resources page, where the catalogs are chosen. */
   onGoToResources: () => void;
@@ -82,6 +88,14 @@ export function DataSourceHealth({
   useEffect(() => {
     void load();
   }, [load]);
+  // The draft read first is the one the page opened on; only a change after it reads again.
+  const seenDraft = useRef(draftVersion);
+  useEffect(() => {
+    if (seenDraft.current !== undefined && seenDraft.current !== draftVersion) {
+      void load();
+    }
+    seenDraft.current = draftVersion;
+  }, [draftVersion, load]);
 
   const sources = status?.dataSources ?? null;
   // The items whose tables are gone: a few at first, all on asking.

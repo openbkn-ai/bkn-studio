@@ -16,3 +16,30 @@
   margin: 0;
   color: var(--color-text-secondary);
 }
+
+/* What the network already has, read only, below the project's own indexes. */
+.existing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.existingHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.existingTitle {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  overflow-wrap: anywhere;
+}

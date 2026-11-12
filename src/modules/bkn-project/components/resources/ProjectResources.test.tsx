@@ -23,7 +23,9 @@ import type { UnderstandingCatalog } from "@/modules/bkn-project/types/publish";
 const mocks = vi.hoisted(() => ({
   addDraftCatalogs: vi.fn(),
   getDraft: vi.fn(),
+  getNetworkBackground: vi.fn(),
   getProject: vi.fn(),
+  listCapabilities: vi.fn(),
   getUnderstanding: vi.fn(),
   kb: ((): { mode: BknProjectKbMode } => ({ mode: "hidden" }))(),
   listCatalogs: vi.fn(),
@@ -74,7 +76,19 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
 
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  getNetworkBackground: mocks.getNetworkBackground,
   listDocuments: mocks.listDocuments,
+}));
+
+vi.mock("@/modules/knowledge-network/services/capability-binding.service", () => ({
+  listKnowledgeNetworkCapabilities: mocks.listCapabilities,
+}));
+
+vi.mock("@/modules/bkn-project/components/requirements/Citations", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/bkn-project/components/requirements/Citations")
+  >()),
+  DocumentViewer: ({ documentId }: { documentId: string }) => <div>viewing {documentId}</div>,
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
@@ -207,6 +221,14 @@ beforeEach(() => {
   mocks.getDraft.mockResolvedValue(ready());
   mocks.getUnderstanding.mockResolvedValue(understanding([]));
   mocks.listDocuments.mockResolvedValue([]);
+  // A new network by default: no background, no knowledge base of its own.
+  mocks.getNetworkBackground.mockResolvedValue(null);
+  mocks.listCapabilities.mockResolvedValue({
+    boxes: [],
+    entries: [],
+    metadataAvailable: true,
+    totalCount: 0,
+  });
   mocks.listCatalogs.mockResolvedValue({ items: [{ id: "cat-001", name: "ERP" }], total: 1 });
 });
 
@@ -395,6 +417,46 @@ describe("ProjectResources", () => {
     expect(await screen.findByText("bknProject.requirements.documents.title")).toBeInTheDocument();
     expect(screen.getByText("bknProject.resources.optional")).toBeInTheDocument();
     await waitFor(() => expect(mocks.listDocuments).toHaveBeenCalledWith("p1"));
+  });
+
+  it("lists the network's background as a read-only source, opened as a document", async () => {
+    mocks.getNetworkBackground.mockResolvedValue({ id: "network", name: "Supply" });
+    renderPage({}, true, "/?tab=documents");
+
+    const background = await screen.findByTestId("network-background");
+    expect(
+      within(background).getByText("bknProject.networkExisting.background.name"),
+    ).toBeInTheDocument();
+    expect(within(background).getAllByTestId("network-existing-dot")).toHaveLength(2);
+    fireEvent.click(within(background).getByText("bknProject.networkExisting.background.view"));
+    expect(await screen.findByText("viewing network")).toBeInTheDocument();
+  });
+
+  it("lists no background on a new network", async () => {
+    renderPage({}, true, "/?tab=documents");
+
+    expect(await screen.findByText("bknProject.requirements.documents.title")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getNetworkBackground).toHaveBeenCalledWith("p1"));
+    expect(screen.queryByTestId("network-background")).toBeNull();
+  });
+
+  it("lists the knowledge bases mounted on the network as sources, in the professional edition", async () => {
+    mocks.kb.mode = "enabled";
+    mocks.listCapabilities.mockResolvedValue({
+      boxes: [],
+      entries: [{ capabilityId: "kb1", name: "Supplier contracts" }],
+      metadataAvailable: true,
+      totalCount: 1,
+    });
+    renderPage({}, true, "/?tab=knowledge-base");
+
+    const bases = await screen.findByTestId("network-bases");
+    expect(within(bases).getByText("Supplier contracts")).toBeInTheDocument();
+    expect(mocks.listCapabilities).toHaveBeenCalledWith("staff", {
+      limit: 100,
+      mountedOnly: true,
+      type: "knowledge_base",
+    });
   });
 
   it("keeps the tab in the URL, so going back and links land on it", async () => {

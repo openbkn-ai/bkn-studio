@@ -76,7 +76,7 @@ export const bknProjectZhCN = {
       existing: "选择已有知识网络",
       existingDescription: "在已有网络上修订；基线为它的线上版本",
       existingStart:
-        "已有 {{objects}} 个对象类、{{relations}} 个关系类、{{actions}} 个行动类，会带入概念建模和动力建模。",
+        "已有 {{groups}} 个概念分组、{{objects}} 个对象类、{{relations}} 个关系类、{{actions}} 个行动类、{{functions}} 个函数、{{skills}} 个 Skill，会带入各个环节并标为“网络已有”。",
       catalogsFromNetwork: "已自动选上网络在用的数据目录，可以再增减。",
       networkPlaceholder: "选择知识网络",
       networkRequired: "请选择知识网络",
@@ -274,6 +274,40 @@ export const bknProjectZhCN = {
         parts: "{{names}}",
         nothing: "（无）",
         failed: "没能采纳这条建议，请稍后重试",
+      },
+    },
+    networkExisting: {
+      mark: "网络已有",
+      index: {
+        title: "网络已有的索引",
+        description:
+          "这些表由网络里已有的对象类在用，索引由知识网络维护，这里只展示状态，不需要在项目里构建。",
+        summary: "{{ready}} / {{total}} 张表的索引可用",
+      },
+      background: {
+        title: "网络已有的业务背景",
+        description:
+          "知识网络的说明和 SKILL.md，只读。概念抽取和场景生成会一起参考并引用；要修改请到知识网络中编辑。",
+        name: "网络说明和 SKILL.md",
+        view: "查看",
+        loadFailed: "网络的业务背景暂时读取不到",
+      },
+      knowledgeBases: {
+        title: "网络已挂载的知识库",
+        description: "这些知识库已挂载在知识网络上，自动作为项目的来源，只读。",
+      },
+      tiles: {
+        sources: "网络已有业务背景资料",
+        concepts: "其中网络已有 {{count}} 个",
+        concepts_one: "其中网络已有 {{count}} 个",
+        concepts_other: "其中网络已有 {{count}} 个",
+        ontology: "网络已有 {{existing}} 个，新增 {{added}} 个",
+        kinetic: "网络已有 {{actions}} 个行动类、{{functions}} 个函数、{{skills}} 个 Skill",
+        kineticValue: "{{count}} 个行动类",
+        kineticValue_one: "{{count}} 个行动类",
+        kineticValue_other: "{{count}} 个行动类",
+        build: "网络已有 {{ready}} / {{total}} 张表的索引可用",
+        release: "网络运行版本 {{version}}",
       },
     },
     build: {
@@ -2508,6 +2542,7 @@ export const bknProjectZhCN = {
         table: "数据表",
         stateColumn: "索引状态",
         buildColumn: "上次构建",
+        builtAt: "{{time}} 构建完成",
         state: {
           ready: "可用",
           readyRebuilding: "可用，正在重建",

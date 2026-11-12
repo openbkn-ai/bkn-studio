@@ -6,6 +6,7 @@
  */
 
 import { Alert, Spin } from "antd";
+import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -168,8 +169,16 @@ export function IndexReadiness({
       title: t("bknProject.release.index.stateColumn"),
     },
     {
+      // A ready index says when it was built, whoever built it: a table already indexed when the
+      // model was confirmed started no build of the project's.
       render: (_value, item) =>
-        item.build ? (
+        item.builtTime && (item.state === "ready" || !item.build) ? (
+          <span className={styles.muted}>
+            {t("bknProject.release.index.builtAt", {
+              time: dayjs(item.builtTime).format("YYYY/MM/DD HH:mm"),
+            })}
+          </span>
+        ) : item.build ? (
           <span
             className={
               item.build.outcome === "created" || item.build.outcome === "existing"

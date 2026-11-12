@@ -72,8 +72,11 @@ describe("NewProjectModal", () => {
     startMock.mockResolvedValue({
       actionTypes: 0,
       catalogIds: [],
+      conceptGroups: 0,
+      functions: 0,
       objectTypes: 0,
       relationTypes: 0,
+      skills: 0,
     });
     // Ant Design's responsive grid observes media queries; jsdom has none.
     vi.stubGlobal(
@@ -126,8 +129,11 @@ describe("NewProjectModal", () => {
     startMock.mockResolvedValue({
       actionTypes: 7,
       catalogIds: ["c1", "elsewhere"],
+      conceptGroups: 1,
+      functions: 4,
       objectTypes: 14,
       relationTypes: 21,
+      skills: 2,
     });
     createProjectMock.mockResolvedValue({ id: "p1" });
     const onCreated = renderModal();
@@ -149,6 +155,30 @@ describe("NewProjectModal", () => {
       knId: "orders",
       name: "Orders",
     });
+  });
+
+  it("names a network that only has functions and Skills, and says nothing of an empty one", async () => {
+    startMock.mockResolvedValueOnce({
+      actionTypes: 0,
+      catalogIds: [],
+      conceptGroups: 0,
+      functions: 4,
+      objectTypes: 0,
+      relationTypes: 0,
+      skills: 2,
+    });
+    renderModal();
+    pickOption("bknProject.create.networkPlaceholder", "Orders network");
+
+    expect(await screen.findByText("bknProject.create.existingStart")).toBeInTheDocument();
+  });
+
+  it("says nothing of a network that has nothing yet", async () => {
+    renderModal();
+    pickOption("bknProject.create.networkPlaceholder", "Orders network");
+
+    await waitFor(() => expect(startMock).toHaveBeenCalledWith("orders"));
+    expect(screen.queryByText("bknProject.create.existingStart")).not.toBeInTheDocument();
   });
 
   it("creates a project of a new network, which needs its name", async () => {
