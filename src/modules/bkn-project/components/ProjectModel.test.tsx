@@ -115,6 +115,7 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
 }));
 
 import { DRAFT_POLL_MS, mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
+import { networkObjectTypePath } from "@/modules/bkn-project/types/workspace";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ProjectModel } from "./ProjectModel";
@@ -526,6 +527,28 @@ describe("ProjectModel", () => {
     expect(screen.getByTestId("location")).toHaveTextContent(/^\/bkn-project\/p1\/model$/);
   });
 
+  it("shows what the network already has read only when a link asks to edit it", async () => {
+    const draft = ready();
+    draft.items.objectTypes.find((item) => item.id === "customers")!.existing = true;
+    getDraftMock.mockResolvedValue(draft);
+    renderWithoutAntdStyles(
+      <MemoryRouter initialEntries={["/bkn-project/p1/model?object=customers"]}>
+        <ProjectModel
+          initialObject="customers"
+          onConfirmed={vi.fn()}
+          onViewConfirmation={vi.fn()}
+          onGoToResources={onGoToResources}
+          ownerIsCaller
+          project={project}
+        />
+        <Location />
+      </MemoryRouter>,
+    );
+    const drawer = await screen.findByRole("dialog", undefined, { timeout: 5000 });
+    expect(screen.queryByRole("region", { name: "bknProject.objectEditor.title" })).toBeNull();
+    expect(within(drawer).getAllByText("customers").length).toBeGreaterThan(0);
+  });
+
   it("opens an object type with its identity, properties and the fields left out", async () => {
     getDraftMock.mockResolvedValue(ready());
     // An archived project is read only: its object types open in the details.
@@ -695,6 +718,42 @@ describe("ProjectModel", () => {
     await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
     expect(getDraftMock).toHaveBeenCalledTimes(2);
     expect(screen.queryByText("bknProject.model.generateFailed")).not.toBeInTheDocument();
+  });
+
+  it("lists what the network already has with the draft, read only and marked", async () => {
+    const draft = ready();
+    const existing = draft.items.objectTypes.find((item) => item.id === "customers")!;
+    existing.existing = true;
+    const relation = draft.items.relationTypes[0];
+    relation.existing = true;
+    draft.items.existingTables = ["customers", "regions"];
+    getDraftMock.mockResolvedValue(draft);
+    renderModel();
+
+    // The header counts what the network has apart from what drafting adds.
+    expect(
+      await screen.findByText(/^bknProject\.model\.summaryWithExisting:/, undefined, {
+        timeout: 5000,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`bknProject.model.existing.skippedHint:${JSON.stringify({ count: 2 })}`),
+    ).toBeInTheDocument();
+    // Read only: neither adopted nor edited here, and opened in the knowledge network.
+    expect(screen.getByRole("switch", { name: /"name":"customers"/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /edit:.*"name":"customers"/ })).toBeDisabled();
+    expect(
+      screen.getAllByRole("link", { name: "bknProject.model.existing.open" })[0],
+    ).toHaveAttribute("href", networkObjectTypePath("orders", "customers"));
+    expect(
+      screen.getAllByRole("img", { name: "bknProject.model.existing.mark" }).length,
+    ).toBeGreaterThan(0);
+    // What drafting adds stays editable.
+    expect(screen.getByRole("switch", { name: /"name":"sales_orders"/ })).toBeEnabled();
+
+    // Opening it shows it, not the editor.
+    fireEvent.click(screen.getAllByRole("button", { name: /^customers/ }).at(-1)!);
+    expect(screen.queryByRole("region", { name: "bknProject.objectEditor.title" })).toBeNull();
   });
 
   it("offers no edits on an archived project", async () => {

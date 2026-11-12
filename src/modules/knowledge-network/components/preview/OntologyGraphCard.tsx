@@ -46,6 +46,8 @@ type OntologyGraphCardProps = {
   emptyDescription?: string;
   /** Types and relations drawn faint and dashed: shown for context, not part of the model. */
   fadedIds?: ReadonlySet<string>;
+  /** Types drawn with a small dot at their top left, such as what a draft's network already has. */
+  markedIds?: ReadonlySet<string>;
   fillAvailableHeight?: boolean;
   /** A click opens something over the page: the graph leaves the maximized view first. */
   leaveMaximizedOnSelect?: boolean;
@@ -70,6 +72,7 @@ type OntologyGraphCardProps = {
 export function OntologyGraphCard({
   emptyDescription,
   fadedIds,
+  markedIds,
   fillAvailableHeight = false,
   leaveMaximizedOnSelect,
   legend,
@@ -146,14 +149,18 @@ export function OntologyGraphCard({
   const graph = useMemo(() => {
     const drawn = buildModelingPreviewGraph(objectTypes, relationTypes);
     const built = parallelEdges ? spreadParallelEdges(drawn) : drawn;
-    if (!fadedIds?.size) {
+    if (!fadedIds?.size && !markedIds?.size) {
       return built;
     }
     return {
-      edges: built.edges.map((edge) => (fadedIds.has(edge.id) ? { ...edge, faded: true } : edge)),
-      nodes: built.nodes.map((node) => (fadedIds.has(node.id) ? { ...node, faded: true } : node)),
+      edges: built.edges.map((edge) => (fadedIds?.has(edge.id) ? { ...edge, faded: true } : edge)),
+      nodes: built.nodes.map((node) => ({
+        ...node,
+        ...(fadedIds?.has(node.id) ? { faded: true } : {}),
+        ...(markedIds?.has(node.id) ? { marked: true } : {}),
+      })),
     };
-  }, [fadedIds, objectTypes, parallelEdges, relationTypes]);
+  }, [fadedIds, markedIds, objectTypes, parallelEdges, relationTypes]);
 
   const hasDeprecated = useMemo(
     () => graph.nodes.some(isDeprecated) || graph.edges.some(isDeprecated),

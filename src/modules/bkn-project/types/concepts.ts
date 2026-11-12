@@ -27,8 +27,11 @@ export type ConceptState = (typeof CONCEPT_STATES)[number];
 export type ConceptBlocker = "needs_identity" | "end_not_adopted" | "repair";
 
 export type ConceptSource = {
-  /** A table, a knowledge-base document, or a requirement concept of the specification. */
-  kind: "table" | "document" | "requirement";
+  /**
+   * A table, a knowledge-base document, a requirement concept of the specification, or the
+   * project's network, for an object or relation type it already has.
+   */
+  kind: "table" | "document" | "requirement" | "network";
   id: string;
   name: string;
   /** The requirement documents a requirement concept cites. */

@@ -8,6 +8,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
@@ -38,6 +39,11 @@ export function DraftConceptGraph({
 }) {
   const { t } = useTranslation();
   const records = useMemo(() => draftGraphRecords(draft), [draft]);
+  // What the network already has is drawn with a dot, as the lists mark it.
+  const existing = useMemo(
+    () => new Set(draft.items.objectTypes.filter((item) => item.existing).map((item) => item.id)),
+    [draft],
+  );
 
   return (
     <OntologyGraphCard
@@ -55,11 +61,18 @@ export function DraftConceptGraph({
             })}
           </span>
           <span>{t("bknProject.model.graph.legend")}</span>
+          {existing.size ? (
+            <span>
+              <ExistingMark />
+              {t("bknProject.model.existing.mark")}
+            </span>
+          ) : null}
           {action}
         </>
       }
       loadConceptGroups={false}
       logicalGrouping={false}
+      markedIds={existing}
       networkId={networkId}
       objectTypes={records.objectTypes}
       // Nothing stays selected: the types beside the graph stay listed, and a click opens the

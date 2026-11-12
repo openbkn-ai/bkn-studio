@@ -207,6 +207,7 @@ export const bknProjectZhCN = {
         table: "表：{{name}}",
         document: "知识库文件",
         requirement: "需求：{{name}}",
+        network: "网络已有",
       },
       because: {
         table_entity: "来自一张业务表",
@@ -220,6 +221,7 @@ export const bknProjectZhCN = {
         manual: "你建的",
         document: "从知识库文件中识别",
         requirement: "需求文档里提到",
+        network: "知识网络里已有",
         other: "抽取时给出的建议",
       },
       destination: {
@@ -317,9 +319,21 @@ export const bknProjectZhCN = {
         failed: "起草失败",
       },
       summary: "已按项目数据目录的表结构起草：{{objects}} 个对象类、{{relations}} 个关系类。",
+      summaryWithExisting:
+        "网络已有 {{objects}}、{{relations}}；本次起草新增 {{newObjects}}、{{newRelations}}。",
+      countObjects: "{{count}} 个对象类",
+      countObjects_one: "{{count}} 个对象类",
+      countObjects_other: "{{count}} 个对象类",
+      countRelations: "{{count}} 个关系类",
+      countRelations_one: "{{count}} 个关系类",
+      countRelations_other: "{{count}} 个关系类",
       existing: {
         title: "网络已有",
         mark: "网络已有",
+        readOnly: "网络已有的内容请到知识网络中修改",
+        skippedHint: "网络已在用的 {{count}} 张表没有再起草。",
+        skippedHint_one: "网络已在用的 {{count}} 张表没有再起草。",
+        skippedHint_other: "网络已在用的 {{count}} 张表没有再起草。",
         summary:
           "网络里已有 {{objects}} 个对象类、{{relations}} 个关系类，确认模型时原样保留；要修改请到知识网络中编辑。",
         skipped: "起草时跳过了网络已在用的 {{count}} 张表：{{tables}}。",
@@ -1222,6 +1236,8 @@ export const bknProjectZhCN = {
         undecidedTitle_one: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedTitle_other: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedAccept: "暂不纳入这些项",
+        waitingUndecided: "先决定上面这些项：去采纳，或勾选“暂不纳入这些项”",
+        waitingAccept: "勾选上面的选项后才能确认",
         undecidedItem: "「{{name}}」：{{because}}",
         neededBy: "不纳入的话，这些问题答不上来：",
         partialTitle: "以下 {{count}} 张表起草时读取不到，没有参与起草",

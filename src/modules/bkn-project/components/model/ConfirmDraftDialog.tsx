@@ -36,10 +36,15 @@ function adoptedCounts(draft: Draft) {
   const objects = new Set(
     draft.items.objectTypes.filter((item) => item.adopted).map((item) => item.id),
   );
+  // What the network already has stays as it is: only what the draft adds is written.
   const relations = draft.items.relationTypes.filter(
-    (item) => item.adopted && objects.has(item.source) && objects.has(item.target),
+    (item) =>
+      item.adopted && !item.existing && objects.has(item.source) && objects.has(item.target),
   ).length;
-  return { objects: objects.size, relations };
+  return {
+    objects: draft.items.objectTypes.filter((item) => item.adopted && !item.existing).length,
+    relations,
+  };
 }
 
 /**
@@ -245,6 +250,14 @@ export function ConfirmDraft({
     (!needsPartial || acceptPartial) &&
     (!needsConflicts || acceptConflicts);
   const unreadable = draft.items.unreadable;
+  // Why confirming waits, beside the button that cannot be pressed yet.
+  const waitingFor = ready
+    ? null
+    : needsUndecided && !acceptUndecided && undecided !== null
+      ? t("bknProject.confirm.dialog.waitingUndecided")
+      : (needsPartial && !acceptPartial) || (needsConflicts && !acceptConflicts)
+        ? t("bknProject.confirm.dialog.waitingAccept")
+        : null;
 
   return (
     <>
@@ -254,6 +267,13 @@ export function ConfirmDraft({
       <Modal
         cancelText={t("common.cancel")}
         confirmLoading={sending}
+        footer={(_, { CancelBtn, OkBtn }) => (
+          <div className={styles.confirmFooter}>
+            {waitingFor ? <span className={styles.confirmWaiting}>{waitingFor}</span> : null}
+            <CancelBtn />
+            <OkBtn />
+          </div>
+        )}
         okButtonProps={{ disabled: !ready }}
         okText={t("bknProject.confirm.dialog.ok")}
         onCancel={() => setOpen(false)}

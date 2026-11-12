@@ -158,6 +158,11 @@ export type DraftObjectType = {
   aliases: string[];
   description: string;
   displayKey: string;
+  /**
+   * What the project's network already has: read only in the draft, edited in the knowledge
+   * network, never written by confirming the draft.
+   */
+  existing?: boolean;
   id: string;
   /**
    * The update field: the property whose value grows whenever a record changes, which the table's
@@ -199,6 +204,8 @@ export type DraftRelationType = {
   cardinality: string;
   description: string;
   evidence: DraftJoinEvidence;
+  /** What the project's network already has, as for an object type. */
+  existing?: boolean;
   id: string;
   linkTable?: DraftTable;
   mapping: DraftFieldMapping[];
