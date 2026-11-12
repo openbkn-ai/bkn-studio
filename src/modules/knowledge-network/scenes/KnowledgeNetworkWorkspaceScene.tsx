@@ -288,15 +288,13 @@ export function KnowledgeNetworkWorkspaceScene({
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
-      item.key === "concept-groups" ||
-      item.key === "object-types" ||
-      item.key === "relation-types" ||
-      item.key === "action-types",
+      item.key === "concept-groups" || item.key === "object-types" || item.key === "relation-types",
   );
   // Tools may be mounted for direct network use or referenced by an action type. These are
   // separate relationships; an action reference does not require a manual mount.
   const dynamicNavItems = navigationItems.filter(
     (item) =>
+      item.key === "action-types" ||
       item.key === "metrics" ||
       item.key === "functions" ||
       item.key === "apis" ||
