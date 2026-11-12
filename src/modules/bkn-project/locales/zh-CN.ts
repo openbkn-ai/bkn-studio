@@ -248,7 +248,13 @@ export const bknProjectZhCN = {
       aiMark: "由 AI 命名或新增",
       notUnderstood:
         "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。重新抽取时会先对这些表做语义理解，完成后名称会换成业务名称。",
+      notUnderstood_one:
+        "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。重新抽取时会先对这些表做语义理解，完成后名称会换成业务名称。",
+      notUnderstood_other:
+        "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。重新抽取时会先对这些表做语义理解，完成后名称会换成业务名称。",
       notUnderstoodReadOnly: "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。",
+      notUnderstoodReadOnly_one: "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。",
+      notUnderstoodReadOnly_other: "有 {{count}} 张表还没有做语义理解，这些概念暂时用表名。",
       understandAction: "去做语义理解",
       ask: "问 AI",
       revise: {

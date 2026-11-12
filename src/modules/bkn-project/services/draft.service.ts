@@ -2173,7 +2173,8 @@ export async function reviseConcept(
                 : undefined;
           if (item) {
             item.name = revision.value.name;
-            item.description = revision.value.description;
+            // A definition not given stays, as bkn-project keeps it.
+            item.description = revision.value.description || item.description;
           }
         }
         draft.update_time = Math.max(Date.now(), draft.update_time + 1);

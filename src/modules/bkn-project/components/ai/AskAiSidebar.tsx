@@ -340,7 +340,7 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
         </div>
         <div className={styles.actions}>
           {messages.length ? (
-            <Button disabled={generating} onClick={restart} size="small" type="text">
+            <Button disabled={generating || adopting} onClick={restart} size="small" type="text">
               {t(`${PREFIX}.newConversation`)}
             </Button>
           ) : null}
@@ -407,6 +407,7 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
                   return (
                     <Checkbox
                       checked={proposal.selected.includes(index)}
+                      disabled={adopting}
                       key={index}
                       onChange={(event) =>
                         setProposal({
@@ -496,7 +497,8 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
       </div>
       <div className={styles.composer}>
         <AiPromptComposer
-          checking={false}
+          // No question while the changes chosen are being written: they are of this answer.
+          checking={adopting}
           generating={generating}
           inputLabel={t(`${PREFIX}.question`)}
           onStop={() => asking.current?.abort()}

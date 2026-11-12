@@ -676,6 +676,38 @@ describe("ProjectConcepts", () => {
     );
   });
 
+  it("asks nothing new while the chosen changes are being adopted", async () => {
+    assistant.askConcepts.mockResolvedValue({
+      answer: "Rename it.",
+      dropped: [],
+      revisions: [
+        { field: "verdict", reason: "", value: { key: "object_types/orders", verdict: "event" } },
+      ],
+    });
+    let finish: (value: Concepts) => void = () => undefined;
+    service.reviseConcept.mockReturnValue(
+      new Promise<Concepts>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    renderConcepts();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
+    const question = screen.getByRole("textbox", { name: "bknProject.model.ask.question" });
+    fireEvent.change(question, { target: { value: "Name them" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.model.ask.adoptSelected" }),
+    );
+
+    await waitFor(() => expect(question).toBeDisabled());
+    expect(
+      screen.getByRole("button", { name: "bknProject.model.ask.newConversation" }),
+    ).toBeDisabled();
+    await act(async () => finish(concepts({ draftUpdateTime: 6 })));
+    await waitFor(() => expect(question).not.toBeDisabled());
+  });
+
   it("shows others the judgments without letting them change any", async () => {
     renderConcepts(false);
 

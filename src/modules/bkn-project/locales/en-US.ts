@@ -266,9 +266,17 @@ export const bknProjectEnUS = {
       aliases: "Aliases: {{names}}",
       aiMark: "Named or added by AI",
       notUnderstood:
-        "Tables without semantic understanding yet: {{count}}. Their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+      notUnderstood_one:
+        "{{count}} table has no semantic understanding yet, so its concept uses the table name. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+      notUnderstood_other:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
       notUnderstoodReadOnly:
-        "Tables without semantic understanding yet: {{count}}. Their concepts use the table names.",
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
+      notUnderstoodReadOnly_one:
+        "{{count}} table has no semantic understanding yet, so its concept uses the table name.",
+      notUnderstoodReadOnly_other:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
       understandAction: "Run semantic understanding",
       ask: "Ask AI",
       revise: {
