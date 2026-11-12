@@ -162,3 +162,16 @@ export function readImplementedReturn(state: unknown): ImplementedReturn | null 
   }
   return null;
 }
+
+/** The ids of the needs the network's items cover: those linked to one of them. */
+export const coveredNeedIds = (items: { needIds: string[] }[]) =>
+  new Set(items.flatMap((item) => item.needIds));
+
+/** What kinetic modeling holds: what the network already has and the needs it does not cover. */
+export function kineticItemCount(logic: {
+  needs: { id: string }[];
+  networkItems: { needIds: string[] }[];
+}) {
+  const covered = coveredNeedIds(logic.networkItems);
+  return logic.networkItems.length + logic.needs.filter((need) => !covered.has(need.id)).length;
+}

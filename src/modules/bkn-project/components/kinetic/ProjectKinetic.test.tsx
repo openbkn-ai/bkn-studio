@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   editItem: vi.fn(),
   getCandidates: vi.fn(),
   getDraft: vi.fn(),
+  getExistingDefinitions: vi.fn(),
   getLogicNeeds: vi.fn(),
   getRequirements: vi.fn(),
   getStatus: vi.fn(),
@@ -73,6 +74,7 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
 
 vi.mock("@/modules/bkn-project/services/draft.service", () => ({
   getDraft: mocks.getDraft,
+  getExistingDefinitions: mocks.getExistingDefinitions,
 }));
 
 import { ProjectKinetic } from "./ProjectKinetic";
@@ -177,6 +179,8 @@ function logicNeeds(): LogicNeeds {
     ],
     live: true,
     networkId: "net",
+    networkItems: [],
+    networkItemsReason: "",
     reason: "",
     released: true,
     updateTime: 9,
@@ -263,6 +267,10 @@ describe("ProjectKinetic", () => {
         ],
       },
     });
+    mocks.getExistingDefinitions.mockResolvedValue({
+      objectTypes: [{ id: "suppliers", name: "供应商" }],
+      relationTypes: [],
+    });
     mocks.link.mockResolvedValue(requirements());
     mocks.unlink.mockResolvedValue(requirements());
     mocks.analyzeKinetic.mockResolvedValue(requirements());
@@ -290,6 +298,181 @@ describe("ProjectKinetic", () => {
     expect(within(row("查物流")).getByText("实现已失效")).toBeInTheDocument();
     expect(within(row("查物流")).getByRole("button", { name: "重新匹配" })).toBeInTheDocument();
     expect(screen.queryByText(/object_metric|mcp_tool|action_type|analysis/)).toBeNull();
+  });
+
+  it("on a network the project created, lists every need and nothing as already in the network", async () => {
+    renderPage();
+
+    expect(await screen.findByText("改期")).toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(NEEDS.length + 1);
+    expect(screen.queryByText(/网络已有/)).toBeNull();
+    expect(screen.queryByRole("img", { name: "网络已有" })).toBeNull();
+    expect(mocks.getExistingDefinitions).not.toHaveBeenCalled();
+  });
+
+  it("lists what the network already has by object, read-only, with the needs it covers", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      networkItems: [
+        {
+          boxId: "",
+          description: "把订单改到新的承诺日期",
+          id: "reschedule",
+          name: "订单改期",
+          needIds: ["n3"],
+          ownerObjectTypeId: "orders",
+          ownerObjectTypeName: "",
+          type: "action_type",
+        },
+        {
+          boxId: "",
+          description: "",
+          id: "hold",
+          name: "暂停供货",
+          needIds: [],
+          ownerObjectTypeId: "suppliers",
+          ownerObjectTypeName: "",
+          type: "action_type",
+        },
+        {
+          boxId: "box",
+          description: "",
+          id: "f9",
+          name: "算交期",
+          needIds: [],
+          ownerObjectTypeId: "",
+          ownerObjectTypeName: "",
+          type: "function",
+        },
+        {
+          boxId: "",
+          description: "",
+          id: "s9",
+          name: "补货建议",
+          needIds: [],
+          ownerObjectTypeId: "",
+          ownerObjectTypeName: "",
+          type: "skill",
+        },
+      ],
+      released: false,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("网络已有 2 个行动类、1 个函数、1 个 Skill；新增需求 6 个"),
+    ).toBeInTheDocument();
+    const section = within(screen.getByRole("region", { name: "网络已有" }));
+    expect(
+      section.getByText("这些是知识网络里已有的，在这里只读；要修改，请到知识网络中进行。"),
+    ).toBeInTheDocument();
+    // Grouped by the object they act on, named from the draft or the network.
+    expect(section.getByText("销售订单")).toBeInTheDocument();
+    expect(await section.findByText("供应商")).toBeInTheDocument();
+    expect(section.getByText("不属于特定对象")).toBeInTheDocument();
+    expect(section.getAllByRole("img", { name: "网络已有" }).length).toBeGreaterThanOrEqual(5);
+    // Nothing of them is edited here.
+    expect(section.queryByRole("button", { name: /编辑|删除/ })).toBeNull();
+
+    // The need it covers is not listed as a new need.
+    expect(screen.queryByRole("cell", { name: /^改期/ })).toBeNull();
+    fireEvent.click(section.getByRole("button", { name: "在知识网络中查看「订单改期」" }));
+    expect(open).toHaveBeenCalledWith(
+      expect.stringContaining("/knowledge-network/workspace/net/action-types/reschedule/detail"),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    fireEvent.click(section.getByRole("button", { name: "查看需求「改期」" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    open.mockRestore();
+  });
+
+  it("says every need is covered, not that none matches the filters, when the network covers all", async () => {
+    const onCount = vi.fn();
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      needs: [view(NEEDS[2])],
+      networkItems: [
+        {
+          boxId: "",
+          description: "",
+          id: "reschedule",
+          name: "订单改期",
+          needIds: ["n3"],
+          ownerObjectTypeId: "orders",
+          ownerObjectTypeName: "",
+          type: "action_type",
+        },
+      ],
+    });
+    renderWithoutAntdStyles(
+      <MemoryRouter>
+        <ProjectKinetic
+          onCount={onCount}
+          onGoToModel={vi.fn()}
+          onGoToRelease={vi.fn()}
+          ownerIsCaller
+          project={project}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("动力需求都已由网络已有的内容覆盖，没有新增需求。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("没有符合筛选条件的动力需求。")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    // The navigation is told what the page holds: one item in the network, no new need.
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(1));
+  });
+
+  it("says when some of what the network has could not be read", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      networkItems: [
+        {
+          boxId: "",
+          description: "",
+          id: "late",
+          name: "延误率",
+          needIds: ["n1"],
+          ownerObjectTypeId: "orders",
+          ownerObjectTypeName: "销售订单",
+          type: "object_metric",
+        },
+      ],
+      networkItemsReason: "forbidden",
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("网络已有的部分内容暂时读不到，列表可能不完整。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("网络已有 1 个指标；新增需求 6 个")).toBeInTheDocument();
+  });
+
+  it("says implementations wait for the first release only while the network runs no version", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), live: false, released: false });
+    const { unmount } = renderPage();
+    expect(await screen.findByText(/首次发布后再实现/)).toBeInTheDocument();
+    expect(
+      screen.queryByText("在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。"),
+    ).toBeNull();
+    unmount();
+
+    // Running, after a release or on a network the project started on: no waiting is said.
+    for (const released of [true, false]) {
+      mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), live: true, released });
+      const page = renderPage();
+      expect(
+        await screen.findByText(
+          "在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/首次发布后再实现/)).toBeNull();
+      page.unmount();
+    }
   });
 
   it("filters by kind and by state", async () => {
@@ -418,6 +601,8 @@ describe("ProjectKinetic", () => {
       live: false,
       needs: [],
       networkId: "",
+      networkItems: [],
+      networkItemsReason: "",
       reason: "",
       released: false,
       updateTime: 0,
