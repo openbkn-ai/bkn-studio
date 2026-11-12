@@ -247,9 +247,38 @@ export type DraftDecision = {
 /** Catalogs being added to a ready draft: their tables are drafted in the background. */
 export type DraftAdding = { by: ProjectAccount; catalogIds: string[]; since: number };
 
+/** An object type the project's network already has; the draft keeps it as it is. */
+export type ExistingObjectType = {
+  aliases: string[];
+  description: string;
+  id: string;
+  name: string;
+  primaryKeys: string[];
+  propertyCount: number;
+  /** The resource id of the table it reads; empty when it reads none. */
+  tableId: string;
+};
+
+/** A relation type the project's network already has. */
+export type ExistingRelationType = {
+  aliases: string[];
+  id: string;
+  name: string;
+  source: string;
+  target: string;
+};
+
+/** What the project's network already has and the draft did not write: empty on a new network. */
+export type ExistingDefinitions = {
+  objectTypes: ExistingObjectType[];
+  relationTypes: ExistingRelationType[];
+};
+
 export type DraftItems = {
   /** null unless catalogs are being added; the draft stays editable meanwhile. */
   adding: DraftAdding | null;
+  /** Tables drafting left out because an object type the network already has reads them. */
+  existingTables?: string[];
   decisions: DraftDecision[];
   excluded: DraftExcludedField[];
   objectTypes: DraftObjectType[];

@@ -9,6 +9,9 @@ import { AxiosError, type AxiosResponse } from "axios";
 
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
+import { getKnowledgeNetworkStatistics } from "@/modules/knowledge-network/services/network.service";
+import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/object-type.service";
 import type {
   CreateProjectInput,
   Project,
@@ -327,4 +330,34 @@ export async function getLatestRelease(knId: string): Promise<ProjectRelease | n
   return newest
     ? { createTime: newest.create_time, networkId: newest.network_id, version: newest.version }
     : null;
+}
+
+/** What an existing network brings to a new project: how much it models and the catalogs it reads. */
+export type ExistingNetworkStart = {
+  actionTypes: number;
+  catalogIds: string[];
+  objectTypes: number;
+  relationTypes: number;
+};
+
+/** Reads what a project created on the existing network would start from. */
+export async function getExistingNetworkStart(networkId: string): Promise<ExistingNetworkStart> {
+  const [statistics, objectTypes] = await Promise.all([
+    getKnowledgeNetworkStatistics(networkId),
+    listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true }),
+  ]);
+  const resourceIds = objectTypes
+    .map((item) =>
+      item.dataSource?.type === "resource" || !item.dataSource?.type ? item.dataSource?.id : "",
+    )
+    .filter((id): id is string => Boolean(id));
+  const resources = await getCatalogResources(resourceIds);
+  return {
+    actionTypes: statistics?.actionTypesTotal ?? 0,
+    catalogIds: Array.from(
+      new Set(resources.map((resource) => resource.catalogId).filter(Boolean)),
+    ),
+    objectTypes: statistics?.objectTypesTotal ?? objectTypes.length,
+    relationTypes: statistics?.relationTypesTotal ?? 0,
+  };
 }
