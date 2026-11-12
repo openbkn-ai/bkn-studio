@@ -73,7 +73,7 @@ export function NewProjectModal({
         if (!active) return;
         setStart(value);
         const known = new Set(catalogs.map((catalog) => catalog.id));
-        const chosen: string[] = form.getFieldValue("catalogIds") ?? [];
+        const chosen = (form.getFieldValue("catalogIds") as string[] | undefined) ?? [];
         const added = value.catalogIds.filter((id) => known.has(id) && !chosen.includes(id));
         if (added.length) {
           form.setFieldsValue({ catalogIds: [...chosen, ...added] });
