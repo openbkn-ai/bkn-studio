@@ -14,6 +14,7 @@ import { listObjectTypeResourceFields as listResourceFields } from "@/modules/kn
 import type { ObjectTypeResourceField } from "@/modules/knowledge-network/types/object-type";
 import { mockAddProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type {
+  ExistingDefinitions,
   DraftSourceCitation,
   DraftExtractionField,
   DraftDocumentModel,
@@ -330,6 +331,7 @@ export type BackendDraft = {
   error: string;
   items: {
     adding?: { by: BackendAccount; catalog_ids: string[] | null; since: number } | null;
+    inputs?: { existing_tables?: string[] | null } | null;
     decisions?: {
       action: string;
       after: unknown;
@@ -461,6 +463,9 @@ export function mapDraft(draft: BackendDraft): Draft {
             since: items.adding.since,
           }
         : null,
+      ...(items.inputs?.existing_tables?.length
+        ? { existingTables: items.inputs.existing_tables }
+        : {}),
       decisions: (items.decisions ?? []).map((decision) => ({
         action: decision.action,
         after: decision.after,
@@ -1243,6 +1248,52 @@ function acceptMockSuggestions(projectId: string, updateTime: number) {
 
 const draftPath = (projectId: string) =>
   `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/draft`;
+
+type BackendExisting = {
+  object_types:
+    | {
+        aliases?: string[] | null;
+        description: string;
+        id: string;
+        name: string;
+        primary_keys: string[] | null;
+        property_count: number;
+        table_id: string;
+      }[]
+    | null;
+  relation_types:
+    | { aliases?: string[] | null; id: string; name: string; source: string; target: string }[]
+    | null;
+};
+
+/** What the project's network already has and the draft did not write; empty on a new network. */
+export async function getExistingDefinitions(projectId: string): Promise<ExistingDefinitions> {
+  if (useMock) {
+    return wait({ objectTypes: [], relationTypes: [] });
+  }
+  const response = await http.get<BackendExisting>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/existing`,
+    { skipErrorToast: true },
+  );
+  return {
+    objectTypes: (response.data.object_types ?? []).map((item) => ({
+      aliases: item.aliases ?? [],
+      description: item.description,
+      id: item.id,
+      name: item.name,
+      primaryKeys: item.primary_keys ?? [],
+      propertyCount: item.property_count,
+      tableId: item.table_id,
+    })),
+    relationTypes: (response.data.relation_types ?? []).map((item) => ({
+      aliases: item.aliases ?? [],
+      id: item.id,
+      name: item.name,
+      source: item.source,
+      target: item.target,
+    })),
+  };
+}
 
 /** How often a draft that is drafting is read again, by every page that shows it. */
 export const DRAFT_POLL_MS = 5000;

@@ -79,6 +79,10 @@ export const bknProjectEnUS = {
       target: "Target knowledge network",
       existing: "Use an existing network",
       existingDescription: "Revise an existing network; the baseline is its live version",
+      existingStart:
+        "It has {{objects}} object types, {{relations}} relation types and {{actions}} action types, which concept modeling and kinetic modeling start from.",
+      catalogsFromNetwork:
+        "The data catalogs the network reads are selected; add or remove as needed.",
       networkPlaceholder: "Select a knowledge network",
       networkRequired: "Select a knowledge network",
       networksLoadFailed: "Failed to load knowledge networks",
@@ -298,6 +302,25 @@ export const bknProjectEnUS = {
       },
       summary:
         "Drafted from the tables of the project's data catalogs: {{objects}} object types, {{relations}} relation types.",
+      existing: {
+        title: "Already in the network",
+        mark: "Already in the network",
+        summary:
+          "The network already has {{objects}} object types and {{relations}} relation types. Confirming keeps them as they are; edit them in the knowledge network.",
+        skipped: "Drafting left out {{count}} tables the network already uses: {{tables}}.",
+        skipped_one: "Drafting left out {{count}} table the network already uses: {{tables}}.",
+        skipped_other: "Drafting left out {{count}} tables the network already uses: {{tables}}.",
+        objects: "Object types {{count}}",
+        objects_one: "Object type {{count}}",
+        objects_other: "Object types {{count}}",
+        relations: "Relation types {{count}}",
+        relations_one: "Relation type {{count}}",
+        relations_other: "Relation types {{count}}",
+        separator: ", ",
+        open: "View in the knowledge network",
+        ends: "{{source}} → {{target}}",
+        columns: { name: "Name", identity: "Identity", properties: "Properties", ends: "Ends" },
+      },
       pending: "{{count}} items wait for you",
       pending_one: "{{count}} item waits for you",
       pending_other: "{{count}} items wait for you",

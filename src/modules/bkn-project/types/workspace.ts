@@ -61,6 +61,10 @@ export const projectObjectTypePath = (projectId: string, itemId: string) =>
 export const networkWorkspacePath = (networkId: string) =>
   `/knowledge-network/workspace/${encodeURIComponent(networkId)}/overview`;
 
+/** An object type in its knowledge network's workspace. */
+export const networkObjectTypePath = (networkId: string, objectTypeId: string) =>
+  `/knowledge-network/workspace/${encodeURIComponent(networkId)}/object-types/${encodeURIComponent(objectTypeId)}/detail`;
+
 /** The tabs of the requirements and resources page, as they appear in its URL. */
 export const RESOURCE_TABS = ["catalogs", "knowledge-base", "documents"] as const;
 

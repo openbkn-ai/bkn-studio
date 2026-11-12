@@ -6,11 +6,15 @@
  */
 
 import { Alert, Form, Input, Modal, Radio, Select } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
-import { createProject } from "@/modules/bkn-project/services/project.service";
+import {
+  createProject,
+  type ExistingNetworkStart,
+  getExistingNetworkStart,
+} from "@/modules/bkn-project/services/project.service";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 
@@ -54,9 +58,37 @@ export function NewProjectModal({
   // Why creating failed, said in the dialog, which stays open to retry.
   const [failure, setFailure] = useState<string | null>(null);
   const mode = Form.useWatch("mode", form) ?? "existing";
+  const knId = Form.useWatch("knId", form);
+  // What the chosen existing network brings: shown, and its catalogs selected for drafting.
+  const [start, setStart] = useState<ExistingNetworkStart | null>(null);
+
+  useEffect(() => {
+    if (mode !== "existing" || !knId) {
+      setStart(null);
+      return;
+    }
+    let active = true;
+    getExistingNetworkStart(knId)
+      .then((value) => {
+        if (!active) return;
+        setStart(value);
+        const known = new Set(catalogs.map((catalog) => catalog.id));
+        const chosen = (form.getFieldValue("catalogIds") as string[] | undefined) ?? [];
+        const added = value.catalogIds.filter((id) => known.has(id) && !chosen.includes(id));
+        if (added.length) {
+          form.setFieldsValue({ catalogIds: [...chosen, ...added] });
+        }
+      })
+      // Without it the dialog works as before: the person picks the catalogs.
+      .catch(() => active && setStart(null));
+    return () => {
+      active = false;
+    };
+  }, [catalogs, form, knId, mode]);
 
   const handleClose = () => {
     form.resetFields();
+    setStart(null);
     setFailure(null);
     setAskVersioning(false);
     onCancel();
@@ -179,6 +211,15 @@ export function NewProjectModal({
                 showSearch
               />
             </Form.Item>
+            {start && start.objectTypes + start.relationTypes + start.actionTypes > 0 ? (
+              <div className={styles.start}>
+                {t("bknProject.create.existingStart", {
+                  actions: start.actionTypes,
+                  objects: start.objectTypes,
+                  relations: start.relationTypes,
+                })}
+              </div>
+            ) : null}
           </>
         ) : (
           <Form.Item
@@ -197,7 +238,11 @@ export function NewProjectModal({
         )}
 
         <Form.Item
-          extra={t("bknProject.create.catalogsHint")}
+          extra={
+            start?.catalogIds.length
+              ? t("bknProject.create.catalogsFromNetwork")
+              : t("bknProject.create.catalogsHint")
+          }
           label={t("bknProject.create.catalogs")}
           name="catalogIds"
         >
