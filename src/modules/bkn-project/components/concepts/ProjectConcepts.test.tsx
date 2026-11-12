@@ -704,7 +704,9 @@ describe("ProjectConcepts", () => {
     expect(
       screen.getByRole("button", { name: "bknProject.model.ask.newConversation" }),
     ).toBeDisabled();
-    await act(async () => finish(concepts({ draftUpdateTime: 6 })));
+    act(() => {
+      finish(concepts({ draftUpdateTime: 6 }));
+    });
     await waitFor(() => expect(question).not.toBeDisabled());
   });
 
