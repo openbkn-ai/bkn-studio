@@ -45,6 +45,16 @@ const service = vi.hoisted(() => ({
   getDraft: vi.fn(),
   judgeConcept: vi.fn(),
   mergeConcept: vi.fn(),
+  reviseConcept: vi.fn(),
+}));
+const assistant = vi.hoisted(() => ({ askConcepts: vi.fn(), understandCatalogs: vi.fn() }));
+vi.mock("@/modules/bkn-project/services/ask.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/ask.service")>()),
+  askConcepts: assistant.askConcepts,
+}));
+vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  understandCatalogs: assistant.understandCatalogs,
 }));
 const requirements = vi.hoisted(() => ({
   editItem: vi.fn(),
@@ -79,6 +89,8 @@ const project = { archived: false, id: "p1", knId: "orders" } as Project;
 
 function concept(extra: Partial<Concept>): Concept {
   return {
+    ai: false,
+    aliases: [],
     blocked: null,
     description: "",
     item: null,
@@ -136,6 +148,7 @@ function concepts(extra: Partial<Concepts> = {}): Concepts {
     ],
     counts: { blocked: 1, in_model: 1, judged: 1, pending: 1, "verdict:object": 2 },
     draftUpdateTime: 5,
+    notUnderstood: 0,
     requirementUpdateTime: 9,
     ...extra,
   };
@@ -575,6 +588,92 @@ describe("ProjectConcepts", () => {
     await waitFor(() => expect(confirmMock).toHaveBeenCalled());
     await confirmMock.mock.calls[0][0].onOk();
     expect(service.generateDraft).toHaveBeenLastCalledWith("p1", { discardDecisions: true });
+  });
+
+  it("names a table's concept as semantic understanding did, marked lightly, with the table as an alias", async () => {
+    service.getConcepts.mockResolvedValue(
+      concepts({
+        concepts: [
+          concept({
+            ai: true,
+            aliases: ["erp_material"],
+            description: "Material master data",
+            item: { adopted: true, id: "erp_material", kind: "object_types" },
+            key: "object_types/erp_material",
+            name: "Material",
+            suggestedBecause: "table_understood",
+          }),
+        ],
+      }),
+    );
+    renderConcepts();
+
+    expect(await screen.findByText("Material")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "bknProject.concepts.aiMark" })).toBeInTheDocument();
+    expect(
+      screen.getByText(`bknProject.concepts.aliases:${JSON.stringify({ names: "erp_material" })}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `bknProject.concepts.understoodWith:${JSON.stringify({ description: "Material master data" })}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says tables are not understood yet, and understands them before extracting again", async () => {
+    service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 2 }));
+    assistant.understandCatalogs.mockResolvedValue([]);
+    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
+    renderConcepts();
+
+    expect(
+      await screen.findByText(`bknProject.concepts.notUnderstood:${JSON.stringify({ count: 2 })}`),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.reextract" }));
+    await waitFor(() => expect(service.generateDraft).toHaveBeenCalledWith("p1", {}));
+    expect(assistant.understandCatalogs).toHaveBeenCalledWith("p1");
+  });
+
+  it("asks AI about the concepts and adopts the chosen changes one by one as decisions", async () => {
+    const define = {
+      field: "define",
+      reason: "A business name",
+      value: { description: "", key: "object_types/orders", name: "Sales order" },
+    };
+    const verdict = {
+      field: "verdict",
+      reason: "",
+      value: { key: "object_types/orders", verdict: "event" },
+    };
+    assistant.askConcepts.mockResolvedValue({
+      answer: "Rename it.",
+      dropped: [],
+      revisions: [define, verdict],
+    });
+    const next = concepts({ draftUpdateTime: 6 });
+    service.reviseConcept
+      .mockResolvedValueOnce(next)
+      .mockResolvedValueOnce(concepts({ draftUpdateTime: 7 }));
+    renderConcepts();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+      target: { value: "Name them" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    expect(await screen.findByText("Rename it.")).toBeInTheDocument();
+    expect(assistant.askConcepts).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "p1", question: "Name them" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.adoptSelected" }));
+    await waitFor(() => expect(service.reviseConcept).toHaveBeenCalledTimes(2));
+    expect(service.reviseConcept).toHaveBeenNthCalledWith(1, "p1", 5, define);
+    // The second is written over the draft the first left.
+    expect(service.reviseConcept).toHaveBeenNthCalledWith(2, "p1", 6, verdict);
+    await waitFor(() =>
+      expect(messageMock.success).toHaveBeenCalledWith("bknProject.model.ask.adopted"),
+    );
   });
 
   it("shows others the judgments without letting them change any", async () => {

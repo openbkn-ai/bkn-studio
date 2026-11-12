@@ -40,7 +40,20 @@ const SETTLE_MS = 1000;
 /** Why Ask AI did not answer, as the page says it; any other is said as `other`. */
 const ERRORS = new Set(["NotReady", "ItemNotFound", "AskUnavailable", "AskTimeout"]);
 /** What a proposed change was to, as the page names it; any other is named as `other`. */
-const FIELDS = new Set(["name", "comment", "primary_keys", "display_key", "data_property", "ends"]);
+const FIELDS = new Set([
+  "name",
+  "comment",
+  "primary_keys",
+  "display_key",
+  "data_property",
+  "ends",
+  "aliases",
+  "define",
+  "verdict",
+  "merge",
+  "split",
+  "add",
+]);
 /** Why a proposed change was not used, as the page says it; any other is said as `other`. */
 const DROPPED = new Set([
   "unchanged",
@@ -56,6 +69,11 @@ const DROPPED = new Set([
   "duplicate",
   "not_from_given_end",
   "too_long",
+  "invalid",
+  "invalid_aliases",
+  "unknown_concept",
+  "verdict_not_fit",
+  "in_specification",
 ]);
 
 /** A change as the person sees it before applying it: what it changes, from what to what. */
@@ -73,11 +91,22 @@ type Message = {
   tone?: "error";
 };
 
-type Proposal = {
+/** A change Ask AI proposes: of an item being edited, or of the concepts. */
+type Revision = { field: string; reason: string };
+
+/** Asks AI with the question and the turns before it; the answer's text comes as it is written. */
+export type AskWith<R extends Revision> = (request: {
+  history: AskTurn[];
+  onText: (text: string) => void;
+  question: string;
+  signal: AbortSignal;
+}) => Promise<{ answer: string; dropped: AskDropped[]; revisions: R[] }>;
+
+type Proposal<R extends Revision> = {
   dropped: AskDropped[];
   /** How each change read against the editor when the answer came, kept as it was then. */
   previews: RevisionPreview[];
-  revisions: AskRevision[];
+  revisions: R[];
   /** The changes to apply, by their place in `revisions`; all of them at first. */
   selected: number[];
 };
@@ -88,9 +117,15 @@ type Proposal = {
  * the changes it proposes, each from what it is now to what it would be. Chosen changes go into
  * the editor only when applied, can be taken back, and are written only by saving. Closing the
  * editor forgets the conversation.
+ *
+ * Beside a page that writes each change as it is adopted, such as the concepts, `askWith` asks and
+ * `adopt` writes the chosen changes one by one; one that fails stays to adopt again, and what was
+ * adopted is changed on the page, not taken back here.
  */
-export function AskAiSidebar({
-  itemId,
+export function AskAiSidebar<R extends Revision = AskRevision>({
+  adopt,
+  askWith,
+  itemId = null,
   kind,
   onApply,
   onClose,
@@ -100,21 +135,25 @@ export function AskAiSidebar({
   top,
   working,
 }: {
+  /** Writes one change; replies whether it was written. */
+  adopt?: (revision: R) => Promise<boolean>;
+  /** Asks in place of asking about the item being edited. */
+  askWith?: AskWith<R>;
   /** The item asked about; null for one being made. */
-  itemId: string | null;
-  kind: AskKind;
+  itemId?: string | null;
+  kind: AskKind | "concepts";
   /** Puts the changes into the editor; replies how to take them back. */
-  onApply: (revisions: AskRevision[]) => UndoApply;
+  onApply?: (revisions: R[]) => UndoApply;
   onClose: () => void;
   /** How a change reads against the editor as it is now. */
-  preview: (revision: AskRevision) => RevisionPreview;
+  preview: (revision: R) => RevisionPreview;
   projectId: string;
   /** What is being edited, under the title. */
   subtitle: string;
   /** Shown above the conversation, such as suggestions to start from. */
   top?: ReactNode;
   /** What the editor holds now, saved or not. */
-  working: () => DraftObjectTypeSave | DraftRelationTypeSave;
+  working?: () => DraftObjectTypeSave | DraftRelationTypeSave;
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -123,7 +162,8 @@ export function AskAiSidebar({
   const [settling, setSettling] = useState(false);
   const settle = useRef<number | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
-  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [proposal, setProposal] = useState<Proposal<R> | null>(null);
+  const [adopting, setAdopting] = useState(false);
   const [undo, setUndo] = useState<{ take: UndoApply } | null>(null);
   const [promptRequest, setPromptRequest] = useState<{ revision: number; value: string }>();
   const turns = useRef<AskTurn[]>([]);
@@ -173,9 +213,16 @@ export function AskAiSidebar({
       signal: controller.signal,
     };
     try {
-      const reply = await (kind === "object_types"
-        ? askDraftItem({ ...request, kind, working: working() as DraftObjectTypeSave })
-        : askDraftItem({ ...request, kind, working: working() as DraftRelationTypeSave }));
+      const reply = askWith
+        ? await askWith(request)
+        : // Asked about the item being edited, its changes are of the item's kind.
+          ((await (kind === "object_types"
+            ? askDraftItem({ ...request, kind, working: working?.() as DraftObjectTypeSave })
+            : askDraftItem({
+                ...request,
+                kind: "relation_types",
+                working: working?.() as DraftRelationTypeSave,
+              }))) as unknown as { answer: string; dropped: AskDropped[]; revisions: R[] });
       const answer = (reply.answer || text).trim();
       const proposed = reply.revisions.length > 0 || reply.dropped.length > 0;
       // AI may give only its changes: they show with a line saying so, never an empty bubble.
@@ -220,10 +267,44 @@ export function AskAiSidebar({
     setUndo(null);
   };
 
-  const apply = () => {
-    if (proposal) {
-      setUndo({ take: onApply(proposal.selected.map((index) => proposal.revisions[index])) });
+  const apply = async () => {
+    if (!proposal) {
+      return;
+    }
+    if (!adopt) {
+      if (onApply) {
+        setUndo({ take: onApply(proposal.selected.map((index) => proposal.revisions[index])) });
+      }
       setProposal(null);
+      return;
+    }
+    // Written one by one, in order: what is left, failed or not chosen, can be adopted next.
+    setAdopting(true);
+    const left: number[] = [];
+    let failed = false;
+    for (const index of proposal.revisions.keys()) {
+      if (
+        !proposal.selected.includes(index) ||
+        failed ||
+        !(await adopt(proposal.revisions[index]))
+      ) {
+        failed ||= proposal.selected.includes(index);
+        left.push(index);
+      }
+    }
+    setAdopting(false);
+    setProposal(
+      left.length
+        ? {
+            dropped: [],
+            previews: left.map((index) => proposal.previews[index]),
+            revisions: left.map((index) => proposal.revisions[index]),
+            selected: [],
+          }
+        : null,
+    );
+    if (!failed) {
+      message.success(t(`${PREFIX}.adopted`));
     }
   };
 
@@ -243,7 +324,7 @@ export function AskAiSidebar({
     });
 
   // A relation type being made is asked about differently from one that exists.
-  const topic = itemId === null ? `${kind}_new` : kind;
+  const topic = itemId === null && kind !== "concepts" ? `${kind}_new` : kind;
   const empty = !messages.length && !generating;
   return (
     <aside aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
@@ -320,7 +401,7 @@ export function AskAiSidebar({
             {proposal.revisions.length ? (
               <>
                 <strong>{t(`${PREFIX}.proposalTitle`)}</strong>
-                <p>{t(`${PREFIX}.proposalHint`)}</p>
+                <p>{t(`${PREFIX}.${adopt ? "adoptHint" : "proposalHint"}`)}</p>
                 {proposal.revisions.map((revision, index) => {
                   const shown = proposal.previews[index];
                   return (
@@ -367,10 +448,17 @@ export function AskAiSidebar({
             ) : null}
             {proposal.revisions.length ? (
               <Space>
-                <Button disabled={!proposal.selected.length} onClick={apply} type="primary">
-                  {t(`${PREFIX}.apply`)}
+                <Button
+                  disabled={!proposal.selected.length}
+                  loading={adopting}
+                  onClick={() => void apply()}
+                  type="primary"
+                >
+                  {t(`${PREFIX}.${adopt ? "adoptSelected" : "apply"}`)}
                 </Button>
-                <Button onClick={() => setProposal(null)}>{t(`${PREFIX}.reject`)}</Button>
+                <Button disabled={adopting} onClick={() => setProposal(null)}>
+                  {t(`${PREFIX}.reject`)}
+                </Button>
               </Space>
             ) : null}
           </div>

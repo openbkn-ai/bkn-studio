@@ -58,6 +58,10 @@ export type Concept = {
   blocked: ConceptBlocker | null;
   /** The concepts merged into this one. */
   merged: { key: string; name: string }[];
+  /** Its other names: its item's, and the table name of one semantic understanding named. */
+  aliases: string[];
+  /** Named by semantic understanding, or added or named from Ask AI. */
+  ai: boolean;
 };
 
 export type Concepts = {
@@ -68,4 +72,29 @@ export type Concepts = {
   concepts: Concept[];
   /** By state, and by verdict as `verdict:<verdict>`. */
   counts: Record<string, number>;
+  /** The tables semantic understanding has not named yet: their concepts keep the table name. */
+  notUnderstood: number;
+};
+
+/** One of the concepts a split makes. */
+export type ConceptPart = { description: string; name: string; verdict: ConceptVerdict };
+
+/**
+ * A change Ask AI proposes of the concepts, checked by bkn-project against them as they stand.
+ * Adopting one records it as the person's decision, which can be changed again.
+ */
+export type ConceptRevision = { reason: string } & (
+  | { field: "define"; value: { description: string; key: string; name: string } }
+  | { field: "verdict"; value: { key: string; verdict: ConceptVerdict } }
+  | { field: "merge"; value: { into: string; key: string } }
+  | { field: "split"; value: { key: string; parts: ConceptPart[] } }
+  | { field: "add"; value: { description: string; name: string; verdict: ConceptVerdict } }
+  | { field: "aliases"; value: { aliases: string[]; key: string } }
+);
+
+/** Ask AI's answer about the concepts, and the changes it proposes. */
+export type ConceptAskAnswer = {
+  answer: string;
+  dropped: { field: string; reason: string }[];
+  revisions: ConceptRevision[];
 };

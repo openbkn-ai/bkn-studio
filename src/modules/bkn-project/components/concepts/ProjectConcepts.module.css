@@ -5,10 +5,38 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* The list, and Ask AI beside it on the right while it is open. */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .page {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+}
+
+.side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: calc(100vh - 160px);
+  min-height: 420px;
+}
+
+/* A concept AI named or added: a small dot before its name, no highlight. */
+.aiMark {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--color-primary-500);
 }
 
 .center {

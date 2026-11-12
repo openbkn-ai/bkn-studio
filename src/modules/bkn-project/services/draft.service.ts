@@ -37,6 +37,7 @@ import type {
 import type {
   Concept,
   ConceptBlocker,
+  ConceptRevision,
   Concepts,
   ConceptVerdict,
 } from "@/modules/bkn-project/types/concepts";
@@ -1825,6 +1826,8 @@ export async function draftSourceChanges(projectId: string, signature: string): 
 }
 
 type BackendConcept = {
+  ai?: boolean;
+  aliases?: string[] | null;
   blocked?: string;
   description?: string;
   item?: Concept["item"];
@@ -1851,12 +1854,15 @@ type BackendConcepts = {
   concepts?: BackendConcept[] | null;
   counts?: Record<string, number> | null;
   draft_update_time?: number;
+  not_understood?: number;
   requirement_update_time?: number;
 };
 
 function mapConcepts(data: BackendConcepts): Concepts {
   return {
     concepts: (data.concepts ?? []).map((concept) => ({
+      ai: concept.ai ?? false,
+      aliases: concept.aliases ?? [],
       blocked: (concept.blocked as ConceptBlocker | undefined) || null,
       description: concept.description ?? "",
       item: concept.item ?? null,
@@ -1878,6 +1884,7 @@ function mapConcepts(data: BackendConcepts): Concepts {
     })),
     counts: data.counts ?? {},
     draftUpdateTime: data.draft_update_time ?? 0,
+    notUnderstood: data.not_understood ?? 0,
     requirementUpdateTime: data.requirement_update_time ?? 0,
   };
 }
@@ -1993,6 +2000,8 @@ function mockConcepts(projectId: string): Concepts {
                 ? "blocked"
                 : "judged";
           return {
+            ai: false,
+            aliases: [],
             blocked: state === "blocked" ? entry.blocker : null,
             description: entry.description,
             item: entry.item,
@@ -2033,6 +2042,7 @@ function mockConcepts(projectId: string): Concepts {
     concepts,
     counts,
     draftUpdateTime: draft?.status === "ready" ? draft.update_time : 0,
+    notUnderstood: 0,
     // The mock lists no requirement concept of its own.
     requirementUpdateTime: 0,
   };
@@ -2123,6 +2133,62 @@ export async function mergeConcept(
   const response = await http.post<BackendConcepts>(
     `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:merge`,
     { into, key, update_time: updateTime },
+    { skipErrorToast: true },
+  );
+  return mapConcepts(response.data);
+}
+
+/**
+ * Adopts a change Ask AI proposed of the concepts over the draft made at `updateTime`: recorded as
+ * the person's decision, as judging or merging by hand is.
+ */
+export async function reviseConcept(
+  projectId: string,
+  updateTime: number,
+  revision: ConceptRevision,
+): Promise<Concepts> {
+  if (useMock) {
+    switch (revision.field) {
+      case "verdict":
+        return judgeConcept(projectId, updateTime, {
+          key: revision.value.key,
+          reason: revision.reason,
+          verdict: revision.value.verdict,
+        });
+      case "merge":
+        return mergeConcept(projectId, updateTime, revision.value.key, revision.value.into);
+      default: {
+        // The mock renames an item; what else is proposed it leaves as it is.
+        const draft = mockDrafts[projectId];
+        if (!draft || draft.update_time !== updateTime) {
+          throw mockConflict("Stale", "The draft changed since it was read; reload it.");
+        }
+        if (revision.field === "define") {
+          const [kind, id] = revision.value.key.split("/");
+          const item =
+            kind === "object_types"
+              ? draft.items.object_types?.find((entry) => entry.id === id)
+              : kind === "relation_types"
+                ? draft.items.relation_types?.find((entry) => entry.id === id)
+                : undefined;
+          if (item) {
+            item.name = revision.value.name;
+            item.description = revision.value.description;
+          }
+        }
+        draft.update_time = Math.max(Date.now(), draft.update_time + 1);
+        return wait(mockConcepts(projectId));
+      }
+    }
+  }
+  const response = await http.post<BackendConcepts>(
+    `${API_PREFIX}/${encodeURIComponent(projectId)}/ontology/concepts:revise`,
+    {
+      field: revision.field,
+      reason: revision.reason,
+      update_time: updateTime,
+      value: revision.value,
+    },
     { skipErrorToast: true },
   );
   return mapConcepts(response.data);

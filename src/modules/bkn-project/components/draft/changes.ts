@@ -46,6 +46,10 @@ export function itemNames(draft: Draft): ItemNames {
 export type DescribedDecision = { after?: string; before?: string; text: string };
 
 const asText = (value: unknown) => (typeof value === "string" ? value : "");
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 const asList = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
@@ -167,6 +171,12 @@ function conceptDecisionText(t: TFunction, decision: DraftDecision, names: ItemN
       return t("bknProject.concepts.history.merge", {
         into: conceptName(asText(decision.after), names),
         name,
+      });
+    case "define":
+    case "add":
+      // The name it was given, as the decision records it.
+      return t(`bknProject.concepts.history.${decision.action}`, {
+        name: asText(asRecord(decision.after)?.name) || name,
       });
     default:
       return t("bknProject.concepts.history.unmerge", { name });

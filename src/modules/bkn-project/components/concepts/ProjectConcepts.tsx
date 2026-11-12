@@ -7,7 +7,7 @@
 
 import { Alert, Segmented, Select, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -21,9 +21,17 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import {
+  AskAiSidebar,
+  type RevisionPreview,
+} from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
-import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import { askConcepts } from "@/modules/bkn-project/services/ask.service";
+import {
+  projectErrorCode,
+  understandCatalogs,
+} from "@/modules/bkn-project/services/publish.service";
 import {
   editItem,
   extractRequirementConcepts,
@@ -37,9 +45,11 @@ import {
   getDraft,
   judgeConcept,
   mergeConcept,
+  reviseConcept,
 } from "@/modules/bkn-project/services/draft.service";
 import type {
   Concept,
+  ConceptRevision,
   Concepts,
   ConceptState,
   ConceptVerdict,
@@ -86,6 +96,8 @@ function becauseKey(code: string) {
   }
   return [
     "table_entity",
+    "table_understood",
+    "ai",
     "code_table",
     "foreign_key",
     "name_match",
@@ -141,6 +153,12 @@ export function ProjectConcepts({
   const [filter, setFilter] = useState<Filter>("all");
   // Why the last judgment or merge was refused, kept on the page until it is dealt with.
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  // Ask AI beside the list; what it proposes is adopted over the concepts as they are now.
+  const [asking, setAsking] = useState(false);
+  const current = useRef<Concepts | undefined>(undefined);
+  useEffect(() => {
+    current.current = concepts;
+  }, [concepts]);
   const canEdit = ownerIsCaller && !project.archived;
 
   // Tells whether the page was read: a failed read keeps what was shown before.
@@ -314,9 +332,89 @@ export function ProjectConcepts({
     }
   };
 
+  // Adopting a change Ask AI proposed records it as the person's decision, as judging does.
+  const adoptRevision = async (revision: ConceptRevision): Promise<boolean> => {
+    const read = current.current;
+    if (!read) {
+      return false;
+    }
+    try {
+      const next = await reviseConcept(project.id, read.draftUpdateTime, revision);
+      current.current = next;
+      setConcepts(next);
+      setRefusal(null);
+      readDraftAgain();
+      return true;
+    } catch (error) {
+      refused(error, "revise.failed");
+      return false;
+    }
+  };
+
+  // How a change reads against the concepts as they are now.
+  const revisionPreview = (revision: ConceptRevision): RevisionPreview => {
+    const list = current.current?.concepts ?? [];
+    const find = (key: string) => list.find((concept) => concept.key === key);
+    const named = (name: string, description: string) =>
+      description ? t(`${PREFIX}.revise.named`, { description, name }) : name;
+    const separator = t("bknProject.listSeparator");
+    if (revision.field === "add") {
+      return {
+        after: t(`${PREFIX}.revise.added`, {
+          concept: named(revision.value.name, revision.value.description),
+          verdict: t(`${PREFIX}.verdict.${revision.value.verdict}`),
+        }),
+        before: "",
+        label: t(`${PREFIX}.revise.add`),
+      };
+    }
+    const concept = find(revision.value.key);
+    const name = concept?.name ?? "";
+    const label = t(`${PREFIX}.revise.${revision.field}`, { name });
+    switch (revision.field) {
+      case "define":
+        return {
+          after: named(revision.value.name, revision.value.description),
+          before: named(name, concept?.description ?? ""),
+          label,
+        };
+      case "verdict":
+        return {
+          after: t(`${PREFIX}.verdict.${revision.value.verdict}`),
+          before: concept ? t(`${PREFIX}.verdict.${concept.verdict}`) : "",
+          label,
+        };
+      case "merge":
+        return {
+          after: t(`${PREFIX}.revise.into`, {
+            name: find(revision.value.into)?.name ?? revision.value.into,
+          }),
+          before: t(`${PREFIX}.revise.kept`),
+          label,
+        };
+      case "split":
+        return {
+          after: revision.value.parts.map((part) => part.name).join(separator),
+          before: name,
+          label,
+        };
+      case "aliases":
+        return {
+          after: revision.value.aliases.join(separator) || t(`${PREFIX}.revise.nothing`),
+          before: concept?.aliases.join(separator) || t(`${PREFIX}.revise.nothing`),
+          label,
+        };
+    }
+  };
+
   // Extracting again over decisions discards them, so it asks first, as the modeling page does.
+  // Tables semantic understanding has not named are understood first, as far as the person may:
+  // the concepts take the business names once it finishes.
   const extract = async (discardDecisions: boolean) => {
     setBusy("extract");
+    if (concepts?.notUnderstood) {
+      await understandCatalogs(project.id).catch(() => undefined);
+    }
     try {
       setDraft(await generateDraft(project.id, discardDecisions ? { discardDecisions } : {}));
     } catch (error) {
@@ -466,7 +564,24 @@ export function ProjectConcepts({
       key: "concept",
       render: (_value, concept) => (
         <div className={styles.cell}>
-          <span className={styles.name}>{concept.name}</span>
+          <span className={styles.name}>
+            {concept.ai ? (
+              <span
+                aria-label={t(`${PREFIX}.aiMark`)}
+                className={styles.aiMark}
+                role="img"
+                title={t(`${PREFIX}.aiMark`)}
+              />
+            ) : null}
+            {concept.name}
+          </span>
+          {concept.aliases.length ? (
+            <span className={styles.muted}>
+              {t(`${PREFIX}.aliases`, {
+                names: concept.aliases.join(t("bknProject.listSeparator")),
+              })}
+            </span>
+          ) : null}
           {concept.description ? <span className={styles.muted}>{concept.description}</span> : null}
           {concept.merged.length ? (
             <span className={styles.muted}>
@@ -528,7 +643,11 @@ export function ProjectConcepts({
     {
       key: "reason",
       render: (_value, concept) => {
-        const because = t(`${PREFIX}.because.${becauseKey(concept.suggestedBecause)}`);
+        // What semantic understanding said of the table is the reason it is what it is.
+        const because =
+          concept.suggestedBecause === "table_understood" && concept.description
+            ? t(`${PREFIX}.understoodWith`, { description: concept.description })
+            : t(`${PREFIX}.because.${becauseKey(concept.suggestedBecause)}`);
         // Drafting found it but left it out: say so, and what it could be judged instead.
         const leftOut =
           concept.state === "pending" &&
@@ -606,159 +725,193 @@ export function ProjectConcepts({
   ];
 
   return (
-    <div className={styles.page}>
-      <div className={styles.head}>
-        <span className={styles.muted}>
-          {kbMode === "hidden"
-            ? t(`${PREFIX}.summaryCore`, {
-                requirements: sources.requirement.size,
-                tables: sources.table.size,
-              })
-            : t(`${PREFIX}.summary`, {
-                documents: sources.document.size,
-                requirements: sources.requirement.size,
-                tables: sources.table.size,
-              })}
-        </span>
-        {canEdit ? (
-          <span className={styles.actions}>
-            <AppButton
-              disabled={extractingRequirements || (busy !== null && busy !== "requirements")}
-              loading={busy === "requirements"}
-              onClick={() => void extractRequirements()}
-            >
-              {t(`${PREFIX}.requirements.extract`)}
-            </AppButton>
-            <AppButton
-              disabled={drafting || (busy !== null && busy !== "extract")}
-              loading={busy === "extract"}
-              onClick={() => void extract(false)}
-            >
-              {t(`${PREFIX}.reextract`)}
-            </AppButton>
+    <div className={styles.layout}>
+      <div className={styles.page}>
+        <div className={styles.head}>
+          <span className={styles.muted}>
+            {kbMode === "hidden"
+              ? t(`${PREFIX}.summaryCore`, {
+                  requirements: sources.requirement.size,
+                  tables: sources.table.size,
+                })
+              : t(`${PREFIX}.summary`, {
+                  documents: sources.document.size,
+                  requirements: sources.requirement.size,
+                  tables: sources.table.size,
+                })}
           </span>
-        ) : (
-          <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
-        )}
-      </div>
-
-      {refusal ? (
-        <Alert
-          action={
-            refusal.reload ? (
-              <AppButton
-                // Polling reads the page too: only reading it on request settles the refusal, and
-                // only once the read succeeds.
-                onClick={() => void load().then((read) => read && setRefusal(null))}
-                size="small"
-              >
-                {t(`${PREFIX}.reload`)}
-              </AppButton>
-            ) : undefined
-          }
-          closable
-          message={refusal.text}
-          onClose={() => setRefusal(null)}
-          showIcon
-          type="warning"
-        />
-      ) : null}
-
-      {/* The funnel: where the concepts come from, what they were judged, how many are in. */}
-      <dl className={styles.stats} data-region="funnel">
-        {[
-          ["sources", sources.table.size + sources.document.size + sources.requirement.size],
-          ["concepts", total],
-        ].map(([key, value]) => (
-          <div className={styles.stat} key={key}>
-            <dt>{t(`${PREFIX}.stats.${key}`)}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-        {(["object", "event", "property", "values", "relation", "kinetic", "none"] as const).map(
-          (verdict) => (
-            <div className={styles.stat} key={verdict}>
-              <dt>{t(`${PREFIX}.verdict.${verdict}`)}</dt>
-              <dd>{concepts.counts[`verdict:${verdict}`] ?? 0}</dd>
-            </div>
-          ),
-        )}
-        {/* As the modeling page counts it: what drafting adopted is in until someone takes it out. */}
-        <div className={styles.stat}>
-          <dt>{t(`${PREFIX}.stats.inModel`)}</dt>
-          <dd>{inModel.count}</dd>
-          {inModel.unconfirmed ? (
-            <span className={styles.muted}>
-              {t(`${PREFIX}.stats.inModelPending`, { count: inModel.unconfirmed })}
-            </span>
-          ) : null}
-        </div>
-      </dl>
-
-      {drafting ? <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" /> : null}
-      {extractingRequirements ? (
-        <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
-      ) : conceptsRun?.status === "failed" ? (
-        // What the last run that ended extracted stands: say so, rather than an empty page.
-        <Alert
-          message={t(
-            conceptsRun.extracted
-              ? `${PREFIX}.requirements.failedKept`
-              : `${PREFIX}.requirements.failed`,
-          )}
-          showIcon
-          type="warning"
-        />
-      ) : conceptsRun?.extracted && conceptsRun.stale ? (
-        <Alert message={t(`${PREFIX}.requirements.stale`)} showIcon type="info" />
-      ) : null}
-      {pending && ready ? (
-        <Alert
-          action={
+          {canEdit ? (
             <span className={styles.actions}>
-              {canEdit ? (
-                <AppButton
-                  disabled={busy !== null && busy !== "accept"}
-                  loading={busy === "accept"}
-                  onClick={acceptAll}
-                  size="small"
-                  type="primary"
-                >
-                  {t(`${PREFIX}.acceptAll`)}
+              {ready ? (
+                <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
+                  {t(`${PREFIX}.ask`)}
                 </AppButton>
               ) : null}
-              <AppButton onClick={onGoToModel} size="small">
-                {t(`${PREFIX}.goToModel`)}
+              <AppButton
+                disabled={extractingRequirements || (busy !== null && busy !== "requirements")}
+                loading={busy === "requirements"}
+                onClick={() => void extractRequirements()}
+              >
+                {t(`${PREFIX}.requirements.extract`)}
+              </AppButton>
+              <AppButton
+                disabled={drafting || (busy !== null && busy !== "extract")}
+                loading={busy === "extract"}
+                onClick={() => void extract(false)}
+              >
+                {t(`${PREFIX}.reextract`)}
               </AppButton>
             </span>
-          }
-          description={t(`${PREFIX}.pendingAdopted`)}
-          message={t(`${PREFIX}.pending`, { count: pending })}
-          showIcon
-          type="info"
+          ) : (
+            <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
+          )}
+        </div>
+
+        {refusal ? (
+          <Alert
+            action={
+              refusal.reload ? (
+                <AppButton
+                  // Polling reads the page too: only reading it on request settles the refusal, and
+                  // only once the read succeeds.
+                  onClick={() => void load().then((read) => read && setRefusal(null))}
+                  size="small"
+                >
+                  {t(`${PREFIX}.reload`)}
+                </AppButton>
+              ) : undefined
+            }
+            closable
+            message={refusal.text}
+            onClose={() => setRefusal(null)}
+            showIcon
+            type="warning"
+          />
+        ) : null}
+
+        {/* The funnel: where the concepts come from, what they were judged, how many are in. */}
+        <dl className={styles.stats} data-region="funnel">
+          {[
+            ["sources", sources.table.size + sources.document.size + sources.requirement.size],
+            ["concepts", total],
+          ].map(([key, value]) => (
+            <div className={styles.stat} key={key}>
+              <dt>{t(`${PREFIX}.stats.${key}`)}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+          {(["object", "event", "property", "values", "relation", "kinetic", "none"] as const).map(
+            (verdict) => (
+              <div className={styles.stat} key={verdict}>
+                <dt>{t(`${PREFIX}.verdict.${verdict}`)}</dt>
+                <dd>{concepts.counts[`verdict:${verdict}`] ?? 0}</dd>
+              </div>
+            ),
+          )}
+          {/* As the modeling page counts it: what drafting adopted is in until someone takes it out. */}
+          <div className={styles.stat}>
+            <dt>{t(`${PREFIX}.stats.inModel`)}</dt>
+            <dd>{inModel.count}</dd>
+            {inModel.unconfirmed ? (
+              <span className={styles.muted}>
+                {t(`${PREFIX}.stats.inModelPending`, { count: inModel.unconfirmed })}
+              </span>
+            ) : null}
+          </div>
+        </dl>
+
+        {drafting ? <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" /> : null}
+        {concepts.notUnderstood ? (
+          <Alert
+            action={
+              <AppButton onClick={onGoToResources} size="small">
+                {t(`${PREFIX}.understandAction`)}
+              </AppButton>
+            }
+            message={t(`${PREFIX}.${canEdit ? "notUnderstood" : "notUnderstoodReadOnly"}`, {
+              count: concepts.notUnderstood,
+            })}
+            showIcon
+            type="info"
+          />
+        ) : null}
+        {extractingRequirements ? (
+          <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
+        ) : conceptsRun?.status === "failed" ? (
+          // What the last run that ended extracted stands: say so, rather than an empty page.
+          <Alert
+            message={t(
+              conceptsRun.extracted
+                ? `${PREFIX}.requirements.failedKept`
+                : `${PREFIX}.requirements.failed`,
+            )}
+            showIcon
+            type="warning"
+          />
+        ) : conceptsRun?.extracted && conceptsRun.stale ? (
+          <Alert message={t(`${PREFIX}.requirements.stale`)} showIcon type="info" />
+        ) : null}
+        {pending && ready ? (
+          <Alert
+            action={
+              <span className={styles.actions}>
+                {canEdit ? (
+                  <AppButton
+                    disabled={busy !== null && busy !== "accept"}
+                    loading={busy === "accept"}
+                    onClick={acceptAll}
+                    size="small"
+                    type="primary"
+                  >
+                    {t(`${PREFIX}.acceptAll`)}
+                  </AppButton>
+                ) : null}
+                <AppButton onClick={onGoToModel} size="small">
+                  {t(`${PREFIX}.goToModel`)}
+                </AppButton>
+              </span>
+            }
+            description={t(`${PREFIX}.pendingAdopted`)}
+            message={t(`${PREFIX}.pending`, { count: pending })}
+            showIcon
+            type="info"
+          />
+        ) : null}
+
+        {documentSource}
+
+        <Segmented<Filter>
+          onChange={setFilter}
+          options={[
+            { label: `${t(`${PREFIX}.filter.all`)} ${total}`, value: "all" },
+            ...CONCEPT_STATES.map((state) => ({
+              label: `${t(`${PREFIX}.state.${state}`)} ${concepts.counts[state] ?? 0}`,
+              value: state,
+            })),
+          ]}
+          value={filter}
         />
+        <AppTable<Concept>
+          columns={columns}
+          dataSource={shown}
+          pagination={false}
+          rowKey="key"
+          size="small"
+        />
+      </div>
+      {asking && canEdit && ready ? (
+        <div className={styles.side}>
+          <AskAiSidebar<ConceptRevision>
+            adopt={adoptRevision}
+            askWith={(request) => askConcepts({ ...request, projectId: project.id })}
+            kind="concepts"
+            onClose={() => setAsking(false)}
+            preview={revisionPreview}
+            projectId={project.id}
+            subtitle={t("bknProject.model.ask.subtitle.concepts", { count: total })}
+          />
+        </div>
       ) : null}
-
-      {documentSource}
-
-      <Segmented<Filter>
-        onChange={setFilter}
-        options={[
-          { label: `${t(`${PREFIX}.filter.all`)} ${total}`, value: "all" },
-          ...CONCEPT_STATES.map((state) => ({
-            label: `${t(`${PREFIX}.state.${state}`)} ${concepts.counts[state] ?? 0}`,
-            value: state,
-          })),
-        ]}
-        value={filter}
-      />
-      <AppTable<Concept>
-        columns={columns}
-        dataSource={shown}
-        pagination={false}
-        rowKey="key"
-        size="small"
-      />
     </div>
   );
 }
