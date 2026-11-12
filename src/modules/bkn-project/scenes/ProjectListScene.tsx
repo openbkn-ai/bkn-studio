@@ -63,6 +63,8 @@ export function ProjectListScene() {
   const [networksError, setNetworksError] = useState<string | null>(null);
   const [catalogs, setCatalogs] = useState<ProjectCatalog[]>([]);
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
+  // The cards name their catalogs once the list is read, whether or not it could be.
+  const [catalogsRead, setCatalogsRead] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Each load takes a number; only the latest one may write the list, so a slow answer to an
@@ -121,10 +123,11 @@ export function ProjectListScene() {
       });
       setCatalogs(result.items.map(({ id, name }) => ({ id, name })));
     } catch (error) {
-      // The list falls back to catalog ids; the dialog shows the failure.
+      // The cards count the catalogs they cannot name; the dialog shows the failure.
       setCatalogs([]);
       setCatalogsError(requestFailureText(t, error));
     }
+    setCatalogsRead(true);
   }, [t]);
 
   useEffect(() => {
@@ -273,7 +276,7 @@ export function ProjectListScene() {
               <div className={styles.grid}>
                 {items.map((project) => (
                   <ProjectCard
-                    catalogNames={catalogNames}
+                    catalogNames={catalogsRead ? catalogNames : null}
                     isOwner={project.owner.id === currentUserId}
                     key={project.id}
                     networkName={networkNames[project.knId]}

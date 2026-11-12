@@ -11,7 +11,7 @@ import {
   ProjectOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Tag, Tooltip, type MenuProps } from "antd";
+import { Dropdown, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { TFunction } from "i18next";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
@@ -44,7 +44,11 @@ const STAGE_TONES: Record<ProjectStage, LightStatusTone> = {
 const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type ProjectCardProps = {
-  catalogNames: Record<string, string>;
+  /**
+   * The names of the catalogs the caller may read; null while they are read. A catalog missing
+   * from them, one the caller may not read or one deleted since, is counted, never named by id.
+   */
+  catalogNames: Record<string, string> | null;
   /** The caller owns the project and may archive or restore it. */
   isOwner: boolean;
   networkName?: string;
@@ -118,7 +122,14 @@ export function ProjectCard({
       : []),
   ];
 
-  const catalogs = project.catalogIds.map((id) => catalogNames[id] ?? id);
+  const named = catalogNames
+    ? project.catalogIds.filter((id) => Object.hasOwn(catalogNames, id))
+    : [];
+  const unreadable = catalogNames ? project.catalogIds.length - named.length : 0;
+  const catalogs = [
+    ...named.map((id) => catalogNames?.[id] ?? ""),
+    ...(unreadable ? [t("bknProject.list.card.unreadableCatalogs", { count: unreadable })] : []),
+  ];
 
   return (
     <article
@@ -212,7 +223,9 @@ export function ProjectCard({
         <div className={styles.fact}>
           <dt>{t("bknProject.list.card.catalogs")}</dt>
           <dd>
-            {catalogs.length > 0 ? (
+            {!catalogNames && project.catalogIds.length > 0 ? (
+              <Spin size="small" />
+            ) : catalogs.length > 0 ? (
               <Tooltip title={catalogs.join(t("bknProject.list.card.separator"))}>
                 <span className={styles.ellipsis}>
                   {catalogs.join(t("bknProject.list.card.separator"))}
