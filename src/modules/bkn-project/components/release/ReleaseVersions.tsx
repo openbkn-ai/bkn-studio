@@ -103,10 +103,11 @@ export function ReleaseVersions({
   const [switchTo, setSwitchTo] = useState<NetworkVersion | null>(null);
   const [copyOf, setCopyOf] = useState<NetworkVersion | null>(null);
 
-  const who = (id: string) =>
+  // The name the reply carries, else the user list the caller may read.
+  const who = (id: string, name = "") =>
     id === runtimeConfig.currentUser.id
       ? t(`${PREFIX}.you`)
-      : (directory.get(id) ?? t(`${PREFIX}.someone`));
+      : name || (directory.get(id) ?? t(`${PREFIX}.someone`));
 
   const loaded = versions && versions !== "failed" ? versions : null;
   const versioning = loaded?.versioning;
@@ -182,7 +183,7 @@ export function ReleaseVersions({
       key: "publisher",
       render: (_, entry) => (
         <span className={styles.question}>
-          <span>{who(entry.publisherId)}</span>
+          <span>{who(entry.publisherId, entry.publisherName)}</span>
           <span className={styles.small}>{dayjs(entry.createTime).format("YYYY/MM/DD HH:mm")}</span>
         </span>
       ),

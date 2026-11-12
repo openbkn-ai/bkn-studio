@@ -229,7 +229,11 @@ export function ProjectCard({
         <Tooltip title={t("bknProject.list.card.owner")}>
           <span className={`${styles.metaItem} ${styles.footerLeft}`}>
             <UserOutlined />
-            <span>{isOwner ? t("bknProject.list.ownerYou") : project.owner.id}</span>
+            <span>
+              {isOwner
+                ? t("bknProject.list.ownerYou")
+                : project.ownerName || t("bknProject.list.ownerSomeone")}
+            </span>
           </span>
         </Tooltip>
         <Tooltip title={t("bknProject.list.card.updated")}>

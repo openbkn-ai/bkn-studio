@@ -54,6 +54,7 @@ export const bknProjectEnUS = {
       sameNetworkTip:
         "Several projects may change one knowledge network; publishing checks whether another project has changed its live version.",
       ownerYou: "You",
+      ownerSomeone: "Another member",
       archive: "Archive",
       unarchive: "Restore",
       archiveConfirm: {

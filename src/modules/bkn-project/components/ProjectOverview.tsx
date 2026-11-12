@@ -426,7 +426,7 @@ export function ProjectOverview({
   );
   const owner = ownerIsCaller
     ? t("bknProject.list.ownerYou")
-    : (directory.get(project.owner.id) ?? project.owner.id);
+    : project.ownerName || (directory.get(project.owner.id) ?? t("bknProject.list.ownerSomeone"));
   // Through the shared adapter, which falls back where the Clipboard API is missing (plain HTTP).
   const copyId = () => {
     void writeTextToClipboard(project.id)

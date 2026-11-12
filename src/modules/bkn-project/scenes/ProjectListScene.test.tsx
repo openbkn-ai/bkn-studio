@@ -179,7 +179,12 @@ describe("ProjectListScene", () => {
     listProjectsMock.mockResolvedValue({
       items: [
         project({ catalogIds: ["c1"], otherProjects: 1 }),
-        project({ id: "p2", name: "Receipts", owner: { id: "someone", type: "user" } }),
+        project({
+          id: "p2",
+          name: "Receipts",
+          owner: { id: "someone", type: "user" },
+          ownerName: "张三",
+        }),
       ],
       nextCursor: null,
       total: 2,
@@ -199,7 +204,8 @@ describe("ProjectListScene", () => {
     ).toBeInTheDocument();
 
     const theirs = card("Receipts");
-    expect(within(theirs).getByText("someone")).toBeInTheDocument();
+    expect(within(theirs).getByText("张三")).toBeInTheDocument();
+    expect(within(theirs).queryByText("someone")).toBeNull();
     expect(within(await openMenu("Receipts")).queryByText("bknProject.list.archive")).toBeNull();
     expect(listProjectsMock).toHaveBeenCalledWith({
       archived: "false",
