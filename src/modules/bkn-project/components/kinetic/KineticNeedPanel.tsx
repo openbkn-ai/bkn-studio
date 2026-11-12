@@ -354,7 +354,7 @@ export function KineticNeedPanel({
 }
 
 /** Marks what the knowledge network already has: a small dot, never a highlighted background. */
-function InNetworkDot() {
+export function InNetworkDot() {
   const { t } = useTranslation();
   const label = t(`${PANEL}.inNetwork`);
   return (

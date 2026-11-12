@@ -151,10 +151,21 @@ vi.mock("@/modules/knowledge-network/services/network.service", async (importOri
 
 // Kinetic modeling is tested on its own.
 vi.mock("@/modules/bkn-project/components/kinetic/ProjectKinetic", () => ({
-  ProjectKinetic: ({ onGoToRelease }: { onGoToRelease: () => void }) => (
-    <button onClick={onGoToRelease} type="button">
-      kinetic page
-    </button>
+  ProjectKinetic: ({
+    onCount,
+    onGoToRelease,
+  }: {
+    onCount?: (count: number | undefined) => void;
+    onGoToRelease: () => void;
+  }) => (
+    <>
+      <button onClick={onGoToRelease} type="button">
+        kinetic page
+      </button>
+      <button onClick={() => onCount?.(5)} type="button">
+        kinetic read
+      </button>
+    </>
   ),
 }));
 
@@ -192,6 +203,11 @@ vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) =
 }));
 
 const getRequirementsMock = vi.hoisted(() => vi.fn());
+const getLogicNeedsMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/bkn-project/services/kinetic.service", () => ({
+  getLogicNeeds: getLogicNeedsMock,
+}));
 
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
@@ -281,6 +297,7 @@ describe("ProjectWorkspaceScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRequirementsMock.mockResolvedValue(null);
+    getLogicNeedsMock.mockRejectedValue(new Error("down"));
     getProjectMock.mockResolvedValue(project);
     getNetworkMock.mockResolvedValue({ id: "orders", name: "Orders network" });
     getLatestReleaseMock.mockResolvedValue({
@@ -460,6 +477,41 @@ describe("ProjectWorkspaceScene", () => {
     expect(
       screen.getByTitle('bknProject.overview.tiles.questionsReadySub:{"version":4}'),
     ).toBeInTheDocument();
+  });
+
+  it("counts kinetic items as what the network already has and the new needs", async () => {
+    getLogicNeedsMock.mockResolvedValue({
+      needs: [{ id: "n1" }, { id: "n2" }, { id: "n3" }],
+      networkItems: [
+        { id: "a1", needIds: ["n1"], type: "action_type" },
+        { id: "f1", needIds: [], type: "function" },
+      ],
+    });
+    renderScene();
+    const kinetic = await screen.findByRole("button", {
+      name: "bknProject.workspace.sections.kinetic",
+    });
+    // Two in the network, and n2 and n3 new: n1 is covered by what the network has.
+    await waitFor(() => expect(kinetic).toHaveTextContent("4"));
+  });
+
+  it("on kinetic modeling, counts what the page read instead of reading the needs again", async () => {
+    renderScene("kinetic");
+    const kinetic = await screen.findByRole("button", {
+      name: "bknProject.workspace.sections.kinetic",
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "kinetic read" }));
+    await waitFor(() => expect(kinetic).toHaveTextContent("5"));
+    expect(getLogicNeedsMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves the kinetic count off when the needs cannot be read", async () => {
+    renderScene();
+    const kinetic = await screen.findByRole("button", {
+      name: "bknProject.workspace.sections.kinetic",
+    });
+    await waitFor(() => expect(getLogicNeedsMock).toHaveBeenCalled());
+    expect(kinetic).toHaveTextContent(/^bknProject\.workspace\.sections\.kinetic$/);
   });
 
   it("counts the tables whose structured index is ready, in community wording", async () => {

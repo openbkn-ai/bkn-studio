@@ -65,6 +65,19 @@ type BackendLogicNeeds = {
       })[]
     | null;
   network_id?: string;
+  network_items?:
+    | {
+        box_id?: string;
+        description?: string;
+        id: string;
+        name: string;
+        need_ids?: string[] | null;
+        owner_object_type_id?: string;
+        owner_object_type_name?: string;
+        type: string;
+      }[]
+    | null;
+  network_items_reason?: string;
   reason?: string;
   live?: boolean;
   released?: boolean;
@@ -115,6 +128,17 @@ export const mapLogicNeeds = (data: BackendLogicNeeds): LogicNeeds => ({
     unconnected: (need.unconnected ?? []).map(({ from, to }) => ({ from, to })),
   })),
   networkId: data.network_id ?? "",
+  networkItems: (data.network_items ?? []).map((item) => ({
+    boxId: item.box_id ?? "",
+    description: item.description ?? "",
+    id: item.id,
+    name: item.name,
+    needIds: item.need_ids ?? [],
+    ownerObjectTypeId: item.owner_object_type_id ?? "",
+    ownerObjectTypeName: item.owner_object_type_name ?? "",
+    type: item.type,
+  })),
+  networkItemsReason: data.network_items_reason ?? "",
   // An older bkn-project tells only whether the project was released.
   live: data.live ?? data.released ?? false,
   reason: data.reason ?? "",
@@ -151,7 +175,16 @@ export async function getLogicNeeds(projectId: string): Promise<LogicNeeds> {
   } catch (error) {
     // An older bkn-project answers 404 before there is a specification: nothing, never released.
     if (isRequestNotFound(error)) {
-      return { live: false, needs: [], networkId: "", reason: "", released: false, updateTime: 0 };
+      return {
+        live: false,
+        needs: [],
+        networkId: "",
+        networkItems: [],
+        networkItemsReason: "",
+        reason: "",
+        released: false,
+        updateTime: 0,
+      };
     }
     throw error;
   }
@@ -314,6 +347,8 @@ async function mockLogicNeeds(projectId: string): Promise<LogicNeeds> {
       };
     }),
     networkId: MOCK_NETWORK,
+    networkItems: [],
+    networkItemsReason: "",
     live: true,
     reason: "",
     released: true,
