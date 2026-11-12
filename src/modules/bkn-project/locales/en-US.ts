@@ -11,9 +11,6 @@ export const bknProjectEnUS = {
     description:
       "Each project brings requirements, ontology and releases together for one business knowledge network.",
     list: {
-      cardTitle: "Projects",
-      cardTip:
-        "Several projects may change one knowledge network; publishing checks whether another project has changed its live version.",
       searchPlaceholder: "Search project names",
       showArchived: "Show archived",
       create: "New project",
@@ -28,18 +25,34 @@ export const bknProjectEnUS = {
       emptyDescription:
         "Create a project to build a business knowledge network from structured data.",
       emptyFiltered: "No matching projects",
-      columns: {
-        project: "Project",
-        network: "Target knowledge network",
-        catalogs: "Data catalogs",
+      card: {
+        open: "Open project",
+        more: "More actions",
+        network: "Knowledge network",
+        catalogs: "Data sources",
+        separator: ", ",
         owner: "Owner",
         updated: "Updated",
-        actions: "Actions",
+        lastRelease: "Last published v{{version}}",
+        stages: {
+          archived: "Archived",
+          no_draft: "Not drafted",
+          drafting: "Drafting",
+          draft_failed: "Drafting failed",
+          deciding: "Modeling",
+          ready_to_confirm: "Model to confirm",
+          check_not_started: "Data check pending",
+          checking: "Checking data",
+          check_needs_attention: "Data check needs attention",
+          confirmed: "Ready to publish",
+          published: "Published",
+        },
       },
       sameNetwork: "Same network · {{count}} other projects",
       sameNetwork_one: "Same network · {{count}} other project",
       sameNetwork_other: "Same network · {{count}} other projects",
-      archivedTag: "Archived",
+      sameNetworkTip:
+        "Several projects may change one knowledge network; publishing checks whether another project has changed its live version.",
       ownerYou: "You",
       archive: "Archive",
       unarchive: "Restore",

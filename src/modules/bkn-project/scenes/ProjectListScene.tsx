@@ -5,39 +5,37 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { InfoCircleOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, Input, Tag, Tooltip } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Checkbox, Input, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { getMockUserRole } from "@/framework/runtime/mock-user";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { NewProjectModal } from "@/modules/bkn-project/components/NewProjectModal";
+import { ProjectCard } from "@/modules/bkn-project/components/ProjectCard";
 import {
   listProjectNetworks,
   listProjects,
   setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
-import { networkWorkspacePath, projectSectionPath } from "@/modules/bkn-project/types/workspace";
+import { projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectListScene.module.css";
 
-export const PROJECT_PAGE_SIZE = 20;
+/** Fills whole rows of the card grid at its common widths. */
+export const PROJECT_PAGE_SIZE = 24;
 
 /** bkn-project answers a cursor it did not issue, or one gone stale, with this code. */
 const INVALID_CURSOR_CODE = "BknProject.InvalidParameter.Cursor";
-
-const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 export function ProjectListScene() {
   const { t } = useTranslation();
@@ -142,10 +140,14 @@ export function ProjectListScene() {
 
   const resetPaging = () => setCursors([undefined]);
 
-  const handleSearch = (value: string) => {
-    setName(value.trim());
-    resetPaging();
-  };
+  // Searches as the name is typed, as the knowledge network list does.
+  const searchedName = useDebouncedValue(keyword).trim();
+  useEffect(() => {
+    if (searchedName !== name) {
+      setName(searchedName);
+      setCursors([undefined]);
+    }
+  }, [name, searchedName]);
 
   const handleShowArchived = (checked: boolean) => {
     setShowArchived(checked);
@@ -188,125 +190,56 @@ export function ProjectListScene() {
     });
   };
 
-  const columns: ColumnsType<Project> = [
-    {
-      title: t("bknProject.list.columns.project"),
-      dataIndex: "name",
-      width: 260,
-      render: (value: string, record) => (
-        <div className={styles.stack}>
-          <Link className={styles.name} to={projectSectionPath(record.id, "overview")}>
-            {value}
-          </Link>
-          <code className={styles.id}>{record.id}</code>
-          {record.archived ? <Tag>{t("bknProject.list.archivedTag")}</Tag> : null}
-        </div>
-      ),
-    },
-    {
-      title: t("bknProject.list.columns.network"),
-      dataIndex: "knId",
-      width: 260,
-      render: (value: string, record) => (
-        <div className={styles.stack}>
-          {/* The project's network keeps its versions under one id: the link opens it. */}
-          <Link to={networkWorkspacePath(value)}>{networkNames[value] ?? value}</Link>
-          <code className={styles.id}>{value}</code>
-          {record.otherProjects > 0 ? (
-            <Tag color="warning">
-              {t("bknProject.list.sameNetwork", { count: record.otherProjects })}
-            </Tag>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      title: t("bknProject.list.columns.catalogs"),
-      dataIndex: "catalogIds",
-      width: 200,
-      render: (value: string[]) =>
-        value.length > 0 ? (
-          <div className={styles.stack}>
-            {value.map((id) => (
-              <span key={id}>{catalogNames[id] ?? id}</span>
-            ))}
-          </div>
-        ) : (
-          <span className={styles.muted}>—</span>
-        ),
-    },
-    {
-      title: t("bknProject.list.columns.owner"),
-      dataIndex: "owner",
-      width: 140,
-      render: (_value, record) =>
-        record.owner.id === currentUserId ? (
-          t("bknProject.list.ownerYou")
-        ) : (
-          <code className={styles.id}>{record.owner.id}</code>
-        ),
-    },
-    {
-      title: t("bknProject.list.columns.updated"),
-      dataIndex: "updateTime",
-      width: 160,
-      render: (value: number) => formatTime(value),
-    },
-    {
-      title: t("bknProject.list.columns.actions"),
-      key: "actions",
-      width: 100,
-      render: (_value, record) => {
-        if (record.owner.id !== currentUserId) {
-          return null;
-        }
-        return record.archived ? (
-          <AppButton type="link" onClick={() => void changeArchived(record, false)}>
-            {t("bknProject.list.unarchive")}
-          </AppButton>
-        ) : (
-          <AppButton type="link" onClick={() => handleArchive(record)}>
-            {t("bknProject.list.archive")}
-          </AppButton>
-        );
-      },
-    },
-  ];
-
   const filtered = name !== "" || showArchived;
+
+  const openProject = (project: Project) => {
+    void navigate(projectSectionPath(project.id, "overview"));
+  };
 
   return (
     <section className={styles.page}>
-      <div className={styles.head}>
-        <div>
-          <h2 className={styles.title}>{t("bknProject.title")}</h2>
-          <p className={styles.intro}>{t("bknProject.description")}</p>
-        </div>
-        {canCreateProject ? (
-          <AppButton icon={<PlusOutlined />} type="primary" onClick={openCreate}>
-            {t("bknProject.list.create")}
-          </AppButton>
-        ) : null}
-      </div>
-
       <div className={styles.toolbar}>
-        <Input.Search
-          allowClear
-          className={styles.search}
-          onChange={(event) => setKeyword(event.target.value)}
-          onSearch={handleSearch}
-          placeholder={t("bknProject.list.searchPlaceholder")}
-          value={keyword}
-        />
-        <Checkbox
-          checked={showArchived}
-          onChange={(event) => handleShowArchived(event.target.checked)}
-        >
-          {t("bknProject.list.showArchived")}
-        </Checkbox>
-        <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void loadProjects()}>
-          {t("bknProject.list.refresh")}
-        </AppButton>
+        <div className={styles.toolbarLeft}>
+          {canCreateProject ? (
+            <AppButton
+              className={styles.toolbarButton}
+              icon={<PlusOutlined />}
+              onClick={openCreate}
+              type="primary"
+            >
+              {t("bknProject.list.create")}
+            </AppButton>
+          ) : null}
+        </div>
+        <div className={styles.toolbarRight}>
+          <Input
+            allowClear
+            className={styles.searchInput}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder={t("bknProject.list.searchPlaceholder")}
+            prefix={<SearchOutlined className={styles.searchIcon} />}
+            value={keyword}
+          />
+          <Checkbox
+            checked={showArchived}
+            onChange={(event) => handleShowArchived(event.target.checked)}
+          >
+            {t("bknProject.list.showArchived")}
+          </Checkbox>
+          <div className={styles.toolbarActions}>
+            <Tooltip title={t("bknProject.list.refresh")}>
+              <button
+                aria-label={t("bknProject.list.refresh")}
+                className={styles.iconButton}
+                disabled={loading}
+                onClick={() => void loadProjects()}
+                type="button"
+              >
+                <ReloadOutlined />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
       </div>
 
       {loadError ? (
@@ -324,47 +257,54 @@ export function ProjectListScene() {
         />
       ) : null}
 
-      <div className={styles.cardHead}>
-        <span className={styles.cardTitle}>{t("bknProject.list.cardTitle")}</span>
-        <Tooltip title={t("bknProject.list.cardTip")}>
-          <InfoCircleOutlined className={styles.muted} />
-        </Tooltip>
-        <span className={styles.muted}>{t("bknProject.list.total", { count: total })}</span>
-      </div>
+      <div className={styles.contentArea}>
+        <Spin spinning={loading} wrapperClassName={styles.loadingWrapper}>
+          <div className={styles.listContent}>
+            {!loadError && !loading && items.length === 0 ? (
+              filtered ? (
+                <EmptyStatePanel title={t("bknProject.list.emptyFiltered")} />
+              ) : (
+                <EmptyStatePanel
+                  description={t("bknProject.list.emptyDescription")}
+                  title={t("bknProject.list.emptyTitle")}
+                />
+              )
+            ) : (
+              <div className={styles.grid}>
+                {items.map((project) => (
+                  <ProjectCard
+                    catalogNames={catalogNames}
+                    isOwner={project.owner.id === currentUserId}
+                    key={project.id}
+                    networkName={networkNames[project.knId]}
+                    onArchive={handleArchive}
+                    onOpen={openProject}
+                    onUnarchive={(record) => void changeArchived(record, false)}
+                    project={project}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </Spin>
 
-      <AppTable<Project>
-        columns={columns}
-        dataSource={items}
-        loading={loading}
-        locale={{
-          emptyText: filtered ? (
-            <EmptyStatePanel title={t("bknProject.list.emptyFiltered")} />
-          ) : (
-            <EmptyStatePanel
-              description={t("bknProject.list.emptyDescription")}
-              title={t("bknProject.list.emptyTitle")}
-            />
-          ),
-        }}
-        pagination={false}
-        rowClassName={(record) => (record.archived ? styles.archivedRow : "")}
-        rowKey="id"
-        scroll={{ x: 1100 }}
-      />
-
-      {page > 0 || nextCursor ? (
         <div className={styles.pager}>
-          <AppButton disabled={page === 0} onClick={() => setCursors(cursors.slice(0, -1))}>
-            {t("bknProject.list.prevPage")}
-          </AppButton>
-          <AppButton
-            disabled={!nextCursor}
-            onClick={() => nextCursor && setCursors([...cursors, nextCursor])}
-          >
-            {t("bknProject.list.nextPage")}
-          </AppButton>
+          <span className={styles.total}>{t("bknProject.list.total", { count: total })}</span>
+          {page > 0 || nextCursor ? (
+            <>
+              <AppButton disabled={page === 0} onClick={() => setCursors(cursors.slice(0, -1))}>
+                {t("bknProject.list.prevPage")}
+              </AppButton>
+              <AppButton
+                disabled={!nextCursor}
+                onClick={() => nextCursor && setCursors([...cursors, nextCursor])}
+              >
+                {t("bknProject.list.nextPage")}
+              </AppButton>
+            </>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {canCreateProject ? (
         <NewProjectModal

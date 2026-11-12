@@ -5,95 +5,73 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/* The platform's white page surface, so the list sits on it as other modules do. */
+/* The knowledge network list's page, toolbar and card grid, so both lists read alike. */
 .page {
-  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  /* Fills the content area, so no shell grey shows below a short list. */
-  flex: 1;
-  padding: 24px 28px;
-}
-
-.head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.title {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.intro {
-  margin: 8px 0 0;
-  max-width: 880px;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  line-height: 1.7;
+  composes: page from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
 }
 
 .toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  composes: toolbar from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
 }
 
-.search {
-  width: 280px;
+.toolbarLeft {
+  composes: toolbarLeft from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.toolbarRight {
+  composes: toolbarRight from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.toolbarButton {
+  composes: toolbarButton from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.searchInput {
+  composes: searchInput from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.searchIcon {
+  composes: searchIcon from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.toolbarActions {
+  composes: toolbarActions from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.iconButton {
+  composes: iconButton from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.contentArea {
+  composes: contentArea from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.loadingWrapper {
+  composes: loadingWrapper from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.listContent {
+  composes: listContent from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
+}
+
+.grid {
+  composes: grid from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
 }
 
 .alert {
-  margin-bottom: 16px;
-}
-
-.cardHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.cardTitle {
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-}
-
-.name {
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.id {
-  color: var(--color-text-tertiary);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 11.5px;
-}
-
-.muted {
-  color: var(--color-text-tertiary);
-}
-
-.archivedRow {
-  opacity: 0.6;
+  margin-top: 14px;
 }
 
 .pager {
   display: flex;
+  flex-shrink: 0;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px;
+}
+
+.total {
+  color: var(--color-text-tertiary);
+  font-size: 13px;
 }
