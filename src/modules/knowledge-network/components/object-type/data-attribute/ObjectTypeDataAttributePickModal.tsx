@@ -55,6 +55,11 @@ export function ObjectTypeDataAttributePickModal({
     }
   };
 
+  // Keep the closed Portal out of the canvas's synchronous connection updates.
+  if (!open) {
+    return null;
+  }
+
   return (
     <Modal
       cancelText={t("common.cancel")}
