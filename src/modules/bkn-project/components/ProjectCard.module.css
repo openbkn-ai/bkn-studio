@@ -1,0 +1,120 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* The knowledge network card, so both lists look and behave alike. */
+.card {
+  composes: card from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+  --network-accent: var(--color-text-link);
+  min-height: 188px;
+}
+
+.archived {
+  --network-accent: var(--color-border);
+  opacity: 0.65;
+}
+
+.header {
+  composes: header from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.titleRow {
+  composes: titleRow from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.iconBox {
+  composes: iconBox from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+  color: var(--color-text-link);
+}
+
+.titleContent {
+  composes: titleContent from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.titleText {
+  composes: titleText from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.moreButton {
+  composes: moreButton from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.cardMenu {
+  composes: cardMenu from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.footer {
+  composes: footer from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.footerLeft {
+  composes: footerLeft from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.metaItem {
+  composes: metaItem from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.statusRow :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 18px 12px 70px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.fact {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fact dt {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.fact dd {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sameNetwork {
+  flex-shrink: 0;
+  margin-inline-end: 0;
+}
+
+.muted {
+  color: var(--color-text-tertiary);
+}

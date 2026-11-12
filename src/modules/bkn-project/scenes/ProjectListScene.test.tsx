@@ -16,6 +16,7 @@ const createProjectMock = vi.hoisted(() => vi.fn());
 const listNetworksMock = vi.hoisted(() => vi.fn());
 const setArchivedMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
+const getStatusMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const confirmMock = vi.hoisted(() => vi.fn());
 const newProjectModalRenderMock = vi.hoisted(() => vi.fn());
@@ -43,6 +44,10 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   listProjectNetworks: listNetworksMock,
   listProjects: listProjectsMock,
   setProjectArchived: setArchivedMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/publish.service", () => ({
+  getProjectStatus: getStatusMock,
 }));
 
 vi.mock("@/shared/catalog", () => ({
@@ -100,6 +105,17 @@ function project(overrides: Partial<Project>): Project {
   };
 }
 
+function card(name: string) {
+  return screen.getByText(name).closest("article") as HTMLElement;
+}
+
+/** Opens a card's menu and returns the names of its actions. */
+async function openMenu(name: string) {
+  fireEvent.click(within(card(name)).getByRole("button", { name: "bknProject.list.card.more" }));
+  const menus = await screen.findAllByRole("menu");
+  return menus[menus.length - 1];
+}
+
 function axiosError(code: string) {
   return { isAxiosError: true, response: { data: { error_code: code, description: code } } };
 }
@@ -125,6 +141,7 @@ describe("ProjectListScene", () => {
     );
     listNetworksMock.mockResolvedValue([{ id: "orders", name: "Orders network" }]);
     listCatalogsMock.mockResolvedValue({ items: [{ id: "c1", name: "ERP" }], total: 1 });
+    getStatusMock.mockResolvedValue({ release: null, stage: "deciding" });
   });
 
   afterEach(() => {
@@ -169,19 +186,25 @@ describe("ProjectListScene", () => {
     });
     renderScene();
 
-    const mine = (await screen.findByText("Orders")).closest("tr") as HTMLElement;
+    await screen.findByText("Orders");
+    const mine = card("Orders");
     expect(within(mine).getByText("Orders network")).toBeInTheDocument();
     expect(within(mine).getByText("ERP")).toBeInTheDocument();
     expect(within(mine).getByText('bknProject.list.sameNetwork:{"count":1}')).toBeInTheDocument();
-    expect(within(mine).getByText("bknProject.list.archive")).toBeInTheDocument();
+    expect(
+      await within(mine).findByText("bknProject.list.card.stages.deciding"),
+    ).toBeInTheDocument();
+    expect(
+      within(await openMenu("Orders")).getByText("bknProject.list.archive"),
+    ).toBeInTheDocument();
 
-    const theirs = screen.getByText("Receipts").closest("tr") as HTMLElement;
-    expect(within(theirs).queryByText("bknProject.list.archive")).toBeNull();
+    const theirs = card("Receipts");
     expect(within(theirs).getByText("someone")).toBeInTheDocument();
+    expect(within(await openMenu("Receipts")).queryByText("bknProject.list.archive")).toBeNull();
     expect(listProjectsMock).toHaveBeenCalledWith({
       archived: "false",
       cursor: undefined,
-      limit: 20,
+      limit: 24,
       name: "",
     });
   });
@@ -203,10 +226,6 @@ describe("ProjectListScene", () => {
 
     fireEvent.change(screen.getByPlaceholderText("bknProject.list.searchPlaceholder"), {
       target: { value: " ord " },
-    });
-    fireEvent.keyDown(screen.getByPlaceholderText("bknProject.list.searchPlaceholder"), {
-      key: "Enter",
-      keyCode: 13,
     });
     await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ name: "ord" })),
@@ -258,14 +277,12 @@ describe("ProjectListScene", () => {
     expect(await screen.findByText("opened overview")).toBeInTheDocument();
   });
 
-  it("links each project name to its overview", async () => {
+  it("opens a project's overview from its card", async () => {
     listProjectsMock.mockResolvedValue({ items: [project({})], nextCursor: null, total: 1 });
     renderScene();
 
-    expect((await screen.findByText("Orders")).closest("a")).toHaveAttribute(
-      "href",
-      "/bkn-project/p1/overview",
-    );
+    fireEvent.click(await screen.findByText("Orders"));
+    expect(await screen.findByText("opened overview")).toBeInTheDocument();
   });
 
   it("pages with the cursor the backend returns, and back", async () => {
@@ -341,7 +358,7 @@ describe("ProjectListScene", () => {
     renderScene();
     expect(await screen.findByText('bknProject.list.total:{"count":7}')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("bknProject.list.refresh"));
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.list.refresh" }));
     expect(await screen.findByText("bknProject.list.loadFailed")).toBeInTheDocument();
     expect(screen.getByText('bknProject.list.total:{"count":0}')).toBeInTheDocument();
 
@@ -360,12 +377,13 @@ describe("ProjectListScene", () => {
     setArchivedMock.mockResolvedValue(project({}));
     renderScene();
 
-    fireEvent.click(await screen.findByText("bknProject.list.archive"));
+    await screen.findByText("Orders");
+    fireEvent.click(within(await openMenu("Orders")).getByText("bknProject.list.archive"));
     const { onOk } = confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };
     await onOk();
     expect(setArchivedMock).toHaveBeenCalledWith("p1", true);
 
-    fireEvent.click(screen.getByText("bknProject.list.unarchive"));
+    fireEvent.click(within(await openMenu("Old")).getByText("bknProject.list.unarchive"));
     await waitFor(() => expect(setArchivedMock).toHaveBeenLastCalledWith("p2", false));
     expect(messageMock.success).toHaveBeenCalledWith("bknProject.list.unarchiveSuccess");
   });
