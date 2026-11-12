@@ -103,7 +103,8 @@ export function ProjectCard({
   }, [project.archived, project.id, project.updateTime]);
 
   const stage: ProjectStage | null = project.archived ? "archived" : (status?.stage ?? null);
-  const release = status ? releaseView(t, status) : null;
+  // A card archived while shown keeps its last status; archived cards say only that they are.
+  const release = status && !project.archived ? releaseView(t, status) : null;
   const publishedVersion = stage === "published" ? status?.release?.version : undefined;
 
   const menuItems: MenuProps["items"] = [

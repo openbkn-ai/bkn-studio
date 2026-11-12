@@ -128,6 +128,28 @@ describe("ProjectCard", () => {
     await waitFor(() => expect(getStatusMock).not.toHaveBeenCalled());
   });
 
+  it("drops the release of a card archived while it is shown", async () => {
+    getStatusMock.mockResolvedValue({ release, stage: "deciding" });
+    const { rerender } = renderCard();
+    expect(await screen.findByText(/lastRelease/)).toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <ProjectCard
+          catalogNames={{}}
+          isOwner
+          onArchive={vi.fn()}
+          onOpen={vi.fn()}
+          onUnarchive={vi.fn()}
+          project={{ ...project, archived: true }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("bknProject.list.card.stages.archived")).toBeInTheDocument();
+    expect(screen.queryByText(/lastRelease/)).toBeNull();
+  });
+
   it("still shows the card when its status cannot be read", async () => {
     getStatusMock.mockRejectedValue(new Error("down"));
     renderCard();
