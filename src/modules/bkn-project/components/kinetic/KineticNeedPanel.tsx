@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Drawer, Spin } from "antd";
+import { Alert, Drawer, Spin, Tooltip } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -50,6 +50,7 @@ const PANEL = `${KINETIC}.panel`;
 export function KineticNeedPanel({
   canEdit,
   executor,
+  existingNetwork = false,
   metricsMode,
   need,
   networkId,
@@ -64,6 +65,11 @@ export function KineticNeedPanel({
   saving,
 }: {
   canEdit: boolean;
+  /**
+   * The project started from a network that already runs a version and has not released yet:
+   * what that network has is marked as already there.
+   */
+  existingNetwork?: boolean;
   metricsMode: ObjectMetricsMode;
   need: LogicNeedView;
   /** The live network; empty when it could not be read. */
@@ -202,7 +208,10 @@ export function KineticNeedPanel({
             <h4 className={styles.blockTitle}>{t(`${PANEL}.implementation`)}</h4>
             {implementation?.available ? (
               <div className={styles.card}>
-                <strong>{implementation.name}</strong>
+                <span className={styles.row}>
+                  {existingNetwork ? <InNetworkDot /> : null}
+                  <strong>{implementation.name}</strong>
+                </span>
                 {implementation.description ? (
                   <span className={styles.muted}>{implementation.description}</span>
                 ) : null}
@@ -274,6 +283,7 @@ export function KineticNeedPanel({
                     key={`${candidate.type}/${candidate.boxId}/${candidate.id}`}
                   >
                     <span className={styles.row}>
+                      {existingNetwork ? <InNetworkDot /> : null}
                       <strong>{candidate.name}</strong>
                       {candidate.reasons.map((reason) => (
                         <LightStatusTag key={reason} tone="neutral">
@@ -340,5 +350,16 @@ export function KineticNeedPanel({
         open={upgrading}
       />
     </Drawer>
+  );
+}
+
+/** Marks what the knowledge network already has: a small dot, never a highlighted background. */
+function InNetworkDot() {
+  const { t } = useTranslation();
+  const label = t(`${PANEL}.inNetwork`);
+  return (
+    <Tooltip title={label}>
+      <span aria-label={label} className={styles.inNetworkDot} role="img" />
+    </Tooltip>
   );
 }

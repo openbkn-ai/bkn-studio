@@ -318,6 +318,8 @@ export function ProjectKinetic({
     [logic, spec],
   );
   const live = logic !== null;
+  // Before the project's first release, whatever a running network has was there already.
+  const existingNetwork = Boolean(logic?.live && !logic.released);
   const networkId = logic?.networkId ?? "";
   const kinetic = projectSectionPath(project.id, "kinetic");
 
@@ -657,9 +659,13 @@ export function ProjectKinetic({
             type="success"
           />
         ) : null}
-        {/* Before the first release nothing is implemented live: that is not a failure. */}
-        {logic && !logic.released ? (
+        {/* Before the network runs a version nothing is implemented live: that is not a failure. */}
+        {logic && !logic.live ? (
           <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
+        ) : null}
+        {/* A network the project started from runs already: what it has can be linked now. */}
+        {existingNetwork ? (
+          <Alert message={t(`${KINETIC}.liveBeforeRelease`)} showIcon type="info" />
         ) : null}
         {!live || logic?.reason ? (
           <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
@@ -720,6 +726,7 @@ export function ProjectKinetic({
         {openNeed ? (
           <KineticNeedPanel
             canEdit={editable}
+            existingNetwork={existingNetwork}
             executor={needs.find(
               (item) => item.id === openNeed.executedBy && canExecute(item.kind),
             )}

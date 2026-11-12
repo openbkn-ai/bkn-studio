@@ -103,10 +103,19 @@ describe("kinetic.service", () => {
     });
   });
 
+  it("reads the network live when it runs a version, and an older reply by its release", async () => {
+    const { kinetic } = await importServices();
+    mockGet.mockResolvedValueOnce({ data: { live: true, released: false, update_time: 0 } });
+    expect(await kinetic.getLogicNeeds("p/1")).toMatchObject({ live: true, released: false });
+    mockGet.mockResolvedValueOnce({ data: { released: true, update_time: 0 } });
+    expect(await kinetic.getLogicNeeds("p/1")).toMatchObject({ live: true, released: true });
+  });
+
   it("reads no needs and no release when there is none, also from an older 404", async () => {
     const { kinetic } = await importServices();
     mockGet.mockResolvedValueOnce({ data: { needs: [], update_time: 0 } });
     expect(await kinetic.getLogicNeeds("p/1")).toEqual({
+      live: false,
       needs: [],
       networkId: "",
       reason: "",
@@ -121,6 +130,7 @@ describe("kinetic.service", () => {
       } as AxiosResponse),
     );
     expect(await kinetic.getLogicNeeds("p/1")).toEqual({
+      live: false,
       needs: [],
       networkId: "",
       reason: "",
