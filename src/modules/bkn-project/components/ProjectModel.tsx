@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { ExistingDefinitions } from "@/modules/bkn-project/components/model/ExistingDefinitions";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
 import { DraftChangesPanel } from "@/modules/bkn-project/components/draft/DraftChangesPanel";
@@ -551,6 +552,7 @@ export function ProjectModel({
       <div className={styles.page}>
         {notices}
         {understanding}
+        <ExistingDefinitions networkId={project.knId} projectId={project.id} />
         <EmptyStatePanel
           action={
             noCatalogs ? (
@@ -702,6 +704,11 @@ export function ProjectModel({
         />
       ) : null}
       {understanding}
+      <ExistingDefinitions
+        networkId={project.knId}
+        projectId={project.id}
+        skippedTables={draft.items.existingTables}
+      />
       {draft.status === "drafting" ? (
         <EmptyStatePanel
           description={t("bknProject.model.drafting.description")}

@@ -10,6 +10,7 @@ import { AxiosError, type AxiosResponse } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createProjectMock = vi.hoisted(() => vi.fn());
+const startMock = vi.hoisted(() => vi.fn());
 const translate = vi.hoisted(() => (key: string) => key);
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -19,6 +20,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@/modules/bkn-project/services/project.service", () => ({
   createProject: createProjectMock,
+  getExistingNetworkStart: startMock,
 }));
 
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
@@ -67,6 +69,12 @@ function pickOption(placeholder: string, label: string) {
 describe("NewProjectModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    startMock.mockResolvedValue({
+      actionTypes: 0,
+      catalogIds: [],
+      objectTypes: 0,
+      relationTypes: 0,
+    });
     // Ant Design's responsive grid observes media queries; jsdom has none.
     vi.stubGlobal(
       "matchMedia",
@@ -107,6 +115,35 @@ describe("NewProjectModal", () => {
     fireEvent.click(screen.getByText("bknProject.create.submit"));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
+    expect(createProjectMock).toHaveBeenCalledWith({
+      catalogIds: ["c1"],
+      knId: "orders",
+      name: "Orders",
+    });
+  });
+
+  it("starts from what an existing network has: says so and selects the catalogs it reads", async () => {
+    startMock.mockResolvedValue({
+      actionTypes: 7,
+      catalogIds: ["c1", "elsewhere"],
+      objectTypes: 14,
+      relationTypes: 21,
+    });
+    createProjectMock.mockResolvedValue({ id: "p1" });
+    const onCreated = renderModal();
+
+    fireEvent.change(screen.getByPlaceholderText("bknProject.create.namePlaceholder"), {
+      target: { value: "Orders" },
+    });
+    pickOption("bknProject.create.networkPlaceholder", "Orders network");
+
+    expect(await screen.findByText("bknProject.create.existingStart")).toBeInTheDocument();
+    expect(startMock).toHaveBeenCalledWith("orders");
+    expect(screen.getByText("bknProject.create.catalogsFromNetwork")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("bknProject.create.submit"));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    // Only catalogs the person can choose are selected; one not listed is left out.
     expect(createProjectMock).toHaveBeenCalledWith({
       catalogIds: ["c1"],
       knId: "orders",
