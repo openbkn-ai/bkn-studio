@@ -87,6 +87,32 @@ afterEach(() => {
 });
 
 describe("ContextLoaderIntegrationPanel tool catalog", () => {
+  it("uses the MCP tool title before a stale local translation", () => {
+    translation.t.mockImplementation((key) =>
+      key.endsWith(".get_action_info") ? "行动工具召回" : key,
+    );
+    const toolDefs = [
+      {
+        name: "get_action_info",
+        title: "行动类详情与参数",
+        inputSchema: { type: "object", properties: {} },
+      },
+    ];
+    const ops = mcpOpsFrom(toolDefs);
+    const { container } = renderPanel({
+      activeOps: ops,
+      op: ops[0],
+      selectedId: toolDefs[0].name,
+      toolDefs,
+      currentTool: toolDefs[0],
+    });
+
+    expect(container.querySelector('[class*="epBusinessName"]')?.textContent).toBe(
+      "行动类详情与参数",
+    );
+    expect(screen.queryByText("行动工具召回")).toBeNull();
+  });
+
   it.each(["zh-CN", "en-US"])(
     "renders the agreed groups and descriptions in %s",
     async (locale) => {

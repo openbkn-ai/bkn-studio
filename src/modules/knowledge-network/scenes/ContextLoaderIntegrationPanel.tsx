@@ -533,7 +533,8 @@ export function ContextLoaderIntegrationPanel({
   );
   const displayOf = useCallback(
     (target: ContextLoaderOp) => {
-      const display = toolDisplayOf(target.id, toolMetaByName.get(target.id));
+      const toolMeta = toolMetaByName.get(target.id);
+      const display = toolDisplayOf(target.id, toolMeta);
       const groupPrefix = `knowledgeNetwork.contextLoaderPanel.toolGroups.${display.groupKey}`;
       return {
         ...display,
@@ -542,9 +543,11 @@ export function ContextLoaderIntegrationPanel({
           display.groupDescription === null
             ? null
             : t(`${groupPrefix}.description`, { defaultValue: display.groupDescription }),
-        name: t(`knowledgeNetwork.contextLoaderPanel.toolNames.${target.id}`, {
-          defaultValue: display.name,
-        }),
+        name:
+          toolMeta?.title?.trim() ||
+          t(`knowledgeNetwork.contextLoaderPanel.toolNames.${target.id}`, {
+            defaultValue: display.name,
+          }),
       };
     },
     [t, toolMetaByName],

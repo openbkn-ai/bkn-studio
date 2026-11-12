@@ -36,7 +36,7 @@ export const contextLoaderPanelPart = {
       },
       logic: {
         label: "Logical attributes and actions",
-        description: "Logical attribute calculation, action recall, and execution",
+        description: "Logical attribute calculation, action details, and execution",
       },
       resource: {
         label: "Data resources",
@@ -67,7 +67,7 @@ export const contextLoaderPanelPart = {
       other: { label: "Other capabilities", description: "Uncategorized MCP capabilities" },
     },
     toolNames: {
-      search_schema: "Semantic search",
+      search_schema: "Schema exploration",
       get_object_types: "Object type definitions",
       get_relation_types: "Relation type definitions",
       get_action_types: "Action type definitions",
@@ -78,9 +78,9 @@ export const contextLoaderPanelPart = {
       describe_resource: "Resource field schema",
       run_sql: "SQL data query",
       get_logic_properties_values: "Logical attribute calculation",
-      get_action_info: "Action tool recall",
+      get_action_info: "Action details and inputs",
       execute_action: "Execute action",
-      get_action_execution: "Action execution result",
+      get_action_execution: "Action status and results",
       list_action_execution: "Action execution history",
       list_action_executions: "Action execution history",
       query_metric: "Metric data query",
