@@ -239,7 +239,8 @@ export function ProjectConcepts({
   };
 
   const judge = async (concept: Concept, verdict: ConceptVerdict) => {
-    if (!concepts) {
+    // A table's concept before drafting is no item and no requirement concept: nothing judges it yet.
+    if (!concepts || tableCandidate(concept)) {
       return;
     }
     setBusy(concept.key);
@@ -719,7 +720,7 @@ export function ProjectConcepts({
             render: (_value: unknown, concept: Concept) => (
               <span className={styles.actions}>
                 {/* The suggestion is right as it is: confirming it judges it so. */}
-                {concept.state === "pending" && !inNetwork(concept) ? (
+                {concept.state === "pending" && !inNetwork(concept) && !tableCandidate(concept) ? (
                   <AppButton
                     aria-label={t(`${PREFIX}.confirmOf`, { name: concept.name })}
                     onClick={() => void judge(concept, concept.verdict)}
@@ -729,7 +730,7 @@ export function ProjectConcepts({
                   </AppButton>
                 ) : null}
                 {/* A concept others were merged into stays where it is, as does the network's. */}
-                {concept.merged.length || inNetwork(concept) ? null : (
+                {concept.merged.length || inNetwork(concept) || tableCandidate(concept) ? null : (
                   <Select<string>
                     aria-label={t(`${PREFIX}.mergeIntoOf`, { name: concept.name })}
                     className={styles.merge}

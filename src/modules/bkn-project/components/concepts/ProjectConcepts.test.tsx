@@ -854,6 +854,27 @@ describe("ProjectConcepts", () => {
     await waitFor(() => expect(service.generateDraft).toHaveBeenCalledWith("p1", {}));
   });
 
+  it("offers no confirming or merging of a table's candidate, even beside a ready draft", async () => {
+    service.getConcepts.mockResolvedValue(
+      concepts({
+        concepts: [
+          ...concepts().concepts,
+          concept({
+            key: "table_concepts/r_late",
+            name: "Late table",
+            sources: [{ documentIds: [], id: "r_late", kind: "table", name: "late" }],
+          }),
+        ],
+      }),
+    );
+    renderConcepts();
+
+    const late = await row("Late table");
+    expect(late.queryByRole("button", { name: /confirmOf/ })).toBeNull();
+    expect(late.queryByRole("combobox", { name: /mergeIntoOf/ })).toBeNull();
+    expect(late.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
+  });
+
   it("leads to the sources while there is nothing to extract from", async () => {
     service.getConcepts.mockResolvedValue({
       concepts: [],
