@@ -66,7 +66,13 @@ type BackendReview = {
     unjudged: number;
   };
   refusals: { code: string }[] | null;
-  release: { base_version: string; network_id: string; network_name: string };
+  release: {
+    base_version: string;
+    network_id: string;
+    network_name: string;
+    running_label?: string;
+    running_version?: number;
+  };
   risks: {
     copies: number;
     existing: BackendItem[] | null;
@@ -191,6 +197,8 @@ export function mapReview(review: BackendReview): ReleaseReview {
       baseVersion: review.release.base_version,
       networkId: review.release.network_id,
       networkName: review.release.network_name,
+      runningLabel: review.release.running_label ?? "",
+      runningVersion: review.release.running_version ?? 0,
     },
     risks: {
       copies: review.risks.copies,
@@ -644,6 +652,8 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
       baseVersion: mockReleases[mockReleases.length - 1].version,
       networkId: "supply_chain",
       networkName: `Supply Chain · ${version}`,
+      runningLabel: "",
+      runningVersion: 0,
     },
     risks: {
       copies: 0,

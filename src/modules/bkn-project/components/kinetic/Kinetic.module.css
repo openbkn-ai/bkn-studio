@@ -136,3 +136,12 @@
   border-radius: 8px;
   background: var(--color-bg-surface);
 }
+
+.inNetworkDot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+}

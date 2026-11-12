@@ -1392,6 +1392,8 @@ export const bknProjectEnUS = {
         "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
       beforeRelease:
         "Implementations can be seen and linked after the first release. You can analyse and record kinetic needs now.",
+      liveBeforeRelease:
+        "The knowledge network is already running: implementations it has, marked with a blue dot, can be linked directly.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
       noneFiltered: "No kinetic need matches the filters.",
       stats: {
@@ -1519,6 +1521,7 @@ export const bknProjectEnUS = {
         },
         candidates: "Close matches the knowledge network has",
         candidatesNone: "No close match found.",
+        inNetwork: "Already in the network",
         candidatesFailed: "Close matches cannot be read right now",
         candidateReason: {
           same_name: "Same name",
@@ -2178,6 +2181,8 @@ export const bknProjectEnUS = {
         loadFailed: "The release review cannot be read right now",
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
+        targetRunning:
+          "Creates the new version {{name}}, based on the running version ({{version}}).",
         join: "; ",
         keptDocument:
           "{{count}} fields were decided as the documents have them right. The published data still uses the business system's values and the release records the differences; correct them in the business system:",

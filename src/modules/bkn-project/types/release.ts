@@ -58,7 +58,17 @@ export type ReleaseReview = {
   };
   /** Error codes the release itself would be refused with, such as a version already published. */
   refusals: string[];
-  release: { baseVersion: string; networkId: string; networkName: string };
+  /**
+   * `baseVersion` is the lineage's newest release; before one, `runningVersion` (with its
+   * `runningLabel`) is the version the network already runs, 0 for a network without versions.
+   */
+  release: {
+    baseVersion: string;
+    networkId: string;
+    networkName: string;
+    runningLabel: string;
+    runningVersion: number;
+  };
   risks: {
     copies: number;
     existing: ReleaseItem[];

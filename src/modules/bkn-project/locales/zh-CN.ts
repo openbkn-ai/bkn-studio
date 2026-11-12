@@ -1290,6 +1290,7 @@ export const bknProjectZhCN = {
       loadFailed: "动力需求暂时读取不到",
       liveUnavailable: "线上知识网络暂时读不到，实现情况可能不完整。",
       beforeRelease: "首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。",
+      liveBeforeRelease: "知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
       stats: {
@@ -1412,6 +1413,7 @@ export const bknProjectZhCN = {
         },
         candidates: "知识网络里已有的相近实现",
         candidatesNone: "没有找到相近的实现。",
+        inNetwork: "网络已有",
         candidatesFailed: "相近的实现暂时读不到",
         candidateReason: {
           same_name: "同名",
@@ -2029,6 +2031,7 @@ export const bknProjectZhCN = {
         loadFailed: "发布审核暂时读取不到",
         target: "将创建新版本「{{name}}」，基于线上的 v{{version}}。",
         targetFirst: "将创建第一个版本「{{name}}」。",
+        targetRunning: "将创建新版本「{{name}}」，基于线上运行的版本（{{version}}）。",
         join: "；",
         keptDocument:
           "{{count}} 个字段判定为文档说法正确。发布的数据仍按业务系统的值，这些不一致会写进发布记录，请到业务系统里更正：",
