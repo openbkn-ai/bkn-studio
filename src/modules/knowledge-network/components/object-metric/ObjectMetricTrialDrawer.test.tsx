@@ -600,6 +600,70 @@ describe("ObjectMetricTrialDrawer", () => {
     expect(onDrillThrough.mock.calls[1][2]).toBe("next-page");
   });
 
+  it("shows a participant page timeout inside the open drawer and allows retry", async () => {
+    const definition = createObjectMetricDefinitionV1("atomic", "order");
+    const onRun = vi.fn().mockResolvedValue({
+      entries: [
+        { bucket_key: "all-orders", available_actions: ["participants"], status: "ok", value: 2 },
+      ],
+      model: {
+        metric_id: "trial",
+        name: definition.name,
+        output_shape: "summary",
+        owner_object_type_id: "order",
+        value: definition.result_semantics.value,
+        version: 0,
+      },
+      overall_ms: 1,
+      status: "ok",
+    } satisfies ObjectMetricDataV1);
+    const onDrillThrough = vi
+      .fn()
+      .mockResolvedValueOnce({
+        participants: [{ instance_identity: { order_id: "order-1" }, role: "owner" }],
+        next_cursor: "next-page",
+        status: "ok",
+      })
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 504,
+          data: {
+            description: "Gateway timeout",
+            error_details: "participant query timed out before the result page was complete",
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        participants: [{ instance_identity: { order_id: "order-2" }, role: "owner" }],
+        status: "ok",
+      });
+    render(
+      <ObjectMetricTrialDrawer
+        definition={definition}
+        mode="draft"
+        onClose={vi.fn()}
+        onDrillThrough={onDrillThrough}
+        onRun={onRun}
+        open
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "试算" }));
+    fireEvent.click(await screen.findByRole("row", { name: /2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "查看参与实例" }));
+    expect(await screen.findByText("order_id: order-1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+    const timeout = await screen.findByText("参与实例查询超时，本页尚未查完，请重试。");
+    expect(timeout.closest(".ant-drawer-body")).not.toBeNull();
+    expect(screen.getByText("order_id: order-1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+    expect(await screen.findByText("order_id: order-2")).toBeInTheDocument();
+    expect(screen.queryByText("参与实例查询超时，本页尚未查完，请重试。")).toBeNull();
+    expect(onDrillThrough.mock.calls[2][2]).toBe("next-page");
+  });
+
   it("filters only the selected bucket and restores the prior result without a new request", async () => {
     const definition = createObjectMetricDefinitionV1("atomic", "order");
     const base: ObjectMetricDataV1 = {

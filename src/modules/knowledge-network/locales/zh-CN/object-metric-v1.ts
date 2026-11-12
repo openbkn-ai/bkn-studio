@@ -1213,6 +1213,7 @@ export const objectMetricV1Part = {
   analysisDataChanged: "当前数据可能已变化，明细与原图表值可能不同。",
   analysisInstance: "实例",
   analysisLoadMore: "加载更多",
+  analysisParticipantsTimeout: "参与实例查询超时，本页尚未查完，请重试。",
   analysisMetric: "对象指标",
   analysisVersion: "版本",
   analysisDraft: "工作草稿",

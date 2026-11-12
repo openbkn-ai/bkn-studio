@@ -92,4 +92,30 @@ describe("object metric V1 HTTP routes", () => {
       participants: [{ instance_identity: { order_id: "110101199001152345" } }],
     });
   });
+
+  it("allows the participant scan to finish before the client request times out", async () => {
+    const { queryObjectMetricDrillThroughV1, trialObjectMetricDrillThroughV1 } =
+      await import("@/modules/knowledge-network/services/object-metric.service");
+
+    await queryObjectMetricDrillThroughV1("network-1", "metric-1", 2, {}, "bucket-1");
+    await trialObjectMetricDrillThroughV1(
+      "network-1",
+      createObjectMetricDefinitionV1("atomic", "orders"),
+      {},
+      "bucket-1",
+    );
+
+    expect(postMock).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("/data/drill-through"),
+      expect.anything(),
+      expect.objectContaining({ timeout: 90000 }),
+    );
+    expect(postMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("/trial/drill-through"),
+      expect.anything(),
+      expect.objectContaining({ timeout: 90000 }),
+    );
+  });
 });

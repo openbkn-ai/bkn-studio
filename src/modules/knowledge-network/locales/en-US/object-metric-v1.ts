@@ -1358,6 +1358,8 @@ export const objectMetricV1Part = {
   analysisDataChanged: "Current data may have changed; details can differ from the chart value.",
   analysisInstance: "Instance",
   analysisLoadMore: "Load more",
+  analysisParticipantsTimeout:
+    "Participant query timed out before this page was complete. Try again.",
   analysisMetric: "Metric",
   analysisVersion: "Version",
   analysisDraft: "Working draft",
