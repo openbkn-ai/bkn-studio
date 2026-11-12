@@ -16,12 +16,18 @@ const {
   entitlementState,
   getKnowledgeNetwork,
   getKnowledgeNetworkStatistics,
+  listKnowledgeNetworkCapabilities,
   listObjectMetricsV1,
 } = vi.hoisted(() => ({
   entitlementState: { value: "available" },
   getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
   getKnowledgeNetworkStatistics: vi.fn(),
+  listKnowledgeNetworkCapabilities: vi.fn(),
   listObjectMetricsV1: vi.fn(),
+}));
+
+vi.mock("@/modules/knowledge-network/services/capability-binding.service", () => ({
+  listKnowledgeNetworkCapabilities,
 }));
 
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
@@ -109,5 +115,88 @@ describe("useWorkspaceData metrics sidebar count", () => {
       expect(getKnowledgeNetwork).toHaveBeenCalled();
     });
     expect(listObjectMetricsV1).not.toHaveBeenCalled();
+  });
+});
+
+describe("useWorkspaceData direct capability mounts", () => {
+  it.each([
+    ["functions", "function", "function"],
+    ["apis", "function", "openapi"],
+    ["mcp", "mcp_tool", ""],
+  ] as const)("shows only mounted %s entries", async (section, type, metadataType) => {
+    getKnowledgeNetwork.mockResolvedValue(createDetail());
+    getKnowledgeNetworkStatistics.mockResolvedValue(createDetail().statistics);
+    listKnowledgeNetworkCapabilities.mockResolvedValue({
+      boxes: [],
+      entries: [{ id: "binding-1", boxId: "box-1", metadataType, name: "Direct mount" }],
+      metadataAvailable: true,
+      totalCount: 1,
+    });
+
+    const { result } = renderHook(() => useWorkspaceData("kn-1", section));
+
+    await waitFor(() => {
+      const data = section === "mcp" ? result.current.mcpTools : result.current[section];
+      expect(data.entries.map((entry) => entry.name)).toEqual(["Direct mount"]);
+      expect(data.totalCount).toBe(1);
+    });
+    expect(listKnowledgeNetworkCapabilities).toHaveBeenCalledWith(
+      "kn-1",
+      expect.objectContaining({ mountedOnly: true, type }),
+    );
+  });
+
+  it("hides reference-only rows if an older backend ignores mounted_only", async () => {
+    getKnowledgeNetwork.mockResolvedValue(createDetail());
+    getKnowledgeNetworkStatistics.mockResolvedValue(createDetail().statistics);
+    listKnowledgeNetworkCapabilities.mockResolvedValue({
+      boxes: [],
+      entries: [
+        { id: "", boxId: "box-1", metadataType: "function", name: "Action reference" },
+        { id: "binding-1", boxId: "box-1", metadataType: "function", name: "Direct mount" },
+      ],
+      metadataAvailable: true,
+      totalCount: 2,
+    });
+
+    const { result } = renderHook(() => useWorkspaceData("kn-1", "functions"));
+
+    await waitFor(() => {
+      expect(result.current.functions.entries.map((entry) => entry.name)).toEqual(["Direct mount"]);
+      expect(result.current.functions.totalCount).toBe(1);
+    });
+  });
+
+  it("reads the next mount page before splitting API and Function rows", async () => {
+    getKnowledgeNetwork.mockResolvedValue(createDetail());
+    getKnowledgeNetworkStatistics.mockResolvedValue(createDetail().statistics);
+    listKnowledgeNetworkCapabilities.mockImplementation(
+      (_networkId: string, query: { offset?: number }) =>
+        Promise.resolve({
+          boxes: [],
+          entries:
+            query.offset === 1000
+              ? [{ id: "api-1", boxId: "box-api", metadataType: "openapi", name: "API" }]
+              : Array.from({ length: 1000 }, (_, index) => ({
+                  id: `function-${index}`,
+                  boxId: "box-function",
+                  metadataType: "function",
+                  name: `Function ${index}`,
+                })),
+          metadataAvailable: true,
+          totalCount: 1001,
+        }),
+    );
+
+    const { result } = renderHook(() => useWorkspaceData("kn-1", "apis"));
+
+    await waitFor(() => {
+      expect(result.current.apis.entries.map((entry) => entry.id)).toEqual(["api-1"]);
+      expect(result.current.functions.totalCount).toBe(1000);
+    });
+    expect(listKnowledgeNetworkCapabilities).toHaveBeenCalledWith(
+      "kn-1",
+      expect.objectContaining({ mountedOnly: true, offset: 1000, type: "function" }),
+    );
   });
 });

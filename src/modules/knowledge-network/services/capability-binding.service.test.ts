@@ -75,6 +75,18 @@ describe("capability-binding.service", () => {
     expect(config.params).toMatchObject({ branch: "main", type: "function" });
   });
 
+  it("requests stored mounts only when the caller opts in", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+
+    await listKnowledgeNetworkCapabilities("kn-1", { mountedOnly: true, type: "function" });
+
+    const [, config] = getMock.mock.calls[0] as [string, { params: Record<string, unknown> }];
+    expect(config.params).toMatchObject({
+      mounted_only: "true",
+      type: "function",
+    });
+  });
+
   it("reads the toolset kind the backend tags each binding with", async () => {
     getMock.mockResolvedValue({
       data: {

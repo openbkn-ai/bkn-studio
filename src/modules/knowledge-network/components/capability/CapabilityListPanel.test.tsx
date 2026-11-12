@@ -149,6 +149,13 @@ describe("CapabilityListPanel restricted empty state", () => {
     expect(screen.queryByText("knowledgeNetwork.capabilityNoVisibleFunctions")).toBeNull();
   });
 
+  it("does not claim a direct mount has no model references", () => {
+    renderPanel("function", false, dataFor("function"));
+
+    expect(screen.queryByText("knowledgeNetwork.capabilityColumnReferences")).toBeNull();
+    expect(screen.getByText("knowledgeNetwork.capabilitySourceManual")).not.toBeNull();
+  });
+
   it.each([
     ["function", "execution-factory:function:view"],
     ["api", "execution-factory:toolbox:view"],

@@ -32,7 +32,6 @@ import {
   type AttachCapabilityInput,
   type CapabilityBindingListResult,
   type CapabilityBindingRecord,
-  type CapabilitySource,
   type CapabilityType,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -122,12 +121,6 @@ function isMountedByHand(record: CapabilityBindingRecord) {
     record.id !== "" &&
     (record.sources.length === 0 ||
       record.sources.some((source) => source.kind === "box" || source.kind === "manual"))
-  );
-}
-
-function referencingSources(record: CapabilityBindingRecord): CapabilitySource[] {
-  return record.sources.filter(
-    (source) => source.kind === "action_type" || source.kind === "object_type",
   );
 }
 
@@ -237,52 +230,12 @@ export function CapabilityListPanel({
       </span>
     );
 
-  /** Who reaches for the capability: the object types and action types that point at it. */
-  const renderReferences = (record: CapabilityBindingRecord) => {
-    const references = referencingSources(record);
-    if (references.length === 0) {
-      return <span className={panelStyles.mutedCell}>-</span>;
-    }
-
-    return (
-      <span className={panelStyles.sourceTags}>
-        {references.map((source) => (
-          <Tag color="blue" key={source.kind}>
-            {t(
-              source.kind === "action_type"
-                ? "knowledgeNetwork.capabilitySourceActionType"
-                : "knowledgeNetwork.capabilitySourceObjectType",
-              {
-                names: source.refs
-                  .map((ref) => (ref.property ? `${ref.name}.${ref.property}` : ref.name))
-                  .filter(Boolean)
-                  .join("、"),
-              },
-            )}
-          </Tag>
-        ))}
-      </span>
-    );
-  };
-
   const runDetach = async (bindingIds: string[]) => {
-    // A row that is also referenced stays in the list with only its references left; saying so
-    // beforehand is the difference between "it worked" and "nothing happened".
-    const staysReferenced = data.entries.some(
-      (entry) => bindingIds.includes(entry.id) && referencingSources(entry).length > 0,
-    );
-
     setBusy(true);
     try {
       await onDetach(bindingIds);
       setSelectedRowKeys((keys) => keys.filter((key) => !bindingIds.includes(key)));
-      void message.success(
-        t(
-          staysReferenced
-            ? "knowledgeNetwork.capabilityDetachKeptByReference"
-            : "knowledgeNetwork.capabilityDetachSuccess",
-        ),
-      );
+      void message.success(t("knowledgeNetwork.capabilityDetachSuccess"));
     } finally {
       setBusy(false);
     }
@@ -384,11 +337,6 @@ export function CapabilityListPanel({
       title: t("knowledgeNetwork.capabilityColumnMountKind"),
       width: 120,
       render: (_: unknown, record) => renderMountKind(record),
-    },
-    {
-      key: "references",
-      title: t("knowledgeNetwork.capabilityColumnReferences"),
-      render: (_: unknown, record) => renderReferences(record),
     },
     {
       dataIndex: "comment",

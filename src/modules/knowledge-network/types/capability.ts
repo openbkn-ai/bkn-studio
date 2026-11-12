@@ -87,6 +87,8 @@ export type CapabilityMetadataType = "function" | "openapi";
 
 export type CapabilityBindingListQuery = {
   boxId?: string;
+  /** List stored mounts only; model references are available from the default list. */
+  mountedOnly?: boolean;
   metadataType?: CapabilityMetadataType;
   direction?: "asc" | "desc";
   limit?: number;

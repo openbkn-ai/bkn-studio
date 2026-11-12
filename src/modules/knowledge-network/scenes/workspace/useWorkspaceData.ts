@@ -34,24 +34,17 @@ import {
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
 
-/**
- * The backend appends model-referenced capabilities only to a page that reaches the end of the
- * stored rows, so a short page would drop them. Ask for the largest page it accepts, which covers
- * any real network in one read; the loop below stays for the pathological case.
- */
+/** Read every mounted row before splitting toolbox tools into Function and API sections. */
 const CAPABILITY_SECTION_LIMIT = 1000;
 
-/**
- * Tool bindings drive both list pages and both nav counts, and the split between API and function
- * can only be made on entries this client holds. Reading one page would silently undercount a
- * network with more bindings than the page size, so walk the pages until the reported total is in.
- */
+/** Dynamic Model lists stored mounts; action executors stay in Action Type configuration. */
 async function listAllCapabilities(
   networkId: string,
   type: CapabilityType,
 ): Promise<CapabilityBindingListResult> {
   const first = await listKnowledgeNetworkCapabilities(networkId, {
     limit: CAPABILITY_SECTION_LIMIT,
+    mountedOnly: true,
     type,
     withDetail: true,
   });
@@ -62,6 +55,7 @@ async function listAllCapabilities(
   for (let page = 1; page < pages; page += 1) {
     const next = await listKnowledgeNetworkCapabilities(networkId, {
       limit: CAPABILITY_SECTION_LIMIT,
+      mountedOnly: true,
       offset: page * CAPABILITY_SECTION_LIMIT,
       type,
       withDetail: true,
@@ -74,7 +68,15 @@ async function listAllCapabilities(
     });
   }
 
-  return { ...first, boxes, entries };
+  // Older backends ignore mounted_only. Keep the view correct while the two services roll out.
+  const mounted = entries.filter((entry) => entry.id !== "");
+  const mountedBoxIds = new Set(mounted.map((entry) => entry.boxId));
+  return {
+    ...first,
+    boxes: boxes.filter((box) => mountedBoxIds.has(box.boxId)),
+    entries: mounted,
+    totalCount: mounted.length,
+  };
 }
 
 /**
