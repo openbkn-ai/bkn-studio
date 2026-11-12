@@ -144,6 +144,9 @@ export const bknProjectEnUS = {
       summaryCore:
         "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
       reextract: "Extract again",
+      extract: "Extract concepts",
+      candidates:
+        "These candidate concepts come from the tables of the data catalogs, under the business names semantic understanding gave them. Extract concepts to judge or merge them one by one.",
       requirements: {
         extract: "Extract requirement concepts",
         started: "Extracting concepts from the requirement documents",
@@ -250,6 +253,7 @@ export const bknProjectEnUS = {
         kinetic: "Into the kinetic model",
         none: "Not into the model",
         noItem: "No data source yet",
+        candidate: "Goes into the concept model once extracted",
       },
       blocked: {
         needs_identity: "Choose its identity first",

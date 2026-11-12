@@ -805,6 +805,55 @@ describe("ProjectConcepts", () => {
     expect(screen.getByText("bknProject.concepts.empty.title")).toBeInTheDocument();
   });
 
+  it("lists the catalog tables as candidates before extracting, judged once extracted", async () => {
+    service.getConcepts.mockResolvedValue({
+      concepts: [
+        concept({
+          ai: true,
+          aliases: ["orders"],
+          description: "客户下的订单",
+          key: "table_concepts/r_orders",
+          name: "订单",
+          sources: [
+            { documentIds: [], id: "r_orders", kind: "table", name: "orders" },
+            { documentIds: ["d1"], id: "k1", kind: "requirement", name: "订单" },
+          ],
+          suggestedBecause: "table_understood",
+        }),
+        concept({
+          item: { adopted: true, id: "supply_region", kind: "object_types" },
+          key: "object_types/supply_region",
+          name: "区域",
+          sources: [{ documentIds: [], id: "supply_region", kind: "network", name: "区域" }],
+          state: "in_model",
+          suggestedBecause: "network",
+        }),
+      ],
+      counts: { in_model: 1, pending: 1 },
+      draftUpdateTime: 0,
+      notUnderstood: 0,
+      requirementUpdateTime: 9,
+    });
+    service.getDraft.mockResolvedValue(null);
+    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
+    renderConcepts();
+
+    const orders = await row("订单");
+    expect(screen.getByText("bknProject.concepts.candidates")).toBeInTheDocument();
+    expect(orders.getByText("bknProject.concepts.destination.candidate")).toBeInTheDocument();
+    // Not judged in the specification, nor here before extracting: no item is it yet.
+    expect(orders.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
+    expect(orders.queryByRole("img", { name: "bknProject.model.existing.mark" })).toBeNull();
+    // What the network already has is marked as before.
+    expect(
+      (await row("区域")).getAllByRole("img", { name: "bknProject.model.existing.mark" }),
+    ).toHaveLength(2);
+    expect(screen.queryByText("bknProject.concepts.empty.title")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.extract" }));
+    await waitFor(() => expect(service.generateDraft).toHaveBeenCalledWith("p1", {}));
+  });
+
   it("leads to the sources while there is nothing to extract from", async () => {
     service.getConcepts.mockResolvedValue({
       concepts: [],

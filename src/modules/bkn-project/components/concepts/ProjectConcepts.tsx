@@ -68,6 +68,14 @@ const PREFIX = "bknProject.concepts";
 /** The key prefix of a requirement concept no draft item is. */
 const REQUIREMENT_CONCEPT = "requirement_concepts/";
 
+/** The key prefix of a catalog table's concept before drafting: judged once drafting makes it an item. */
+const TABLE_CONCEPT = "table_concepts/";
+
+/** A catalog table's concept listed before drafting. */
+function tableCandidate(concept: Concept) {
+  return concept.key.startsWith(TABLE_CONCEPT);
+}
+
 /** The specification's category of a verdict, as a requirement concept is judged there. */
 const categoryOf = (verdict: ConceptVerdict) => (verdict === "none" ? "not_ontology" : verdict);
 
@@ -525,10 +533,16 @@ export function ProjectConcepts({
   const editable = canEdit && ready && busy === null;
   // A requirement concept is judged in the specification, while no run rewrites it.
   // What the network already has is judged in the knowledge network, not here.
+  // A table's concept before drafting is judged once extracting makes it an item.
   const judgeable = (concept: Concept) =>
     concept.item
       ? editable && !inNetwork(concept)
-      : canEdit && busy === null && concepts.requirementUpdateTime > 0 && !extractingRequirements;
+      : !tableCandidate(concept) &&
+        canEdit &&
+        busy === null &&
+        concepts.requirementUpdateTime > 0 &&
+        !extractingRequirements;
+  const candidates = !ready && concepts.concepts.some(tableCandidate);
   const pending = concepts.counts.pending ?? 0;
   const total = concepts.concepts.length;
   const shown =
@@ -550,6 +564,9 @@ export function ProjectConcepts({
       );
     }
     if (modelVerdict(concept.verdict)) {
+      if (tableCandidate(concept)) {
+        return <span className={styles.muted}>{t(`${PREFIX}.destination.candidate`)}</span>;
+      }
       return concept.item ? (
         <AppButton onClick={() => onOpenItem(concept.item!)} size="small" type="link">
           {t(`${PREFIX}.destination.model`)}
@@ -770,7 +787,7 @@ export function ProjectConcepts({
                 loading={busy === "extract"}
                 onClick={() => void extract(false)}
               >
-                {t(`${PREFIX}.reextract`)}
+                {t(`${PREFIX}.${ready ? "reextract" : "extract"}`)}
               </AppButton>
             </span>
           ) : (
@@ -832,6 +849,9 @@ export function ProjectConcepts({
         </dl>
 
         {drafting ? <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" /> : null}
+        {candidates && !drafting ? (
+          <Alert message={t(`${PREFIX}.candidates`)} showIcon type="info" />
+        ) : null}
         {concepts.notUnderstood ? (
           <Alert
             action={
