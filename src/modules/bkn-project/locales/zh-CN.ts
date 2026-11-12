@@ -1293,6 +1293,7 @@ export const bknProjectZhCN = {
     kinetic: {
       intro:
         "分析概念模型之外还需要哪些计算和操作能力：指标、函数、Skill，以及行动类和它绑定的 API、MCP 工具。知识网络里已有的直接连接；指标和行动类可以去知识网络实现，保存后回到这里连上。",
+      liveNoteRunning: "在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。",
       liveNote:
         "指标和行动类要等关联对象进入线上知识网络才能创建：新项目可以先记录，首次发布后再实现。在线上新建之后，下次发布前要先提交线上的修改。",
       analyze: "分析动力需求",
@@ -1321,6 +1322,34 @@ export const bknProjectZhCN = {
       liveBeforeRelease: "知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
+      allCovered: "动力需求都已由网络已有的内容覆盖，没有新增需求。",
+      network: {
+        title: "网络已有",
+        summary: "网络已有 {{items}}；新增需求 {{count}} 个",
+        summary_one: "网络已有 {{items}}；新增需求 {{count}} 个",
+        summary_other: "网络已有 {{items}}；新增需求 {{count}} 个",
+        count: {
+          action_type: "{{count}} 个行动类",
+          action_type_one: "{{count}} 个行动类",
+          action_type_other: "{{count}} 个行动类",
+          function: "{{count}} 个函数",
+          function_one: "{{count}} 个函数",
+          function_other: "{{count}} 个函数",
+          skill: "{{count}} 个 Skill",
+          skill_one: "{{count}} 个 Skill",
+          skill_other: "{{count}} 个 Skill",
+          object_metric: "{{count}} 个指标",
+          object_metric_one: "{{count}} 个指标",
+          object_metric_other: "{{count}} 个指标",
+        },
+        readOnly: "这些是知识网络里已有的，在这里只读；要修改，请到知识网络中进行。",
+        unreadable: "网络已有的部分内容暂时读不到，列表可能不完整。",
+        noObject: "不属于特定对象",
+        covers: "覆盖需求：",
+        view: "在知识网络中查看",
+        viewItem: "在知识网络中查看「{{name}}」",
+        openNeed: "查看需求「{{name}}」",
+      },
       stats: {
         implemented: "已实现",
         pending: "待实现",

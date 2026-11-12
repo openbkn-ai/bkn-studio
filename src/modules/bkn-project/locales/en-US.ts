@@ -1392,6 +1392,8 @@ export const bknProjectEnUS = {
     kinetic: {
       intro:
         "Find what the concept model needs computed or done beyond what it stores: metrics, functions, Skills, and action types with the APIs and MCP tools they run. Link what the knowledge network already has; metrics and action types can be built in the knowledge network and are linked when you come back.",
+      liveNoteRunning:
+        "After creating or changing metrics or action types in the knowledge network, commit those changes before the next release.",
       liveNote:
         "Metrics and action types can be created once their object types are in the live knowledge network: a new project records them first and implements them after its first release. After creating something live, commit the live changes before the next release.",
       analyze: "Analyze kinetic needs",
@@ -1425,6 +1427,37 @@ export const bknProjectEnUS = {
         "The knowledge network is already running: implementations it has, marked with a blue dot, can be linked directly.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
       noneFiltered: "No kinetic need matches the filters.",
+      allCovered:
+        "Every kinetic need is covered by what the network already has; there are no new needs.",
+      network: {
+        title: "Already in the network",
+        summary: "Already in the network: {{items}}; {{count}} new needs",
+        summary_one: "Already in the network: {{items}}; {{count}} new need",
+        summary_other: "Already in the network: {{items}}; {{count}} new needs",
+        count: {
+          action_type: "{{count}} action types",
+          action_type_one: "{{count}} action type",
+          action_type_other: "{{count}} action types",
+          function: "{{count}} functions",
+          function_one: "{{count}} function",
+          function_other: "{{count}} functions",
+          skill: "{{count}} Skills",
+          skill_one: "{{count}} Skill",
+          skill_other: "{{count}} Skills",
+          object_metric: "{{count}} metrics",
+          object_metric_one: "{{count}} metric",
+          object_metric_other: "{{count}} metrics",
+        },
+        readOnly:
+          "These are already in the knowledge network and are read-only here. Edit them in the knowledge network.",
+        unreadable:
+          "Some of what the network already has cannot be read right now; the list may be incomplete.",
+        noObject: "Not tied to one object",
+        covers: "Covers:",
+        view: "View in the knowledge network",
+        viewItem: "View “{{name}}” in the knowledge network",
+        openNeed: "View need “{{name}}”",
+      },
       stats: {
         implemented: "Implemented",
         pending: "To implement",

@@ -39,9 +39,26 @@ export type LogicNeedView = RequirementLogicNeed & {
   unconnected: { from: string; to: string }[];
 };
 
+/**
+ * What the network already had when the project started on it: an action type, function, Skill
+ * or object metric (`type` as a link's). Read-only here; it is edited in the network. `needIds`
+ * are the project's needs linked to it, the needs it covers.
+ */
+export type LogicNetworkItem = LogicNeedTarget & {
+  description: string;
+  name: string;
+  needIds: string[];
+  ownerObjectTypeId: string;
+  ownerObjectTypeName: string;
+};
+
 /** The kinetic needs with what implements them in the project's live network. */
 export type LogicNeeds = {
   needs: LogicNeedView[];
+  /** What the network had before the project; empty on a network the project created. */
+  networkItems: LogicNetworkItem[];
+  /** Why some of them could not be read: `forbidden` or `unavailable`; empty when all were. */
+  networkItemsReason: string;
   /** The live network: the latest release's, or the lineage's own before one. */
   networkId: string;
   /** `unavailable` when the released network could not be read. */
