@@ -318,9 +318,11 @@ describe("ProjectWorkspaceScene", () => {
     renderScene();
 
     const header = (await screen.findByText("Orders network")).closest("section") as HTMLElement;
-    expect(
-      await within(header).findAllByText("bknProject.overview.versions.unpublished"),
-    ).toHaveLength(2);
+    await waitFor(() =>
+      expect(within(header).getAllByText("bknProject.overview.versions.unpublished")).toHaveLength(
+        2,
+      ),
+    );
   });
 
   it("names the page in the navigation only, and shows the network on the overview", async () => {
