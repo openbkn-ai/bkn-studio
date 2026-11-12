@@ -27,7 +27,9 @@ import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectRele
 import { ProjectResources } from "@/modules/bkn-project/components/resources/ProjectResources";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import { UnsavedLeaveGuard } from "@/modules/bkn-project/components/unsaved/UnsavedLeaveGuard";
+import { coveredNeedIds } from "@/modules/bkn-project/components/kinetic/needs";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import {
   getLatestRelease,
@@ -97,7 +99,8 @@ export function ProjectWorkspaceScene({
     void load();
   }, [load]);
 
-  // What the navigation counts: catalogs, object types and scenario questions, read again on each
+  // What the navigation counts: catalogs, object types, kinetic items (what the network already
+  // has and the project's new needs) and scenario questions, read again on each
   // page so a change made on one shows when moving on. A failed read leaves the count off.
   const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
   // Read once the project is, after the page's own reads: the counts only add to it.
@@ -110,9 +113,18 @@ export function ProjectWorkspaceScene({
     void Promise.all([
       getRequirements(projectId).catch(() => null),
       getDraft(projectId).catch(() => null),
-    ]).then(([requirements, draft]) => {
+      getLogicNeeds(projectId).catch(() => null),
+    ]).then(([requirements, draft, logic]) => {
       if (active) {
+        const covered = coveredNeedIds(logic?.networkItems ?? []);
         setCounts({
+          ...(logic
+            ? {
+                kinetic:
+                  logic.networkItems.length +
+                  logic.needs.filter((need) => !covered.has(need.id)).length,
+              }
+            : {}),
           ...(requirements?.status === "ready" && requirements.spec
             ? { scenarios: requirements.spec.questions.length }
             : {}),

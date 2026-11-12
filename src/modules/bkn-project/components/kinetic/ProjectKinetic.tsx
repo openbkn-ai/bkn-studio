@@ -21,13 +21,19 @@ import {
   logicKindText,
   needStateText,
   needStateTone,
+  networkSummary,
   runErrorText,
   sourceText,
 } from "@/modules/bkn-project/components/kinetic/kineticMessages";
 import { KineticNeedDialog } from "@/modules/bkn-project/components/kinetic/KineticNeedDialog";
-import { KineticNeedPanel } from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
+import {
+  InNetworkDot,
+  KineticNeedPanel,
+} from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
+import { KineticNetworkItems } from "@/modules/bkn-project/components/kinetic/KineticNetworkItems";
 import {
   canExecute,
+  coveredNeedIds,
   executionPrefill,
   LOGIC_KINDS,
   METRIC_TYPES,
@@ -40,7 +46,7 @@ import {
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
-import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import { getDraft, getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
   getLogicNeeds,
   linkLogicNeed,
@@ -110,6 +116,8 @@ export function ProjectKinetic({
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
   const [objectTypes, setObjectTypes] = useState<{ id: string; name: string }[]>([]);
+  // The network's own object types, to name those its items act on that the draft does not have.
+  const [networkObjects, setNetworkObjects] = useState<{ id: string; name: string }[]>([]);
   const [kind, setKind] = useState<string>(ALL);
   const [stateFilter, setStateFilter] = useState<string>(ALL);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -176,6 +184,24 @@ export function ProjectKinetic({
       active = false;
     };
   }, [project.id]);
+
+  const networkItems = useMemo(() => logic?.networkItems ?? [], [logic]);
+  const hasNetworkItems = networkItems.length > 0;
+  useEffect(() => {
+    if (!hasNetworkItems) {
+      return undefined;
+    }
+    let active = true;
+    getExistingDefinitions(project.id)
+      .then(
+        (existing) =>
+          active && setNetworkObjects(existing.objectTypes.map(({ id, name }) => ({ id, name }))),
+      )
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [hasNetworkItems, project.id]);
 
   const run = requirements?.spec.runs.kinetic ?? null;
   const running = run?.status === "running";
@@ -289,8 +315,11 @@ export function ProjectKinetic({
     });
 
   const objectName = useCallback(
-    (id: string) => objectTypes.find((item) => item.id === id)?.name ?? id,
-    [objectTypes],
+    (id: string) =>
+      objectTypes.find((item) => item.id === id)?.name ??
+      networkObjects.find((item) => item.id === id)?.name ??
+      id,
+    [networkObjects, objectTypes],
   );
   const citing = useMemo(
     () => ({
@@ -318,8 +347,9 @@ export function ProjectKinetic({
     [logic, spec],
   );
   const live = logic !== null;
-  // Before the project's first release, whatever a running network has was there already.
-  const existingNetwork = Boolean(logic?.live && !logic.released);
+  // Before the project's first release, whatever a running network has was there already; after
+  // it, the network lists what it had when the project started on it.
+  const existingNetwork = Boolean(logic?.live && !logic.released) || hasNetworkItems;
   const networkId = logic?.networkId ?? "";
   const kinetic = projectSectionPath(project.id, "kinetic");
 
@@ -439,8 +469,12 @@ export function ProjectKinetic({
 
   const states = needs.map((need) => ({ need, state: needState(need) }));
   const count = (state: NeedState) => states.filter((entry) => entry.state === state).length;
+  // A need the network already covers is shown with what covers it, not as a new need.
+  const covered = coveredNeedIds(networkItems);
+  const newNeeds = needs.filter((need) => !covered.has(need.id)).length;
   const shown = states.filter(
     (entry) =>
+      !covered.has(entry.need.id) &&
       (kind === ALL || entry.need.kind === kind) &&
       // The state filter shows only with the live read: without it, it is not applied.
       (!live || stateFilter === ALL || entry.state === stateFilter),
@@ -670,7 +704,18 @@ export function ProjectKinetic({
         {!live || logic?.reason ? (
           <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
         ) : null}
-        <Alert message={t(`${KINETIC}.liveNote`)} showIcon type="info" />
+        {/* Waiting for the first release is said only while the network runs no version. */}
+        <Alert
+          message={t(`${KINETIC}.${logic?.live ? "liveNoteRunning" : "liveNote"}`)}
+          showIcon
+          type="info"
+        />
+        {hasNetworkItems ? (
+          <p className={`${styles.muted} ${styles.row}`}>
+            <InNetworkDot />
+            {networkSummary(t, networkItems, newNeeds)}
+          </p>
+        ) : null}
         {live && needs.length ? (
           <div className={styles.stats}>
             {(["implemented", "pending", "waitingRelease"] as const).map((state) => (
@@ -682,6 +727,16 @@ export function ProjectKinetic({
               </div>
             ))}
           </div>
+        ) : null}
+        {hasNetworkItems ? (
+          <KineticNetworkItems
+            items={networkItems}
+            needs={needs}
+            networkId={networkId}
+            objectName={objectName}
+            onOpenNeed={setOpenId}
+            reason={logic?.networkItemsReason ?? ""}
+          />
         ) : null}
         {needs.length ? (
           <>
