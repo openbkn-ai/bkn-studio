@@ -144,6 +144,14 @@ export const dataCatalogZhCN = {
         empty: "暂无探查任务",
       },
       semantic: {
+        applyResult: "应用结果",
+        applyPermissionUnavailable: "无法确认应用权限，暂不可应用。您仍可查看任务结果。",
+        applicationMode: "实际应用方式",
+        belowThreshold: "结果未达到原任务置信度阈值。如需降低阈值，请创建新任务。",
+        forceDescription: "使用已保存结果覆盖已有业务名称和描述，仍须通过置信度与 schema 校验。",
+        fillEmptyDescription: "使用已保存结果填充空白业务名称和描述，保留已有人工内容。",
+        applySuccess: "已应用保存的理解结果。",
+        applyUnchanged: "已完成应用，本次没有元数据变更。详见应用明细。",
         empty: "暂无语义理解任务",
         deleteTitle: "删除语义理解任务",
         deleteDescription: "确认删除语义理解任务“{{id}}”吗？",
@@ -193,6 +201,7 @@ export const dataCatalogZhCN = {
           },
         },
         mock: {
+          fieldDescription: "{{field}} 的业务含义",
           customerCatalog: "CRM 主数据",
           phoneInsufficientSamplesWarning: "字段 phone 的样本值不足，未生成语义建议。",
           insufficientSamples: "样本值不足",

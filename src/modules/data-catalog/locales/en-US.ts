@@ -152,6 +152,19 @@ export const dataCatalogEnUS = {
         empty: "No discovery tasks",
       },
       semantic: {
+        applyResult: "Apply result",
+        applyPermissionUnavailable:
+          "Unable to confirm application permissions. Applying is unavailable; you can still review the task result.",
+        applicationMode: "Application strategy",
+        belowThreshold:
+          "This result is below the original confidence threshold. Create a new task to use a lower threshold.",
+        forceDescription:
+          "Overwrite existing business names and descriptions with the saved result. Confidence and schema checks still apply.",
+        fillEmptyDescription:
+          "Use the saved result to fill empty business names and descriptions. Existing custom content is preserved.",
+        applySuccess: "The saved result has been applied.",
+        applyUnchanged:
+          "Application completed without metadata changes. Review the application details.",
         empty: "No semantic-understanding tasks",
         deleteTitle: "Delete semantic-understanding task",
         deleteDescription: "Delete semantic-understanding task “{{id}}”?",
@@ -201,6 +214,7 @@ export const dataCatalogEnUS = {
           },
         },
         mock: {
+          fieldDescription: "Business meaning of {{field}}",
           customerCatalog: "CRM Master Data",
           phoneInsufficientSamplesWarning:
             "The phone field has insufficient sample values, so no semantic suggestion was generated.",

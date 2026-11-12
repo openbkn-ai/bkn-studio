@@ -335,6 +335,7 @@ export const mockResources: CatalogResource[] = [
   ...filterDemoResources,
   makeResource({
     id: "res-customers",
+    operations: ["view_detail", "query_data", "modify", "delete"],
     catalogId: "cat-001",
     name: "customers",
     category: "table",
@@ -1141,6 +1142,7 @@ export const mockResources: CatalogResource[] = [
   }),
   makeResource({
     id: "res-kn-chunks",
+    operations: ["view_detail", "query_data", "modify", "delete"],
     catalogId: "cat-002",
     name: "kn_chunks",
     category: "dataset",

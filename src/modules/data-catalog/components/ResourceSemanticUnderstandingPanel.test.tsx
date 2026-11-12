@@ -5,18 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { FormInstance } from "antd";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { deleteSemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import type { SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 const {
+  applySemanticUnderstandingTaskMock,
+  getSemanticUnderstandingTaskMock,
   createResourceSemanticUnderstandingTaskMock,
   listSemanticUnderstandingTasksMock,
   modalConfirmMock,
@@ -26,6 +29,8 @@ const {
     locale: "zh-CN",
     currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
   },
+  applySemanticUnderstandingTaskMock: vi.fn(),
+  getSemanticUnderstandingTaskMock: vi.fn(),
   createResourceSemanticUnderstandingTaskMock: vi.fn(),
   listSemanticUnderstandingTasksMock: vi.fn(),
   modalConfirmMock: vi.fn<(config: { onOk: () => Promise<void> }) => void>(),
@@ -58,6 +63,8 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", () => ({
+  applySemanticUnderstandingTask: applySemanticUnderstandingTaskMock,
+  getSemanticUnderstandingTask: getSemanticUnderstandingTaskMock,
   createResourceSemanticUnderstandingTask: createResourceSemanticUnderstandingTaskMock,
   deleteSemanticUnderstandingTask: vi.fn(),
   listSemanticUnderstandingTasks: listSemanticUnderstandingTasksMock,
@@ -424,6 +431,91 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       screen.getByText("dataCatalog.taskManagement.columns.applyMode").closest("th"),
     ).not.toBeNull();
     expect(document.querySelectorAll(".ant-table-filter-trigger").length).toBeGreaterThan(0);
+  });
+
+  it.each([false, true])(
+    "refreshes after application even if the drawer closes: %s",
+    async (closeWhilePending) => {
+      const task: SemanticUnderstandingTask = {
+        agentId: "resource-semantic-understanding",
+        applied: false,
+        applyMode: "dry_run",
+        catalogId: resource.catalogId,
+        resourceId: resource.id,
+        scope: "resource",
+        status: "completed",
+        confidence: 0.9,
+        confidenceThreshold: 0.75,
+        createTime: 100,
+        creator: { id: "user-1", type: "user" },
+        id: "saved-task",
+        resultJson: "{}",
+      };
+      listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [task], total: 1 });
+      getSemanticUnderstandingTaskMock.mockResolvedValue(task);
+      let complete!: (value: SemanticUnderstandingTask) => void;
+      applySemanticUnderstandingTaskMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve;
+          }),
+      );
+      const onApplied = vi.fn();
+      render(
+        <ResourceSemanticUnderstandingPanel
+          active
+          catalog={{ ...manageableCatalog, operations: ["task_manage", "resource_manage"] }}
+          onApplied={onApplied}
+          resource={{ ...resource, operations: ["view_detail", "modify"] }}
+        />,
+      );
+      fireEvent.click(await screen.findByRole("button", { name: "saved-task" }));
+      const listRequests = listSemanticUnderstandingTasksMock.mock.calls.length;
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "dataCatalog.taskManagement.semantic.applyResult",
+        }),
+      );
+      if (closeWhilePending) fireEvent.click(screen.getByRole("button", { name: "Close" }));
+      await act(async () => {
+        complete({ ...task, applied: true });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(onApplied).toHaveBeenCalledTimes(1));
+      expect(applySemanticUnderstandingTaskMock).toHaveBeenCalledWith("saved-task", "fill_empty");
+      expect(listSemanticUnderstandingTasksMock.mock.calls.length).toBeGreaterThan(listRequests);
+    },
+  );
+
+  it("does not offer application when the catalog allows it but the Resource denies modify", async () => {
+    const task = {
+      id: "saved-task",
+      scope: "resource",
+      status: "completed",
+      applyMode: "dry_run",
+      catalogId: resource.catalogId,
+      resourceId: resource.id,
+      applied: false,
+      confidence: 0.9,
+      confidenceThreshold: 0.75,
+      createTime: 100,
+      creator: { id: "user-1", type: "user" },
+      resultJson: "{}",
+    };
+    listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [task], total: 1 });
+    getSemanticUnderstandingTaskMock.mockResolvedValue(task);
+    render(
+      <ResourceSemanticUnderstandingPanel
+        active
+        catalog={{ ...manageableCatalog, operations: ["task_manage", "resource_manage"] }}
+        resource={resource}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "saved-task" }));
+    await screen.findByText("dataCatalog.taskManagement.semantic.fields.inputHash");
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.taskManagement.semantic.applyResult" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows finish time before create time", async () => {

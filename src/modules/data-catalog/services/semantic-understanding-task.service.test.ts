@@ -6,6 +6,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockResources } from "./mock-db";
 
 const { getMock, postMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 import {
+  applySemanticUnderstandingTask,
   buildSemanticUnderstandingTaskListParams,
   createResourceSemanticUnderstandingTask,
   deleteSemanticUnderstandingTask,
@@ -306,5 +308,169 @@ describe("semantic-understanding task list", () => {
       "/vega-backend/v1/semantic-understanding-tasks",
       expect.objectContaining({ skipErrorToast: true }),
     );
+  });
+});
+
+describe("applySemanticUnderstandingTask", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("posts the selected strategy and preserves the original dry-run result", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockResolvedValue({
+      data: {
+        id: "task/1",
+        scope: "resource",
+        catalog_id: "catalog-1",
+        resource_id: "resource-1",
+        agent_id: "semantic-agent",
+        apply_mode: "dry_run",
+        status: "completed",
+        applied: true,
+        confidence: 0.9,
+        confidence_threshold: 0.75,
+        create_time: 1,
+        creator: { id: "user-1", type: "user" },
+        input: "",
+        result_json: "saved-result",
+        apply_detail_json: '{"apply_mode":"force"}',
+      },
+    });
+    const { applySemanticUnderstandingTask: applyTask } =
+      await import("./semantic-understanding-task.service");
+    const task = await applyTask("task/1", "force");
+    expect(postMock).toHaveBeenLastCalledWith(
+      "/vega-backend/v1/semantic-understanding-tasks/task%2F1/apply",
+      { apply_mode: "force" },
+      { skipErrorToast: true },
+    );
+    expect(task).toMatchObject({
+      applyMode: "dry_run",
+      applied: true,
+      resultJson: "saved-result",
+      input: "",
+    });
+  });
+
+  it("applies saved mock suggestions to the resource without replacing task output", async () => {
+    const resource = mockResources.find((item) => item.id === "res-customers")!;
+    const original = structuredClone(resource);
+    const task = await createResourceSemanticUnderstandingTask({
+      resourceId: resource.id,
+      applyMode: "dry_run",
+    });
+    const savedTask = (await getSemanticUnderstandingTask(task.id))!;
+    const input = savedTask.input,
+      result = savedTask.resultJson;
+    try {
+      const applied = await applySemanticUnderstandingTask(task.id, "force");
+      expect(applied).toMatchObject({
+        applyMode: "dry_run",
+        applied: true,
+        input,
+        resultJson: result,
+      });
+      expect(resource.schema[0].description).not.toBe(original.schema[0].description);
+      expect(JSON.parse(applied.applyDetailJson!)).toMatchObject({ apply_mode: "force" });
+      const snapshot = JSON.stringify(resource);
+      await applySemanticUnderstandingTask(task.id, "force");
+      expect(JSON.stringify(resource)).toBe(snapshot);
+    } finally {
+      Object.assign(resource, original);
+      await deleteSemanticUnderstandingTask(task.id);
+    }
+  });
+
+  it("rejects a mock schema change including attributes without mutating metadata", async () => {
+    const resource = mockResources.find((item) => item.id === "res-customers")!;
+    const original = structuredClone(resource);
+    const task = await createResourceSemanticUnderstandingTask({
+      resourceId: resource.id,
+      applyMode: "dry_run",
+    });
+    try {
+      resource.schema[0].attributes = { precision: 42 };
+      const snapshot = JSON.stringify(resource);
+      await expect(applySemanticUnderstandingTask(task.id, "force")).rejects.toMatchObject({
+        response: { status: 409 },
+      });
+      expect(JSON.stringify(resource)).toBe(snapshot);
+      expect((await getSemanticUnderstandingTask(task.id))?.applied).toBe(false);
+    } finally {
+      Object.assign(resource, original);
+      await deleteSemanticUnderstandingTask(task.id);
+    }
+  });
+});
+
+describe("saved mock semantic application boundaries", () => {
+  it("accepts absent legacy attributes when current attributes are empty", async () => {
+    const resource = mockResources.find((item) => item.id === "res-customers")!;
+    const original = structuredClone(resource);
+    resource.schema = resource.schema.map((field) => ({ ...field, attributes: undefined }));
+    const task = await createResourceSemanticUnderstandingTask({
+      resourceId: resource.id,
+      applyMode: "dry_run",
+    });
+    try {
+      resource.schema = resource.schema.map((field) => ({ ...field, attributes: {} }));
+      const applied = await applySemanticUnderstandingTask(task.id, "force");
+      expect(applied.applied).toBe(true);
+      expect(applied.applyMode).toBe("dry_run");
+    } finally {
+      Object.assign(resource, original);
+      await deleteSemanticUnderstandingTask(task.id);
+    }
+  });
+
+  it("cannot force a below-threshold result or mutate the original threshold", async () => {
+    const resource = mockResources.find((item) => item.id === "res-customers")!;
+    const task = await createResourceSemanticUnderstandingTask({
+      resourceId: resource.id,
+      applyMode: "dry_run",
+      confidenceThreshold: 0.95,
+    });
+    const before = JSON.stringify(resource);
+    try {
+      await expect(applySemanticUnderstandingTask(task.id, "force")).rejects.toMatchObject({
+        response: { status: 409 },
+      });
+      expect(JSON.stringify(resource)).toBe(before);
+      expect((await getSemanticUnderstandingTask(task.id))?.confidenceThreshold).toBe(0.95);
+    } finally {
+      await deleteSemanticUnderstandingTask(task.id);
+    }
+  });
+
+  it("completes no-change application and does not replay it with another strategy", async () => {
+    const resource = mockResources.find((item) => item.id === "res-customers")!;
+    const original = structuredClone(resource);
+    const task = await createResourceSemanticUnderstandingTask({
+      resourceId: resource.id,
+      applyMode: "dry_run",
+    });
+    try {
+      resource.schema = resource.schema.map((field) => ({
+        ...field,
+        description: "Custom business description",
+        displayName: "Custom name",
+      }));
+      const before = JSON.stringify(resource);
+      const unchanged = await applySemanticUnderstandingTask(task.id, "fill_empty");
+      expect(unchanged.applied).toBe(true);
+      expect(JSON.parse(unchanged.applyDetailJson!)).toMatchObject({
+        reason: "no_resource_changes",
+        apply_mode: "fill_empty",
+      });
+      expect(JSON.stringify(resource)).toBe(before);
+      const repeated = await applySemanticUnderstandingTask(task.id, "force");
+      expect(repeated).toEqual(unchanged);
+      expect(repeated.applyMode).toBe("dry_run");
+      expect(JSON.stringify(resource)).toBe(before);
+      expect((await getSemanticUnderstandingTask(task.id))?.applied).toBe(true);
+    } finally {
+      Object.assign(resource, original);
+      await deleteSemanticUnderstandingTask(task.id);
+    }
   });
 });

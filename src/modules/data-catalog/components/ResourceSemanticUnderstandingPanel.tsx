@@ -62,10 +62,12 @@ function formatTime(value: number) {
 export function ResourceSemanticUnderstandingPanel({
   active,
   catalog,
+  onApplied,
   resource,
 }: {
   active: boolean;
   catalog: CatalogRecord | null;
+  onApplied?: () => void;
   resource: CatalogResource;
 }) {
   const { t } = useTranslation();
@@ -675,13 +677,17 @@ export function ResourceSemanticUnderstandingPanel({
           ) : null}
         </Form>
       </Modal>
-      {detailTaskId ? (
-        <SemanticUnderstandingTaskDetailDrawer
-          onClose={() => setDetailTaskId(null)}
-          open
-          taskId={detailTaskId}
-        />
-      ) : null}
+      <SemanticUnderstandingTaskDetailDrawer
+        canApply={canManageTasks && hasCatalogResourceOperation(resource, "modify")}
+        onApplied={() => {
+          void loadPage(page, pageSize);
+          void loadSummary();
+          onApplied?.();
+        }}
+        onClose={() => setDetailTaskId(null)}
+        open={Boolean(detailTaskId)}
+        taskId={detailTaskId ?? ""}
+      />
     </div>
   );
 }

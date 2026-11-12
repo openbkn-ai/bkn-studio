@@ -760,6 +760,9 @@ export function ResourceWorkspaceScene({
                         <ResourceSemanticUnderstandingPanel
                           active={tab === "semantic-understanding"}
                           catalog={catalog}
+                          onApplied={() => {
+                            void refreshResource();
+                          }}
                           resource={resource}
                         />
                       </div>
