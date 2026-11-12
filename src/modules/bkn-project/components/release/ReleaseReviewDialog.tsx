@@ -21,6 +21,7 @@ import {
   checkTitle,
   publishErrorText,
   refusalText,
+  versionName,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
@@ -309,7 +310,12 @@ function ReviewBody({
       <p className={styles.muted}>
         {release.baseVersion
           ? t(`${PREFIX}.target`, { name: release.networkName, version: release.baseVersion })
-          : t(`${PREFIX}.targetFirst`, { name: release.networkName })}
+          : release.runningVersion
+            ? t(`${PREFIX}.targetRunning`, {
+                name: release.networkName,
+                version: versionName(t, release.runningVersion, release.runningLabel),
+              })
+            : t(`${PREFIX}.targetFirst`, { name: release.networkName })}
       </p>
       {review.refusals.length ? (
         <Alert

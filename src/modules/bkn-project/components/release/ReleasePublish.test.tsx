@@ -118,7 +118,13 @@ function review(extra: Partial<ReleaseReview> = {}): ReleaseReview {
       unjudged: 0,
     },
     refusals: [],
-    release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "供应链 · 1.0.3" },
+    release: {
+      baseVersion: "1.0.2",
+      networkId: "n_v1_0_3",
+      networkName: "供应链 · 1.0.3",
+      runningLabel: "",
+      runningVersion: 0,
+    },
     risks: { copies: 0, existing: [], onlyAdditions: true, orphans: [], unimplementedNeeds: [] },
     signature: "sig-1",
     version: "1.0.3",
@@ -523,6 +529,36 @@ describe("ReleasePublish", () => {
     expect(prepareButton()).toBeEnabled();
     expect(onChanged).not.toHaveBeenCalled();
     expect(view.queryByText(code)).not.toBeInTheDocument();
+  });
+
+  it("builds on the running version of a network the project started from, and says first only without one", async () => {
+    const target = async (release: Partial<ReleaseReview["release"]>) => {
+      getReleaseReviewMock.mockResolvedValue(
+        review({ release: { ...review().release, baseVersion: "", ...release } }),
+      );
+      const { unmount } = renderPublish();
+      fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+      const view = await dialog();
+      await view.findByText("草稿确认");
+      return { unmount, view };
+    };
+
+    let shown = await target({ runningLabel: "v1.0.0", runningVersion: 1 });
+    expect(
+      shown.view.getByText("将创建新版本「供应链 · 1.0.3」，基于线上运行的版本（v1.0.0）。"),
+    ).toBeInTheDocument();
+    expect(shown.view.queryByText(/第一个版本/)).toBeNull();
+    shown.unmount();
+
+    shown = await target({ runningLabel: "", runningVersion: 1 });
+    expect(
+      shown.view.getByText("将创建新版本「供应链 · 1.0.3」，基于线上运行的版本（第 1 版）。"),
+    ).toBeInTheDocument();
+    shown.unmount();
+
+    shown = await target({ runningLabel: "", runningVersion: 0 });
+    expect(shown.view.getByText("将创建第一个版本「供应链 · 1.0.3」。")).toBeInTheDocument();
+    shown.unmount();
   });
 
   it("reviews another version only after checking it again", async () => {

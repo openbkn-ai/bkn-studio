@@ -144,7 +144,13 @@ describe("release.service", () => {
         unjudged: 0,
       },
       refusals: [],
-      release: { baseVersion: "1.0.2", networkId: "n_v1_0_3", networkName: "Supply · 1.0.3" },
+      release: {
+        baseVersion: "1.0.2",
+        networkId: "n_v1_0_3",
+        networkName: "Supply · 1.0.3",
+        runningLabel: "",
+        runningVersion: 0,
+      },
       risks: {
         copies: 1,
         existing: [],
