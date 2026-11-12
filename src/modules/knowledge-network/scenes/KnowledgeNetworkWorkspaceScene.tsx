@@ -150,6 +150,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const hasCapabilities =
     (detail?.statistics.functionsTotal ?? 0) +
       (detail?.statistics.apisTotal ?? 0) +
+      (detail?.statistics.mcpToolsTotal ?? 0) +
       (detail?.statistics.skillsTotal ?? 0) >
     0;
   const experienceNetwork = useMemo(
@@ -229,6 +230,24 @@ export function KnowledgeNetworkWorkspaceScene({
         paidEdition: "professional",
       },
       {
+        key: "functions",
+        label: t("knowledgeNetwork.workspaceFunctions"),
+        icon: <KnowledgeResourceIcon kind="function" />,
+        count: detail?.statistics.functionsTotal ?? 0,
+      },
+      {
+        key: "apis",
+        label: t("knowledgeNetwork.workspaceApis"),
+        icon: <KnowledgeResourceIcon kind="api" />,
+        count: detail?.statistics.apisTotal ?? 0,
+      },
+      {
+        key: "mcp",
+        label: t("knowledgeNetwork.workspaceMcpTools"),
+        icon: <KnowledgeResourceIcon kind="mcp" />,
+        count: detail?.statistics.mcpToolsTotal ?? 0,
+      },
+      {
         key: "skills",
         label: t("knowledgeNetwork.workspaceSkills"),
         icon: <KnowledgeResourceIcon kind="skill" />,
@@ -274,10 +293,16 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "relation-types" ||
       item.key === "action-types",
   );
-  // Metrics and SKILLs remain network-level capabilities. Function, API and MCP tools are chosen
-  // inside an action and their action reference creates the capability binding automatically.
+  // Tools may be mounted for direct network use or referenced by an action type. These are
+  // separate relationships; an action reference does not require a manual mount.
   const dynamicNavItems = navigationItems.filter(
-    (item) => item.key === "metrics" || item.key === "skills" || item.key === "knowledge-bases",
+    (item) =>
+      item.key === "metrics" ||
+      item.key === "functions" ||
+      item.key === "apis" ||
+      item.key === "mcp" ||
+      item.key === "skills" ||
+      item.key === "knowledge-bases",
   );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
