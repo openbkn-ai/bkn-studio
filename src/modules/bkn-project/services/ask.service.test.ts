@@ -285,3 +285,49 @@ describe("document assistant wire format", () => {
     ]);
   });
 });
+
+describe("concept assistant wire format", () => {
+  it("reads the changes of the concepts it knows, leaving out the rest", async () => {
+    const { mapConceptAnswer } = await importService();
+    const result = mapConceptAnswer({
+      answer: "Two changes.",
+      dropped: [{ field: "verdict", reason: "verdict_not_fit" }],
+      revisions: [
+        { field: "define", reason: "r", value: { key: "object_types/a", name: "A" } },
+        {
+          field: "split",
+          reason: "",
+          value: {
+            key: "object_types/a",
+            parts: [
+              { name: "Order", verdict: "object" },
+              { description: "One line", name: "Order line", verdict: "object" },
+            ],
+          },
+        },
+        { field: "verdict", reason: "", value: { key: "object_types/a", verdict: "unknown" } },
+        { field: "add", reason: "", value: { name: "Batch", verdict: "event" } },
+      ],
+    });
+    expect(result.dropped).toEqual([{ field: "verdict", reason: "verdict_not_fit" }]);
+    expect(result.revisions).toEqual([
+      {
+        field: "define",
+        reason: "r",
+        value: { description: "", key: "object_types/a", name: "A" },
+      },
+      {
+        field: "split",
+        reason: "",
+        value: {
+          key: "object_types/a",
+          parts: [
+            { description: "", name: "Order", verdict: "object" },
+            { description: "One line", name: "Order line", verdict: "object" },
+          ],
+        },
+      },
+      { field: "add", reason: "", value: { description: "", name: "Batch", verdict: "event" } },
+    ]);
+  });
+});

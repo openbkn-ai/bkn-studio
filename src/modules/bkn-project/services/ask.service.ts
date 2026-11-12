@@ -7,6 +7,13 @@
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import { objectTypeBody, relationBody } from "@/modules/bkn-project/services/draft.service";
+import {
+  CONCEPT_VERDICTS,
+  type ConceptAskAnswer,
+  type ConceptPart,
+  type ConceptRevision,
+  type ConceptVerdict,
+} from "@/modules/bkn-project/types/concepts";
 import type {
   AskAnswer,
   AskDropped,
@@ -232,12 +239,40 @@ export async function askDraftItem(request: AskRequest): Promise<AskAnswer> {
   if (useMock) {
     return askMock(request);
   }
-  const { apiBaseUrl, auth, locale } = getRuntimeConfig();
+  const { apiBaseUrl } = getRuntimeConfig();
   const draft = `${apiBaseUrl}${API_PREFIX}/${encodeURIComponent(request.projectId)}/ontology/draft`;
   const url =
     request.itemId === null
       ? `${draft}/${request.kind}:ask`
       : `${draft}/${request.kind}/${encodeURIComponent(request.itemId)}/ask`;
+  const working = request.working
+    ? request.kind === "object_types"
+      ? objectTypeBody(request.working)
+      : relationBody(request.working)
+    : undefined;
+  return streamAsk(
+    url,
+    {
+      history: request.history.slice(-ASK_HISTORY_TURNS),
+      question: request.question,
+      ...(working ? { working } : {}),
+    },
+    request,
+    mapAnswer,
+  );
+}
+
+/**
+ * Posts a question to an Ask AI endpoint of bkn-project and reads its answer as it streams: the
+ * text as it is written, then the result `map` reads.
+ */
+async function streamAsk<A extends { answer: string }>(
+  url: string,
+  body: Record<string, unknown>,
+  request: { onText: (text: string) => void; signal?: AbortSignal },
+  map: (data: unknown) => A,
+): Promise<A> {
+  const { auth, locale } = getRuntimeConfig();
   // Signed in as the page is, once more with a fresh token when the one it had expired.
   const post = (init: RequestInit, token: string | null) => {
     const headers = new Headers(init.headers);
@@ -247,19 +282,10 @@ export async function askDraftItem(request: AskRequest): Promise<AskAnswer> {
     }
     return fetch(url, { ...init, headers });
   };
-  const working = request.working
-    ? request.kind === "object_types"
-      ? objectTypeBody(request.working)
-      : relationBody(request.working)
-    : undefined;
   let written = "";
   try {
     const init: RequestInit = {
-      body: JSON.stringify({
-        history: request.history.slice(-ASK_HISTORY_TURNS),
-        question: request.question,
-        ...(working ? { working } : {}),
-      }),
+      body: JSON.stringify(body),
       headers: { Accept: "text/event-stream", "Content-Type": "application/json" },
       method: "POST",
       signal: request.signal,
@@ -291,7 +317,7 @@ export async function askDraftItem(request: AskRequest): Promise<AskAnswer> {
           request.onText(data.content);
         } else if (parsed?.name === "result") {
           // bkn-project tidies the answer it ends with; that one stands.
-          const answer = mapAnswer(data);
+          const answer = map(data);
           return { ...answer, answer: answer.answer || written };
         } else if (parsed?.name === "error") {
           throw new AskError(codeOf(data), text(data?.answer) || written);
@@ -308,4 +334,105 @@ export async function askDraftItem(request: AskRequest): Promise<AskAnswer> {
     }
     throw new AskError(request.signal?.aborted ? "aborted" : "other", written);
   }
+}
+
+export type ConceptAskRequest = {
+  history: AskTurn[];
+  /** The answer's text as it is written. */
+  onText: (text: string) => void;
+  projectId: string;
+  question: string;
+  signal?: AbortSignal;
+};
+
+const CONCEPT_VERDICT_SET = new Set<string>(CONCEPT_VERDICTS);
+const verdictOf = (value: unknown) =>
+  CONCEPT_VERDICT_SET.has(text(value)) ? (text(value) as ConceptVerdict) : null;
+
+/** A change of the concepts as the page adopts it; one of a shape the page does not know is left out. */
+function mapConceptRevision(value: unknown): ConceptRevision | null {
+  const item = asRecord(value);
+  const change = asRecord(item?.value);
+  if (!item || !change) {
+    return null;
+  }
+  const reason = text(item.reason);
+  const key = text(change.key);
+  const name = text(change.name);
+  const description = text(change.description);
+  const verdict = verdictOf(change.verdict);
+  switch (item.field) {
+    case "define":
+      return key && name ? { field: "define", reason, value: { description, key, name } } : null;
+    case "verdict":
+      return key && verdict ? { field: "verdict", reason, value: { key, verdict } } : null;
+    case "merge":
+      return key && text(change.into)
+        ? { field: "merge", reason, value: { into: text(change.into), key } }
+        : null;
+    case "split": {
+      const parts = (Array.isArray(change.parts) ? change.parts : [])
+        .map(asRecord)
+        .map((part) => ({
+          description: text(part?.description),
+          name: text(part?.name),
+          verdict: verdictOf(part?.verdict),
+        }))
+        .filter((part): part is ConceptPart => Boolean(part.name && part.verdict));
+      return key && parts.length > 1 ? { field: "split", reason, value: { key, parts } } : null;
+    }
+    case "add":
+      return name && verdict
+        ? { field: "add", reason, value: { description, name, verdict } }
+        : null;
+    case "aliases":
+      return key && Array.isArray(change.aliases)
+        ? { field: "aliases", reason, value: { aliases: change.aliases.map(String), key } }
+        : null;
+    default:
+      return null;
+  }
+}
+
+/** bkn-project's answer about the concepts, with the changes it proposes and those it left out. */
+export function mapConceptAnswer(value: unknown): ConceptAskAnswer {
+  const data = asRecord(value) ?? {};
+  const { answer, dropped } = mapAnswer(value);
+  return {
+    answer,
+    dropped,
+    revisions: (Array.isArray(data.revisions) ? data.revisions : [])
+      .map(mapConceptRevision)
+      .filter((item): item is ConceptRevision => item !== null),
+  };
+}
+
+async function askConceptsMock(request: ConceptAskRequest): Promise<ConceptAskAnswer> {
+  const answer = "Some concepts are still named by their tables; business names read better.";
+  for (const word of answer.split(/(?<= )/)) {
+    if (request.signal?.aborted) {
+      throw new AskError("aborted");
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, MOCK_STEP_MS));
+    request.onText(word);
+  }
+  return { answer, dropped: [], revisions: [] };
+}
+
+/**
+ * Asks AI about the project's concepts, with the questions before it. The answer's text comes as
+ * it is written; the changes it proposes, checked by bkn-project, come at the end. Nothing changes
+ * until a change is adopted.
+ */
+export async function askConcepts(request: ConceptAskRequest): Promise<ConceptAskAnswer> {
+  if (useMock) {
+    return askConceptsMock(request);
+  }
+  const { apiBaseUrl } = getRuntimeConfig();
+  return streamAsk(
+    `${apiBaseUrl}${API_PREFIX}/${encodeURIComponent(request.projectId)}/ontology/concepts:ask`,
+    { history: request.history.slice(-ASK_HISTORY_TURNS), question: request.question },
+    request,
+    mapConceptAnswer,
+  );
 }

@@ -224,6 +224,8 @@ export const bknProjectEnUS = {
       },
       because: {
         table_entity: "From a business table",
+        table_understood: "From semantic understanding",
+        ai: "Added from AI's suggestion",
         code_table: "A code table: it only gives values, used by fields",
         foreign_key: "A relation the tables declare",
         name_match: "Suggested by fields of the same name",
@@ -261,6 +263,40 @@ export const bknProjectEnUS = {
         judge: "Judged the concept “{{name}}” as {{verdict}}",
         merge: "Merged the concept “{{name}}” into “{{into}}”",
         unmerge: "Took the concept “{{name}}” out of its merge",
+        define: "Renamed the concept to “{{name}}”",
+        add: "Added the concept “{{name}}”",
+      },
+      understoodWith: "Semantic understanding: {{description}}",
+      aliases: "Aliases: {{names}}",
+      aiMark: "Named or added by AI",
+      notUnderstood:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+      notUnderstood_one:
+        "{{count}} table has no semantic understanding yet, so its concept uses the table name. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+      notUnderstood_other:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
+      notUnderstoodReadOnly:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
+      notUnderstoodReadOnly_one:
+        "{{count}} table has no semantic understanding yet, so its concept uses the table name.",
+      notUnderstoodReadOnly_other:
+        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
+      understandAction: "Run semantic understanding",
+      ask: "Ask AI",
+      revise: {
+        define: "“{{name}}”",
+        verdict: "Verdict of “{{name}}”",
+        merge: "Merge “{{name}}”",
+        split: "Split “{{name}}”",
+        add: "New concept",
+        added: "{{concept}} ({{verdict}})",
+        aliases: "Aliases of “{{name}}”",
+        named: "{{name}}: {{description}}",
+        into: "Into “{{name}}”",
+        kept: "A concept of its own",
+        parts: "{{names}}",
+        nothing: "(none)",
+        failed: "Could not adopt this suggestion; try again later",
       },
     },
     build: {
@@ -679,6 +715,7 @@ export const bknProjectEnUS = {
           relation_types_new: "Relation type · new",
           object_types: "Object type · {{name}}",
           relation_types: "Relation type · {{name}}",
+          concepts: "Concept extraction · concepts: {{count}}",
         },
         intro: {
           relation_types_new:
@@ -687,6 +724,8 @@ export const bknProjectEnUS = {
             "Say how you would like to change this object type. I suggest changes first, and update the form once you confirm them. I can see changes you have not saved yet.",
           relation_types:
             "Say how you would like to change this relation type. I suggest changes first, and update the form once you confirm them. I can see changes you have not saved yet.",
+          concepts:
+            "Say how you would like to tidy these concepts. I suggest changes: rename and define, judge, merge, split, add, or add aliases. Adopting one records it like judging by hand, and you can change it again.",
         },
         examplesTitle: "Examples",
         examples: {
@@ -705,12 +744,18 @@ export const bknProjectEnUS = {
             "Suggest a clearer name",
             "Write the description",
           ],
+          concepts: [
+            "Name the concepts still named by their tables in business words",
+            "Which concepts are the same and could be merged?",
+            "Should any concept be an event, or not included?",
+          ],
         },
         question: "Your question",
         placeholder: {
           relation_types_new: "Describe the relation you want to make, or ask more…",
           object_types: "Describe how to change this object type, or ask more…",
           relation_types: "Describe how to change this relation type, or ask more…",
+          concepts: "For example: name the concepts starting with erp_ in business words",
         },
         submit: "Send",
         stop: "Stop generating",
@@ -726,6 +771,10 @@ export const bknProjectEnUS = {
         apply: "Apply selected changes",
         reject: "Reject suggestions",
         applied: "The selected suggestions are in the form, not saved yet.",
+        adoptHint:
+          "Only the checked changes are adopted. Each is recorded as a decision at once, and you can change it again like any judgment.",
+        adoptSelected: "Adopt selected",
+        adopted: "Adopted the selected suggestions.",
         undo: "Undo this apply",
         undone: "The AI changes were undone; the form is as it was before.",
         undoStale:
@@ -740,6 +789,12 @@ export const bknProjectEnUS = {
           display_key: "Title",
           data_property: "Property",
           ends: "Ends and how they join",
+          aliases: "Aliases",
+          define: "Name and definition",
+          verdict: "Verdict",
+          merge: "Merge",
+          split: "Split",
+          add: "New concept",
           other: "A change",
         },
         preview: {
@@ -776,6 +831,11 @@ export const bknProjectEnUS = {
             duplicate: "the same relation already exists",
             not_from_given_end: "it does not start from the object you chose",
             too_long: "it is too long",
+            invalid: "the change does not hold",
+            invalid_aliases: "the aliases are not allowed",
+            unknown_concept: "the concept is not in the list",
+            verdict_not_fit: "the verdict does not fit the concept",
+            in_specification: "requirement concepts are changed in the specification",
             other: "it would not pass the checks on saving",
           },
         },
