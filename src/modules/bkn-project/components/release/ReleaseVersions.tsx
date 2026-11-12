@@ -19,14 +19,19 @@ import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { CopyVersionDialog } from "@/modules/bkn-project/components/release/CopyVersionDialog";
 import {
   passedCount,
+  regressionStatusText,
   releaseNotes,
   versionName,
   versionNameIn,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { Section } from "@/modules/bkn-project/components/release/ReleaseSection";
 import { RollbackDialog } from "@/modules/bkn-project/components/release/RollbackDialog";
-import { getRegression } from "@/modules/bkn-project/services/release.service";
-import type { NetworkVersion, ProjectVersions } from "@/modules/bkn-project/types/release";
+import { getRegression, REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
+import type {
+  NetworkVersion,
+  ProjectVersions,
+  Regression,
+} from "@/modules/bkn-project/types/release";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 
 import styles from "./Release.module.css";
@@ -34,7 +39,10 @@ import styles from "./Release.module.css";
 const PREFIX = "bknProject.release.versions";
 const ORIGINS = new Set(["project", "other_project", "workspace"]);
 
-/** How the scenario questions did on the release that published a version; read per row. */
+/**
+ * How the scenario questions did on the release that published a version; read per row. A
+ * running regression is read again until it ends, so the row says what the page's status says.
+ */
 function RegressionCell({
   onOpen,
   projectId,
@@ -46,28 +54,47 @@ function RegressionCell({
 }) {
   const { t } = useTranslation();
   // undefined while reading; null for none or a failed read.
-  const [counts, setCounts] = useState<{ passed: number; total: number } | null | undefined>(
-    undefined,
-  );
+  const [regression, setRegression] = useState<Regression | null | undefined>(undefined);
+  const [reads, setReads] = useState(0);
   useEffect(() => {
     let active = true;
     getRegression(projectId, version).then(
-      (regression) => active && setCounts(regression ? passedCount(regression) : null),
-      () => active && setCounts(null),
+      (next) => active && setRegression(next),
+      () => active && setRegression(null),
     );
     return () => {
       active = false;
     };
   }, [projectId, version]);
-  if (counts === undefined) {
+  const running = regression?.status === "running";
+  useEffect(() => {
+    if (!running) {
+      return undefined;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      getRegression(projectId, version)
+        .then((next) => active && setRegression(next))
+        .catch(() => undefined)
+        .finally(() => active && setReads((count) => count + 1));
+    }, REGRESSION_POLL_MS);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [projectId, version, reads, running]);
+  if (regression === undefined) {
     return <Spin size="small" />;
   }
-  if (!counts?.total) {
+  if (!regression) {
     return <span className={styles.small}>{t(`${PREFIX}.noRegression`)}</span>;
   }
+  const counts = passedCount(regression);
   return (
     <AppButton onClick={onOpen} size="small" type="link">
-      {t(`${PREFIX}.regressionPassed`, counts)}
+      {counts.total && !running
+        ? t(`${PREFIX}.regressionPassed`, counts)
+        : regressionStatusText(t, regression.status)}
     </AppButton>
   );
 }
