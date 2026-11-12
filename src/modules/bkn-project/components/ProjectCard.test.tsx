@@ -53,7 +53,7 @@ const release = {
 function renderCard(
   overrides: Partial<Project> = {},
   isOwner = true,
-  catalogNames: Record<string, string> | null = { c1: "ERP" },
+  catalogNames: Record<string, string> | "failed" | null = { c1: "ERP" },
 ) {
   return render(
     <MemoryRouter>
@@ -109,6 +109,15 @@ describe("ProjectCard", () => {
       await screen.findByText('bknProject.list.card.unreadableCatalogs:{"count":2}'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/01a1cf2f/)).toBeNull();
+  });
+
+  it("says the names could not be read now, not that the catalogs cannot be, when the list failed", async () => {
+    getStatusMock.mockResolvedValue({ release: null, stage: "drafting" });
+    renderCard({}, true, "failed");
+    expect(
+      await screen.findByText('bknProject.list.card.catalogNamesUnavailable:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/unreadableCatalogs|c1|c2/)).toBeNull();
   });
 
   it("names the published version in the stage of a published project", async () => {

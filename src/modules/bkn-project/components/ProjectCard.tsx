@@ -45,10 +45,11 @@ const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type ProjectCardProps = {
   /**
-   * The names of the catalogs the caller may read; null while they are read. A catalog missing
-   * from them, one the caller may not read or one deleted since, is counted, never named by id.
+   * The names of the catalogs the caller may read; null while they are read, "failed" when they
+   * could not be. A catalog missing from them, one the caller may not read or one deleted since,
+   * is counted, never named by its id.
    */
-  catalogNames: Record<string, string> | null;
+  catalogNames: Record<string, string> | "failed" | null;
   /** The caller owns the project and may archive or restore it. */
   isOwner: boolean;
   networkName?: string;
@@ -122,13 +123,19 @@ export function ProjectCard({
       : []),
   ];
 
-  const named = catalogNames
-    ? project.catalogIds.filter((id) => Object.hasOwn(catalogNames, id))
-    : [];
-  const unreadable = catalogNames ? project.catalogIds.length - named.length : 0;
+  const names = catalogNames && catalogNames !== "failed" ? catalogNames : {};
+  const named = project.catalogIds.filter((id) => Object.hasOwn(names, id));
+  const unnamed = project.catalogIds.length - named.length;
   const catalogs = [
-    ...named.map((id) => catalogNames?.[id] ?? ""),
-    ...(unreadable ? [t("bknProject.list.card.unreadableCatalogs", { count: unreadable })] : []),
+    ...named.map((id) => names[id]),
+    ...(unnamed
+      ? [
+          t(
+            `bknProject.list.card.${catalogNames === "failed" ? "catalogNamesUnavailable" : "unreadableCatalogs"}`,
+            { count: unnamed },
+          ),
+        ]
+      : []),
   ];
 
   return (

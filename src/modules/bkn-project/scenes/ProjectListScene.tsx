@@ -36,6 +36,8 @@ export const PROJECT_PAGE_SIZE = 24;
 
 /** bkn-project answers a cursor it did not issue, or one gone stale, with this code. */
 const INVALID_CURSOR_CODE = "BknProject.InvalidParameter.Cursor";
+/** The catalogs read in one request for the names on the cards and the new-project picker. */
+const CATALOG_PAGE_SIZE = 500;
 
 export function ProjectListScene() {
   const { t } = useTranslation();
@@ -63,8 +65,8 @@ export function ProjectListScene() {
   const [networksError, setNetworksError] = useState<string | null>(null);
   const [catalogs, setCatalogs] = useState<ProjectCatalog[]>([]);
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
-  // The cards name their catalogs once the list is read, whether or not it could be.
-  const [catalogsRead, setCatalogsRead] = useState(false);
+  // The cards name their catalogs once the list is read, or say it could not be.
+  const [catalogsRead, setCatalogsRead] = useState<"failed" | "read" | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Each load takes a number; only the latest one may write the list, so a slow answer to an
@@ -118,16 +120,26 @@ export function ProjectListScene() {
     // One read serves the catalog names of the list and the picker of the new-project dialog.
     setCatalogsError(null);
     try {
-      const result = await listCatalogs(catalogListAllQuery({ pageSize: 500 }), {
-        skipErrorToast: true,
-      });
-      setCatalogs(result.items.map(({ id, name }) => ({ id, name })));
+      // Every page, so a card never takes a catalog past the first for one the viewer cannot read.
+      const read: ProjectCatalog[] = [];
+      for (let page = 1; ; page += 1) {
+        const result = await listCatalogs(
+          catalogListAllQuery({ page, pageSize: CATALOG_PAGE_SIZE }),
+          { skipErrorToast: true },
+        );
+        read.push(...result.items.map(({ id, name }) => ({ id, name })));
+        if (result.items.length === 0 || page * CATALOG_PAGE_SIZE >= result.total) {
+          break;
+        }
+      }
+      setCatalogs(read);
+      setCatalogsRead("read");
     } catch (error) {
-      // The cards count the catalogs they cannot name; the dialog shows the failure.
+      // The cards say the names could not be read now; the dialog shows the failure.
       setCatalogs([]);
       setCatalogsError(requestFailureText(t, error));
+      setCatalogsRead("failed");
     }
-    setCatalogsRead(true);
   }, [t]);
 
   useEffect(() => {
@@ -276,7 +288,7 @@ export function ProjectListScene() {
               <div className={styles.grid}>
                 {items.map((project) => (
                   <ProjectCard
-                    catalogNames={catalogsRead ? catalogNames : null}
+                    catalogNames={catalogsRead === "read" ? catalogNames : catalogsRead}
                     isOwner={project.owner.id === currentUserId}
                     key={project.id}
                     networkName={networkNames[project.knId]}
