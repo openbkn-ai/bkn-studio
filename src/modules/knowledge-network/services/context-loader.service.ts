@@ -194,8 +194,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     id: "query_metric",
     mcpOnly: true,
     summary:
-      "Queries modeled metrics using their own calculation rules. Select metric_id from get_object_types related_metrics first. " +
-      "Use get_logic_properties_values for instance-level metrics bound to logical properties.",
+      "Queries a published object metric using its fixed calculation rules. Select metric_id and version from get_object_types related_metrics first. " +
+      "Use get_logic_properties_values only for independently defined logical properties.",
     path: `${REST_PREFIX}/kn/query_metric`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id", metric_id: "your_metric_id" },
@@ -204,13 +204,12 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "get_action_info",
     summary:
-      "Recalls related actions from object instance identities and returns Function Call-compatible _dynamic_tools definitions.",
+      "Reads the business definition and execution input schema of a specified action type. Target identities are optional for parameter preview.",
     path: `${REST_PREFIX}/kn/get_action_info`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
       kn_id: "your_kn_id",
       at_id: "your_action_type",
-      _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }],
     },
   },
   {

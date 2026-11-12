@@ -526,7 +526,8 @@ export function ContextLoaderIntegrationPanel({
         ) : null}
       </div>
     ) : null;
-  // Display names and groups come from tools/list metadata first, with local fallback for old servers.
+  // Known tool names use live translations so language switching does not require refetching
+  // tools/list. Unknown tools keep the server title through toolDisplayOf.
   const toolMetaByName = useMemo(
     () => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])),
     [toolDefs],
