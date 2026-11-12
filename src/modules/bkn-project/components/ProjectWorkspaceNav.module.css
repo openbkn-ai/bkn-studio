@@ -1,0 +1,41 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * The project's side navigation uses the knowledge network workspace's items; a page name too
+ * long for one line (English ones are) wraps instead of being cut, and the count stays at the top.
+ */
+button.item {
+  align-items: flex-start;
+  height: auto;
+  min-height: 36px;
+}
+
+.meta {
+  align-items: flex-start;
+}
+
+/* The icon sits on the first line of the name. */
+.meta > :first-child {
+  margin-top: 2px;
+}
+
+.meta .label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.status {
+  margin-top: 1px;
+}

@@ -59,28 +59,84 @@
 }
 
 /* A stat card's bottom row with a short figure on the left and its link on the right. */
+/*
+ * The network's stat cards, made to hold longer (English) wording: the card is as tall as its row,
+ * the figure and its name wrap inside the card, and the line under them wraps, the link going to
+ * the next line when the card is narrow.
+ */
+.statCard {
+  composes: overviewStatCard from "../../knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.statDefinition {
+  composes: overviewStatDefinition from "../../knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
+}
+
+.statDefinition dt {
+  flex-shrink: 0;
+}
+
+.statDefinition dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .statFooter {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  height: 36px;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-height: 36px;
+  margin-top: auto;
+  padding: 6px 0;
   border-top: 1px solid var(--color-border);
+  box-sizing: border-box;
 }
 
 .statFooterNote {
+  min-width: 0;
   color: var(--color-text-secondary);
   font-size: 12px;
-  white-space: nowrap;
+  line-height: 18px;
+}
+
+.statCard .statFooter :global(.ant-btn) {
+  height: auto;
+  min-height: 22px;
+  margin-left: auto;
+  padding-inline: 0;
+  text-align: right;
+  white-space: normal;
+}
+
+.statAction {
+  composes: overviewStatAction from "../../knowledge-network/scenes/KnowledgeNetworkWorkspaceScene.module.css";
+  margin-top: auto;
+}
+
+.statCard .statAction:global(.ant-btn) {
+  height: auto;
+  min-height: 36px;
+  padding-block: 7px !important;
+  text-align: left;
+  white-space: normal;
 }
 
 /* Where a stat card has no page to open, its line says what the figure means. */
 .statNote {
   display: flex;
   align-items: center;
-  height: 36px;
+  min-height: 36px;
   margin: 0;
+  margin-top: auto;
+  padding: 6px 0;
   border-top: 1px solid var(--color-border);
+  box-sizing: border-box;
   color: var(--color-text-tertiary);
   font-size: 12px;
 }
