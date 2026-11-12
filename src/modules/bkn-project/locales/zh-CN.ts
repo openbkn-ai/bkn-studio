@@ -51,6 +51,7 @@ export const bknProjectZhCN = {
       sameNetwork_other: "同网络 · 另有 {{count}} 个项目",
       sameNetworkTip: "多个项目可以修改同一个知识网络；发布时会检查线上版本是否已被其他项目改变。",
       ownerYou: "我",
+      ownerSomeone: "其他成员",
       archive: "归档",
       unarchive: "恢复",
       archiveConfirm: {

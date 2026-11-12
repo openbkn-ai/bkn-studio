@@ -32,6 +32,7 @@ type BackendProject = {
   name: string;
   other_projects: number;
   owner: { id: string; type: string };
+  owner_name?: string;
   update_time: number;
 };
 
@@ -53,6 +54,7 @@ export function mapProject(item: BackendProject): Project {
     name: item.name,
     otherProjects: item.other_projects,
     owner: item.owner,
+    ownerName: item.owner_name,
     updateTime: item.update_time,
   };
 }

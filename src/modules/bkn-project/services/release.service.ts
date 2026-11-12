@@ -80,6 +80,7 @@ type BackendReview = {
 
 type BackendPrepared = {
   publisher: { id: string } | null;
+  publisher_name?: string;
   update_time: number;
   version: string;
 };
@@ -91,6 +92,7 @@ type BackendVersion = {
   notes: string;
   origin: string;
   publisher: { id: string } | null;
+  publisher_name?: string;
   release?: string;
   status: string;
   version: number;
@@ -243,6 +245,7 @@ const mapVersion = (version: BackendVersion): NetworkVersion => ({
   notes: version.notes,
   origin: version.origin,
   publisherId: version.publisher?.id ?? "",
+  publisherName: version.publisher_name,
   release: version.release ?? "",
   status: version.status,
   version: version.version,
@@ -253,6 +256,7 @@ export const mapVersions = (data: BackendVersions): ProjectVersions => ({
   prepared: data.prepared
     ? {
         publisherId: data.prepared.publisher?.id ?? "",
+        publisherName: data.prepared.publisher_name,
         updateTime: data.prepared.update_time,
         version: data.prepared.version,
       }

@@ -27,6 +27,8 @@ export type Project = {
   /** Other unarchived projects of the same network. */
   otherProjects: number;
   owner: ProjectAccount;
+  /** The owner's display name; empty when the directory does not know it. */
+  ownerName?: string;
   updateTime: number;
 };
 

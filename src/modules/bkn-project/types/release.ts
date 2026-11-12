@@ -92,6 +92,8 @@ export type PublishInput = {
 /** The project's release written into the network's draft and not published yet. */
 export type PreparedRelease = {
   publisherId: string;
+  /** The publisher's display name; empty when the directory does not know it. */
+  publisherName?: string;
   /** When it was written into the network. */
   updateTime: number;
   version: string;
@@ -109,6 +111,8 @@ export type NetworkVersion = {
   notes: string;
   origin: string;
   publisherId: string;
+  /** The publisher's display name; empty when the directory does not know it. */
+  publisherName?: string;
   release: string;
   status: string;
   version: number;

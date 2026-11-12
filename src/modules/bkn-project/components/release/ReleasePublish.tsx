@@ -155,10 +155,11 @@ export function ReleasePublish({
   }, [projectId, regressionOf, regressionReads, regressionRunning]);
   useEffect(() => setUnchangedAs(null), [prepared?.version]);
 
-  const who = (id: string) =>
+  // The name the reply carries, else the user list the caller may read.
+  const who = (id: string, name = "") =>
     id === runtimeConfig.currentUser.id
       ? t(`${PREFIX}.you`)
-      : (directory.get(id) ?? t(`${PREFIX}.someone`));
+      : name || (directory.get(id) ?? t(`${PREFIX}.someone`));
 
   const counts = regression ? passedCount(regression) : { passed: 0, total: 0 };
   const failedQuestions =
@@ -238,7 +239,7 @@ export function ReleasePublish({
             <dd>
               {t(`${PREFIX}.preparedBy`, {
                 time: formatTime(prepared.updateTime),
-                who: who(prepared.publisherId),
+                who: who(prepared.publisherId, prepared.publisherName),
               })}
             </dd>
             <dt>{t(`${PREFIX}.fields.regression`)}</dt>

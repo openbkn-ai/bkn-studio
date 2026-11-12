@@ -50,12 +50,12 @@ const release = {
   version: "1.2.0",
 };
 
-function renderCard(overrides: Partial<Project> = {}) {
+function renderCard(overrides: Partial<Project> = {}, isOwner = true) {
   return render(
     <MemoryRouter>
       <ProjectCard
         catalogNames={{ c1: "ERP" }}
-        isOwner
+        isOwner={isOwner}
         networkName="Orders network"
         onArchive={vi.fn()}
         onOpen={vi.fn()}
@@ -157,5 +157,21 @@ describe("ProjectCard", () => {
     await waitFor(() => expect(getStatusMock).toHaveBeenCalledWith("p1"));
     expect(screen.getByText("Orders")).toBeInTheDocument();
     expect(screen.queryByText(/stages\./)).toBeNull();
+  });
+
+  it("names another member's project by its owner's name, never by an id", async () => {
+    getStatusMock.mockResolvedValue({ release: null, stage: "drafting" });
+    renderCard(
+      {
+        owner: { id: "266c6a42-6131-4d62-8f39-853e7093701c", type: "user" },
+        ownerName: "Administrator",
+      },
+      false,
+    );
+    expect(await screen.findByText("Administrator")).toBeInTheDocument();
+
+    renderCard({ owner: { id: "266c6a42-6131-4d62-8f39-853e7093701c", type: "user" } }, false);
+    expect(await screen.findByText("bknProject.list.ownerSomeone")).toBeInTheDocument();
+    expect(screen.queryByText("266c6a42-6131-4d62-8f39-853e7093701c")).toBeNull();
   });
 });

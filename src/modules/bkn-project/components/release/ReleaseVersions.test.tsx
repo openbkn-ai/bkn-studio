@@ -53,7 +53,7 @@ function versions(fullHistory = true): ProjectVersions {
     entries: [
       entry(7, { notes: "增加故障部位\nAccepted: index_not_ready", status: "running" }),
       entry(6, { publisherId: "u2" }),
-      entry(5),
+      entry(5, { publisherId: "u9", publisherName: "李四" }),
       entry(4, { label: "", origin: "workspace", release: "", status: "deprecated" }),
       entry(3, { origin: "other_project" }),
     ],
@@ -158,6 +158,8 @@ describe("ReleaseVersions", () => {
     expect(within(rowOf("v1.6.0")).getByText("张三")).toBeInTheDocument();
     expect(within(rowOf("v1.6.0")).getByText("回退到此版本")).toBeInTheDocument();
     expect(within(rowOf("v1.5.0")).getByText("切换为运行版本")).toBeInTheDocument();
+    // A name the reply carries is shown to anyone, even one who may not list users.
+    expect(within(rowOf("v1.5.0")).getByText("李四")).toBeInTheDocument();
     const workspace = rowOf("第 4 版");
     expect(within(workspace).getByText("已废止")).toBeInTheDocument();
     expect(within(workspace).getByText("工作区")).toBeInTheDocument();
