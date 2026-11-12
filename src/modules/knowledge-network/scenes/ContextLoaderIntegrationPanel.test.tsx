@@ -17,13 +17,16 @@ import { mcpOpsFrom } from "../services/context-loader.service";
 
 import { ContextLoaderIntegrationPanel } from "./ContextLoaderIntegrationPanel";
 
+type Translate = (key: string, options?: { defaultValue?: string }) => string;
+
 const translation = vi.hoisted(() => ({
-  t: vi.fn<(key: string, options?: { defaultValue?: string }) => string>((key) => key),
+  t: vi.fn<Translate>((key) => key),
+  currentT: null as Translate | null,
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: translation.t }),
+  useTranslation: () => ({ t: translation.currentT ?? translation.t }),
 }));
 
 type PanelProps = ComponentProps<typeof ContextLoaderIntegrationPanel>;
@@ -74,32 +77,40 @@ function renderPanel(overrides: Partial<PanelProps>) {
     appKeyValue: "",
     ...overrides,
   };
-  return render(
+  const result = render(
     <MemoryRouter>
       <ContextLoaderIntegrationPanel {...props} />
     </MemoryRouter>,
   );
+  return { ...result, props };
 }
 
 afterEach(() => {
   cleanup();
   translation.t.mockImplementation((key) => key);
+  translation.currentT = null;
 });
 
 describe("ContextLoaderIntegrationPanel tool catalog", () => {
-  it("uses the MCP tool title before a stale local translation", () => {
-    translation.t.mockImplementation((key) =>
-      key.endsWith(".get_action_info") ? "行动工具召回" : key,
-    );
+  it("keeps known tool names in sync with the active locale after tools/list was loaded", async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: "zh-CN",
+      resources: {
+        "zh-CN": { translation: { knowledgeNetwork: zh } },
+        "en-US": { translation: { knowledgeNetwork: en } },
+      },
+    });
+    translation.currentT = (key, options) => i18n.t(key, options ?? {});
     const toolDefs = [
       {
         name: "get_action_info",
-        title: "行动类详情与参数",
+        title: "行动信息",
         inputSchema: { type: "object", properties: {} },
       },
     ];
     const ops = mcpOpsFrom(toolDefs);
-    const { container } = renderPanel({
+    const { container, rerender, props } = renderPanel({
       activeOps: ops,
       op: ops[0],
       selectedId: toolDefs[0].name,
@@ -110,7 +121,16 @@ describe("ContextLoaderIntegrationPanel tool catalog", () => {
     expect(container.querySelector('[class*="epBusinessName"]')?.textContent).toBe(
       "行动类详情与参数",
     );
-    expect(screen.queryByText("行动工具召回")).toBeNull();
+    await i18n.changeLanguage("en-US");
+    translation.currentT = (key, options) => i18n.t(key, options ?? {});
+    rerender(
+      <MemoryRouter>
+        <ContextLoaderIntegrationPanel {...props} />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector('[class*="epBusinessName"]')?.textContent).toBe(
+      "Action details and inputs",
+    );
   });
 
   it.each(["zh-CN", "en-US"])(

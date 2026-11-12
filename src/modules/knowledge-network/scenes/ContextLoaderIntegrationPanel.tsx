@@ -526,15 +526,15 @@ export function ContextLoaderIntegrationPanel({
         ) : null}
       </div>
     ) : null;
-  // Display names and groups come from tools/list metadata first, with local fallback for old servers.
+  // Known tool names use live translations so language switching does not require refetching
+  // tools/list. Unknown tools keep the server title through toolDisplayOf.
   const toolMetaByName = useMemo(
     () => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])),
     [toolDefs],
   );
   const displayOf = useCallback(
     (target: ContextLoaderOp) => {
-      const toolMeta = toolMetaByName.get(target.id);
-      const display = toolDisplayOf(target.id, toolMeta);
+      const display = toolDisplayOf(target.id, toolMetaByName.get(target.id));
       const groupPrefix = `knowledgeNetwork.contextLoaderPanel.toolGroups.${display.groupKey}`;
       return {
         ...display,
@@ -543,11 +543,9 @@ export function ContextLoaderIntegrationPanel({
           display.groupDescription === null
             ? null
             : t(`${groupPrefix}.description`, { defaultValue: display.groupDescription }),
-        name:
-          toolMeta?.title?.trim() ||
-          t(`knowledgeNetwork.contextLoaderPanel.toolNames.${target.id}`, {
-            defaultValue: display.name,
-          }),
+        name: t(`knowledgeNetwork.contextLoaderPanel.toolNames.${target.id}`, {
+          defaultValue: display.name,
+        }),
       };
     },
     [t, toolMetaByName],
