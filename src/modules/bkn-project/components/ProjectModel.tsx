@@ -614,6 +614,9 @@ export function ProjectModel({
     setRelationPanel(null);
     setPanelId(id);
   };
+  // A link may ask to edit what the network already has: it is shown read only instead.
+  const existingPanel = panelId !== null && existingObjectIds.has(panelId);
+  const shownId = openId ?? (existingPanel ? panelId : null);
   const openRelation = (id: string | null) => {
     if (id && existingRelationIds.has(id)) {
       return;
@@ -854,9 +857,17 @@ export function ProjectModel({
           <DraftObjectDrawer
             catalogNames={catalogNames}
             excluded={items.excluded}
-            objectType={items.objectTypes.find((item) => item.id === openId) ?? null}
-            onClose={() => setOpenId(null)}
-            onEdit={editable && !(openId && existingObjectIds.has(openId)) ? openEditor : undefined}
+            objectType={items.objectTypes.find((item) => item.id === shownId) ?? null}
+            onClose={() => {
+              setOpenId(null);
+              // One a link asked to edit is shown read only; closing it drops the link.
+              if (existingPanel) {
+                closePanel();
+              }
+            }}
+            onEdit={
+              editable && !(shownId && existingObjectIds.has(shownId)) ? openEditor : undefined
+            }
           />
           {relationPanel && editable ? (
             <RelationTypePanel
@@ -871,7 +882,7 @@ export function ProjectModel({
               relationTypeId={relationPanel.id}
             />
           ) : null}
-          {panelId && editable ? (
+          {panelId && editable && !existingPanel ? (
             <ObjectTypePanel
               draft={draft}
               key={`${panelId}`}

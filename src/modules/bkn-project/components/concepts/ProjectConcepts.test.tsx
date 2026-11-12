@@ -261,7 +261,8 @@ describe("ProjectConcepts", () => {
               { documentIds: [], id: "supply_sales_order", kind: "network", name: "销售订单" },
               { documentIds: [], id: "t_orders", kind: "table", name: "orders" },
             ],
-            state: "in_model",
+            // Even one the reply left pending is not judged here.
+            state: "pending",
             suggestedBecause: "network",
           }),
         ],
@@ -276,6 +277,7 @@ describe("ProjectConcepts", () => {
     // Judged and merged in the knowledge network, not here.
     expect(order.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
     expect(order.queryByRole("combobox", { name: /mergeIntoOf/ })).toBeNull();
+    expect(order.queryByRole("button", { name: /confirmOf/ })).toBeNull();
   });
 
   it("leads from a kinetic concept to kinetic modeling", async () => {

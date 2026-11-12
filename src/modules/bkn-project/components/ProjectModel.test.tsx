@@ -527,6 +527,28 @@ describe("ProjectModel", () => {
     expect(screen.getByTestId("location")).toHaveTextContent(/^\/bkn-project\/p1\/model$/);
   });
 
+  it("shows what the network already has read only when a link asks to edit it", async () => {
+    const draft = ready();
+    draft.items.objectTypes.find((item) => item.id === "customers")!.existing = true;
+    getDraftMock.mockResolvedValue(draft);
+    renderWithoutAntdStyles(
+      <MemoryRouter initialEntries={["/bkn-project/p1/model?object=customers"]}>
+        <ProjectModel
+          initialObject="customers"
+          onConfirmed={vi.fn()}
+          onViewConfirmation={vi.fn()}
+          onGoToResources={onGoToResources}
+          ownerIsCaller
+          project={project}
+        />
+        <Location />
+      </MemoryRouter>,
+    );
+    const drawer = await screen.findByRole("dialog", undefined, { timeout: 5000 });
+    expect(screen.queryByRole("region", { name: "bknProject.objectEditor.title" })).toBeNull();
+    expect(within(drawer).getAllByText("customers").length).toBeGreaterThan(0);
+  });
+
   it("opens an object type with its identity, properties and the fields left out", async () => {
     getDraftMock.mockResolvedValue(ready());
     // An archived project is read only: its object types open in the details.

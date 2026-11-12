@@ -702,7 +702,7 @@ export function ProjectConcepts({
             render: (_value: unknown, concept: Concept) => (
               <span className={styles.actions}>
                 {/* The suggestion is right as it is: confirming it judges it so. */}
-                {concept.state === "pending" ? (
+                {concept.state === "pending" && !inNetwork(concept) ? (
                   <AppButton
                     aria-label={t(`${PREFIX}.confirmOf`, { name: concept.name })}
                     onClick={() => void judge(concept, concept.verdict)}
