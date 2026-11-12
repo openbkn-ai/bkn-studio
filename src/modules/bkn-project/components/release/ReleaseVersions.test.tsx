@@ -5,10 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
+import { REGRESSION_POLL_MS } from "@/modules/bkn-project/services/release.service";
 import type { NetworkVersion, ProjectVersions } from "@/modules/bkn-project/types/release";
 
 const getRegressionMock = vi.hoisted(() => vi.fn());
@@ -225,5 +226,40 @@ describe("ReleaseVersions", () => {
     unmount();
     renderVersions("failed");
     expect(screen.getByText("版本列表暂时读取不到")).toBeInTheDocument();
+  });
+
+  describe("the regression of a just-published version", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const regressionCell = () => within(rowOf("v1.7.0")).getAllByRole("cell")[6];
+
+    it("says it is running, and follows it until it ends", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      getRegressionMock
+        .mockResolvedValueOnce({ results: [], status: "running" })
+        .mockResolvedValue({
+          results: [{ outcome: "passed" }, { outcome: "not_answered" }],
+          status: "not_passed",
+        });
+      renderVersions(versions());
+
+      expect(await within(regressionCell()).findByText("运行中")).toBeInTheDocument();
+      expect(within(regressionCell()).queryByText("没有回归")).toBeNull();
+      await act(() => vi.advanceTimersByTimeAsync(REGRESSION_POLL_MS));
+      expect(await within(regressionCell()).findByText("1 / 2 通过")).toBeInTheDocument();
+    });
+
+    it("says how a run without results ended, and none only when none was started", async () => {
+      getRegressionMock.mockImplementation((_: string, version: string) =>
+        Promise.resolve(version === "1.7.0" ? { results: [], status: "no_questions" } : null),
+      );
+      renderVersions(versions());
+
+      expect(await within(regressionCell()).findByText("没有场景问题")).toBeInTheDocument();
+      const previous = within(rowOf("v1.6.0")).getAllByRole("cell")[6];
+      expect(await within(previous).findByText("没有回归")).toBeInTheDocument();
+    });
   });
 });
