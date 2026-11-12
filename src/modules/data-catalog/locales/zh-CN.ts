@@ -145,6 +145,7 @@ export const dataCatalogZhCN = {
       },
       semantic: {
         applyResult: "应用结果",
+        applyPermissionUnavailable: "无法确认应用权限，暂不可应用。您仍可查看任务结果。",
         applicationMode: "实际应用方式",
         belowThreshold: "结果未达到原任务置信度阈值。如需降低阈值，请创建新任务。",
         forceDescription: "使用已保存结果覆盖已有业务名称和描述，仍须通过置信度与 schema 校验。",

@@ -153,6 +153,8 @@ export const dataCatalogEnUS = {
       },
       semantic: {
         applyResult: "Apply result",
+        applyPermissionUnavailable:
+          "Unable to confirm application permissions. Applying is unavailable; you can still review the task result.",
         applicationMode: "Application strategy",
         belowThreshold:
           "This result is below the original confidence threshold. Create a new task to use a lower threshold.",

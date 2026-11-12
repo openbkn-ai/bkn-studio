@@ -126,20 +126,82 @@ describe("SemanticUnderstandingTaskDetailDrawer", () => {
     },
   );
 
-  it("keeps the result visible when Resource permission loading fails", async () => {
-    getResource.mockRejectedValue(new Error("Cannot load Resource permissions"));
+  it.each([
+    { probe: getResource, error: "Cannot load Resource permissions" },
+    { probe: getCatalog, error: "Cannot load catalog permissions" },
+  ])(
+    "warns about application permissions without reporting a detail error: $error",
+    async ({ probe, error }) => {
+      probe.mockRejectedValue(new Error(error));
+      render(<SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-1" />);
+      const warning = await screen.findByText(
+        "dataCatalog.taskManagement.semantic.applyPermissionUnavailable",
+      );
+      expect(warning.closest(".ant-alert")).toHaveClass("ant-alert-warning");
+      expect(screen.getByText(error)).toBeInTheDocument();
+      expect(document.querySelector(".ant-alert-error")).toBeNull();
+      expect(screen.getByText(/Reviewed result/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: buttonName })).not.toBeInTheDocument();
+    },
+  );
+
+  it("reports task loading errors without probing application permissions", async () => {
+    getTask.mockRejectedValue(new Error("Task detail unavailable"));
     render(<SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-1" />);
-    expect(await screen.findByText("Cannot load Resource permissions")).toBeInTheDocument();
-    expect(screen.getByText(/Reviewed result/)).toBeInTheDocument();
+    expect((await screen.findByText("Task detail unavailable")).closest(".ant-alert")).toHaveClass(
+      "ant-alert-error",
+    );
+    expect(getCatalog).not.toHaveBeenCalled();
+    expect(getResource).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText("dataCatalog.taskManagement.semantic.applyPermissionUnavailable"),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { status: "pending" },
+    { status: "running" },
+    { status: "failed" },
+    { status: "cancelled" },
+    { scope: "catalog" },
+    { applied: true },
+    { applyMode: "fill_empty" },
+    { applyMode: "force" },
+    { resourceId: "" },
+    { resultJson: "" },
+    { resultJson: "  " },
+  ])("does not probe application permissions for an ineligible task: %j", async (change) => {
+    getTask.mockResolvedValue({ ...task, ...change });
+    render(<SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-1" />);
+    await screen.findByText("dataCatalog.taskManagement.semantic.fields.inputHash");
+    expect(getCatalog).not.toHaveBeenCalled();
+    expect(getResource).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: buttonName })).not.toBeInTheDocument();
   });
 
-  it("keeps the result visible when catalog permission loading fails", async () => {
-    getCatalog.mockRejectedValue(new Error("Cannot load catalog permissions"));
-    render(<SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-1" />);
-    expect(await screen.findByText("Cannot load catalog permissions")).toBeInTheDocument();
-    expect(screen.getByText(/Reviewed result/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: buttonName })).not.toBeInTheDocument();
+  it("ignores an outdated application-permission failure after switching tasks", async () => {
+    let rejectPermissions!: (reason: Error) => void;
+    const pendingPermissions = new Promise((_, reject) => {
+      rejectPermissions = reject;
+    });
+    getResource.mockReturnValue(pendingPermissions);
+    const view = render(
+      <SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-1" />,
+    );
+    await waitFor(() => expect(getResource).toHaveBeenCalledTimes(1));
+    getTask.mockResolvedValue({ ...task, id: "task-2", applied: true });
+    view.rerender(<SemanticUnderstandingTaskDetailDrawer onClose={vi.fn()} open taskId="task-2" />);
+    await screen.findByText(/task-2/);
+    await act(async () => {
+      rejectPermissions(new Error("Outdated permission failure"));
+      await pendingPermissions.catch(() => {});
+    });
+    expect(screen.queryByText("Outdated permission failure")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("dataCatalog.taskManagement.semantic.applyPermissionUnavailable"),
+    ).not.toBeInTheDocument();
+    expect(getCatalog).toHaveBeenCalledTimes(1);
+    expect(getResource).toHaveBeenCalledTimes(1);
   });
 
   it.each([

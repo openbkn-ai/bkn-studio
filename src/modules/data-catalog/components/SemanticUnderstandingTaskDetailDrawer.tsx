@@ -128,6 +128,7 @@ export function SemanticUnderstandingTaskDetailDrawer({
   const [task, setTask] = useState<SemanticUnderstandingTask | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [applyPermissionError, setApplyPermissionError] = useState<string | null>(null);
   const [allowedToApply, setAllowedToApply] = useState(false);
   const [applyMode, setApplyMode] = useState<"fill_empty" | "force">("fill_empty");
   const [applying, setApplying] = useState(false);
@@ -151,6 +152,7 @@ export function SemanticUnderstandingTaskDetailDrawer({
     applyingRef.current = false;
     setApplying(false);
     setAllowedToApply(false);
+    setApplyPermissionError(null);
     setApplyMode("fill_empty");
     setApplyError(null);
     setApplyOutcome(null);
@@ -160,23 +162,31 @@ export function SemanticUnderstandingTaskDetailDrawer({
       setTask(null);
       try {
         const nextTask = await getSemanticUnderstandingTask(taskId);
-        if (active) setTask(nextTask);
+        if (!active) return;
+        setTask(nextTask);
         if (canApply !== undefined) {
           if (active) setAllowedToApply(canApply);
         } else if (
           nextTask?.scope === "resource" &&
           nextTask.applyMode === "dry_run" &&
-          nextTask.resourceId
+          nextTask.status === "completed" &&
+          !nextTask.applied &&
+          nextTask.resourceId &&
+          nextTask.resultJson?.trim()
         ) {
-          const [catalog, resource] = await Promise.all([
-            getCatalog(nextTask.catalogId, { skipErrorToast: true }),
-            getCatalogResource(nextTask.resourceId),
-          ]);
-          if (active)
-            setAllowedToApply(
-              hasCatalogOperation(catalog, "task_manage") &&
-                hasCatalogResourceOperation(resource, "modify"),
-            );
+          try {
+            const [catalog, resource] = await Promise.all([
+              getCatalog(nextTask.catalogId, { skipErrorToast: true }),
+              getCatalogResource(nextTask.resourceId),
+            ]);
+            if (active)
+              setAllowedToApply(
+                hasCatalogOperation(catalog, "task_manage") &&
+                  hasCatalogResourceOperation(resource, "modify"),
+              );
+          } catch (error) {
+            if (active) setApplyPermissionError(extractRequestErrorMessage(error));
+          }
         }
       } catch (error) {
         if (active) setLoadError(extractRequestErrorMessage(error));
@@ -306,6 +316,14 @@ export function SemanticUnderstandingTaskDetailDrawer({
     >
       <div className={styles.drawerContent}>
         {loadError ? <Alert message={loadError} showIcon type="error" /> : null}
+        {applyPermissionError ? (
+          <Alert
+            description={applyPermissionError}
+            message={t("dataCatalog.taskManagement.semantic.applyPermissionUnavailable")}
+            showIcon
+            type="warning"
+          />
+        ) : null}
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
           <div className={styles.statusRow}>
