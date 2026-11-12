@@ -285,7 +285,6 @@ export const bknProjectZhCN = {
       },
     },
     networkExisting: {
-      mark: "网络已有",
       index: {
         title: "网络已有的索引",
         description:

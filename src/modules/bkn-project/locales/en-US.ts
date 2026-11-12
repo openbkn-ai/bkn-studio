@@ -308,7 +308,6 @@ export const bknProjectEnUS = {
       },
     },
     networkExisting: {
-      mark: "Already in the network",
       index: {
         title: "Indexes already in the network",
         description:

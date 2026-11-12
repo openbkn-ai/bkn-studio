@@ -6,20 +6,17 @@
  */
 
 import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+
+import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 
 import styles from "./ExistingMark.module.css";
 
-/** The blue dot that marks what the project's network already has. */
+/** The modeling page's blue dot for what the network already has, as the other pages show it. */
 export function ExistingDot() {
-  const { t } = useTranslation();
   return (
-    <span
-      aria-label={t("bknProject.networkExisting.mark")}
-      className={styles.dot}
-      data-testid="network-existing-dot"
-      role="img"
-    />
+    <span className={styles.mark} data-testid="network-existing-dot">
+      <ExistingMark />
+    </span>
   );
 }
 
