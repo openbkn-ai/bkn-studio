@@ -27,7 +27,7 @@ import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectRele
 import { ProjectResources } from "@/modules/bkn-project/components/resources/ProjectResources";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import { UnsavedLeaveGuard } from "@/modules/bkn-project/components/unsaved/UnsavedLeaveGuard";
-import { coveredNeedIds } from "@/modules/bkn-project/components/kinetic/needs";
+import { kineticItemCount } from "@/modules/bkn-project/components/kinetic/needs";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
@@ -103,6 +103,8 @@ export function ProjectWorkspaceScene({
   // has and the project's new needs) and scenario questions, read again on each
   // page so a change made on one shows when moving on. A failed read leaves the count off.
   const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
+  // Kinetic modeling counts what it reads itself; elsewhere the count is read here.
+  const [kineticCount, setKineticCount] = useState<number | undefined>(undefined);
   // Read once the project is, after the page's own reads: the counts only add to it.
   const loadedId = loaded?.project.id;
   useEffect(() => {
@@ -113,18 +115,13 @@ export function ProjectWorkspaceScene({
     void Promise.all([
       getRequirements(projectId).catch(() => null),
       getDraft(projectId).catch(() => null),
-      getLogicNeeds(projectId).catch(() => null),
+      section === "kinetic" ? undefined : getLogicNeeds(projectId).catch(() => null),
     ]).then(([requirements, draft, logic]) => {
       if (active) {
-        const covered = coveredNeedIds(logic?.networkItems ?? []);
+        if (logic !== undefined) {
+          setKineticCount(logic ? kineticItemCount(logic) : undefined);
+        }
         setCounts({
-          ...(logic
-            ? {
-                kinetic:
-                  logic.networkItems.length +
-                  logic.needs.filter((need) => !covered.has(need.id)).length,
-              }
-            : {}),
           ...(requirements?.status === "ready" && requirements.spec
             ? { scenarios: requirements.spec.questions.length }
             : {}),
@@ -199,7 +196,11 @@ export function ProjectWorkspaceScene({
         <div className={kn.workspaceLayout}>
           <ProjectWorkspaceNav
             active={section}
-            counts={{ ...counts, resources: project.catalogIds.length }}
+            counts={{
+              ...counts,
+              ...(kineticCount === undefined ? {} : { kinetic: kineticCount }),
+              resources: project.catalogIds.length,
+            }}
             projectId={project.id}
           />
           <main
@@ -233,6 +234,7 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "kinetic" ? (
                 <ProjectKinetic
+                  onCount={setKineticCount}
                   onGoToModel={() => go("model")}
                   onGoToRelease={() => go("release")}
                   ownerIsCaller={ownerIsCaller}

@@ -35,6 +35,7 @@ import {
   canExecute,
   coveredNeedIds,
   executionPrefill,
+  kineticItemCount,
   LOGIC_KINDS,
   METRIC_TYPES,
   NEED_STATES,
@@ -88,11 +89,14 @@ const ALL = "all";
  * type and comes back to link it. Nothing is linked by itself.
  */
 export function ProjectKinetic({
+  onCount,
   onGoToModel,
   onGoToRelease,
   ownerIsCaller,
   project,
 }: {
+  /** Told how many kinetic items the page holds as it reads them; undefined when unreadable. */
+  onCount?: (count: number | undefined) => void;
   /** Opens concept modeling, where the model is confirmed. */
   onGoToModel: () => void;
   /** Opens the release page, where the live network's changes are committed. */
@@ -186,6 +190,11 @@ export function ProjectKinetic({
   }, [project.id]);
 
   const networkItems = useMemo(() => logic?.networkItems ?? [], [logic]);
+  useEffect(() => {
+    if (reads > 0) {
+      onCount?.(logic ? kineticItemCount(logic) : undefined);
+    }
+  }, [logic, onCount, reads]);
   const hasNetworkItems = networkItems.length > 0;
   useEffect(() => {
     if (!hasNetworkItems) {
@@ -738,7 +747,9 @@ export function ProjectKinetic({
             reason={logic?.networkItemsReason ?? ""}
           />
         ) : null}
-        {needs.length ? (
+        {needs.length > 0 && newNeeds === 0 ? (
+          <p className={styles.muted}>{t(`${KINETIC}.allCovered`)}</p>
+        ) : needs.length ? (
           <>
             <div className={styles.filters}>
               <Select

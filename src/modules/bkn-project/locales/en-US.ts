@@ -1421,6 +1421,8 @@ export const bknProjectEnUS = {
         "The knowledge network is already running: implementations it has, marked with a blue dot, can be linked directly.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
       noneFiltered: "No kinetic need matches the filters.",
+      allCovered:
+        "Every kinetic need is covered by what the network already has; there are no new needs.",
       network: {
         title: "Already in the network",
         summary: "Already in the network: {{items}}; {{count}} new needs",

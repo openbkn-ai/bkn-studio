@@ -1316,6 +1316,7 @@ export const bknProjectZhCN = {
       liveBeforeRelease: "知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
+      allCovered: "动力需求都已由网络已有的内容覆盖，没有新增需求。",
       network: {
         title: "网络已有",
         summary: "网络已有 {{items}}；新增需求 {{count}} 个",

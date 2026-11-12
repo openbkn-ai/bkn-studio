@@ -103,6 +103,55 @@ describe("kinetic.service", () => {
     });
   });
 
+  it("reads what the network already has, its missing fields as empty", async () => {
+    const { kinetic } = await importServices();
+    mockGet.mockResolvedValueOnce({
+      data: {
+        network_items: [
+          {
+            box_id: "box",
+            description: "d",
+            id: "f1",
+            name: "Window check",
+            need_ids: ["n1"],
+            owner_object_type_id: "orders",
+            owner_object_type_name: "Orders",
+            type: "function",
+          },
+          { id: "s1", name: "Triage", need_ids: null, type: "skill" },
+        ],
+        network_items_reason: "forbidden",
+        update_time: 0,
+      },
+    });
+
+    const read = await kinetic.getLogicNeeds("p/1");
+
+    expect(read.networkItemsReason).toBe("forbidden");
+    expect(read.networkItems).toEqual([
+      {
+        boxId: "box",
+        description: "d",
+        id: "f1",
+        name: "Window check",
+        needIds: ["n1"],
+        ownerObjectTypeId: "orders",
+        ownerObjectTypeName: "Orders",
+        type: "function",
+      },
+      {
+        boxId: "",
+        description: "",
+        id: "s1",
+        name: "Triage",
+        needIds: [],
+        ownerObjectTypeId: "",
+        ownerObjectTypeName: "",
+        type: "skill",
+      },
+    ]);
+  });
+
   it("reads the network live when it runs a version, and an older reply by its release", async () => {
     const { kinetic } = await importServices();
     mockGet.mockResolvedValueOnce({ data: { live: true, released: false, update_time: 0 } });

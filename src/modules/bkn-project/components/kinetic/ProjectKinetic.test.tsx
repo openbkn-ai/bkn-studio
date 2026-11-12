@@ -388,6 +388,45 @@ describe("ProjectKinetic", () => {
     open.mockRestore();
   });
 
+  it("says every need is covered, not that none matches the filters, when the network covers all", async () => {
+    const onCount = vi.fn();
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      needs: [view(NEEDS[2])],
+      networkItems: [
+        {
+          boxId: "",
+          description: "",
+          id: "reschedule",
+          name: "订单改期",
+          needIds: ["n3"],
+          ownerObjectTypeId: "orders",
+          ownerObjectTypeName: "",
+          type: "action_type",
+        },
+      ],
+    });
+    renderWithoutAntdStyles(
+      <MemoryRouter>
+        <ProjectKinetic
+          onCount={onCount}
+          onGoToModel={vi.fn()}
+          onGoToRelease={vi.fn()}
+          ownerIsCaller
+          project={project}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("动力需求都已由网络已有的内容覆盖，没有新增需求。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("没有符合筛选条件的动力需求。")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    // The navigation is told what the page holds: one item in the network, no new need.
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(1));
+  });
+
   it("says when some of what the network has could not be read", async () => {
     mocks.getLogicNeeds.mockResolvedValue({
       ...logicNeeds(),

@@ -139,10 +139,21 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
 
 // Kinetic modeling is tested on its own.
 vi.mock("@/modules/bkn-project/components/kinetic/ProjectKinetic", () => ({
-  ProjectKinetic: ({ onGoToRelease }: { onGoToRelease: () => void }) => (
-    <button onClick={onGoToRelease} type="button">
-      kinetic page
-    </button>
+  ProjectKinetic: ({
+    onCount,
+    onGoToRelease,
+  }: {
+    onCount?: (count: number | undefined) => void;
+    onGoToRelease: () => void;
+  }) => (
+    <>
+      <button onClick={onGoToRelease} type="button">
+        kinetic page
+      </button>
+      <button onClick={() => onCount?.(5)} type="button">
+        kinetic read
+      </button>
+    </>
   ),
 }));
 
@@ -404,6 +415,16 @@ describe("ProjectWorkspaceScene", () => {
     });
     // Two in the network, and n2 and n3 new: n1 is covered by what the network has.
     await waitFor(() => expect(kinetic).toHaveTextContent("4"));
+  });
+
+  it("on kinetic modeling, counts what the page read instead of reading the needs again", async () => {
+    renderScene("kinetic");
+    const kinetic = await screen.findByRole("button", {
+      name: "bknProject.workspace.sections.kinetic",
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "kinetic read" }));
+    await waitFor(() => expect(kinetic).toHaveTextContent("5"));
+    expect(getLogicNeedsMock).not.toHaveBeenCalled();
   });
 
   it("leaves the kinetic count off when the needs cannot be read", async () => {
