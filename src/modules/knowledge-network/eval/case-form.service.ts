@@ -140,7 +140,7 @@ export async function listRelationCheckInstances(
           field: p.name,
           operation: "like",
           value_from: "const",
-          value: needle.replace(/[%\\]/g, (char) => "\\" + char),
+          value: `%${needle.replace(/[%_\\]/g, (char) => "\\" + char)}%`,
         });
       if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(needle))
         for (const key of endpoint.primary_keys) {

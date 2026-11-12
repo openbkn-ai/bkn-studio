@@ -95,8 +95,33 @@ it("searches all authorized relation instances with typed numeric identities and
       condition: {
         operation: "or",
         sub_conditions: [
-          { field: "name", operation: "like", value_from: "const", value: "108" },
+          { field: "name", operation: "like", value_from: "const", value: "%108%" },
           { field: "id", operation: "==", value_from: "const", value: 108 },
+        ],
+      },
+    }),
+    expect.anything(),
+  );
+});
+it("searches relation names by substring and treats LIKE metacharacters literally", async () => {
+  postSpy.mockResolvedValueOnce({ data: { datas: [] } });
+  await listRelationCheckInstances(
+    "kn",
+    {
+      id: "supplier",
+      name: "供应商",
+      primary_keys: ["id"],
+      data_properties: [{ name: "name", type: "string" }],
+    },
+    "a%_\\b",
+  );
+  expect(postSpy).toHaveBeenLastCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      condition: {
+        operation: "or",
+        sub_conditions: [
+          { field: "name", operation: "like", value_from: "const", value: "%a\\%\\_\\\\b%" },
         ],
       },
     }),
