@@ -353,7 +353,10 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
     renderScene(entitlement());
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
-    expect(screen.getByRole("button", { name: /行动类/ })).toBeTruthy();
+    const actionEntry = screen.getByRole("button", { name: /行动类/ });
+    expect(screen.getByText("knowledgeNetwork.workspaceDynamicModel").nextElementSibling).toBe(
+      actionEntry,
+    );
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /API/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
@@ -389,10 +392,11 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
   });
 
   it("drops the title of a group whose entries are all hidden", () => {
-    mocks.hiddenNavigation = ["concept-groups", "object-types", "relation-types", "action-types"];
+    mocks.hiddenNavigation = ["concept-groups", "object-types", "relation-types"];
     renderScene(entitlement());
 
     expect(screen.queryByText("knowledgeNetwork.workspaceConceptModel")).toBeNull();
+    expect(screen.getByRole("button", { name: /行动类/ })).toBeTruthy();
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
   });
 
