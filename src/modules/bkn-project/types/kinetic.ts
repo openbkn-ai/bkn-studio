@@ -46,7 +46,12 @@ export type LogicNeeds = {
   networkId: string;
   /** `unavailable` when the released network could not be read. */
   reason: string;
-  /** Whether the project was ever released: before that, nothing is implemented live. */
+  /**
+   * Whether the network runs a version: the project was released, or it started from a network
+   * already running one. Before that, nothing is implemented live.
+   */
+  live: boolean;
+  /** Whether the project was ever released. */
   released: boolean;
   /** The specification's, sent with a link. */
   updateTime: number;

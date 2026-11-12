@@ -66,6 +66,7 @@ type BackendLogicNeeds = {
     | null;
   network_id?: string;
   reason?: string;
+  live?: boolean;
   released?: boolean;
   update_time: number;
 };
@@ -114,6 +115,8 @@ export const mapLogicNeeds = (data: BackendLogicNeeds): LogicNeeds => ({
     unconnected: (need.unconnected ?? []).map(({ from, to }) => ({ from, to })),
   })),
   networkId: data.network_id ?? "",
+  // An older bkn-project tells only whether the project was released.
+  live: data.live ?? data.released ?? false,
   reason: data.reason ?? "",
   released: data.released ?? false,
   updateTime: data.update_time,
@@ -148,7 +151,7 @@ export async function getLogicNeeds(projectId: string): Promise<LogicNeeds> {
   } catch (error) {
     // An older bkn-project answers 404 before there is a specification: nothing, never released.
     if (isRequestNotFound(error)) {
-      return { needs: [], networkId: "", reason: "", released: false, updateTime: 0 };
+      return { live: false, needs: [], networkId: "", reason: "", released: false, updateTime: 0 };
     }
     throw error;
   }
@@ -311,6 +314,7 @@ async function mockLogicNeeds(projectId: string): Promise<LogicNeeds> {
       };
     }),
     networkId: MOCK_NETWORK,
+    live: true,
     reason: "",
     released: true,
     updateTime: requirements?.updateTime ?? 0,

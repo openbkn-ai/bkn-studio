@@ -175,6 +175,7 @@ function logicNeeds(): LogicNeeds {
         link: { at: 1, boxId: "mcp", byId: "me", id: "t1", type: "mcp_tool" },
       }),
     ],
+    live: true,
     networkId: "net",
     reason: "",
     released: true,
@@ -327,7 +328,7 @@ describe("ProjectKinetic", () => {
   });
 
   it("says implementations wait for the first release, not that the network is unreadable", async () => {
-    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), released: false });
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), live: false, released: false });
     renderPage();
 
     expect(
@@ -336,9 +337,64 @@ describe("ProjectKinetic", () => {
     expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
   });
 
+  it("lets a project on a running network link what the network has before its first release", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), released: false });
+    mocks.getCandidates.mockResolvedValue({
+      candidates: [
+        {
+          boxId: "",
+          description: "",
+          id: "triage",
+          name: "订单分诊",
+          ownerObjectTypeId: "",
+          reasons: ["similar_name"],
+          type: "skill",
+        },
+      ],
+      networkId: "net",
+      reason: "",
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/首次发布后才能查看和连接实现/)).toBeNull();
+
+    const panel = await openNeed("催单排序", "匹配或实现");
+    expect(await panel.findByText("订单分诊")).toBeInTheDocument();
+    expect(panel.getByRole("img", { name: "网络已有" })).toBeInTheDocument();
+    expect(panel.getByRole("button", { name: "连接「订单分诊」" })).toBeEnabled();
+  });
+
+  it("marks nothing as already in the network once the project has released", async () => {
+    mocks.getCandidates.mockResolvedValue({
+      candidates: [
+        {
+          boxId: "",
+          description: "",
+          id: "triage",
+          name: "订单分诊",
+          ownerObjectTypeId: "",
+          reasons: ["similar_name"],
+          type: "skill",
+        },
+      ],
+      networkId: "net",
+      reason: "",
+    });
+    renderPage();
+
+    const panel = await openNeed("催单排序", "匹配或实现");
+    expect(await panel.findByText("订单分诊")).toBeInTheDocument();
+    expect(panel.queryByRole("img", { name: "网络已有" })).toBeNull();
+    expect(screen.queryByText(/知识网络已在运行/)).toBeNull();
+  });
+
   it("warns as well before the first release when the network could not be read", async () => {
     mocks.getLogicNeeds.mockResolvedValue({
       ...logicNeeds(),
+      live: false,
       reason: "unavailable",
       released: false,
     });
@@ -359,6 +415,7 @@ describe("ProjectKinetic", () => {
   it("shows the empty list, not an error, before there is a specification", async () => {
     mocks.getRequirements.mockResolvedValue(null);
     mocks.getLogicNeeds.mockResolvedValue({
+      live: false,
       needs: [],
       networkId: "",
       reason: "",
