@@ -524,6 +524,8 @@ export async function queryObjectMetricDrillThroughV1(
     {
       params: { ...(await resolveKnReadParams(networkId)), version },
       skipErrorToast: true,
+      // The server may finish metric evaluation before its 30-second participant scan begins.
+      timeout: 90000,
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },
@@ -545,6 +547,7 @@ export async function trialObjectMetricDrillThroughV1(
     {
       params: await resolveKnReadParams(networkId),
       skipErrorToast: true,
+      timeout: 90000,
       transformRequest: serializeObjectMetricBody,
       transformResponse: transformPrecisionSafeJSONResponse,
     },

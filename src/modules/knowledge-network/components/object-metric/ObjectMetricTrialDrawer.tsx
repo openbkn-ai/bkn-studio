@@ -19,6 +19,7 @@ import {
   Table,
   Tag,
 } from "antd";
+import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
@@ -265,6 +266,7 @@ export function ObjectMetricTrialDrawer({
   const [participantsPage, setParticipantsPage] = useState(1);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string>();
   const [contextOpen, setContextOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const bucketActionsRef = useRef<HTMLDivElement>(null);
@@ -483,6 +485,7 @@ export function ObjectMetricTrialDrawer({
     if (!onDrillThrough || !selected?.bucket_key || !currentQuery) return;
     setParticipantsLoading(true);
     setError(undefined);
+    setParticipantsError(undefined);
     try {
       const page = await onDrillThrough(currentQuery, selected.bucket_key, cursor);
       setParticipantsPage(
@@ -498,7 +501,15 @@ export function ObjectMetricTrialDrawer({
       );
       setParticipantsOpen(true);
     } catch (requestError) {
-      setError(trialErrorMessage(requestError));
+      const message =
+        axios.isAxiosError(requestError) && requestError.response?.status === 504
+          ? objectMetricText("analysisParticipantsTimeout")
+          : trialErrorMessage(requestError);
+      if (cursor) {
+        setParticipantsError(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setParticipantsLoading(false);
     }
@@ -994,6 +1005,7 @@ export function ObjectMetricTrialDrawer({
         width="min(620px, 100vw)"
       >
         <p>{objectMetricText("analysisLiveNotice")}</p>
+        {participantsError ? <Alert message={participantsError} showIcon type="error" /> : null}
         {participants?.status === "partial" || participants?.warnings?.length ? (
           <Alert
             showIcon
