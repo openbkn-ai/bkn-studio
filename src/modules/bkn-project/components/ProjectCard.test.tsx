@@ -32,11 +32,13 @@ const project: Project = {
   archived: false,
   baselineNetworkId: "orders",
   branch: "project/p1",
+  canManage: true,
   catalogIds: ["c1", "c2"],
   createTime: 1,
   id: "p1",
   knId: "orders",
   name: "Orders",
+  namingLanguage: "zh-CN",
   otherProjects: 0,
   owner: { id: "me", type: "user" },
   updateTime: 1,
@@ -56,9 +58,10 @@ function renderCard(overrides: Partial<Project> = {}, isOwner = true) {
       <ProjectCard
         isOwner={isOwner}
         networkName="Orders network"
-        onArchive={vi.fn()}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+        onExport={vi.fn()}
         onOpen={vi.fn()}
-        onUnarchive={vi.fn()}
         project={{ ...project, ...overrides }}
       />
     </MemoryRouter>,
@@ -133,9 +136,10 @@ describe("ProjectCard", () => {
       <MemoryRouter>
         <ProjectCard
           isOwner
-          onArchive={vi.fn()}
+          onDelete={vi.fn()}
+          onEdit={vi.fn()}
+          onExport={vi.fn()}
           onOpen={vi.fn()}
-          onUnarchive={vi.fn()}
           project={{ ...project, archived: true }}
         />
       </MemoryRouter>,

@@ -14,7 +14,9 @@ import type { Project } from "@/modules/bkn-project/types/project";
 const listProjectsMock = vi.hoisted(() => vi.fn());
 const createProjectMock = vi.hoisted(() => vi.fn());
 const listNetworksMock = vi.hoisted(() => vi.fn());
-const setArchivedMock = vi.hoisted(() => vi.fn());
+const deleteProjectMock = vi.hoisted(() => vi.fn());
+const exportProjectMock = vi.hoisted(() => vi.fn());
+const renameProjectMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const getStatusMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -43,7 +45,11 @@ vi.mock("@/modules/bkn-project/services/project.service", () => ({
   createProject: createProjectMock,
   listProjectNetworks: listNetworksMock,
   listProjects: listProjectsMock,
-  setProjectArchived: setArchivedMock,
+  deleteProject: deleteProjectMock,
+  exportProject: exportProjectMock,
+  importProjectPackage: vi.fn(),
+  previewProjectPackage: vi.fn(),
+  renameProject: renameProjectMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/publish.service", () => ({
@@ -93,11 +99,13 @@ function project(overrides: Partial<Project>): Project {
     archived: false,
     baselineNetworkId: "orders",
     branch: "project/p1",
+    canManage: true,
     catalogIds: [],
     createTime: 1,
     id: "p1",
     knId: "orders",
     name: "Orders",
+    namingLanguage: "zh-CN",
     otherProjects: 0,
     owner: { id: "me", type: "user" },
     updateTime: 1,
@@ -171,11 +179,12 @@ describe("ProjectListScene", () => {
     expect(newProjectModalRenderMock).toHaveBeenCalledWith(expect.objectContaining({ open: true }));
   });
 
-  it("shows the network name, the same-network tag, and archive for the owner only", async () => {
+  it("shows the network name, the same-network tag, and edit and delete for managers only", async () => {
     listProjectsMock.mockResolvedValue({
       items: [
         project({ catalogIds: ["c1"], otherProjects: 1 }),
         project({
+          canManage: false,
           id: "p2",
           name: "Receipts",
           owner: { id: "someone", type: "user" },
@@ -193,16 +202,25 @@ describe("ProjectListScene", () => {
     expect(
       await within(mine).findByText("bknProject.list.card.stages.deciding"),
     ).toBeInTheDocument();
-    expect(
-      within(await openMenu("Orders")).getByText("bknProject.list.archive"),
-    ).toBeInTheDocument();
+    const mineMenu = within(await openMenu("Orders"));
+    expect(mineMenu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "bknProject.list.card.open",
+      "common.edit",
+      "bknProject.manage.export.action",
+      "common.delete",
+    ]);
 
     const theirs = card("Receipts");
     expect(within(theirs).getByText("张三")).toBeInTheDocument();
     expect(within(theirs).queryByText("someone")).toBeNull();
-    expect(within(await openMenu("Receipts")).queryByText("bknProject.list.archive")).toBeNull();
+    const theirMenu = within(await openMenu("Receipts"));
+    expect(theirMenu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "bknProject.list.card.open",
+      "bknProject.manage.export.action",
+    ]);
+    // Archived projects are no more: no filter, no archive action.
+    expect(screen.queryByText("bknProject.list.showArchived")).toBeNull();
     expect(listProjectsMock).toHaveBeenCalledWith({
-      archived: "false",
       limit: 12,
       name: "",
       offset: 0,
@@ -219,7 +237,7 @@ describe("ProjectListScene", () => {
     expect(await screen.findByText("opened orders")).toBeInTheDocument();
   });
 
-  it("searches by name and shows archived projects on request, from the first page", async () => {
+  it("searches by name from the first page", async () => {
     listProjectsMock.mockResolvedValue({ items: [], total: 0 });
     renderScene();
     await waitFor(() => expect(listProjectsMock).toHaveBeenCalledTimes(1));
@@ -228,13 +246,8 @@ describe("ProjectListScene", () => {
       target: { value: " ord " },
     });
     await waitFor(() =>
-      expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ name: "ord" })),
-    );
-
-    fireEvent.click(screen.getByText("bknProject.list.showArchived"));
-    await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ archived: "all", offset: 0 }),
+        expect.objectContaining({ name: "ord", offset: 0 }),
       ),
     );
     expect(await screen.findByText("bknProject.list.emptyFiltered")).toBeInTheDocument();
@@ -250,7 +263,9 @@ describe("ProjectListScene", () => {
       });
     renderScene();
 
-    fireEvent.click(screen.getByText("bknProject.list.showArchived"));
+    fireEvent.change(screen.getByPlaceholderText("bknProject.list.searchPlaceholder"), {
+      target: { value: "new" },
+    });
     expect(await screen.findByText("Newest")).toBeInTheDocument();
 
     answerFirst({ items: [project({ name: "Stale" })], total: 1 });
@@ -302,7 +317,7 @@ describe("ProjectListScene", () => {
     );
   });
 
-  it("goes back to the first page on search, the archived filter and refresh", async () => {
+  it("goes back to the first page on search and refresh", async () => {
     listProjectsMock.mockResolvedValue({ items: [project({})], total: 30 });
     renderScene();
     const toSecondPage = async () => {
@@ -323,41 +338,31 @@ describe("ProjectListScene", () => {
     );
 
     await toSecondPage();
-    fireEvent.click(screen.getByText("bknProject.list.showArchived"));
-    await waitFor(() =>
-      expect(listProjectsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ archived: "all", offset: 0 }),
-      ),
-    );
-
-    await toSecondPage();
     fireEvent.click(screen.getByRole("button", { name: "bknProject.list.refresh" }));
     await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })),
     );
   });
 
-  it("keeps the page after archiving, and moves back when the page emptied", async () => {
+  it("keeps the page after deleting, and moves back when the page emptied", async () => {
     listProjectsMock.mockResolvedValue({ items: [project({})], total: 13 });
-    setArchivedMock.mockResolvedValue(project({}));
+    deleteProjectMock.mockResolvedValue(undefined);
     renderScene();
     fireEvent.click(await screen.findByTitle("2"));
     await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 12 })),
     );
 
-    // The last project of page 2 is archived: page 2 reads empty, and page 1 is read instead.
+    // The last project of page 2 is deleted: page 2 reads empty, and page 1 is read instead.
     listProjectsMock.mockImplementation(({ offset }: { offset: number }) =>
       Promise.resolve(offset ? { items: [], total: 12 } : { items: [project({})], total: 12 }),
     );
-    fireEvent.click(within(await openMenu("Orders")).getByText("bknProject.list.archive"));
-    const { onOk } = confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };
-    await onOk();
-
-    const offsets = listProjectsMock.mock.calls.map(
-      ([query]) => (query as { offset: number }).offset,
-    );
-    expect(offsets.slice(-1)).toEqual([12]);
+    fireEvent.click(within(await openMenu("Orders")).getByText("common.delete"));
+    fireEvent.change(await screen.findByLabelText("bknProject.manage.delete.typeNameLabel"), {
+      target: { value: "Orders" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.delete" }));
+    await waitFor(() => expect(deleteProjectMock).toHaveBeenCalledWith("p1"));
     await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })),
     );
@@ -408,22 +413,23 @@ describe("ProjectListScene", () => {
     expect(await screen.findByText("bknProject.list.emptyTitle")).toBeInTheDocument();
   });
 
-  it("archives after confirmation and restores an archived project directly", async () => {
-    listProjectsMock.mockResolvedValue({
-      items: [project({}), project({ archived: true, id: "p2", name: "Old" })],
-      total: 2,
-    });
-    setArchivedMock.mockResolvedValue(project({}));
+  it("exports a project, and renames it in place from the edit dialog", async () => {
+    listProjectsMock.mockResolvedValue({ items: [project({})], total: 1 });
+    exportProjectMock.mockResolvedValue(undefined);
+    renameProjectMock.mockResolvedValue(project({ name: "Orders 2" }));
     renderScene();
 
     await screen.findByText("Orders");
-    fireEvent.click(within(await openMenu("Orders")).getByText("bknProject.list.archive"));
-    const { onOk } = confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };
-    await onOk();
-    expect(setArchivedMock).toHaveBeenCalledWith("p1", true);
+    fireEvent.click(within(await openMenu("Orders")).getByText("bknProject.manage.export.action"));
+    expect(exportProjectMock).toHaveBeenCalledWith(expect.objectContaining({ id: "p1" }));
 
-    fireEvent.click(within(await openMenu("Old")).getByText("bknProject.list.unarchive"));
-    await waitFor(() => expect(setArchivedMock).toHaveBeenLastCalledWith("p2", false));
-    expect(messageMock.success).toHaveBeenCalledWith("bknProject.list.unarchiveSuccess");
+    fireEvent.click(within(await openMenu("Orders")).getByText("common.edit"));
+    const name = await screen.findByDisplayValue("Orders");
+    fireEvent.change(name, { target: { value: "Orders 2" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(renameProjectMock).toHaveBeenCalledWith("p1", "Orders 2"));
+    expect(await screen.findByText("Orders 2")).toBeInTheDocument();
+    expect(messageMock.success).toHaveBeenCalledWith("bknProject.manage.edit.success");
   });
 });
