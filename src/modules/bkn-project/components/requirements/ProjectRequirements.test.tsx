@@ -39,6 +39,7 @@ const setConceptMappingMock = vi.hoisted(() => vi.fn());
 const getLogicNeedsMock = vi.hoisted(() => vi.fn());
 const listConversationsMock = vi.hoisted(() => vi.fn());
 const getSupplementMock = vi.hoisted(() => vi.fn());
+const getProjectStatusMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
@@ -55,6 +56,11 @@ vi.mock("@/modules/bkn-project/services/conversations.service", async (importOri
   >()),
   getSupplement: getSupplementMock,
   listConversations: listConversationsMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  getProjectStatus: getProjectStatusMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/kinetic.service", () => ({
@@ -280,6 +286,7 @@ describe("ProjectRequirements", () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
     listDocumentsMock.mockResolvedValue(documents);
+    getProjectStatusMock.mockResolvedValue({ confirmation: { current: true, time: 1 } });
     getRequirementsMock.mockResolvedValue(requirements());
     getLogicNeedsMock.mockResolvedValue({ needs: [], networkId: "n", reason: "", updateTime: 1 });
     getSupplementMock.mockResolvedValue({ by: null, text: "", time: 0 });
@@ -301,6 +308,35 @@ describe("ProjectRequirements", () => {
         relationTypes: [{ id: "order_customer", name: "订单的客户" }],
       },
     });
+  });
+
+  it("keeps Ask AI in sight before the model is confirmed, unusable, leading to the model", async () => {
+    getProjectStatusMock.mockResolvedValue({ confirmation: null });
+    renderPage();
+
+    expect(await screen.findByText("本项目还没确认概念模型")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "问 AI" })).toBeDisabled();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "先确认概念模型" })[0]);
+    expect(onGoToModel).toHaveBeenCalled();
+  });
+
+  it("does not keep Ask AI shut when the confirmation cannot be read", async () => {
+    getProjectStatusMock.mockRejectedValue(new Error("down"));
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: "问 AI" });
+    await waitFor(() => expect(button).toBeEnabled());
+  });
+
+  it("asks AI before the first draft once the model is confirmed", async () => {
+    getRequirementsMock.mockResolvedValue(null);
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: "问 AI" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    expect(await screen.findByRole("complementary", { name: "AI 助手" })).toBeInTheDocument();
   });
 
   it("ticks scenarios and questions to ask AI about them, and says which came from asking", async () => {

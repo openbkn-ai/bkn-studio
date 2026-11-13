@@ -26,6 +26,7 @@ import {
   SUPPLEMENT_MAX,
 } from "@/modules/bkn-project/services/conversations.service";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import type { AskModel } from "@/modules/bkn-project/components/ai/askModel";
 import type { AskPage, Supplement } from "@/modules/bkn-project/types/conversations";
 import type { LogicNetworkItem } from "@/modules/bkn-project/types/kinetic";
 import type { RequirementDocument } from "@/modules/bkn-project/types/requirements";
@@ -94,8 +95,8 @@ export function AskSources({
   documents,
   hasBackground,
   kineticNeeds,
+  model,
   networkItems,
-  objectTypes,
   onGoToKinetic,
   onGoToModel,
   onOpenDocuments,
@@ -114,9 +115,9 @@ export function AskSources({
   hasBackground: boolean;
   /** Scenarios: the kinetic needs. */
   kineticNeeds?: number;
+  /** The object types AI reads; null while unread. */
+  model: AskModel | null;
   networkItems: LogicNetworkItem[];
-  /** The confirmed model's object types; null while unread. */
-  objectTypes: number | null;
   onGoToKinetic?: () => void;
   onGoToModel: () => void;
   /** Opens the requirement documents, where they are uploaded. */
@@ -153,17 +154,23 @@ export function AskSources({
               {t(`${PREFIX}.documents`, { count: 0 })}
             </Source>
           )}
-          {objectTypes === null ? null : (
+          {model?.network ? (
+            <Source inNetwork tone="ok">
+              {t(`${PREFIX}.networkObjectTypes`, { count: model.network })}
+            </Source>
+          ) : null}
+          {model === null ? null : model.confirmed ? (
+            <Source action={{ label: t(`${PREFIX}.goToModel`), onClick: onGoToModel }} tone="ok">
+              {t(`${PREFIX}.model`, { count: model.project })}
+            </Source>
+          ) : (
+            // What the network has is not the project's confirmed model: say none is confirmed.
             <Source
-              action={{ label: t(`${PREFIX}.goToModel`), onClick: onGoToModel }}
-              hint={
-                objectTypes ? undefined : (
-                  <span className={styles.sourceHint}>{t(`${PREFIX}.noModel`)}</span>
-                )
-              }
-              tone={objectTypes ? "ok" : "missing"}
+              action={{ label: t(`${PREFIX}.confirmModel`), onClick: onGoToModel }}
+              hint={<span className={styles.sourceHint}>{t(`${PREFIX}.noModel`)}</span>}
+              tone="missing"
             >
-              {t(`${PREFIX}.model`, { count: objectTypes })}
+              {t(`${PREFIX}.notConfirmed`)}
             </Source>
           )}
           {page === "kinetic" ? (

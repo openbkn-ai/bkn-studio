@@ -16,6 +16,8 @@ import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
+import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
@@ -51,6 +53,7 @@ import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledN
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { getDraft, getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
   getLogicNeeds,
@@ -127,10 +130,14 @@ export function ProjectKinetic({
   const [failures, setFailures] = useState(0);
   // null while unknown; the analysis needs a confirmed model.
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
+  // The confirmation could not be read: Ask AI is not kept shut for it, the server answers anyway.
+  const [statusUnread, setStatusUnread] = useState(false);
   // null while unread.
   const [documents, setDocuments] = useState<RequirementDocument[] | null>(null);
   const [objectTypes, setObjectTypes] = useState<{ id: string; name: string }[]>([]);
   const [draftRead, setDraftRead] = useState(false);
+  // The draft's adopted object types the network has, and those the project adds.
+  const [modelCounts, setModelCounts] = useState({ network: 0, project: 0 });
   // The network has a description or SKILL.md, which the analysis and Ask AI read.
   const [background, setBackground] = useState(false);
   // Ask AI beside the list, with the needs ticked to ask about.
@@ -185,7 +192,7 @@ export function ProjectKinetic({
     let active = true;
     getProjectStatus(project.id)
       .then((status) => active && setConfirmed(status.confirmation !== null))
-      .catch(() => undefined);
+      .catch(() => active && setStatusUnread(true));
     listDocuments(project.id)
       .then((next) => active && setDocuments(next))
       .catch(() => undefined);
@@ -195,6 +202,7 @@ export function ProjectKinetic({
           return;
         }
         setDraftRead(true);
+        setModelCounts(modelCountsOf(draft?.items.objectTypes ?? []));
         if (draft) {
           setObjectTypes(
             draft.items.objectTypes
@@ -478,6 +486,22 @@ export function ProjectKinetic({
         : reviewRequirements(project.id, time, [], [{ id: need.id, kind: "logic_needs" }]),
     );
 
+  const states = useMemo(() => needs.map((need) => ({ need, state: needState(need) })), [needs]);
+  // A need the network already covers is shown with what covers it, not as a new need.
+  const covered = useMemo(() => coveredNeedIds(networkItems), [networkItems]);
+  const shown = useMemo(
+    () =>
+      states.filter(
+        (entry) =>
+          !covered.has(entry.need.id) &&
+          (kind === ALL || entry.need.kind === kind) &&
+          // The state filter shows only with the live read: without it, it is not applied.
+          (!live || stateFilter === ALL || entry.state === stateFilter),
+      ),
+    [covered, kind, live, stateFilter, states],
+  );
+  const needsPage = useListPage(shown.length, `${kind}/${stateFilter}`);
+
   if (failures > 0 && requirements === undefined) {
     return (
       <Alert
@@ -500,26 +524,18 @@ export function ProjectKinetic({
     );
   }
 
-  const states = needs.map((need) => ({ need, state: needState(need) }));
   const count = (state: NeedState) => states.filter((entry) => entry.state === state).length;
-  // A need the network already covers is shown with what covers it, not as a new need.
-  const covered = coveredNeedIds(networkItems);
   const newNeeds = needs.filter((need) => !covered.has(need.id)).length;
-  const shown = states.filter(
-    (entry) =>
-      !covered.has(entry.need.id) &&
-      (kind === ALL || entry.need.kind === kind) &&
-      // The state filter shows only with the live read: without it, it is not applied.
-      (!live || stateFilter === ALL || entry.state === stateFilter),
-  );
   const waiting = needs.filter((need) => !need.accepted);
   const editable = canEdit && requirements !== null && !running;
   const openNeed = openId ? needs.find((need) => need.id === openId) : undefined;
   const questionsOf = (needId: string) =>
     spec?.questions.filter((question) => question.logicNeedIds.includes(needId)).length ?? 0;
   const notConfirmed = confirmed === false;
-  // Asking needs a specification: the needs it changes are kept in it.
-  const canAsk = canEdit && requirements !== null;
+  // Asking needs the confirmed model, not a first analysis: before one the list starts from the
+  // conversation.
+  const askReady = confirmed ?? (statusUnread ? true : null);
+  const canAsk = canEdit && askReady === true;
   const refs = selected
     .map((id) => needs.find((need) => need.id === id))
     .filter((need): need is LogicNeedView => need !== undefined)
@@ -695,16 +711,14 @@ export function ProjectKinetic({
                 {t(`${KINETIC}.startOver`)}
               </AppButton>
             ) : null}
-            {canAsk ? (
-              <AppButton
-                aria-pressed={asking}
-                onClick={() => setAsking(!asking)}
-                type={asking ? "default" : "primary"}
-              >
-                {refs.length
-                  ? t("bknProject.ask.button.selected", { count: refs.length })
-                  : t("bknProject.ask.button.label")}
-              </AppButton>
+            {canEdit ? (
+              <AskEntry
+                asking={asking}
+                modelConfirmed={askReady}
+                onGoToModel={onGoToModel}
+                onToggle={() => setAsking(!asking)}
+                selected={refs.length}
+              />
             ) : null}
           </div>
           {notConfirmed ? (
@@ -766,8 +780,8 @@ export function ProjectKinetic({
             canEdit={canEdit}
             documents={documents}
             hasBackground={background}
+            model={draftRead && confirmed !== null ? { ...modelCounts, confirmed } : null}
             networkItems={networkItems}
-            objectTypes={draftRead ? objectTypes.length : null}
             onGoToModel={onGoToModel}
             onOpenDocuments={() => void navigate(projectResourcesPath(project.id, "documents"))}
             onViewBackground={() => setViewing({ documentId: NETWORK_DOCUMENT_ID })}
@@ -838,7 +852,7 @@ export function ProjectKinetic({
                 columns={columns}
                 dataSource={shown}
                 locale={{ emptyText: t(`${KINETIC}.noneFiltered`) }}
-                pagination={shown.length > 20 ? { pageSize: 20 } : false}
+                pagination={needsPage.pagination}
                 rowClassName={(entry) => (flash.has(entry.need.id) ? ask.flash : "")}
                 rowKey={(entry) => entry.need.id}
                 rowSelection={
@@ -848,6 +862,8 @@ export function ProjectKinetic({
                         getCheckboxProps: (entry) => ({
                           title: t("bknProject.ask.select.item", { name: entry.need.name }),
                         }),
+                        // Ticked needs stay ticked on other pages and filters.
+                        preserveSelectedRowKeys: true,
                         onChange: (keys) => {
                           setSelected(keys.map(String));
                           // Ticking is for asking: the panel opens to ask about them.
@@ -958,7 +974,8 @@ export function ProjectKinetic({
               projectId={project.id}
               refs={refs}
               subtitle={t("bknProject.ask.panel.subtitle.kinetic", { count: needs.length })}
-              updateTime={updateTime}
+              // Before the first analysis there is no list: adopting starts it.
+              updateTime={requirements === null ? 0 : updateTime}
             />
           </div>
         ) : null}

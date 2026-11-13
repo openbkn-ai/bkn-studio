@@ -27,6 +27,7 @@ import {
 } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
+import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
@@ -510,6 +511,12 @@ export function ProjectConcepts({
       </BknProjectKbSlot>
     ) : null;
 
+  const shown = useMemo(
+    () => (concepts?.concepts ?? []).filter((c) => filter === "all" || c.state === filter),
+    [concepts, filter],
+  );
+  const listPage = useListPage(shown.length, filter);
+
   if (loadError && concepts === undefined) {
     return (
       <Alert
@@ -566,8 +573,6 @@ export function ProjectConcepts({
   const candidates = !ready && concepts.concepts.some(tableCandidate);
   const pending = concepts.counts.pending ?? 0;
   const total = concepts.concepts.length;
-  const shown =
-    filter === "all" ? concepts.concepts : concepts.concepts.filter((c) => c.state === filter);
   const standing = concepts.concepts;
   const inModel = conceptsInModel(concepts.concepts);
 
@@ -952,7 +957,7 @@ export function ProjectConcepts({
         <AppTable<Concept>
           columns={columns}
           dataSource={shown}
-          pagination={false}
+          pagination={listPage.pagination}
           rowKey="key"
           size="small"
         />

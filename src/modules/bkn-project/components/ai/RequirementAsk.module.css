@@ -109,6 +109,13 @@
   gap: 6px;
 }
 
+/* Ask AI before the model is confirmed: the button, unusable, and where to confirm it. */
+.entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .history {
   display: flex;
   flex-direction: column;

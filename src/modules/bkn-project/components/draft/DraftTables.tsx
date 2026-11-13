@@ -49,11 +49,10 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 
 import { cardinalityKey } from "@/modules/bkn-project/components/relation-type/relation-values";
+import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { networkObjectTypePath } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./DraftTables.module.css";
-
-const PAGE_SIZE = 50;
 
 export function AdoptionTag({ adopted }: { adopted: boolean }) {
   const { t } = useTranslation();
@@ -301,6 +300,7 @@ export function DraftObjectsTable({
   onOpen: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const listPage = useListPage(items.length);
   const sourceEditor = extensionProjectObjectSourceEditor();
   const columns: ColumnsType<DraftObjectType> = [
     {
@@ -383,7 +383,7 @@ export function DraftObjectsTable({
     <AppTable<DraftObjectType>
       columns={columns}
       dataSource={items}
-      pagination={items.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+      pagination={listPage.pagination}
       rowKey="id"
       size="middle"
     />
@@ -409,6 +409,7 @@ export function DraftRelationsTable({
   unadoptedEnds: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
+  const listPage = useListPage(items.length);
   const kbMode = useBknProjectKbMode();
   const DocumentBasis = extensionProjectRelationBasis();
   const columns: ColumnsType<DraftRelationType> = [
@@ -505,7 +506,7 @@ export function DraftRelationsTable({
     <AppTable<DraftRelationType>
       columns={columns}
       dataSource={items}
-      pagination={items.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+      pagination={listPage.pagination}
       rowKey="id"
       size="middle"
     />

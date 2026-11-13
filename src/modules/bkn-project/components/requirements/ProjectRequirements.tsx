@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
+import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
@@ -45,6 +47,7 @@ import { RequirementsExport } from "@/modules/bkn-project/components/requirement
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import {
+  getProjectStatus,
   projectErrorCode,
   projectErrorDetails,
 } from "@/modules/bkn-project/services/publish.service";
@@ -132,8 +135,12 @@ export function ProjectRequirements({
   const [logicNeeds, setLogicNeeds] = useState<LogicNeedView[] | null>(null);
   // What the network had before the project, which AI reads.
   const [networkItems, setNetworkItems] = useState<LogicNetworkItem[]>([]);
-  // The confirmed model's object types; null while unread.
-  const [adoptedObjectTypes, setAdoptedObjectTypes] = useState<number | null>(null);
+  // The draft's adopted object types the network has, and those the project adds; null while unread.
+  const [modelCounts, setModelCounts] = useState<{ network: number; project: number } | null>(null);
+  // null while unknown; asking needs the confirmed model.
+  const [confirmed, setConfirmed] = useState<boolean | null>(null);
+  // The confirmation could not be read: Ask AI is not kept shut for it, the server answers anyway.
+  const [statusUnread, setStatusUnread] = useState(false);
   // The network has a description or SKILL.md, which generating and Ask AI read.
   const [background, setBackground] = useState(false);
   // Ask AI beside the lists, with the scenarios and questions ticked to ask about.
@@ -203,6 +210,9 @@ export function ProjectRequirements({
     getNetworkBackground(project.id)
       .then((found) => active && setBackground(found !== null))
       .catch(() => undefined);
+    getProjectStatus(project.id)
+      .then((status) => active && setConfirmed(status.confirmation !== null))
+      .catch(() => active && setStatusUnread(true));
     return () => {
       active = false;
     };
@@ -214,9 +224,7 @@ export function ProjectRequirements({
     getDraft(project.id)
       .then((draft) => {
         if (active) {
-          setAdoptedObjectTypes(
-            draft ? draft.items.objectTypes.filter((item) => item.adopted).length : 0,
-          );
+          setModelCounts(modelCountsOf(draft?.items.objectTypes ?? []));
         }
         if (active && draft) {
           setDrafted([
@@ -283,6 +291,7 @@ export function ProjectRequirements({
         setBlocked("noOntology");
       } else if (code === "Requirement.ModelNotConfirmed") {
         setBlocked("modelNotConfirmed");
+        setConfirmed(false);
       } else {
         message.error(requirementErrorText(t, code));
       }
@@ -421,8 +430,10 @@ export function ProjectRequirements({
   const started = Boolean(spec && (spec.scenarios.length || spec.questions.length));
   const outdated = spec?.questions.filter((question) => question.ontologyChanged).length ?? 0;
   const activeTab: Tab = tab ?? "questions";
-  // Asking needs a specification: the items it changes are kept in it.
-  const canAsk = canEdit && requirements !== null;
+  // Asking needs the confirmed model, not a first draft: before one the list starts from the
+  // conversation.
+  const askReady = confirmed ?? (statusUnread ? true : null);
+  const canAsk = canEdit && askReady === true;
   const refs = selected
     .map(({ id, kind }) => {
       const name =
@@ -508,16 +519,14 @@ export function ProjectRequirements({
                     {t(`${PREFIX}.startOver`)}
                   </AppButton>
                 ) : null}
-                {canAsk ? (
-                  <AppButton
-                    aria-pressed={asking}
-                    onClick={() => setAsking(!asking)}
-                    type={asking ? "default" : "primary"}
-                  >
-                    {refs.length
-                      ? t("bknProject.ask.button.selected", { count: refs.length })
-                      : t("bknProject.ask.button.label")}
-                  </AppButton>
+                {canEdit ? (
+                  <AskEntry
+                    asking={asking}
+                    modelConfirmed={askReady}
+                    onGoToModel={onGoToModel}
+                    onToggle={() => setAsking(!asking)}
+                    selected={refs.length}
+                  />
                 ) : null}
               </div>
               <AskSources
@@ -526,8 +535,8 @@ export function ProjectRequirements({
                 documents={documents}
                 hasBackground={background}
                 kineticNeeds={spec?.logicNeeds.length ?? 0}
+                model={modelCounts && confirmed !== null ? { ...modelCounts, confirmed } : null}
                 networkItems={networkItems}
-                objectTypes={adoptedObjectTypes}
                 onGoToKinetic={onGoToKinetic}
                 onGoToModel={onGoToModel}
                 onOpenDocuments={() => onGoToResources("documents")}
@@ -756,7 +765,8 @@ export function ProjectRequirements({
                     questions: spec?.questions.length ?? 0,
                     scenarios: spec?.scenarios.length ?? 0,
                   })}
-                  updateTime={requirements?.updateTime}
+                  // Before the first draft there is no list: adopting starts it.
+                  updateTime={requirements === null ? 0 : requirements.updateTime}
                 />
               </div>
             ) : null}

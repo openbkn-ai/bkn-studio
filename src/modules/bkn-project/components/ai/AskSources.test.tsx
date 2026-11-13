@@ -46,8 +46,8 @@ const base = {
   canEdit: true,
   documents: [],
   hasBackground: false,
+  model: { confirmed: true, network: 0, project: 3 },
   networkItems: [],
-  objectTypes: 3,
   onGoToModel: vi.fn(),
   onOpenDocuments: vi.fn(),
   onViewBackground: vi.fn(),
@@ -73,6 +73,40 @@ describe("AskSources", () => {
     // A network with nothing of its own lists nothing of it.
     expect(screen.queryByText(`${S}.background`)).toBeNull();
     expect(await screen.findByText(`${N}.empty`)).toBeInTheDocument();
+  });
+
+  it("counts the network's object types apart and says when the project confirmed none", async () => {
+    const onGoToModel = vi.fn();
+    renderWithoutAntdStyles(
+      <AskSources
+        {...base}
+        model={{ confirmed: false, network: 41, project: 0 }}
+        onGoToModel={onGoToModel}
+      />,
+    );
+
+    expect(
+      screen.getByText(`${S}.networkObjectTypes:${JSON.stringify({ count: 41 })}`),
+    ).toBeInTheDocument();
+    expect(screen.getByText(`${S}.notConfirmed`)).toBeInTheDocument();
+    // The network's object types are never counted as the project's confirmed model.
+    expect(screen.queryByText(new RegExp(`^${S}\\.model:`))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: `${S}.confirmModel` }));
+    expect(onGoToModel).toHaveBeenCalled();
+    await screen.findByText(`${N}.empty`);
+  });
+
+  it("counts the project's confirmed object types beside the network's", async () => {
+    renderWithoutAntdStyles(
+      <AskSources {...base} model={{ confirmed: true, network: 41, project: 2 }} />,
+    );
+
+    expect(
+      screen.getByText(`${S}.networkObjectTypes:${JSON.stringify({ count: 41 })}`),
+    ).toBeInTheDocument();
+    expect(screen.getByText(`${S}.model:${JSON.stringify({ count: 2 })}`)).toBeInTheDocument();
+    expect(screen.queryByText(`${S}.notConfirmed`)).toBeNull();
+    await screen.findByText(`${N}.empty`);
   });
 
   it("names the documents, and marks what the network already has", async () => {
