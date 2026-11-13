@@ -548,9 +548,7 @@ describe("ProjectConcepts", () => {
     const documents = within(sources.querySelector('[data-source="document"]') as HTMLElement);
     expect(documents.getByText("bknProject.concepts.sources.waiting")).toBeTruthy();
     // No source may be started alone meanwhile.
-    expect(
-      (documents.getByRole("button", { name: /runOne.againOf/ }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(documents.getByRole("button", { name: /runOne.againOf/ }).disabled).toBe(true);
   });
 
   it("extracts one source alone from its row", async () => {
