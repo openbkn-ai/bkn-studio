@@ -167,7 +167,8 @@ export function UnderstandingBar({
       const skipped = submitted.filter((catalog) => !catalog.permitted && !catalog.missing);
       if (tables) {
         message.success(t("bknProject.understand.started", { count: tables }));
-      } else if (!skipped.length) {
+      } else if (!skipped.length && !submitted.some((catalog) => catalog.missing)) {
+        // Catalogs that are gone have nothing to understand; the page already says they are gone.
         message.info(t("bknProject.understand.nothingToDo"));
       }
       if (skipped.length) {

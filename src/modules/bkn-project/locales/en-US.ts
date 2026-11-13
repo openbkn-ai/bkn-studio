@@ -635,7 +635,7 @@ export const bknProjectEnUS = {
         missingCatalogsUnnamed:
           "{{count}} of the project's data catalogs no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
         missingCatalogsUnnamed_one:
-          "The project's data catalog no longer exists, or you cannot see it. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
+          "One of the project's data catalogs no longer exists, or you cannot see it. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
         missingCatalogsUnnamed_other:
           "{{count}} of the project's data catalogs no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
         unadoptedEnds:

@@ -350,6 +350,25 @@ describe("UnderstandingBar", () => {
     );
   });
 
+  it("does not say nothing needed understanding when the catalogs are gone", async () => {
+    getUnderstandingMock.mockResolvedValue([
+      { catalogId: "gone-1", counts: {}, missing: true, tables: [], visible: false },
+    ]);
+    understandCatalogsMock.mockResolvedValue([
+      { catalogId: "gone-1", missing: true, permitted: false, tables: 0 },
+    ]);
+    renderBar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "语义理解" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: /开\s*始/ }));
+
+    await waitFor(() => expect(understandCatalogsMock).toHaveBeenCalled());
+    await waitFor(() => expect(getUnderstandingMock).toHaveBeenCalledTimes(2));
+    expect(messageMock.info).not.toHaveBeenCalled();
+    expect(messageMock.warning).not.toHaveBeenCalled();
+  });
+
   it("offers nothing to run for others, an archived project, or when progress cannot be read", async () => {
     getUnderstandingMock.mockResolvedValue([catalog(["completed"])]);
     const { unmount } = renderBar({ ownerIsCaller: false });
