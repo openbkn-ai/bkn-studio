@@ -1271,6 +1271,7 @@ export const bknProjectZhCN = {
         title: "运行语义理解",
         intro:
           "语义理解会为数据目录中的表和字段补上业务名称和说明，起草时会用到。建议在起草之前运行。",
+        language: "理解语言：{{language}}（项目内容语言）",
         fillEmpty: "只补充空缺的名称和说明，保留人工修改",
         force: "覆盖已有的名称和说明",
         forceHint: "英文短名不会被覆盖。",
