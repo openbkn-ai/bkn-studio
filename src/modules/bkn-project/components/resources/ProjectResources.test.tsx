@@ -266,9 +266,11 @@ describe("ProjectResources", () => {
     expect(screen.queryByText(/old-catalog/)).toBeNull();
     fireEvent.click(await button("bknProject.model.catalogs.change"));
     const dialog = await openDialog();
-    expect(await dialog.findByText(/bknProject.model.catalogs.removed/)).toHaveTextContent(
-      "old-catalog",
-    );
+    // The gone catalog is counted, never shown by its id.
+    expect(
+      await dialog.findByText('bknProject.model.catalogs.removed:{"count":1}'),
+    ).toBeInTheDocument();
+    expect(dialog.queryByText(/old-catalog/)).toBeNull();
     fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => expect(mocks.setProjectCatalogs).toHaveBeenCalledWith("p1", ["cat-001"]));
@@ -561,15 +563,68 @@ describe("ProjectResources", () => {
     expect(screen.getByText("bknProject.resources.catalogs.nameUnread")).toBeInTheDocument();
   });
 
-  it("says catalogs it cannot name only once", async () => {
-    mocks.listCatalogs.mockResolvedValue({ items: [], total: 0 });
+  it("says catalogs it cannot name only once, and nothing of catalogs that are gone", async () => {
+    mocks.listCatalogs.mockRejectedValue(new Error("down"));
     mocks.getUnderstanding.mockResolvedValue([
       { catalogId: "a", counts: {}, tables: [], visible: false },
       { catalogId: "b", counts: {}, tables: [], visible: false },
     ]);
-    renderPage({ catalogIds: ["a", "b"] });
+    const view = renderPage({ catalogIds: ["a", "b"] });
 
-    expect(await screen.findAllByText(/understand.progress.invisible/)).toHaveLength(1);
+    expect(await screen.findAllByText(/understand.progress.invisibleUnnamed/)).toHaveLength(1);
+    view.unmount();
+
+    // Once the list is read, a catalog it lacks is gone: counted once, never called unknown.
+    mocks.listCatalogs.mockResolvedValue({ items: [], total: 0 });
+    renderPage({ catalogIds: ["a", "b"] });
+    expect(
+      await screen.findByText('bknProject.resources.catalogs.gone:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/understand.progress.invisible/)).toBeNull();
+    expect(screen.queryByText(/catalogs.unnamed/)).toBeNull();
+  });
+
+  it("marks the catalogs the network uses, which the owner cannot remove, and keeps the added ones", async () => {
+    mocks.listCatalogs.mockResolvedValue({
+      items: [
+        { id: "cat-net", name: "Supply chain" },
+        { id: "cat-001", name: "ERP" },
+        { id: "cat-002", name: "CRM" },
+      ],
+      total: 3,
+    });
+    mocks.getUnderstanding.mockResolvedValue([
+      { ...understanding([["orders", "completed"]])[0], catalogId: "cat-net" },
+    ]);
+    mocks.setProjectCatalogs.mockResolvedValue({
+      ...project,
+      catalogIds: ["cat-net", "cat-001", "cat-002"],
+      networkCatalogIds: ["cat-net"],
+    });
+    renderPage({ catalogIds: ["cat-net", "cat-001"], networkCatalogIds: ["cat-net"] });
+
+    // The table's catalog carries the network's blue dot.
+    const row = (await screen.findByText("orders")).closest("tr")!;
+    expect(within(row).getByTestId("network-existing-dot")).toBeInTheDocument();
+    expect(within(row).getByText("Supply chain")).toBeInTheDocument();
+    // A network catalog the caller sees is not gone, and nothing asks to change it.
+    expect(screen.queryByText(/catalogs.gone/)).toBeNull();
+
+    fireEvent.click(await button("bknProject.model.catalogs.change"));
+    const dialog = await openDialog();
+    // Shown apart, with the dot, and not offered for removal.
+    expect(dialog.getByText("bknProject.model.catalogs.networkLabel")).toBeInTheDocument();
+    expect(dialog.getByTestId("network-existing-line")).toHaveTextContent("Supply chain");
+    expect(dialog.queryByText(/catalogs.removed/)).toBeNull();
+    const select = dialog.getByRole("combobox");
+    fireEvent.mouseDown(select);
+    fireEvent.click(await screen.findByTitle("CRM"));
+    fireEvent.click(dialog.getByRole("button", { name: "common.save" }));
+
+    // Only the catalogs the owner added are sent: the network's stay the network's.
+    await waitFor(() =>
+      expect(mocks.setProjectCatalogs).toHaveBeenCalledWith("p1", ["cat-001", "cat-002"]),
+    );
   });
 
   it("keeps the panel's state across tabs", async () => {

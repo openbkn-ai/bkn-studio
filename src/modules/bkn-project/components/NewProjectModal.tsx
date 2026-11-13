@@ -9,6 +9,7 @@ import { Alert, Form, Input, Modal, Radio, Select } from "antd";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
 import {
   defaultNamingLanguage,
   namingLanguageLabelKey,
@@ -191,22 +192,18 @@ export function NewProjectModal({
     }
     let active = true;
     getExistingNetworkStart(knId)
-      .then((value) => {
-        if (!active) return;
-        setStart(value);
-        const known = new Set(catalogs.map((catalog) => catalog.id));
-        const chosen = (form.getFieldValue("catalogIds") as string[] | undefined) ?? [];
-        const added = value.catalogIds.filter((id) => known.has(id) && !chosen.includes(id));
-        if (added.length) {
-          form.setFieldsValue({ catalogIds: [...chosen, ...added] });
-        }
-      })
+      .then((value) => active && setStart(value))
       // Without it the dialog works as before: the person picks the catalogs.
       .catch(() => active && setStart(null));
     return () => {
       active = false;
     };
-  }, [catalogs, form, knId, mode]);
+  }, [knId, mode]);
+
+  // The catalogs the existing network reads are the network's: shown with the blue dot, never
+  // chosen or stored by the project, which takes them with the network.
+  const networkCatalogIds = mode === "existing" && start ? start.catalogIds : [];
+  const catalogNames = new Map(catalogs.map((catalog) => [catalog.id, catalog.name]));
 
   const handleClose = () => {
     form.resetFields();
@@ -226,7 +223,7 @@ export function NewProjectModal({
     setFailure(null);
     try {
       const project = await createProject({
-        catalogIds: values.catalogIds ?? [],
+        catalogIds: (values.catalogIds ?? []).filter((id) => !networkCatalogIds.includes(id)),
         name: values.name,
         namingLanguage: values.namingLanguage,
         ...(values.mode === "new"
@@ -333,19 +330,37 @@ export function NewProjectModal({
           networksError={networksError}
         />
 
+        {networkCatalogIds.length ? (
+          <Form.Item
+            extra={t("bknProject.model.catalogs.networkHint")}
+            label={t("bknProject.model.catalogs.networkLabel")}
+          >
+            <ul className={styles.networkCatalogs}>
+              {networkCatalogIds.map((id) => (
+                <li key={id}>
+                  <ExistingLine>
+                    {catalogNames.get(id) ?? t("bknProject.model.catalogs.networkUnnamed")}
+                  </ExistingLine>
+                </li>
+              ))}
+            </ul>
+          </Form.Item>
+        ) : null}
         <Form.Item
-          extra={
-            start?.catalogIds.length
-              ? t("bknProject.create.catalogsFromNetwork")
-              : t("bknProject.create.catalogsHint")
-          }
-          label={t("bknProject.create.catalogs")}
+          extra={t("bknProject.create.catalogsHint")}
+          label={t(
+            networkCatalogIds.length
+              ? "bknProject.model.catalogs.addedLabel"
+              : "bknProject.create.catalogs",
+          )}
           name="catalogIds"
         >
           <Select
             mode="multiple"
             optionFilterProp="label"
-            options={catalogs.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
+            options={catalogs
+              .filter((catalog) => !networkCatalogIds.includes(catalog.id))
+              .map((catalog) => ({ label: catalog.name, value: catalog.id }))}
             placeholder={t("bknProject.create.catalogsPlaceholder")}
           />
         </Form.Item>

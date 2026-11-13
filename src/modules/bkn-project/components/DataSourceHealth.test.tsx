@@ -6,6 +6,8 @@
  */
 
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -27,6 +29,7 @@ const project = {
   archived: false,
   catalogIds: ["c1"],
   id: "p1",
+  knId: "kn1",
   name: "供应链",
 } as Project;
 
@@ -65,11 +68,21 @@ const action = (name: string, allowed = true, reason?: string) => ({
   ...(reason ? { reason } : {}),
 });
 
+// The network's name links to it.
+const routed = (node: ReactNode) => <MemoryRouter>{node}</MemoryRouter>;
+
 function renderHealth(of: Project = project) {
   const onGoToModel = vi.fn();
   const onGoToResources = vi.fn();
   const view = renderWithoutAntdStyles(
-    <DataSourceHealth onGoToModel={onGoToModel} onGoToResources={onGoToResources} project={of} />,
+    routed(
+      <DataSourceHealth
+        networkName="供应链网络"
+        onGoToModel={onGoToModel}
+        onGoToResources={onGoToResources}
+        project={of}
+      />,
+    ),
   );
   return { onGoToModel, onGoToResources, view };
 }
@@ -110,7 +123,14 @@ describe("DataSourceHealth", () => {
     getProjectStatusMock.mockResolvedValueOnce(status(ok));
     const { view } = renderHealth();
     expect(await screen.findByText("数据来源")).toBeInTheDocument();
-    expect(screen.getByText("可用")).toBeInTheDocument();
+    // The network has no health: it is connected, by its name, which leads to it.
+    expect(screen.getByText("已连接")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "供应链网络" })).toHaveAttribute(
+      "href",
+      "/knowledge-network/workspace/kn1/overview",
+    );
+    expect(screen.queryByText("可用")).toBeNull();
+    expect(screen.getAllByText("正常")).toHaveLength(2);
     expect(screen.getByText("2 个，都在")).toBeInTheDocument();
     expect(screen.getByText("11 张，都能查到数据")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -129,22 +149,26 @@ describe("DataSourceHealth", () => {
     };
     getProjectStatusMock.mockResolvedValueOnce(status(notBound)).mockResolvedValueOnce(status(ok));
     const view = renderWithoutAntdStyles(
-      <DataSourceHealth
-        draftVersion="ready:1"
-        onGoToModel={vi.fn()}
-        onGoToResources={vi.fn()}
-        project={project}
-      />,
+      routed(
+        <DataSourceHealth
+          draftVersion="ready:1"
+          onGoToModel={vi.fn()}
+          onGoToResources={vi.fn()}
+          project={project}
+        />,
+      ),
     );
     expect(await screen.findByText("还没有采用的条目")).toBeInTheDocument();
 
     view.rerender(
-      <DataSourceHealth
-        draftVersion="ready:2"
-        onGoToModel={vi.fn()}
-        onGoToResources={vi.fn()}
-        project={project}
-      />,
+      routed(
+        <DataSourceHealth
+          draftVersion="ready:2"
+          onGoToModel={vi.fn()}
+          onGoToResources={vi.fn()}
+          project={project}
+        />,
+      ),
     );
 
     expect(await screen.findByText("11 张，都能查到数据")).toBeInTheDocument();
@@ -173,24 +197,29 @@ describe("DataSourceHealth", () => {
     const { onGoToModel, onGoToResources } = renderHealth();
 
     expect(await screen.findByText("1 / 1 个已被删除")).toBeInTheDocument();
-    // Each source states itself with the platform's tag: the network is fine, the others gone.
-    expect(screen.getByText("正常")).toBeInTheDocument();
+    // Each source states itself with the platform's tag: the network is connected, the others gone.
+    expect(screen.getByText("已连接")).toBeInTheDocument();
     expect(screen.getAllByText("已失效")).toHaveLength(2);
     expect(screen.getByText("2 / 10 张查不到数据")).toBeInTheDocument();
+    // One cause, one notice: the gone catalog, with the items it takes along and one thing to do.
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(
-      screen.getByText("项目选用的 1 个数据目录已被删除。请重新选择数据目录，再重新起草。"),
+      screen.getByText(
+        "项目选用的 1 个数据目录已不存在，用到它们的条目也查不到数据。请更换数据目录，再重新起草。",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("对象类「客户」（数据表 customers）已查不到数据")).toBeInTheDocument();
     expect(
       screen.getByText("关系类「下单」（连接表 order_links）已查不到数据"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/ot_customer|rt_order|catalog_missing/)).toBeNull();
+    // The network is there, so archiving is not what the page suggests.
 
-    // Catalogs are chosen with the project's other inputs; drafting again is on the modeling page.
+    // Catalogs are chosen with the project's other inputs, the one thing to do first.
     fireEvent.click(screen.getByRole("button", { name: "重新选择数据目录" }));
     expect(onGoToResources).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "去重新起草" }));
-    expect(onGoToModel).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "去重新起草" })).toBeNull();
+    expect(onGoToModel).not.toHaveBeenCalled();
   });
 
   it("lists the first few gone items, all of them on asking, and folds them back", async () => {
@@ -232,7 +261,7 @@ describe("DataSourceHealth", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("还没有采用的条目")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "归档项目" })).toBeNull();
   });
 
   it("offers no change on an archived project, and asks others to contact the owner", async () => {

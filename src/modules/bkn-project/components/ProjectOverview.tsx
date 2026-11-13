@@ -609,6 +609,7 @@ export function ProjectOverview({
 
       <DataSourceHealth
         draftVersion={draft ? `${draft.status}:${draft.updateTime}` : undefined}
+        networkName={networkName}
         onGoToModel={() => go("model")}
         onGoToResources={() => go("resources", "catalogs")}
         project={project}

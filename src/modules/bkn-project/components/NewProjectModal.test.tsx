@@ -156,7 +156,7 @@ describe("NewProjectModal", () => {
     });
   });
 
-  it("starts from what an existing network has: says so and selects the catalogs it reads", async () => {
+  it("starts from what an existing network has: shows its catalogs as the network's, never stored", async () => {
     startMock.mockResolvedValue({
       actionTypes: 7,
       catalogIds: ["c1", "elsewhere"],
@@ -176,13 +176,19 @@ describe("NewProjectModal", () => {
 
     expect(await screen.findByText("bknProject.create.existingStart")).toBeInTheDocument();
     expect(startMock).toHaveBeenCalledWith("orders");
-    expect(screen.getByText("bknProject.create.catalogsFromNetwork")).toBeInTheDocument();
+    // The network's catalogs are shown with the blue dot, one the caller cannot see unnamed.
+    expect(screen.getByText("bknProject.model.catalogs.networkLabel")).toBeInTheDocument();
+    expect(screen.getAllByTestId("network-existing-line").map((line) => line.textContent)).toEqual([
+      "ERP",
+      "bknProject.model.catalogs.networkUnnamed",
+    ]);
+    expect(screen.getByText("bknProject.model.catalogs.addedLabel")).toBeInTheDocument();
     fireEvent.click(screen.getByText("bknProject.create.submit"));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
-    // Only catalogs the person can choose are selected; one not listed is left out.
+    // Only catalogs added on top are stored; the network's come with the network.
     expect(createProjectMock).toHaveBeenCalledWith({
-      catalogIds: ["c1"],
+      catalogIds: [],
       knId: "orders",
       name: "Orders",
       namingLanguage: "en-US",
