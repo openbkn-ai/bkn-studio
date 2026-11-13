@@ -123,6 +123,15 @@ describe("DataConnectDetailDrawer", () => {
       .mockResolvedValue(schedule(300));
   });
 
+  it("uses the Doris label in details without connector metadata", async () => {
+    getRecordMock.mockResolvedValue({ ...record, category: "table", connectorType: "doris" });
+    render(
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
+    );
+    await screen.findByText("分析型数据库（OLAP）");
+    expect(screen.queryByText("dataConnect.categories.table")).not.toBeInTheDocument();
+  });
+
   it("hides schedule editing without modify on this catalog", async () => {
     getRecordMock.mockResolvedValue({ ...record, operations: ["view_detail"] });
 
@@ -238,6 +247,22 @@ describe("DataConnectDetailDrawer", () => {
       expect.stringContaining("readonly_user"),
       expect.stringContaining("••••••••"),
     ]);
+  });
+
+  it("never echoes declared sensitive variables even without connector metadata", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: {
+        variables: { tenant: "public", api_key: "private-key", arbitrary: "private-option" },
+        sensitive_variables: ["api_key", "arbitrary"],
+      },
+    });
+    render(
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
+    );
+    await screen.findByText("tenant: public");
+    expect(document.body.textContent).not.toContain("private-option");
+    expect(document.body.textContent).not.toContain("private-key");
   });
 
   it("never echoes an encrypted password returned by the detail API", async () => {

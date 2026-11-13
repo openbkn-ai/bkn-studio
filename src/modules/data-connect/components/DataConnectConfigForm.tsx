@@ -307,7 +307,9 @@ function ConnectorFieldGroup({
               extra={
                 isEdit && fieldConfig.encrypted
                   ? t("dataConnect.encryptedFieldEditHint")
-                  : fieldHint
+                  : isEdit && fieldName === "variables"
+                    ? t("dataConnect.sensitiveVariablesEditHint")
+                    : fieldHint
               }
               help={control.kind === "options" ? false : undefined}
               key={fieldName}

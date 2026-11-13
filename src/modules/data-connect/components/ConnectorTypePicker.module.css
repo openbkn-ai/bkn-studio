@@ -238,7 +238,7 @@
 
 .cardHeader {
   display: grid;
-  grid-template-columns: minmax(72px, 1fr) minmax(0, 120px);
+  grid-template-columns: minmax(72px, 1fr) minmax(min-content, max-content);
   align-items: flex-start;
   gap: 10px;
 }
@@ -302,7 +302,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 20px;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -355,6 +355,10 @@
 }
 
 @container connector-picker (max-width: 950px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+
   .card {
     height: 212px;
   }
@@ -368,14 +372,23 @@
   }
 }
 
-.emptyWrap {
-  padding: 48px 0 24px;
+@container connector-picker (max-width: 300px) {
+  .card {
+    height: auto;
+    min-height: 212px;
+  }
+
+  .cardHeader {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .badgeGroup {
+    justify-self: end;
+  }
 }
 
-@media (max-width: 1100px) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.emptyWrap {
+  padding: 48px 0 24px;
 }
 
 @media (max-width: 768px) {

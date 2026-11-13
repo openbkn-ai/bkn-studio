@@ -82,22 +82,32 @@ const CATEGORY_TO_TEMPLATE_FALLBACKS: Record<string, { description: string; labe
 
 const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?: string }> = {
   mariadb: {
+    label: "Relational database",
     description: "Connect MariaDB relational databases.",
   },
   mysql: {
+    label: "Relational database",
     description: "Connect MySQL relational databases.",
   },
   postgresql: {
+    label: "Relational database",
     description: "Connect PostgreSQL relational databases.",
   },
   sqlserver: {
+    label: "Relational database",
     description: "Connect Microsoft SQL Server relational databases.",
   },
   oracle: {
+    label: "Relational database",
     description: "Connect Oracle relational databases.",
   },
   hana: {
+    label: "Relational database",
     description: "Connect SAP HANA relational databases.",
+  },
+  doris: {
+    label: "Analytical database (OLAP)",
+    description: "Connect Apache Doris analytical databases (OLAP).",
   },
   opensearch: {
     description: "Connect OpenSearch indexes.",

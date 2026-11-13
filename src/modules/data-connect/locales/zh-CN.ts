@@ -86,6 +86,8 @@ export const dataConnectZhCN = {
     configStepTitle: "填写连接配置",
     configStepDescription: "按所选连接器填写访问参数。",
     encryptedFieldEditHint: "敏感字段不回显，请重新输入。",
+    sensitiveVariablesEditHint: "修改连接配置时需补全敏感变量；只改名称、描述或标签无需重新输入。",
+    sensitiveVariablesRequired: "请补全敏感变量后再提交完整连接配置：{{fields}}。",
     encryptedFieldPlaceholder: "请输入{{field}}",
     createFlowHint: "保存时会校验参数并测试连接。",
     editFlowHint: "不可更换连接器类型；启停请在列表操作。",
@@ -397,25 +399,35 @@ export const dataConnectZhCN = {
         anyshare: {
           description: "面向文件集 / 文档资源接入。",
         },
+        doris: {
+          label: "分析型数据库（OLAP）",
+          description: "连接 Apache Doris 分析型数据库（OLAP）。",
+        },
         mariadb: {
+          label: "关系型数据库",
           description: "连接 MariaDB 关系型数据库。",
         },
         mysql: {
+          label: "关系型数据库",
           description: "连接 MySQL 关系型数据库。",
         },
         opensearch: {
           description: "连接 OpenSearch 检索索引。",
         },
         oracle: {
+          label: "关系型数据库",
           description: "连接 Oracle 关系型数据库。",
         },
         hana: {
+          label: "关系型数据库",
           description: "连接 SAP HANA 关系型数据库。",
         },
         postgresql: {
+          label: "关系型数据库",
           description: "连接 PostgreSQL 关系型数据库。",
         },
         sqlserver: {
+          label: "关系型数据库",
           description: "连接 Microsoft SQL Server 关系型数据库。",
         },
       },
