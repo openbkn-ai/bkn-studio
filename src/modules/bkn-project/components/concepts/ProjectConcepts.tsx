@@ -470,9 +470,15 @@ export function ProjectConcepts({
     for (const key of keys) {
       const turn = outcome[key];
       if (turn?.state === "failed") {
-        failed[key] = t(
+        const what = t(
           `${PREFIX}.run.failed.${key === "document" && turn.error === "busy" ? "busy" : key}`,
         );
+        // A requirement run that ended failed says why, as the row does once read again.
+        const [code, why] = (turn.error ?? "").split(":", 2);
+        failed[key] =
+          key === "document" && code === "requirements"
+            ? t(`${PREFIX}.run.withReason`, { reason: conceptsRunErrorText(t, why ?? ""), what })
+            : what;
       }
     }
     setRunFailed(failed);

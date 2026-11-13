@@ -170,15 +170,18 @@ export function useConceptRun({
         throw new Failed(code === "Requirement.Drafting" ? "busy" : "request");
       }
       let failed = false;
+      let why = "";
       await until(async () => {
         const read = await getRequirements(projectId).catch(() => undefined);
         const status = read?.spec.conceptsRun?.status;
         failed = status === "failed";
+        why = read?.spec.conceptsRun?.error ?? "";
         return read !== undefined && status !== "running";
       });
       step(1);
       if (failed) {
-        throw new Failed("requirements");
+        // The run's own reason, after the colon, for the page to word.
+        throw new Failed(`requirements:${why}`);
       }
     },
     [projectId, until],

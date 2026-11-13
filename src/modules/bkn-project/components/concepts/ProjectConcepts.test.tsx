@@ -661,6 +661,37 @@ describe("ProjectConcepts", () => {
     expect(doc.getByText('bknProject.concepts.sameName:{"name":"Customer"}')).toBeTruthy();
   });
 
+  it("says why extracting the documents failed right after this page extracted them", async () => {
+    requirements.extractRequirementConcepts.mockResolvedValue({});
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const documents = sources.querySelector('[data-source="document"]') as HTMLElement;
+    requirements.getRequirements.mockResolvedValue({
+      spec: {
+        conceptsRun: {
+          error: "output_too_long",
+          extracted: false,
+          pendingParts: 0,
+          stale: false,
+          status: "failed",
+        },
+        runs: { concepts: { status: "failed", updateTime: 3 }, kinetic: null },
+      },
+      updateTime: 9,
+    });
+    fireEvent.click(within(documents).getByRole("button", { name: /runOne.againOf/ }));
+    await confirmRun();
+
+    await waitFor(() =>
+      expect(documents.textContent).toContain(
+        "bknProject.requirements.conceptsRunError.output_too_long",
+      ),
+    );
+  });
+
   it("extracts one source alone from its row", async () => {
     requirements.extractRequirementConcepts.mockResolvedValue({});
     renderConcepts();
