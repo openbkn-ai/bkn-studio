@@ -50,15 +50,10 @@ const release = {
   version: "1.2.0",
 };
 
-function renderCard(
-  overrides: Partial<Project> = {},
-  isOwner = true,
-  catalogNames: Record<string, string> | "failed" | null = { c1: "ERP" },
-) {
+function renderCard(overrides: Partial<Project> = {}, isOwner = true) {
   return render(
     <MemoryRouter>
       <ProjectCard
-        catalogNames={catalogNames}
         isOwner={isOwner}
         networkName="Orders network"
         onArchive={vi.fn()}
@@ -75,7 +70,7 @@ describe("ProjectCard", () => {
     vi.clearAllMocks();
   });
 
-  it("shows where the project stands, its network and its data sources", async () => {
+  it("shows where the project stands and its network, without a data sources row", async () => {
     getStatusMock.mockResolvedValue({ release: null, stage: "check_needs_attention" });
     renderCard();
 
@@ -86,38 +81,8 @@ describe("ProjectCard", () => {
       "href",
       "/knowledge-network/workspace/orders/overview",
     );
-    // A catalog the caller cannot read is counted, never named by its id.
-    expect(
-      screen.getByText(
-        'ERPbknProject.list.card.separatorbknProject.list.card.unreadableCatalogs:{"count":1}',
-        { normalizer: (text) => text },
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/c2/)).toBeNull();
+    expect(screen.queryByText("bknProject.list.card.catalogs")).toBeNull();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
-  });
-
-  it("never shows a catalog id: none while the names are read, and only a count when none is known", async () => {
-    getStatusMock.mockResolvedValue({ release: null, stage: "drafting" });
-    const { unmount } = renderCard({}, true, null);
-    expect(await screen.findByText("bknProject.list.card.stages.drafting")).toBeInTheDocument();
-    expect(screen.queryByText(/c1|c2|unreadableCatalogs/)).toBeNull();
-    unmount();
-
-    renderCard({ catalogIds: ["01a1cf2f-6d5e-4f4b-9a39-2b8c7f0e1d2a", "c2"] }, true, {});
-    expect(
-      await screen.findByText('bknProject.list.card.unreadableCatalogs:{"count":2}'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/01a1cf2f/)).toBeNull();
-  });
-
-  it("says the names could not be read now, not that the catalogs cannot be, when the list failed", async () => {
-    getStatusMock.mockResolvedValue({ release: null, stage: "drafting" });
-    renderCard({}, true, "failed");
-    expect(
-      await screen.findByText('bknProject.list.card.catalogNamesUnavailable:{"count":2}'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/unreadableCatalogs|c1|c2/)).toBeNull();
   });
 
   it("names the published version in the stage of a published project", async () => {
@@ -167,7 +132,6 @@ describe("ProjectCard", () => {
     rerender(
       <MemoryRouter>
         <ProjectCard
-          catalogNames={{}}
           isOwner
           onArchive={vi.fn()}
           onOpen={vi.fn()}
