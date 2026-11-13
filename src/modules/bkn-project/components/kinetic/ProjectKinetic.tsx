@@ -130,6 +130,8 @@ export function ProjectKinetic({
   const [failures, setFailures] = useState(0);
   // null while unknown; the analysis needs a confirmed model.
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
+  // The confirmation could not be read: Ask AI is not kept shut for it, the server answers anyway.
+  const [statusUnread, setStatusUnread] = useState(false);
   // null while unread.
   const [documents, setDocuments] = useState<RequirementDocument[] | null>(null);
   const [objectTypes, setObjectTypes] = useState<{ id: string; name: string }[]>([]);
@@ -190,7 +192,7 @@ export function ProjectKinetic({
     let active = true;
     getProjectStatus(project.id)
       .then((status) => active && setConfirmed(status.confirmation !== null))
-      .catch(() => undefined);
+      .catch(() => active && setStatusUnread(true));
     listDocuments(project.id)
       .then((next) => active && setDocuments(next))
       .catch(() => undefined);
@@ -532,7 +534,8 @@ export function ProjectKinetic({
   const notConfirmed = confirmed === false;
   // Asking needs the confirmed model, not a first analysis: before one the list starts from the
   // conversation.
-  const canAsk = canEdit && confirmed === true;
+  const askReady = confirmed ?? (statusUnread ? true : null);
+  const canAsk = canEdit && askReady === true;
   const refs = selected
     .map((id) => needs.find((need) => need.id === id))
     .filter((need): need is LogicNeedView => need !== undefined)
@@ -711,7 +714,7 @@ export function ProjectKinetic({
             {canEdit ? (
               <AskEntry
                 asking={asking}
-                modelConfirmed={confirmed}
+                modelConfirmed={askReady}
                 onGoToModel={onGoToModel}
                 onToggle={() => setAsking(!asking)}
                 selected={refs.length}

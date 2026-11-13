@@ -139,6 +139,8 @@ export function ProjectRequirements({
   const [modelCounts, setModelCounts] = useState<{ network: number; project: number } | null>(null);
   // null while unknown; asking needs the confirmed model.
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
+  // The confirmation could not be read: Ask AI is not kept shut for it, the server answers anyway.
+  const [statusUnread, setStatusUnread] = useState(false);
   // The network has a description or SKILL.md, which generating and Ask AI read.
   const [background, setBackground] = useState(false);
   // Ask AI beside the lists, with the scenarios and questions ticked to ask about.
@@ -210,7 +212,7 @@ export function ProjectRequirements({
       .catch(() => undefined);
     getProjectStatus(project.id)
       .then((status) => active && setConfirmed(status.confirmation !== null))
-      .catch(() => undefined);
+      .catch(() => active && setStatusUnread(true));
     return () => {
       active = false;
     };
@@ -430,7 +432,8 @@ export function ProjectRequirements({
   const activeTab: Tab = tab ?? "questions";
   // Asking needs the confirmed model, not a first draft: before one the list starts from the
   // conversation.
-  const canAsk = canEdit && confirmed === true;
+  const askReady = confirmed ?? (statusUnread ? true : null);
+  const canAsk = canEdit && askReady === true;
   const refs = selected
     .map(({ id, kind }) => {
       const name =
@@ -519,7 +522,7 @@ export function ProjectRequirements({
                 {canEdit ? (
                   <AskEntry
                     asking={asking}
-                    modelConfirmed={confirmed}
+                    modelConfirmed={askReady}
                     onGoToModel={onGoToModel}
                     onToggle={() => setAsking(!asking)}
                     selected={refs.length}

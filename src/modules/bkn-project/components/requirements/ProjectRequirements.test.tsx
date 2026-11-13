@@ -321,6 +321,14 @@ describe("ProjectRequirements", () => {
     expect(onGoToModel).toHaveBeenCalled();
   });
 
+  it("does not keep Ask AI shut when the confirmation cannot be read", async () => {
+    getProjectStatusMock.mockRejectedValue(new Error("down"));
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: "问 AI" });
+    await waitFor(() => expect(button).toBeEnabled());
+  });
+
   it("asks AI before the first draft once the model is confirmed", async () => {
     getRequirementsMock.mockResolvedValue(null);
     renderPage();
