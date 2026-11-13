@@ -5,14 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isAxiosError } from "axios";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { http } from "@/framework/request/http";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { EvidenceChainView } from "./evidence-chain.types";
 export interface CurrentExplanation {
   status: "not_generated" | "ready";
   generatedAt?: string;
   locale?: SupportedLocale;
   view?: EvidenceChainView;
+  generationFailure?: ExplanationFailureCode;
 }
 function parse(value: unknown, id: string): CurrentExplanation {
   if (!value || typeof value !== "object") throw new Error("invalid explanation");
@@ -237,21 +240,260 @@ function parse(value: unknown, id: string): CurrentExplanation {
     throw new Error("unsupported explanation locale");
   return { status: "ready", generatedAt: row.generated_at, locale: row.locale ?? "zh-CN", view };
 }
-export async function readCurrentExplanation(id: string): Promise<CurrentExplanation> {
-  const response = await http.get<unknown>(
-    `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`,
-    { skipErrorToast: true },
+export type ExplanationFailureCode =
+  | "agent_timeout"
+  | "agent_failed"
+  | "invalid_agent_result"
+  | "generation_cancelled"
+  | "still_running";
+export class ExplanationTaskError extends Error {
+  constructor(readonly generationCode: ExplanationFailureCode) {
+    super(generationCode);
+  }
+}
+type PendingExplanation = {
+  jobId?: string;
+  retryJobId?: string;
+  locale: SupportedLocale;
+  failed?: boolean;
+  failureCode?: ExplanationFailureCode;
+  resumeOnRead?: boolean;
+};
+function pendingKey(id: string): string {
+  const runtime = getRuntimeConfig();
+  return (
+    "bkn-trace:explanation-task:" + JSON.stringify([runtime.apiBaseUrl, runtime.currentUser.id, id])
   );
+}
+function readPending(key: string): PendingExplanation | undefined {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return undefined;
+    const value = JSON.parse(raw) as Partial<PendingExplanation>;
+    if (value.locale !== "zh-CN" && value.locale !== "en-US") return undefined;
+    for (const id of [value.jobId, value.retryJobId]) {
+      if (id !== undefined && (typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,50}$/.test(id)))
+        return undefined;
+    }
+    if (value.failed !== undefined && typeof value.failed !== "boolean") return undefined;
+    if (value.resumeOnRead !== undefined && typeof value.resumeOnRead !== "boolean")
+      return undefined;
+    if (
+      value.failureCode !== undefined &&
+      !["agent_timeout", "agent_failed", "invalid_agent_result", "generation_cancelled"].includes(
+        value.failureCode,
+      )
+    )
+      return undefined;
+    return value as PendingExplanation;
+  } catch {
+    return undefined;
+  }
+}
+function savePending(key: string, value?: PendingExplanation): void {
+  try {
+    if (value) sessionStorage.setItem(key, JSON.stringify(value));
+    else sessionStorage.removeItem(key);
+  } catch {
+    /* Storage may be disabled; a retry still reuses the server task key. */
+  }
+}
+function taskEnvelope(
+  value: unknown,
+  id: string,
+): { status: "generating" | "failed"; job_id: string; error_code?: string } | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  if (row.status !== "generating" && row.status !== "failed") return undefined;
+  if (
+    row.schema_version !== "1" ||
+    row.interaction_id !== id ||
+    typeof row.job_id !== "string" ||
+    !/^[a-zA-Z0-9_-]{1,50}$/.test(row.job_id)
+  )
+    throw new Error("invalid explanation task scope");
+  return row as { status: "generating" | "failed"; job_id: string; error_code?: string };
+}
+async function finishTask(
+  id: string,
+  key: string,
+  value: unknown,
+  pending: PendingExplanation,
+  signal?: AbortSignal,
+): Promise<CurrentExplanation> {
+  const deadline = Date.now() + 180_000;
+  for (;;) {
+    signal?.throwIfAborted();
+    if (key !== pendingKey(id)) throw new Error("explanation identity changed");
+    const task = taskEnvelope(value, id);
+    if (!task) {
+      const result = parse(value, id);
+      savePending(key);
+      return result;
+    }
+    pending = { jobId: task.job_id, locale: pending.locale, failed: task.status === "failed" };
+    savePending(key, pending);
+    if (task.status === "failed") {
+      const codes: ExplanationFailureCode[] = [
+        "agent_timeout",
+        "agent_failed",
+        "invalid_agent_result",
+        "generation_cancelled",
+      ];
+      const code = codes.find((candidate) => candidate === task.error_code) ?? "agent_failed";
+      savePending(key, { ...pending, failureCode: code });
+      throw new ExplanationTaskError(code);
+    }
+    if (Date.now() >= deadline) throw new ExplanationTaskError("still_running");
+    await waitForPoll(signal);
+    if (key !== pendingKey(id)) throw new Error("explanation identity changed");
+    const response = await taskRequest(
+      key,
+      http.get<unknown>(explanationURL(id), {
+        params: { job_id: task.job_id },
+        headers: { "Accept-Language": pending.locale },
+        skipErrorToast: true,
+        timeout: 30_000,
+        ...(signal ? { signal } : {}),
+      }),
+    );
+    value = response.data;
+  }
+}
+function waitForPoll(signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      const error = new Error("explanation polling aborted", { cause: signal?.reason });
+      error.name = "AbortError";
+      reject(error);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    }, 1500);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+async function taskRequest<T>(key: string, request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    if (isAxiosError(error) && [401, 403, 404, 409].includes(error.response?.status ?? 0))
+      savePending(key);
+    throw error;
+  }
+}
+
+function explanationURL(id: string): string {
+  return `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`;
+}
+async function startTask(
+  id: string,
+  key: string,
+  pending: PendingExplanation,
+  signal?: AbortSignal,
+): Promise<CurrentExplanation> {
+  // Record intent before the POST: a refresh after a lost response can safely
+  // repeat it; BKN Agent's durable idempotency key prevents another model call.
+  signal?.throwIfAborted();
+  savePending(key, pending);
+  let response;
+  try {
+    response = await taskRequest(
+      key,
+      http.post<unknown>(
+        explanationURL(id),
+        {
+          locale: pending.locale,
+          ...(pending.retryJobId ? { retry_job_id: pending.retryJobId } : {}),
+        },
+        {
+          headers: { Prefer: "respond-async" },
+          skipErrorToast: true,
+          timeout: 30_000,
+          ...(signal ? { signal } : {}),
+        },
+      ),
+    );
+  } catch (error) {
+    if (isAxiosError(error) && error.response) {
+      // A received rejection must not turn a future read into another POST.
+      // Keep ambiguous server failures available for an explicit idempotent retry.
+      if ([400, 401, 403, 404, 409, 413, 422].includes(error.response.status)) savePending(key);
+      else savePending(key, { ...pending, resumeOnRead: false });
+    }
+    throw error;
+  }
+  return finishTask(id, key, response.data, pending, signal);
+}
+async function readSavedExplanation(
+  id: string,
+  key: string,
+  signal?: AbortSignal,
+): Promise<CurrentExplanation> {
+  signal?.throwIfAborted();
+  const response = await taskRequest(
+    key,
+    http.get<unknown>(explanationURL(id), {
+      skipErrorToast: true,
+      ...(signal ? { signal } : {}),
+    }),
+  );
+  signal?.throwIfAborted();
+  if (key !== pendingKey(id)) throw new Error("explanation identity changed");
   return parse(response.data, id);
+}
+export async function readCurrentExplanation(
+  id: string,
+  signal?: AbortSignal,
+): Promise<CurrentExplanation> {
+  signal?.throwIfAborted();
+  const key = pendingKey(id);
+  const pending = readPending(key);
+  if (!pending) return readSavedExplanation(id, key, signal);
+  try {
+    if (pending.failed) throw new ExplanationTaskError(pending.failureCode ?? "agent_failed");
+    if (pending.jobId) {
+      const response = await taskRequest(
+        key,
+        http.get<unknown>(explanationURL(id), {
+          params: { job_id: pending.jobId },
+          headers: { "Accept-Language": pending.locale },
+          skipErrorToast: true,
+          timeout: 30_000,
+          ...(signal ? { signal } : {}),
+        }),
+      );
+      return await finishTask(id, key, response.data, pending, signal);
+    }
+    if (pending.resumeOnRead === false) return readSavedExplanation(id, key, signal);
+    return await startTask(id, key, pending, signal);
+  } catch (error) {
+    if (!(error instanceof ExplanationTaskError) || error.generationCode === "still_running")
+      throw error;
+    const saved = await readSavedExplanation(id, key, signal);
+    if (saved.status === "ready") return { ...saved, generationFailure: error.generationCode };
+    throw error;
+  }
 }
 export async function generateCurrentExplanation(
   id: string,
   locale: SupportedLocale,
+  signal?: AbortSignal,
 ): Promise<CurrentExplanation> {
-  const response = await http.post<unknown>(
-    `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`,
-    { locale },
-    { skipErrorToast: true, timeout: 120_000 },
-  );
-  return parse(response.data, id);
+  signal?.throwIfAborted();
+  const key = pendingKey(id);
+  const previous = readPending(key);
+  if (previous?.jobId && !previous.failed && previous.locale === locale)
+    return readCurrentExplanation(id, signal);
+  const retryJobId =
+    previous?.locale === locale
+      ? previous.failed
+        ? previous.jobId
+        : previous.retryJobId
+      : undefined;
+  return startTask(id, key, { locale, retryJobId }, signal);
 }

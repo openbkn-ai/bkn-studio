@@ -11,10 +11,12 @@ import { beforeEach, expect, it, vi } from "vitest";
 import i18n from "@/app/locales/i18n";
 const read = vi.hoisted(() => vi.fn());
 const generate = vi.hoisted(() => vi.fn());
-vi.mock("./current-explanation.service", () => ({
+vi.mock("./current-explanation.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./current-explanation.service")>()),
   readCurrentExplanation: read,
   generateCurrentExplanation: generate,
 }));
+import { ExplanationTaskError } from "./current-explanation.service";
 import { CurrentExplanationPanel } from "./CurrentExplanationPanel";
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
@@ -25,11 +27,11 @@ it("only generates after the user requests evidence", async () => {
   read.mockResolvedValue({ status: "not_generated" });
   generate.mockResolvedValue({ status: "not_generated" });
   render(<CurrentExplanationPanel interactionId="i" />);
-  await waitFor(() => expect(read).toHaveBeenCalledWith("i"));
+  await waitFor(() => expect(read).toHaveBeenCalledWith("i", expect.any(AbortSignal)));
   await screen.findByText(/尚未生成解释/);
   expect(generate).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button"));
-  await waitFor(() => expect(generate).toHaveBeenCalledWith("i", "zh-CN"));
+  await waitFor(() => expect(generate).toHaveBeenCalledWith("i", "zh-CN", expect.any(AbortSignal)));
 });
 it("discards a late response from the previous interaction", async () => {
   let resolve: (value: unknown) => void = () => {};
@@ -43,7 +45,7 @@ it("discards a late response from the previous interaction", async () => {
     .mockResolvedValueOnce({ status: "not_generated" });
   const view = render(<CurrentExplanationPanel interactionId="a" />);
   view.rerender(<CurrentExplanationPanel interactionId="b" />);
-  await waitFor(() => expect(read).toHaveBeenCalledWith("b"));
+  await waitFor(() => expect(read).toHaveBeenCalledWith("b", expect.any(AbortSignal)));
   await act(async () => {
     resolve({ status: "ready", generatedAt: "stale-time" });
     await Promise.resolve();
@@ -148,7 +150,7 @@ it("defaults to the UI language and generates only after an explicit click", asy
   fireEvent.change(select, { target: { value: "zh-CN" } });
   expect(generate).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "View evidence chain" }));
-  expect(generate).toHaveBeenCalledExactlyOnceWith("i", "zh-CN");
+  expect(generate).toHaveBeenCalledExactlyOnceWith("i", "zh-CN", expect.any(AbortSignal));
   expect(select).toBeDisabled();
   expect(screen.getByRole("button")).toBeDisabled();
   await act(async () => {
@@ -183,6 +185,55 @@ it("preserves the saved language on failure and resets the default for another i
   expect(screen.getByText("证据链语言：简体中文")).toBeTruthy();
   expect(screen.getByRole("combobox")).toHaveValue("en-US");
   panel.rerender(<CurrentExplanationPanel interactionId="other" />);
-  await waitFor(() => expect(read).toHaveBeenCalledWith("other"));
+  await waitFor(() => expect(read).toHaveBeenCalledWith("other", expect.any(AbortSignal)));
   expect(screen.getByRole("combobox")).toHaveValue("zh-CN");
+});
+
+it("shows task failure separately from a read failure and retries generation", async () => {
+  const error = new ExplanationTaskError("agent_timeout");
+  read.mockRejectedValue(error);
+  generate.mockResolvedValue({ status: "not_generated" });
+  render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText(/结论识别任务超时/);
+  fireEvent.click(screen.getByRole("button", { name: "查看证据链" }));
+  await waitFor(() => expect(generate).toHaveBeenCalledWith("i", "zh-CN", expect.any(AbortSignal)));
+  expect(read).toHaveBeenCalledTimes(1);
+});
+
+it("shows the saved view alongside a recovered generation failure", async () => {
+  read.mockResolvedValue({
+    status: "ready",
+    generatedAt: "2026-09-10T01:00:00Z",
+    generationFailure: "agent_timeout",
+  });
+  render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText(/依据生成时间/);
+  expect(await screen.findByText(/结论识别任务超时/)).toBeTruthy();
+});
+
+it("aborts the old reader when switching interactions and on unmount", () => {
+  read.mockImplementation(() => new Promise(() => {}));
+  const panel = render(<CurrentExplanationPanel interactionId="a" />);
+  const first = read.mock.calls[0]?.[1] as AbortSignal;
+  expect(first.aborted).toBe(false);
+  panel.rerender(<CurrentExplanationPanel interactionId="b" />);
+  expect(first.aborted).toBe(true);
+  const second = read.mock.calls[1]?.[1] as AbortSignal;
+  expect(second.aborted).toBe(false);
+  panel.unmount();
+  expect(second.aborted).toBe(true);
+});
+
+it("keeps a recovered task failure visible when generation resumes an existing task", async () => {
+  read.mockResolvedValue({ status: "not_generated" });
+  generate.mockResolvedValue({
+    status: "ready",
+    generatedAt: "2026-09-10T01:00:00Z",
+    generationFailure: "agent_timeout",
+  });
+  render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText(/尚未生成解释/);
+  fireEvent.click(screen.getByRole("button"));
+  await screen.findByText(/依据生成时间/);
+  expect(await screen.findByText(/结论识别任务超时/)).toBeTruthy();
 });

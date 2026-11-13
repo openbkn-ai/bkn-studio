@@ -5,12 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+const runtime = vi.hoisted(() => ({ apiBaseUrl: "/api", currentUser: { id: "owner" } }));
+vi.mock("@/framework/runtime/config", () => ({ getRuntimeConfig: () => runtime }));
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
 vi.mock("@/framework/request/http", () => ({ http: { get, post } }));
 import { generateCurrentExplanation, readCurrentExplanation } from "./current-explanation.service";
 beforeEach(() => {
+  sessionStorage.clear();
+  runtime.currentUser.id = "owner";
   get.mockReset();
   post.mockReset();
 });
@@ -24,7 +28,7 @@ it("reads without generating and submits no version parameters", async () => {
   expect(post).toHaveBeenCalledWith(
     "/agent-observability/v1/business-provenance/interactions/i/explanations",
     { locale: "en-US" },
-    { skipErrorToast: true, timeout: 120_000 },
+    { headers: { Prefer: "respond-async" }, skipErrorToast: true, timeout: 30_000 },
   );
 });
 it("rejects another interaction and unsupported response versions", async () => {
@@ -258,4 +262,169 @@ it("retains the saved generation language and treats legacy views as Chinese", a
   expect((await readCurrentExplanation("i")).locale).toBe("en-US");
   get.mockResolvedValue({ data: { ...data, locale: "fr-FR" } });
   await expect(readCurrentExplanation("i")).rejects.toThrow("unsupported explanation locale");
+});
+
+afterEach(() => vi.useRealTimers());
+function readyTaskResult() {
+  return {
+    schema_version: "1",
+    interaction_id: "i",
+    status: "ready",
+    locale: "en-US",
+    generated_at: "2026-11-12T00:00:00Z",
+    view: {
+      interactionId: "i",
+      status: "completed",
+      claims: [],
+      execution: { nodes: [], edges: [] },
+      evidence: { nodes: [], edges: [] },
+    },
+  };
+}
+const generatingTask = {
+  schema_version: "1",
+  interaction_id: "i",
+  status: "generating",
+  job_id: "task-1",
+};
+it("polls an accepted task without another POST and preserves selected language", async () => {
+  vi.useFakeTimers();
+  post.mockResolvedValue({ data: generatingTask });
+  get
+    .mockResolvedValueOnce({ data: generatingTask })
+    .mockResolvedValueOnce({ data: readyTaskResult() });
+  const result = generateCurrentExplanation("i", "en-US");
+  await vi.advanceTimersByTimeAsync(3000);
+  await expect(result).resolves.toMatchObject({ status: "ready", locale: "en-US" });
+  expect(post).toHaveBeenCalledTimes(1);
+  expect(get).toHaveBeenCalledWith(expect.any(String), {
+    params: { job_id: "task-1" },
+    headers: { "Accept-Language": "en-US" },
+    skipErrorToast: true,
+    timeout: 30_000,
+  });
+});
+it("resumes a persisted task after a polling connection is lost", async () => {
+  vi.useFakeTimers();
+  post.mockResolvedValue({ data: generatingTask });
+  get.mockRejectedValueOnce(new Error("connection lost"));
+  const result = generateCurrentExplanation("i", "en-US");
+  const rejected = expect(result).rejects.toThrow("connection lost");
+  await vi.advanceTimersByTimeAsync(1500);
+  await rejected;
+  get.mockResolvedValue({ data: readyTaskResult() });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "ready" });
+  expect(post).toHaveBeenCalledTimes(1);
+});
+it("resends the same generation intent when the initial response was lost", async () => {
+  vi.useFakeTimers();
+  post
+    .mockRejectedValueOnce(new Error("response lost"))
+    .mockResolvedValueOnce({ data: generatingTask });
+  await expect(generateCurrentExplanation("i", "en-US")).rejects.toThrow("response lost");
+  get.mockResolvedValue({ data: readyTaskResult() });
+  const resumed = readCurrentExplanation("i");
+  await vi.advanceTimersByTimeAsync(1500);
+  await expect(resumed).resolves.toMatchObject({ status: "ready" });
+  expect(post).toHaveBeenCalledTimes(2);
+  expect(post.mock.calls[0]).toEqual(post.mock.calls[1]);
+});
+it("does not restore another account's generation intent", async () => {
+  post.mockRejectedValue(new Error("response lost"));
+  await expect(generateCurrentExplanation("i", "en-US")).rejects.toThrow();
+  runtime.currentUser.id = "other";
+  get.mockResolvedValue({
+    data: { schema_version: "1", interaction_id: "i", status: "not_generated" },
+  });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "not_generated" });
+  expect(post).toHaveBeenCalledTimes(1);
+});
+it("classifies terminal failure and explicitly retries its task once", async () => {
+  post.mockResolvedValueOnce({
+    data: { ...generatingTask, status: "failed", error_code: "agent_timeout" },
+  });
+  await expect(generateCurrentExplanation("i", "en-US")).rejects.toMatchObject({
+    generationCode: "agent_timeout",
+  });
+  post.mockResolvedValue({ data: readyTaskResult() });
+  await expect(generateCurrentExplanation("i", "en-US")).resolves.toMatchObject({
+    status: "ready",
+  });
+  expect(post.mock.calls[1]?.[1]).toEqual({ locale: "en-US", retry_job_id: "task-1" });
+});
+it("rejects a task belonging to another interaction instead of polling it", async () => {
+  post.mockResolvedValue({ data: { ...generatingTask, interaction_id: "other" } });
+  await expect(generateCurrentExplanation("i", "en-US")).rejects.toThrow(
+    "invalid explanation task scope",
+  );
+  expect(get).not.toHaveBeenCalled();
+});
+
+for (const code of ["agent_timeout", "generation_cancelled"]) {
+  it(`reads the saved view after a persisted ${code} and retains explicit retry identity`, async () => {
+    post.mockResolvedValueOnce({ data: { ...generatingTask, status: "failed", error_code: code } });
+    await expect(generateCurrentExplanation("i", "en-US")).rejects.toMatchObject({
+      generationCode: code,
+    });
+    get.mockResolvedValue({ data: readyTaskResult() });
+    await expect(readCurrentExplanation("i")).resolves.toMatchObject({
+      status: "ready",
+      generationFailure: code,
+    });
+    expect(get).toHaveBeenCalledWith(expect.any(String), { skipErrorToast: true });
+    post.mockResolvedValue({ data: readyTaskResult() });
+    await generateCurrentExplanation("i", "en-US");
+    expect(post.mock.calls[1]?.[1]).toEqual({ locale: "en-US", retry_job_id: "task-1" });
+  });
+}
+
+it("falls back to the saved view when a resumed task becomes failed", async () => {
+  vi.useFakeTimers();
+  post.mockResolvedValue({ data: generatingTask });
+  get.mockRejectedValueOnce(new Error("offline"));
+  const started = generateCurrentExplanation("i", "en-US");
+  const rejected = expect(started).rejects.toThrow("offline");
+  await vi.advanceTimersByTimeAsync(1500);
+  await rejected;
+  get
+    .mockResolvedValueOnce({
+      data: { ...generatingTask, status: "failed", error_code: "agent_timeout" },
+    })
+    .mockResolvedValueOnce({ data: readyTaskResult() });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({
+    status: "ready",
+    generationFailure: "agent_timeout",
+  });
+  expect(post).toHaveBeenCalledTimes(1);
+});
+
+for (const status of [400, 413, 422, 429, 503]) {
+  it(`does not automatically repeat a POST rejected with HTTP ${status}`, async () => {
+    post.mockRejectedValue(
+      Object.assign(new Error("rejected"), { isAxiosError: true, response: { status } }),
+    );
+    await expect(generateCurrentExplanation("i", "en-US")).rejects.toThrow("rejected");
+    get.mockResolvedValue({
+      data: { schema_version: "1", interaction_id: "i", status: "not_generated" },
+    });
+    await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "not_generated" });
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+}
+
+it("aborts polling without cancelling or forgetting the native task", async () => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  post.mockResolvedValue({ data: generatingTask });
+  const pending = generateCurrentExplanation("i", "en-US", controller.signal);
+  const aborted = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  await vi.advanceTimersByTimeAsync(0);
+  controller.abort();
+  await aborted;
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(get).not.toHaveBeenCalled();
+  expect(post.mock.calls[0]?.[2]).toMatchObject({ signal: controller.signal });
+  get.mockResolvedValue({ data: readyTaskResult() });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "ready" });
+  expect(post).toHaveBeenCalledTimes(1);
 });

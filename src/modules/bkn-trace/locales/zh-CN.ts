@@ -205,6 +205,13 @@ export const bknTraceZhCN = {
       operationScope: "显示所选处理及其明确关联。编号用于选择，不代表执行顺序。",
       returnFact: "返回所选事实",
       current: {
+        taskFailure: {
+          agent_timeout: "结论识别任务超时，可重新生成；原始调用记录未改变。",
+          agent_failed: "结论识别任务失败，可重新生成；原始调用记录未改变。",
+          invalid_agent_result: "结论识别结果未通过校验，未发布为证据链，可重新生成。",
+          generation_cancelled: "生成任务已取消，原始调用记录未改变。",
+          still_running: "生成任务仍在进行，可稍后重新读取；不会重复调用模型。",
+        },
         language: "生成语言",
         generatedLanguage: "证据链语言：{{language}}",
         replaceLanguage: "点击“更新依据”后，将按所选语言重新分析并替换当前证据链。",
