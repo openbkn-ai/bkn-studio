@@ -47,6 +47,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 const service = vi.hoisted(() => ({
+  addDraftCatalogs: vi.fn(),
   draftSourceChanges: vi.fn(),
   generateDraft: vi.fn(),
   getConcepts: vi.fn(),
@@ -552,6 +553,49 @@ describe("ProjectConcepts", () => {
       "disabled",
       true,
     );
+  });
+
+  it("adds the tables to a draft a knowledge-base extraction made, keeping what it holds", async () => {
+    service.getDraft.mockResolvedValue({
+      createTime: 1,
+      items: { adding: null, decisions: [], draftedCatalogIds: [] },
+      status: "ready",
+      updateTime: 5,
+    });
+    service.addDraftCatalogs.mockResolvedValue({ status: "ready" });
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    fireEvent.click(tables.getByRole("button", { name: /runOne.againOf/ }));
+    await confirmRun();
+
+    await waitFor(() => expect(service.addDraftCatalogs).toHaveBeenCalledWith("p1", ["c1"]));
+    expect(service.generateDraft).not.toHaveBeenCalled();
+  });
+
+  it("names a knowledge-base concept's files, and warns of one named as a table's object", async () => {
+    const base = concepts();
+    base.concepts.push(
+      concept({
+        binding: dataset,
+        item: { adopted: false, id: "customer_doc", kind: "object_types" },
+        key: "object_types/customer_doc",
+        name: "customer",
+        sources: [
+          { documentIds: [], id: "f1", kind: "document", name: "" },
+          { documentIds: [], id: "f2", kind: "document", name: "" },
+        ],
+      }),
+    );
+    service.getConcepts.mockResolvedValue(base);
+    renderConcepts();
+
+    const doc = await row("customer");
+    expect(doc.getByText('bknProject.concepts.origin.knowledgeBaseFiles:{"count":2}')).toBeTruthy();
+    expect(doc.getByText('bknProject.concepts.sameName:{"name":"Customer"}')).toBeTruthy();
   });
 
   it("extracts one source alone from its row", async () => {

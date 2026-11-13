@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import {
+  addDraftCatalogs,
   DRAFT_POLL_MS,
   draftSourceChanges,
   generateDraft,
@@ -67,11 +68,14 @@ const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve
  * only what changed in the tables.
  */
 export function useConceptRun({
+  catalogIds,
   extractKnowledgeBase,
   notUnderstood,
   onSourceDone,
   projectId,
 }: {
+  /** The project's data catalogs, whose tables are drafted. */
+  catalogIds: string[];
   /** Starts extracting from the knowledge-base files and settles when it ends. */
   extractKnowledgeBase: () => Promise<KnowledgeBaseOutcome>;
   /** Whether some tables keep their table names, so understanding them comes first. */
@@ -89,9 +93,9 @@ export function useConceptRun({
     };
   }, []);
   // The latest of what the turns read, so a run started earlier sees them as they are now.
-  const latest = useRef({ extractKnowledgeBase, notUnderstood, onSourceDone });
+  const latest = useRef({ catalogIds, extractKnowledgeBase, notUnderstood, onSourceDone });
   useEffect(() => {
-    latest.current = { extractKnowledgeBase, notUnderstood, onSourceDone };
+    latest.current = { catalogIds, extractKnowledgeBase, notUnderstood, onSourceDone };
   });
 
   const until = useCallback(async (done: () => Promise<boolean>) => {
@@ -109,6 +113,21 @@ export function useConceptRun({
       }
       step(1);
       let drafting: boolean;
+      // A draft a knowledge-base extraction made has none of the tables yet: they are added to it,
+      // keeping what it holds.
+      const read = await getDraft(projectId);
+      const undrafted =
+        read?.status === "ready" && read.items.draftedCatalogIds
+          ? latest.current.catalogIds.filter((id) => !read.items.draftedCatalogIds!.includes(id))
+          : [];
+      if (undrafted.length) {
+        await addDraftCatalogs(projectId, undrafted);
+        await until(async () => {
+          const draft = await getDraft(projectId).catch(() => undefined);
+          return draft !== undefined && !draft?.items.adding;
+        });
+        return;
+      }
       try {
         drafting = (await generateDraft(projectId)).status === "drafting";
       } catch (error) {

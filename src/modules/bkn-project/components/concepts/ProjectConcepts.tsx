@@ -232,6 +232,7 @@ export function ProjectConcepts({
   }, []);
 
   const { run, start } = useConceptRun({
+    catalogIds: project.catalogIds,
     extractKnowledgeBase,
     notUnderstood: Boolean(concepts?.notUnderstood),
     onSourceDone: load,
@@ -265,6 +266,8 @@ export function ProjectConcepts({
       setRefusal({ reload: true, text: t(`${PREFIX}.stale`) });
     } else if (draftErrorCode(error) === "DocumentSourceChanged") {
       setRefusal({ reload: false, text: t(`${PREFIX}.sourceChanged`) });
+    } else if (draftErrorCode(error) === "MergeKindMismatch") {
+      setRefusal({ reload: false, text: t(`${PREFIX}.mergeKindRefused`) });
     } else if (draftErrorCode(error) === "CrossBindingMerge") {
       setRefusal({ reload: false, text: t(`${PREFIX}.cross.refused`) });
     } else {
@@ -434,7 +437,7 @@ export function ProjectConcepts({
       case "merge":
         return {
           after: t(`${PREFIX}.revise.into`, {
-            name: find(revision.value.into)?.name ?? revision.value.into,
+            name: find(revision.value.into)?.name ?? t(`${PREFIX}.revise.unknown`),
           }),
           before: t(`${PREFIX}.revise.kept`),
           label,
@@ -491,7 +494,7 @@ export function ProjectConcepts({
         ? counts.documents !== 0
         : knowledgeBaseShown && Boolean(kbStatus?.debugFiles);
 
-  const askRun = (keys: ConceptSourceKey[]) => {
+  const askRun = (keys: ConceptSourceKey[], extractedAny = false) => {
     const one = keys.length === 1;
     const count = (key: ConceptSourceKey) =>
       key === "table"
@@ -524,7 +527,7 @@ export function ProjectConcepts({
       },
       title: one
         ? t(`${PREFIX}.run.oneTitle`, { name: t(`${PREFIX}.sources.kind.${keys[0]}`) })
-        : t(`${PREFIX}.run.allTitle`),
+        : t(`${PREFIX}.run.${extractedAny ? "againTitle" : "allTitle"}`),
     });
   };
 
@@ -724,7 +727,7 @@ export function ProjectConcepts({
                 <AppButton
                   disabled={!runnable.length || busy !== null || drafting || extractingRequirements}
                   loading={run !== null}
-                  onClick={() => askRun(runnable)}
+                  onClick={() => askRun(runnable, extracted)}
                   type="primary"
                 >
                   {t(`${PREFIX}.${run ? "running" : extracted ? "reextract" : "extract"}`)}

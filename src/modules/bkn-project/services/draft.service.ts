@@ -337,7 +337,7 @@ export type BackendDraft = {
   error: string;
   items: {
     adding?: { by: BackendAccount; catalog_ids: string[] | null; since: number } | null;
-    inputs?: { existing_tables?: string[] | null } | null;
+    inputs?: { catalog_ids?: string[] | null; existing_tables?: string[] | null } | null;
     decisions?: {
       action: string;
       after: unknown;
@@ -474,6 +474,7 @@ export function mapDraft(draft: BackendDraft): Draft {
       ...(items.inputs?.existing_tables?.length
         ? { existingTables: items.inputs.existing_tables }
         : {}),
+      ...(items.inputs ? { draftedCatalogIds: items.inputs.catalog_ids ?? [] } : {}),
       decisions: (items.decisions ?? []).map((decision) => ({
         action: decision.action,
         after: decision.after,

@@ -131,6 +131,20 @@ export function DataConcepts({
   const [merging, setMerging] = useState<{ concept: Concept; among?: string[] } | null>(null);
   const [crossing, setCrossing] = useState<Concept[] | null>(null);
   const stats = conceptStats(concepts);
+  // A knowledge-base object named as an object of a table: they are not one, which the page says.
+  const sameNames = useMemo(() => {
+    const tableObjects = new Map(
+      concepts
+        .filter((c) => kindOf(c) === "structured" && objectVerdict(c.verdict))
+        .map((c) => [c.name.trim().toLowerCase(), c.name]),
+    );
+    return new Map(
+      concepts
+        .filter((c) => kindOf(c) === "unstructured" && objectVerdict(c.verdict))
+        .filter((c) => tableObjects.has(c.name.trim().toLowerCase()))
+        .map((c) => [c.key, tableObjects.get(c.name.trim().toLowerCase())!]),
+    );
+  }, [concepts]);
 
   const shown = useMemo(
     () =>
@@ -371,6 +385,11 @@ export function DataConcepts({
                 })}
               </span>
             ) : null}
+            {sameNames.get(concept.key) ? (
+              <span className={styles.warning}>
+                {t(`${PREFIX}.sameName`, { name: sameNames.get(concept.key) })}
+              </span>
+            ) : null}
             {concept.merged.length ? (
               <span className={styles.muted}>
                 {t(`${PREFIX}.merged`, {
@@ -396,7 +415,15 @@ export function DataConcepts({
           <div className={styles.cell}>
             <span>
               {origin === "network" ? <ExistingMark /> : null}
-              {t(`${PREFIX}.origin.${origin}`)}
+              {origin === "knowledgeBase"
+                ? t(`${PREFIX}.origin.knowledgeBaseFiles`, {
+                    count: new Set(
+                      concept.sources
+                        .filter((source) => source.kind === "document" && source.id)
+                        .map((source) => source.id),
+                    ).size,
+                  })
+                : t(`${PREFIX}.origin.${origin}`)}
             </span>
             {bindingLine(concept)}
           </div>

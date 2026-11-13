@@ -187,7 +187,7 @@ export const bknProjectEnUS = {
       intro:
         "Extract the business concepts from the project's sources: concepts from data tables and the knowledge base decide which objects the model has; concepts from requirement documents check whether those objects are enough and what to call them. Once confirmed, draft them in concept modeling.",
       extract: "Extract concepts",
-      reextract: "Extract concepts again",
+      reextract: "Extract again",
       running: "Extracting…",
       goToModel: "Go to concept modeling",
       readOnly: "Only the project owner can extract and judge concepts",
@@ -227,6 +227,7 @@ export const bknProjectEnUS = {
       },
       run: {
         allTitle: "Extract concepts",
+        againTitle: "Extract again",
         allIntro: "The project's sources are processed in order:",
         oneTitle: "Extract only {{name}}",
         oneContent: "Only this source is processed; the results of the others stay as they are.",
@@ -373,7 +374,14 @@ export const bknProjectEnUS = {
         network: "In the network",
         table: "Data table",
         knowledgeBase: "Knowledge base",
+        knowledgeBaseFiles: "Knowledge base · {{count}} files",
+        knowledgeBaseFiles_one: "Knowledge base · {{count}} file",
+        knowledgeBaseFiles_other: "Knowledge base · {{count}} files",
       },
+      sameName:
+        "Same name as the data-table object {{name}}: the two are not merged; where they are linked, add a relation",
+      mergeKindRefused:
+        "An object merges only into an object, and a relation only into a relation.",
       kind: {
         structured: "Structured",
         unstructured: "Unstructured",
@@ -589,6 +597,7 @@ export const bknProjectEnUS = {
         kept: "A concept of its own",
         parts: "{{names}}",
         nothing: "(none)",
+        unknown: "a concept no longer listed",
         failed: "Could not adopt this suggestion; try again later",
       },
     },
@@ -667,8 +676,12 @@ export const bknProjectEnUS = {
         drafting: "Drafting",
         failed: "Drafting failed",
       },
-      summary:
-        "Drafted from the tables of the project's data catalogs: {{objects}} object types, {{relations}} relation types.",
+      summary: "Drafted: {{objects}}, {{relations}}.",
+      objectsBySource:
+        "object types: {{tables}} from data tables + {{documents}} from the knowledge base",
+      showSystem: "Show {{count}} system items that locate source text",
+      showSystem_one: "Show {{count}} system item that locates source text",
+      showSystem_other: "Show {{count}} system items that locate source text",
       summaryWithExisting:
         "The network already has {{objects}} and {{relations}}; this draft adds {{newObjects}} and {{newRelations}}.",
       countObjects: "{{count}} object types",

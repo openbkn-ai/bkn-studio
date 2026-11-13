@@ -286,6 +286,8 @@ export type DraftItems = {
   adding: DraftAdding | null;
   /** Tables drafting left out because an object type the network already has reads them. */
   existingTables?: string[];
+  /** The catalogs the draft's tables were drafted from; absent when unknown. */
+  draftedCatalogIds?: string[];
   decisions: DraftDecision[];
   excluded: DraftExcludedField[];
   objectTypes: DraftObjectType[];
