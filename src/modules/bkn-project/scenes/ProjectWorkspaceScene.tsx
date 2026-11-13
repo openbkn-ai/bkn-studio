@@ -249,6 +249,7 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "scenarios" ? (
                 <ProjectRequirements
+                  onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => go("model")}
                   onGoToResources={goToResources}
                   ownerIsCaller={ownerIsCaller}

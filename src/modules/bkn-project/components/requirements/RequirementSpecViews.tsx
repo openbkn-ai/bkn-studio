@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse } from "antd";
+import { Alert, Checkbox, Collapse } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,7 @@ import { Citations } from "@/modules/bkn-project/components/requirements/Citatio
 import { describeInput } from "@/modules/bkn-project/components/requirements/inputs";
 import { QuestionDevPanel } from "@/modules/bkn-project/components/requirements/QuestionDevPanel";
 import type { DraftedItem } from "@/modules/bkn-project/components/requirements/RequirementDialogs";
-import { Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
+import { Asking, Citing, Editing } from "@/modules/bkn-project/components/requirements/citing";
 import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import {
   compilesToText,
@@ -36,6 +36,7 @@ import type {
   ReviewedKind,
 } from "@/modules/bkn-project/types/requirements";
 
+import ask from "../ai/RequirementAsk.module.css";
 import styles from "./Requirements.module.css";
 
 const PREFIX = "bknProject.requirements";
@@ -170,6 +171,40 @@ function EditedTag({ edited }: { edited: boolean }) {
   return edited ? <LightStatusTag tone="info">{t(`${PREFIX}.edited`)}</LightStatusTag> : null;
 }
 
+/** An item adopted from an Ask AI conversation says so, as its basis. */
+function AskTag({ source }: { source?: string }) {
+  const { t } = useTranslation();
+  return source === "ask" ? (
+    <LightStatusTag tone="info">{t(`${PREFIX}.fromAsk`)}</LightStatusTag>
+  ) : null;
+}
+
+/** Ticks an item to ask AI about it; nothing where nothing is asked. */
+function AskCheck({
+  itemId,
+  kind,
+  label,
+}: {
+  itemId: string;
+  kind: "questions" | "scenarios";
+  label: string;
+}) {
+  const { t } = useTranslation();
+  const asking = useContext(Asking);
+  if (!asking) {
+    return null;
+  }
+  return (
+    <span onClick={(event) => event.stopPropagation()}>
+      <Checkbox
+        aria-label={t("bknProject.ask.select.item", { name: label })}
+        checked={asking.selected.has(itemId)}
+        onChange={() => asking.toggle(kind, itemId)}
+      />
+    </span>
+  );
+}
+
 export function QuestionsView({
   drafted,
   itemName,
@@ -185,6 +220,7 @@ export function QuestionsView({
   spec: RequirementSpec;
 }) {
   const { t } = useTranslation();
+  const asking = useContext(Asking);
   const scenarioName = (id: string) => spec.scenarios.find((item) => item.id === id)?.name ?? id;
   // A question is a row: its text and tags, opened for its fields. Warnings head the opened row.
   const items = spec.questions.map((question) => {
@@ -267,11 +303,13 @@ export function QuestionsView({
           />
         </span>
       ),
+      className: asking?.flash.has(question.id) ? ask.flash : undefined,
       // Kept in the page while closed, so what it says can be found on it; only the tests wait.
       forceRender: true,
       key: question.id,
       label: (
         <span className={styles.questionRow}>
+          <AskCheck itemId={question.id} kind="questions" label={question.text} />
           <span className={styles.questionText}>{question.text}</span>
           {question.type ? (
             <LightStatusTag tone="neutral">{questionTypeText(t, question.type)}</LightStatusTag>
@@ -283,6 +321,7 @@ export function QuestionsView({
             <LightStatusTag tone="warning">{t(`${PREFIX}.questions.hasWarnings`)}</LightStatusTag>
           ) : null}
           <EditedTag edited={question.edited} />
+          <AskTag source={question.source} />
           <ReviewTags accepted={question.accepted} stale={question.ontologyChanged} />
         </span>
       ),
@@ -344,6 +383,7 @@ export function ScenariosView({
   spec: RequirementSpec;
 }) {
   const { t } = useTranslation();
+  const asking = useContext(Asking);
   return (
     <div className={styles.stack}>
       <AddItem kind="scenarios" />
@@ -353,10 +393,15 @@ export function ScenariosView({
           .filter((need) => need.scenarioIds.includes(scenario.id))
           .map((need) => need.id);
         return (
-          <section className={styles.card} key={scenario.id}>
+          <section
+            className={`${styles.card} ${asking?.flash.has(scenario.id) ? ask.flash : ""}`}
+            key={scenario.id}
+          >
             <div className={styles.row}>
+              <AskCheck itemId={scenario.id} kind="scenarios" label={scenario.name} />
               <h4 className={styles.cardTitle}>{scenario.name}</h4>
               <EditedTag edited={scenario.edited} />
+              <AskTag source={scenario.source} />
               <ReviewTags accepted={scenario.accepted} stale={scenario.ontologyChanged} />
               <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
               <ReviewAction
@@ -393,6 +438,7 @@ export function ScenariosView({
 /** Conflicts and modelling choices first, as they wait for the owner, then the rules. */
 export function RulesView({ spec }: { spec: RequirementSpec }) {
   const { t } = useTranslation();
+  const asking = useContext(Asking);
   return (
     <div className={styles.stack}>
       {spec.conflicts.map((conflict) => (
@@ -404,11 +450,15 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
       <AddItem kind="rules" />
       {spec.rules.length ? (
         spec.rules.map((rule) => (
-          <section className={styles.card} key={rule.id}>
+          <section
+            className={`${styles.card} ${asking?.flash.has(rule.id) ? ask.flash : ""}`}
+            key={rule.id}
+          >
             <div className={styles.row}>
               <span>{rule.statement}</span>
               <LightStatusTag tone="neutral">{compilesToText(t, rule.compilesTo)}</LightStatusTag>
               <EditedTag edited={rule.edited} />
+              <AskTag source={rule.source} />
               <ItemActions itemId={rule.id} kind="rules" label={rule.statement} />
             </div>
             <Citations citations={rule.citations} />

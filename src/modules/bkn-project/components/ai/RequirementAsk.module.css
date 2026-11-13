@@ -1,0 +1,268 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* A page with Ask AI beside it on the right while it is open, as on concept extraction. */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: calc(100vh - 160px);
+  min-height: 420px;
+}
+
+.panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+/* An item just changed from the conversation: marked for a moment. */
+.flash {
+  animation: flash 2.4s ease-out;
+}
+
+@keyframes flash {
+  0%,
+  80% {
+    box-shadow: inset 3px 0 0 var(--color-primary-600);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+.flash > td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary-600);
+  animation: flash 2.4s ease-out forwards;
+}
+
+.toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.chip {
+  padding: 0 6px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 3px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+
+.refTag {
+  max-width: 100%;
+  margin-inline-end: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.inNetwork {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.historyTitle {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.historyTitle > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.historyCurrent .historyTitle > span:first-child {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+/* What AI reads, beside the supplement note: two columns, one under the other when narrow. */
+.sources {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+}
+
+@media (max-width: 1100px) {
+  .sources {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sources h3 {
+  margin: 0 0 8px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sourceList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--color-border);
+  font-size: 13px;
+}
+
+.source:last-child {
+  border-bottom: 0;
+}
+
+.sourceIcon {
+  flex: 0 0 auto;
+  line-height: 20px;
+}
+
+.sourceOk {
+  color: var(--color-success-text);
+}
+
+.sourceMissing {
+  color: var(--color-warning-text);
+}
+
+.sourceWhat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--color-text-primary);
+}
+
+.sourceWhat > span:first-child {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sourceHint {
+  color: var(--color-warning-text);
+  font-size: 12px;
+}
+
+.sourceNames {
+  color: var(--color-text-secondary);
+}
+
+.sourceAction:global(.ant-btn) {
+  height: auto;
+  padding: 0;
+}
+
+.noteBox {
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-layout);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.notePlaceholder {
+  color: var(--color-text-secondary);
+}
+
+.noteFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.noteIntro {
+  margin: -4px 0 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

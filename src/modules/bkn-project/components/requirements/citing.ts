@@ -42,3 +42,17 @@ export type SpecEditing = {
 };
 
 export const Editing = createContext<SpecEditing | null>(null);
+
+/**
+ * Ticking items to ask AI about, and the items just changed from a conversation; absent where
+ * nothing is asked about.
+ */
+export type SpecAsking = {
+  /** Items just changed from Ask AI, marked for a moment. */
+  flash: ReadonlySet<string>;
+  /** Ticked items, by id. */
+  selected: ReadonlySet<string>;
+  toggle: (kind: "questions" | "scenarios", itemId: string) => void;
+};
+
+export const Asking = createContext<SpecAsking | null>(null);

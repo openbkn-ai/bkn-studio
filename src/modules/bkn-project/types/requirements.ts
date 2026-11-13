@@ -73,6 +73,8 @@ export type RequirementScenario = Cited &
     id: string;
     knowledge: string[];
     name: string;
+    /** `ask` when adopted from an Ask AI conversation; absent otherwise. */
+    source?: string;
     trigger: string;
   };
 
@@ -125,6 +127,8 @@ export type RequirementQuestion = Cited &
     /** The question counts the latest period up to its reference time. */
     relativeWindow: boolean;
     scenarioIds: string[];
+    /** `ask` when adopted from an Ask AI conversation; absent otherwise. */
+    source?: string;
     template: string;
     text: string;
     type: string;
@@ -146,7 +150,10 @@ export type RequirementLogicNeed = Cited &
     objectTypeIds: string[];
     properties: { objectTypeId: string; property: string }[];
     scenarioIds: string[];
-    /** `documents`, `analysis`, `scenarios` (read from an older specification) or `person`. */
+    /**
+     * `documents`, `analysis`, `scenarios` (read from an older specification), `person`, or `ask`
+     * when adopted from an Ask AI conversation.
+     */
     source: string;
     /** `atomic`, `derived` or `composite`, a metric only. */
     suggestedMetricType: string;
@@ -171,6 +178,8 @@ export type RequirementRun = {
 export type RequirementRule = Omit<Cited, "supplementReason"> & {
   compilesTo: string;
   id: string;
+  /** `ask` when adopted from an Ask AI conversation; absent otherwise. */
+  source?: string;
   statement: string;
 };
 

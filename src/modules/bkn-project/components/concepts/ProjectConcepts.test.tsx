@@ -729,7 +729,7 @@ describe("ProjectConcepts", () => {
     expect(assistant.understandCatalogs).toHaveBeenCalledWith("p1");
   });
 
-  it("asks AI about the concepts and adopts the chosen changes one by one as decisions", async () => {
+  it("asks AI about the concepts and adopts all its changes, one by one, as decisions", async () => {
     const define = {
       field: "define",
       reason: "A business name",
@@ -761,14 +761,65 @@ describe("ProjectConcepts", () => {
       expect.objectContaining({ projectId: "p1", question: "Name them" }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.adoptSelected" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `bknProject.ask.proposal.adoptAll:${JSON.stringify({ count: 2 })}`,
+      }),
+    );
     await waitFor(() => expect(service.reviseConcept).toHaveBeenCalledTimes(2));
     expect(service.reviseConcept).toHaveBeenNthCalledWith(1, "p1", 5, define);
     // The second is written over the draft the first left.
     expect(service.reviseConcept).toHaveBeenNthCalledWith(2, "p1", 6, verdict);
     await waitFor(() =>
-      expect(messageMock.success).toHaveBeenCalledWith("bknProject.model.ask.adopted"),
+      expect(messageMock.success).toHaveBeenCalledWith(
+        `bknProject.ask.panel.adoptedAll:${JSON.stringify({ count: 2 })}`,
+      ),
     );
+    expect(screen.getAllByText("bknProject.ask.proposal.adoptedTag")).toHaveLength(2);
+  });
+
+  it("adopts or declines each change AI proposes on its own", async () => {
+    const define = {
+      field: "define",
+      reason: "",
+      value: { description: "", key: "object_types/orders", name: "Sales order" },
+    };
+    const verdict = {
+      field: "verdict",
+      reason: "",
+      value: { key: "object_types/orders", verdict: "event" },
+    };
+    assistant.askConcepts.mockResolvedValue({
+      answer: "Rename it.",
+      dropped: [],
+      revisions: [define, verdict],
+    });
+    service.reviseConcept.mockResolvedValue(concepts({ draftUpdateTime: 6 }));
+    renderConcepts();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
+      target: { value: "Name them" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
+    await screen.findByText("Rename it.");
+
+    // Declining is the person's own: nothing is written.
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^bknProject\.ask\.proposal\.declineItem/ })[0],
+    );
+    expect(await screen.findByText("bknProject.ask.proposal.declinedTag")).toBeInTheDocument();
+    expect(service.reviseConcept).not.toHaveBeenCalled();
+    // One left: no adopting all of them.
+    expect(
+      screen.queryByRole("button", { name: /^bknProject\.ask\.proposal\.adoptAll/ }),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /^bknProject\.ask\.proposal\.adoptItem/ }));
+    await waitFor(() => expect(service.reviseConcept).toHaveBeenCalledWith("p1", 5, verdict));
+    expect(service.reviseConcept).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("bknProject.ask.proposal.adoptedTag")).toBeInTheDocument();
+    expect(screen.getByText("bknProject.ask.proposal.allDone")).toBeInTheDocument();
   });
 
   it("asks nothing new while the chosen changes are being adopted", async () => {
@@ -792,7 +843,7 @@ describe("ProjectConcepts", () => {
     fireEvent.change(question, { target: { value: "Name them" } });
     fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
     fireEvent.click(
-      await screen.findByRole("button", { name: "bknProject.model.ask.adoptSelected" }),
+      await screen.findByRole("button", { name: /^bknProject\.ask\.proposal\.adoptItem/ }),
     );
 
     await waitFor(() => expect(question).toBeDisabled());
