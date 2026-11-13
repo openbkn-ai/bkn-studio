@@ -15,6 +15,7 @@ import {
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
+import type { RequirementMatchTarget } from "@/modules/bkn-project/types/concepts";
 import type {
   QuestionDev,
   QuestionInput,
@@ -942,6 +943,27 @@ export async function setConceptMapping(
     "put",
     `${requirementsPath(projectId)}/concepts/${encodeURIComponent(conceptId)}/maps-to`,
     { maps_to: mapsTo, update_time: updateTime },
+  );
+}
+
+/**
+ * Matches a requirement concept to data of the project, a table or an object type of the draft,
+ * as the person confirms or chooses it; null for nothing in the data yet. `excluded` leaves it out
+ * instead, keeping its match. A requirement concept never becomes an object of its own.
+ */
+export async function matchRequirementConcept(
+  projectId: string,
+  conceptId: string,
+  match: { excluded?: boolean; target: RequirementMatchTarget | null },
+  updateTime: number,
+): Promise<Requirements> {
+  if (useMock) {
+    return wait(mockEdit(updateTime, () => undefined));
+  }
+  return sendEdit(
+    "put",
+    `${requirementsPath(projectId)}/concepts/${encodeURIComponent(conceptId)}/match`,
+    { excluded: match.excluded ?? false, target: match.target, update_time: updateTime },
   );
 }
 

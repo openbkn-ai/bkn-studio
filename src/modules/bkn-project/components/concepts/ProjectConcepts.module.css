@@ -65,6 +65,13 @@
   padding: 8px 12px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.stat {
+  cursor: pointer;
 }
 
 .stat dt {
@@ -100,14 +107,241 @@
   gap: 8px;
 }
 
-.verdict {
-  min-width: 112px;
-}
-
-.merge {
-  min-width: 140px;
-}
-
 .nowrap {
   white-space: nowrap;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+}
+
+.push {
+  margin-left: auto;
+}
+
+.intro {
+  flex: 1;
+  min-width: 280px;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* One source a row: its name and size, what extracting it made or how far it got, its actions. */
+.source {
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  gap: 4px 16px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px dashed var(--color-border);
+}
+
+.sourceName {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--color-text-primary);
+}
+
+.sourceState {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sourceActions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 420px;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.stepDone {
+  color: var(--color-success-text);
+}
+
+.stepCurrent {
+  color: var(--color-text-link);
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.warning {
+  color: var(--color-warning-text);
+  font-size: 12px;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.verdictFilter {
+  min-width: 120px;
+}
+
+.search {
+  width: 200px;
+}
+
+.selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-bg);
+}
+
+.groupRow {
+  background: var(--color-bg-layout);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Which data a concept is bound to: a table (structured) or a knowledge-base extraction. */
+.kindStructured,
+.kindUnstructured {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.kindStructured {
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.kindUnstructured {
+  color: var(--color-info-text);
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-bg);
+}
+
+/* What a concept is taken as: the reason shows on hover. */
+.as {
+  border-bottom: 1px dotted var(--color-text-tertiary);
+  cursor: help;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover:not(:disabled),
+.option[aria-pressed="true"] {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-bg);
+}
+
+.option:disabled {
+  color: var(--color-text-tertiary);
+  cursor: default;
+}
+
+.footNote {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.quote {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.runList {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.empty {
+  margin: 0;
+  padding: 24px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.tabBadge {
+  margin-left: 6px;
+  color: var(--color-error-text);
+  font-size: 12px;
+}
+
+.refs {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
 }

@@ -41,8 +41,8 @@ describe("conceptsRunErrorText", () => {
   });
 
   it("words a part still to extract, singular and plural", () => {
-    expect(zh("bknProject.concepts.requirements.partial", { count: 2 })).toContain("2 段");
-    expect(en("bknProject.concepts.requirements.partial", { count: 1 })).toContain("1 part ");
+    expect(zh("bknProject.concepts.run.partial", { count: 2 })).toContain("2 段");
+    expect(en("bknProject.concepts.run.partial", { count: 1 })).toContain("1 part ");
   });
 });
 
