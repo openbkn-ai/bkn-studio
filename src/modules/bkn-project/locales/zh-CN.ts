@@ -135,6 +135,9 @@ export const bknProjectZhCN = {
         "从 {{tables}} 张表、{{documents}} 份知识库文件、{{requirements}} 个需求概念抽取概念。",
       summaryCore: "从 {{tables}} 张表、{{requirements}} 个需求概念抽取概念。",
       reextract: "重新抽取",
+      extract: "抽取概念",
+      candidates:
+        "这些候选概念来自数据目录里的表，用的是语义理解给的业务名称。抽取概念后可以逐个判定、合并。",
       requirements: {
         extract: "抽取需求概念",
         started: "已开始从需求文档抽取概念",
@@ -230,6 +233,7 @@ export const bknProjectZhCN = {
         kinetic: "进入动力模型",
         none: "不进入模型",
         noItem: "还没有数据来源",
+        candidate: "抽取后进入概念模型",
       },
       blocked: {
         needs_identity: "要先选定唯一标识",
