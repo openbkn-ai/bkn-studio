@@ -9,6 +9,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -19,6 +20,7 @@ import {
 } from "@/modules/bkn-project/components/publish/messages";
 import { getExistingIndex } from "@/modules/bkn-project/services/publish.service";
 import type { IndexItem, ProjectIndex } from "@/modules/bkn-project/types/publish";
+import { networkObjectTypePath } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./ProjectBuild.module.css";
 
@@ -26,11 +28,23 @@ const PREFIX = "bknProject.networkExisting.index";
 const PAGE_SIZE = 10;
 
 /**
+ * States of an index the network has not built, which only the network can change: the project
+ * cannot build it, nor set what building it needs.
+ */
+const NOT_INDEXED = new Set(["not_built", "not_configured"]);
+
+/**
  * The indexes of the tables the network's existing object types read, beside the project's own:
  * the network keeps them, so they are read only here and never built. Nothing shows on a new
  * network, or when they cannot be read.
  */
-export function ExistingIndexes({ projectId }: { projectId: string }) {
+export function ExistingIndexes({
+  networkId,
+  projectId,
+}: {
+  networkId: string;
+  projectId: string;
+}) {
   const { t } = useTranslation();
   const [index, setIndex] = useState<ProjectIndex | null>(null);
 
@@ -66,11 +80,20 @@ export function ExistingIndexes({ projectId }: { projectId: string }) {
     },
     {
       key: "state",
-      render: (_value, item) => (
-        <LightStatusTag tone={INDEX_STATE_TONE[item.state] ?? "neutral"}>
-          {indexStateText(t, item)}
-        </LightStatusTag>
-      ),
+      render: (_value, item) =>
+        NOT_INDEXED.has(item.state) ? (
+          // Said as the network has it, with where it is built.
+          <span className={styles.name}>
+            <LightStatusTag tone="neutral">{t(`${PREFIX}.notIndexed`)}</LightStatusTag>
+            {networkId ? (
+              <Link to={networkObjectTypePath(networkId, item.id)}>{t(`${PREFIX}.open`)}</Link>
+            ) : null}
+          </span>
+        ) : (
+          <LightStatusTag tone={INDEX_STATE_TONE[item.state] ?? "neutral"}>
+            {indexStateText(t, item)}
+          </LightStatusTag>
+        ),
       title: t("bknProject.release.index.stateColumn"),
     },
     {

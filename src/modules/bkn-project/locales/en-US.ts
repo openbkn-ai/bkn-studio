@@ -317,6 +317,8 @@ export const bknProjectEnUS = {
         description:
           "Object types the network already has read these tables. The knowledge network keeps their indexes: they are shown here and need no build in the project.",
         summary: "{{ready}} / {{total}} table indexes ready",
+        notIndexed: "Not indexed in the knowledge network yet",
+        open: "View in the knowledge network",
       },
       background: {
         title: "Business background already in the network",
@@ -1277,6 +1279,12 @@ export const bknProjectEnUS = {
           "Most tables in the catalogs have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Run semantic understanding first, then draft.",
         unnamedUncounted:
           "Most tables in the catalogs have no business names yet, so drafting would name items after table and field names. Run semantic understanding first, then draft.",
+        unnamedNew:
+          "Most of the new tables to draft have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Tables the network's object types already read are not counted. Run semantic understanding first, then draft.",
+        unnamedNew_one:
+          "Most of the new tables to draft have no business names yet ({{count}} of {{total}} has no description), so drafting would name items after table and field names. Tables the network's object types already read are not counted. Run semantic understanding first, then draft.",
+        unnamedNew_other:
+          "Most of the new tables to draft have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Tables the network's object types already read are not counted. Run semantic understanding first, then draft.",
         run: "Run semantic understanding",
         ownerOnly: "Only the project owner can run semantic understanding",
       },
@@ -1482,6 +1490,10 @@ export const bknProjectEnUS = {
       liveBeforeRelease:
         "The knowledge network is already running: implementations it has, marked with a blue dot, can be linked directly.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
+      analyzedCovered:
+        "Analysis finished: what the network already has covers this model, so no new kinetic needs are required. You can still add one by hand.",
+      analyzedNone:
+        "Analysis finished: this model needs no metrics, functions or Skills for now. You can still add one by hand.",
       noneFiltered: "No kinetic need matches the filters.",
       allCovered:
         "Every kinetic need is covered by what the network already has; there are no new needs.",
@@ -1497,6 +1509,9 @@ export const bknProjectEnUS = {
           function: "{{count}} functions",
           function_one: "{{count}} function",
           function_other: "{{count}} functions",
+          api: "{{count}} APIs",
+          api_one: "{{count}} API",
+          api_other: "{{count}} APIs",
           skill: "{{count}} Skills",
           skill_one: "{{count}} Skill",
           skill_other: "{{count}} Skills",
@@ -1762,6 +1777,18 @@ export const bknProjectEnUS = {
       },
       drafting:
         "Generating the business scenarios and questions from the concept model and the kinetic model; this usually takes a minute or two.",
+      draftingLarge:
+        "Generating the business scenarios and questions from the concept model and the kinetic model. The model is large ({{count}} object types), so this may take several minutes; the page updates when it finishes.",
+      draftingLarge_one:
+        "Generating the business scenarios and questions from the concept model and the kinetic model. The model is large ({{count}} object type), so this may take several minutes; the page updates when it finishes.",
+      draftingLarge_other:
+        "Generating the business scenarios and questions from the concept model and the kinetic model. The model is large ({{count}} object types), so this may take several minutes; the page updates when it finishes.",
+      draftingLong:
+        "Generating the business scenarios and questions from the concept model and the kinetic model; {{count}} minutes so far. A large model may take several minutes; the page updates when it finishes.",
+      draftingLong_one:
+        "Generating the business scenarios and questions from the concept model and the kinetic model; {{count}} minute so far. A large model may take several minutes; the page updates when it finishes.",
+      draftingLong_other:
+        "Generating the business scenarios and questions from the concept model and the kinetic model; {{count}} minutes so far. A large model may take several minutes; the page updates when it finishes.",
       stale:
         "The documents, their types, the data catalogs or the naming language changed after drafting; draft again.",
       waiting: {
@@ -2227,6 +2254,10 @@ export const bknProjectEnUS = {
       },
     },
     release: {
+      systemNotes: {
+        versioningTurnedOn:
+          "Versioning turned on when a project was created on this knowledge network",
+      },
       description:
         "Publish the confirmed ontology as a new version of the network. Agents, MCP and evaluations use the new version at once; there is nothing to switch.",
       loadFailed: "The confirmation could not be loaded",

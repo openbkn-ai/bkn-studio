@@ -19,9 +19,6 @@ import styles from "./Kinetic.module.css";
 
 const NETWORK = `${KINETIC}.network`;
 
-/** The kind of need an item of the network implements. */
-const needKindOf = (type: string) => (type === "object_metric" ? "metric" : type);
-
 /**
  * What the network had before the project: its action types, functions, Skills and metrics,
  * grouped by the object they act on, each marked with a small dot. They are read-only here and
@@ -84,9 +81,7 @@ export function KineticNetworkItems({
                   <span className={styles.row}>
                     <InNetworkDot />
                     <strong>{item.name || item.id}</strong>
-                    <LightStatusTag tone="info">
-                      {logicKindText(t, needKindOf(item.type))}
-                    </LightStatusTag>
+                    <LightStatusTag tone="info">{logicKindText(t, item.kind)}</LightStatusTag>
                     <span className={styles.spacer} />
                     {path ? (
                       <AppButton

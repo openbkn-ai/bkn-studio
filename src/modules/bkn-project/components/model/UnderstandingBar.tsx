@@ -18,6 +18,7 @@ import {
   UNDERSTANDING_STATUS_TONE,
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
+import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
   getProjectStatus,
   getUnderstanding,
@@ -91,10 +92,19 @@ export function UnderstandingBar({
   // Advice from the project's state: most tables have no business name, so understand them first.
   const [unnamed, setUnnamed] = useState<ProjectStatus["hints"][number] | null>(null);
   const [understandAction, setUnderstandAction] = useState<ProjectNextAction | null>(null);
+  // On an existing network the advice counts only the new tables: the network names the rest.
+  const [onNetwork, setOnNetwork] = useState(false);
   const loadHint = useCallback(async () => {
     try {
       const status = await getProjectStatus(projectId);
-      setUnnamed(status.hints.find((hint) => hint.code === "catalogs_unnamed") ?? null);
+      const hint = status.hints.find((item) => item.code === "catalogs_unnamed") ?? null;
+      if (hint) {
+        const existing = await getExistingDefinitions(projectId).catch(() => null);
+        setOnNetwork(
+          Boolean(existing && existing.objectTypes.length + existing.relationTypes.length),
+        );
+      }
+      setUnnamed(hint);
       setUnderstandAction(
         status.nextActions.find((action) => action.action === "understand_catalogs") ?? null,
       );
@@ -226,7 +236,7 @@ export function UnderstandingBar({
           }
           message={
             unnamed.count !== undefined && unnamed.total !== undefined
-              ? t("bknProject.understand.hint.unnamed", {
+              ? t(`bknProject.understand.hint.${onNetwork ? "unnamedNew" : "unnamed"}`, {
                   count: unnamed.count,
                   total: unnamed.total,
                 })

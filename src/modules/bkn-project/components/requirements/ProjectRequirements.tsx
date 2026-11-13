@@ -77,6 +77,15 @@ import styles from "./Requirements.module.css";
 
 const PREFIX = "bknProject.requirements";
 
+/** Object types from which generating takes minutes rather than a minute or two. */
+const LARGE_MODEL_OBJECT_TYPES = 10;
+/**
+ * How long, in minutes, generating runs before the page says how long it has taken so far; past
+ * the longest a run is kept, the start time read is not trusted and nothing is said of it.
+ */
+const LONG_DRAFTING_MINUTES = 2;
+const LONGEST_DRAFTING_MINUTES = 60;
+
 // The concepts are judged on the concept extraction page.
 const TABS = ["questions", "scenarios", "rules"] as const;
 type Tab = (typeof TABS)[number];
@@ -124,6 +133,8 @@ export function ProjectRequirements({
   } | null>(null);
   // Counts every read, so a specification being drafted is read again after a failure too.
   const [reads, setReads] = useState(0);
+  // When the specification was last read, for how long generating has run.
+  const [readAt, setReadAt] = useState(() => Date.now());
   const latest = useRef(0);
   const canEdit = ownerIsCaller && !project.archived;
 
@@ -145,6 +156,7 @@ export function ProjectRequirements({
       }
     } finally {
       setReads((count) => count + 1);
+      setReadAt(Date.now());
     }
   }, [project.id]);
 
@@ -203,6 +215,18 @@ export function ProjectRequirements({
     const timer = window.setTimeout(() => void load(), REQUIREMENTS_POLL_MS);
     return () => window.clearTimeout(timer);
   }, [isDrafting, load, reads]);
+  const objectTypes = drafted.filter((item) => item.kind === "object_type").length;
+  // Generating takes longer the larger the model: say so rather than promise a minute or two.
+  const draftingMinutes =
+    isDrafting && requirements?.updateTime
+      ? Math.floor((readAt - requirements.updateTime) / 60_000)
+      : 0;
+  const draftingText =
+    draftingMinutes >= LONG_DRAFTING_MINUTES && draftingMinutes <= LONGEST_DRAFTING_MINUTES
+      ? t(`${PREFIX}.draftingLong`, { count: draftingMinutes })
+      : objectTypes >= LARGE_MODEL_OBJECT_TYPES
+        ? t(`${PREFIX}.draftingLarge`, { count: objectTypes })
+        : t(`${PREFIX}.drafting`);
 
   /**
    * Generates the scenarios and questions from the adopted ontology. What was accepted is kept;
@@ -433,7 +457,7 @@ export function ProjectRequirements({
               type="info"
             />
           ) : isDrafting ? (
-            <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" />
+            <Alert message={draftingText} showIcon type="info" />
           ) : requirements?.status === "failed" ? (
             <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
           ) : null}

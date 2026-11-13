@@ -294,6 +294,8 @@ export const bknProjectZhCN = {
         description:
           "这些表由网络里已有的对象类在用，索引由知识网络维护，这里只展示状态，不需要在项目里构建。",
         summary: "{{ready}} / {{total}} 张表的索引可用",
+        notIndexed: "知识网络里还没有建索引",
+        open: "到知识网络中查看",
       },
       background: {
         title: "网络已有的业务背景",
@@ -1191,6 +1193,12 @@ export const bknProjectZhCN = {
           "目录里大多数表还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
         unnamedUncounted:
           "目录里大多数表还没有业务名称，起草出的名称会直接用表名和字段名。建议先做语义理解，再起草。",
+        unnamedNew:
+          "要新起草的表里大多数还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。网络已有对象类在用的表不算在内。建议先做语义理解，再起草。",
+        unnamedNew_one:
+          "要新起草的表里大多数还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。网络已有对象类在用的表不算在内。建议先做语义理解，再起草。",
+        unnamedNew_other:
+          "要新起草的表里大多数还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。网络已有对象类在用的表不算在内。建议先做语义理解，再起草。",
         run: "开始语义理解",
         ownerOnly: "只有项目负责人可以发起语义理解",
       },
@@ -1374,6 +1382,9 @@ export const bknProjectZhCN = {
       beforeRelease: "首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。",
       liveBeforeRelease: "知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
+      analyzedCovered:
+        "分析已完成：网络已有的内容已经覆盖这个模型，不需要新增动力需求。需要时也可以手工添加。",
+      analyzedNone: "分析已完成：这个模型暂时不需要指标、函数或 Skill。需要时也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
       allCovered: "动力需求都已由网络已有的内容覆盖，没有新增需求。",
       network: {
@@ -1388,6 +1399,9 @@ export const bknProjectZhCN = {
           function: "{{count}} 个函数",
           function_one: "{{count}} 个函数",
           function_other: "{{count}} 个函数",
+          api: "{{count}} 个 API",
+          api_one: "{{count}} 个 API",
+          api_other: "{{count}} 个 API",
           skill: "{{count}} 个 Skill",
           skill_one: "{{count}} 个 Skill",
           skill_other: "{{count}} 个 Skill",
@@ -1633,6 +1647,18 @@ export const bknProjectZhCN = {
         uncovered_other: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
       },
       drafting: "正在基于概念模型和动力模型生成业务场景和问题，通常需要一两分钟。",
+      draftingLarge:
+        "正在基于概念模型和动力模型生成业务场景和问题。模型较大（{{count}} 个对象类），可能需要几分钟，完成后这里会自动更新。",
+      draftingLarge_one:
+        "正在基于概念模型和动力模型生成业务场景和问题。模型较大（{{count}} 个对象类），可能需要几分钟，完成后这里会自动更新。",
+      draftingLarge_other:
+        "正在基于概念模型和动力模型生成业务场景和问题。模型较大（{{count}} 个对象类），可能需要几分钟，完成后这里会自动更新。",
+      draftingLong:
+        "正在基于概念模型和动力模型生成业务场景和问题，已经用了 {{count}} 分钟。模型较大时可能需要几分钟，完成后这里会自动更新。",
+      draftingLong_one:
+        "正在基于概念模型和动力模型生成业务场景和问题，已经用了 {{count}} 分钟。模型较大时可能需要几分钟，完成后这里会自动更新。",
+      draftingLong_other:
+        "正在基于概念模型和动力模型生成业务场景和问题，已经用了 {{count}} 分钟。模型较大时可能需要几分钟，完成后这里会自动更新。",
       stale: "资料、文档类型、数据目录或命名语言在起草之后有变化，建议重新起草。",
       waiting: {
         both: "还有 {{conflicts}} 个需求冲突、{{choices}} 个建模选择等你处理。",
@@ -2073,6 +2099,9 @@ export const bknProjectZhCN = {
       },
     },
     release: {
+      systemNotes: {
+        versioningTurnedOn: "在这个知识网络上新建项目时开启了版本管理",
+      },
       description:
         "把确认后的本体发布为网络的新版本。发布后智能体、MCP 和评测立即使用新版本，不用切换。",
       loadFailed: "确认情况暂时读取不到",

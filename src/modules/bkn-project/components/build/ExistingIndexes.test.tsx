@@ -5,7 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render as renderInPage, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getExistingIndexMock = vi.hoisted(() => vi.fn());
@@ -23,6 +25,8 @@ vi.mock("@/modules/bkn-project/services/publish.service", () => ({
 }));
 
 import { ExistingIndexes } from "./ExistingIndexes";
+
+const render = (element: ReactElement) => renderInPage(<MemoryRouter>{element}</MemoryRouter>);
 
 const item = (id: string, state: string) => ({
   build: null,
@@ -66,7 +70,7 @@ describe("ExistingIndexes", () => {
       tasksVisible: true,
     });
 
-    render(<ExistingIndexes projectId="p1" />);
+    render(<ExistingIndexes networkId="kn1" projectId="p1" />);
 
     expect(await screen.findByText("Name regions")).toBeInTheDocument();
     expect(getExistingIndexMock).toHaveBeenCalledWith("p1");
@@ -79,10 +83,35 @@ describe("ExistingIndexes", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("says an index the network has not built in business words, with where it is built", async () => {
+    getExistingIndexMock.mockResolvedValue({
+      counts: { not_built: 1, not_configured: 1, ready: 1 },
+      objectTypes: [
+        item("regions", "ready"),
+        item("orders", "not_configured"),
+        item("items", "not_built"),
+      ],
+      tasksVisible: true,
+    });
+
+    render(<ExistingIndexes networkId="kn1" projectId="p1" />);
+
+    expect(await screen.findByText("Name orders")).toBeInTheDocument();
+    expect(screen.getAllByText("bknProject.networkExisting.index.notIndexed")).toHaveLength(2);
+    expect(screen.queryByText("bknProject.release.index.state.not_configured")).toBeNull();
+    expect(screen.queryByText("bknProject.release.index.state.not_built")).toBeNull();
+    const links = screen.getAllByRole("link", { name: "bknProject.networkExisting.index.open" });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/knowledge-network/workspace/kn1/object-types/orders/detail",
+      "/knowledge-network/workspace/kn1/object-types/items/detail",
+    ]);
+    expect(screen.getByText("bknProject.release.index.state.ready")).toBeInTheDocument();
+  });
+
   it("shows nothing on a new network", async () => {
     getExistingIndexMock.mockResolvedValue({ counts: {}, objectTypes: [], tasksVisible: true });
 
-    const { container } = render(<ExistingIndexes projectId="p1" />);
+    const { container } = render(<ExistingIndexes networkId="kn1" projectId="p1" />);
 
     await waitFor(() => expect(getExistingIndexMock).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
@@ -91,7 +120,7 @@ describe("ExistingIndexes", () => {
   it("shows nothing when the indexes cannot be read", async () => {
     getExistingIndexMock.mockRejectedValue(new Error("boom"));
 
-    const { container } = render(<ExistingIndexes projectId="p1" />);
+    const { container } = render(<ExistingIndexes networkId="kn1" projectId="p1" />);
 
     await waitFor(() => expect(getExistingIndexMock).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();

@@ -342,6 +342,44 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("约束")).toBeInTheDocument();
   });
 
+  it("says generating takes minutes on a large model, and how long it has run", async () => {
+    getDraftMock.mockResolvedValue({
+      items: {
+        objectTypes: Array.from({ length: 16 }, (_, index) => ({
+          id: `o${index}`,
+          name: `对象${index}`,
+          properties: [],
+        })),
+        relationTypes: [],
+      },
+    });
+    getRequirementsMock.mockResolvedValue(
+      requirements({ spec: mapSpec({}), status: "drafting", updateTime: Date.now() }),
+    );
+    const { unmount } = renderPage();
+    expect(
+      await screen.findByText(
+        "正在基于概念模型和动力模型生成业务场景和问题。模型较大（16 个对象类），可能需要几分钟，完成后这里会自动更新。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/通常需要一两分钟/)).toBeNull();
+    unmount();
+
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        spec: mapSpec({}),
+        status: "drafting",
+        updateTime: Date.now() - 6 * 60_000 - 1_000,
+      }),
+    );
+    renderPage();
+    expect(
+      await screen.findByText(
+        "正在基于概念模型和动力模型生成业务场景和问题，已经用了 6 分钟。模型较大时可能需要几分钟，完成后这里会自动更新。",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("generates from the adopted ontology before the first time, with documents optional", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
     listDocumentsMock.mockResolvedValueOnce([]);

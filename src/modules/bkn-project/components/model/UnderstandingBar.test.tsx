@@ -18,6 +18,13 @@ import type {
 const getUnderstandingMock = vi.hoisted(() => vi.fn());
 const understandCatalogsMock = vi.hoisted(() => vi.fn());
 const getProjectStatusMock = vi.hoisted(() => vi.fn());
+// What the network already has: nothing, a new network, unless a test says otherwise.
+const getExistingDefinitionsMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  getExistingDefinitions: getExistingDefinitionsMock,
+}));
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -82,6 +89,7 @@ describe("UnderstandingBar", () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
     getProjectStatusMock.mockResolvedValue({ hints: [], nextActions: [] });
+    getExistingDefinitionsMock.mockResolvedValue({ objectTypes: [], relationTypes: [] });
   });
 
   it("advises understanding the catalogs first when most tables have no business name", async () => {
@@ -115,6 +123,24 @@ describe("UnderstandingBar", () => {
     renderBar({ ownerIsCaller: false });
     expect(await screen.findByText("只有项目负责人可以发起语义理解")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "开始语义理解" })).toBeNull();
+  });
+
+  it("on an existing network, says the advice counts only the new tables", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["completed", "not_started"])]);
+    getExistingDefinitionsMock.mockResolvedValue({
+      objectTypes: [{ id: "orders" }],
+      relationTypes: [],
+    });
+    getProjectStatusMock.mockResolvedValue({
+      hints: [{ code: "catalogs_unnamed", count: 2, total: 2 }],
+      nextActions: [],
+    });
+    renderBar();
+    expect(
+      await screen.findByText(/要新起草的表里大多数还没有业务名称（2\/2 张没有描述）/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/网络已有对象类在用的表不算在内/)).toBeInTheDocument();
+    expect(screen.queryByText(/目录里大多数表/)).toBeNull();
   });
 
   afterEach(() => {
