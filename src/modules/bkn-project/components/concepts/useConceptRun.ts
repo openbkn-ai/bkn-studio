@@ -116,8 +116,9 @@ export function useConceptRun({
       // A draft a knowledge-base extraction made has none of the tables yet: they are added to it,
       // keeping what it holds.
       const read = await getDraft(projectId);
+      const fromTables = read?.items.objectTypes.some((item) => !item.document && !item.existing);
       const undrafted =
-        read?.status === "ready" && read.items.draftedCatalogIds
+        read?.status === "ready" && !fromTables && read.items.draftedCatalogIds
           ? latest.current.catalogIds.filter((id) => !read.items.draftedCatalogIds!.includes(id))
           : [];
       if (undrafted.length) {

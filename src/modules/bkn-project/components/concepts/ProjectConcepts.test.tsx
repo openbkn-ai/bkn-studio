@@ -281,7 +281,7 @@ describe("ProjectConcepts", () => {
     service.getConcepts.mockResolvedValue(concepts());
     service.getDraft.mockResolvedValue({
       createTime: 1,
-      items: { decisions: [] },
+      items: { decisions: [], objectTypes: [] },
       status: "ready",
       updateTime: 5,
     });
@@ -558,7 +558,12 @@ describe("ProjectConcepts", () => {
   it("adds the tables to a draft a knowledge-base extraction made, keeping what it holds", async () => {
     service.getDraft.mockResolvedValue({
       createTime: 1,
-      items: { adding: null, decisions: [], draftedCatalogIds: [] },
+      items: {
+        adding: null,
+        decisions: [],
+        draftedCatalogIds: [],
+        objectTypes: [{ document: { role: "entity" }, existing: false, id: "invoice" }],
+      },
       status: "ready",
       updateTime: 5,
     });
@@ -574,6 +579,21 @@ describe("ProjectConcepts", () => {
 
     await waitFor(() => expect(service.addDraftCatalogs).toHaveBeenCalledWith("p1", ["c1"]));
     expect(service.generateDraft).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sources card for a project with only knowledge-base files", async () => {
+    kb.mode = "enabled";
+    slots.kbModel = () => <span>panel</span>;
+    service.getConcepts.mockResolvedValue(concepts({ concepts: [], requirements: [] }));
+    requirements.listDocuments.mockResolvedValue([]);
+    publish.getUnderstanding.mockResolvedValue([{ catalogId: "c1", tables: [] }]);
+    renderConcepts();
+
+    expect(
+      await screen.findByRole("region", { name: "bknProject.concepts.sources.title" }),
+    ).toBeTruthy();
+    expect(screen.getByText("panel")).toBeTruthy();
+    expect(screen.queryByText("bknProject.concepts.empty.title")).toBeNull();
   });
 
   it("names a knowledge-base concept's files, and warns of one named as a table's object", async () => {

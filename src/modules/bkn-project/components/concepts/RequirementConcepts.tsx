@@ -78,8 +78,8 @@ export function RequirementConcepts({
   filter: RequirementFilter;
   /** Whether the knowledge base is a source, to add data to. */
   knowledgeBase: boolean;
-  /** Asks AI to match the requirement concept again. */
-  onAskAgain: (requirement: RequirementConceptMatch) => void;
+  /** Asks AI to match the requirement concept again; absent while Ask AI cannot be used. */
+  onAskAgain?: (requirement: RequirementConceptMatch) => void;
   onFilter: (filter: RequirementFilter) => void;
   onGoToCatalogs: () => void;
   onGoToKnowledgeBase: () => void;
@@ -203,7 +203,7 @@ export function RequirementConcepts({
           <span className={styles.actions}>
             {change}
             {exclude}
-            {action(t(`${PREFIX}.askAgain`), () => onAskAgain(requirement))}
+            {onAskAgain ? action(t(`${PREFIX}.askAgain`), () => onAskAgain(requirement)) : null}
           </span>
         );
       case "confirmed":

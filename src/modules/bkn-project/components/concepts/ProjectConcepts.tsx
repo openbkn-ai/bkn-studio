@@ -94,6 +94,7 @@ const NOTICE_NAMES = 5;
  * concepts are matched to the data, never objects of their own. Ask AI stays beside the list.
  */
 export function ProjectConcepts({
+  onGoToKinetic,
   onGoToModel,
   onGoToResources,
   onOpenItem,
@@ -558,8 +559,13 @@ export function ProjectConcepts({
   const editable = canEdit && ready && busy === null && !run;
   const runnable = CONCEPT_SOURCES.filter(available);
   const extracted = ready || Boolean(conceptsRun?.extracted) || kbStatus?.state === "succeeded";
+  // With nothing to extract from at all: a knowledge base the edition has is a source too.
   const nothing =
-    !data.length && !requirementList.length && counts.tables === 0 && counts.documents === 0;
+    !data.length &&
+    !requirementList.length &&
+    counts.tables === 0 &&
+    counts.documents === 0 &&
+    !knowledgeBaseShown;
   const stalledNotice = stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null;
 
   const produced = (origin: "table" | "knowledgeBase") =>
@@ -799,6 +805,7 @@ export function ProjectConcepts({
                       openAsk(relation ? [t(`${PREFIX}.cross.askRelation`)] : [])
                     }
                     onFilters={setFilters}
+                    onGoToKinetic={onGoToKinetic}
                     onJudge={(concept, verdict) => void judge(concept, verdict)}
                     onJudgeMany={(list, mode) => void judgeMany(list, mode)}
                     onMerge={(key, into) => void merge(key, into)}
@@ -818,7 +825,7 @@ export function ProjectConcepts({
                     editable={canEdit && busy === null && !run && !extractingRequirements}
                     filter={requirementFilter}
                     knowledgeBase={knowledgeBaseShown}
-                    onAskAgain={(requirement) => openAsk([requirement.term])}
+                    onAskAgain={askReady ? (requirement) => openAsk([requirement.term]) : undefined}
                     onFilter={setRequirementFilter}
                     onGoToCatalogs={() => onGoToResources("catalogs")}
                     onGoToKnowledgeBase={() => onGoToResources("knowledge-base")}

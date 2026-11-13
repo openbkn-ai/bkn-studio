@@ -100,6 +100,7 @@ export function DataConcepts({
   editable,
   filters,
   onFilters,
+  onGoToKinetic,
   onJudge,
   onJudgeMany,
   onMerge,
@@ -115,6 +116,8 @@ export function DataConcepts({
   editable: boolean;
   filters: DataFilters;
   onFilters: (filters: DataFilters) => void;
+  /** Opens kinetic modeling, where what is judged kinetic is implemented. */
+  onGoToKinetic: () => void;
   onJudge: (concept: Concept, verdict: ConceptVerdict) => void;
   onJudgeMany: (concepts: Concept[], verdict: "confirm" | "none") => void;
   onMerge: (key: string, into: string) => void;
@@ -441,11 +444,18 @@ export function DataConcepts({
         }
         const { concept } = row;
         return (
-          <Tooltip title={reasonOf(concept)}>
-            <span className={styles.as} tabIndex={0}>
-              {asLabel(concept)}
-            </span>
-          </Tooltip>
+          <span className={styles.actions}>
+            <Tooltip title={reasonOf(concept)}>
+              <span className={styles.as} tabIndex={0}>
+                {asLabel(concept)}
+              </span>
+            </Tooltip>
+            {concept.verdict === "kinetic" && statusOf(concept) === "confirmed" ? (
+              <AppButton onClick={onGoToKinetic} size="small" type="link">
+                {t(`${PREFIX}.goToKinetic`)}
+              </AppButton>
+            ) : null}
+          </span>
         );
       },
       title: (

@@ -380,6 +380,7 @@ export const bknProjectEnUS = {
       },
       sameName:
         "Same name as the data-table object {{name}}: the two are not merged; where they are linked, add a relation",
+      goToKinetic: "Go to kinetic modeling",
       mergeKindRefused:
         "An object merges only into an object, and a relation only into a relation.",
       kind: {

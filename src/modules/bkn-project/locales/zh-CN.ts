@@ -349,6 +349,7 @@ export const bknProjectZhCN = {
         knowledgeBaseFiles_other: "知识库 · {{count}} 份文件",
       },
       sameName: "和数据表的对象「{{name}}」同名：两者不合并，有联系的可以建关系",
+      goToKinetic: "去动力建模",
       mergeKindRefused: "对象只能合并到对象，关系只能合并到关系。",
       kind: {
         structured: "结构化",
