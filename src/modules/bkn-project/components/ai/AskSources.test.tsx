@@ -144,6 +144,19 @@ describe("AskSources", () => {
     expect(screen.getByRole("button", { name: `${N}.edit` })).toBeInTheDocument();
   });
 
+  it("never shows a note it could not read as none, nor lets it be written over", async () => {
+    mocks.getSupplement.mockRejectedValueOnce(new Error("timeout"));
+    mocks.getSupplement.mockResolvedValueOnce({ by: null, text: "Kept", time: 1 });
+    renderWithoutAntdStyles(<AskSources {...base} />);
+
+    expect(await screen.findByText(`${N}.loadFailed`)).toBeInTheDocument();
+    expect(screen.queryByText(`${N}.empty`)).toBeNull();
+    expect(screen.queryByRole("button", { name: `${N}.write` })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+    expect(await screen.findByText("Kept")).toBeInTheDocument();
+    expect(mocks.saveSupplement).not.toHaveBeenCalled();
+  });
+
   it("only shows the note to others", async () => {
     mocks.getSupplement.mockResolvedValue({ by: null, text: "Focus", time: 1 });
     renderWithoutAntdStyles(<AskSources {...base} canEdit={false} />);

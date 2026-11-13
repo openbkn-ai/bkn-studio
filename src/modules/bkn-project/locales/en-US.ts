@@ -1532,6 +1532,8 @@ export const bknProjectEnUS = {
         tooLong: "The supplement note takes at most {{count}} characters.",
         tooLong_one: "The supplement note takes at most {{count}} character.",
         tooLong_other: "The supplement note takes at most {{count}} characters.",
+        loadFailed:
+          "The supplement note cannot be read right now; it can be changed once it is read.",
       },
       panel: {
         title: "AI assistant",

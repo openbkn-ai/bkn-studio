@@ -10,7 +10,7 @@ import {
   ExclamationCircleOutlined,
   MinusCircleOutlined,
 } from "@ant-design/icons";
-import { Input } from "antd";
+import { Alert, Input } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -237,20 +237,23 @@ export function SupplementNote({
 }) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  // null while unread.
+  // null while unread; a note that could not be read is never shown as none, nor written over.
   const [note, setNote] = useState<Supplement | null>(null);
+  const [readFailed, setReadFailed] = useState(false);
+  const [reads, setReads] = useState(0);
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let active = true;
+    setReadFailed(false);
     getSupplement(projectId)
       .then((next) => active && setNote(next))
-      .catch(() => active && setNote({ by: null, text: "", time: 0 }));
+      .catch(() => active && setReadFailed(true));
     return () => {
       active = false;
     };
-  }, [projectId]);
+  }, [projectId, reads]);
 
   const save = async () => {
     if (draft === null) {
@@ -301,6 +304,17 @@ export function SupplementNote({
             </span>
           </div>
         </>
+      ) : readFailed ? (
+        <Alert
+          action={
+            <AppButton onClick={() => setReads((count) => count + 1)} size="small">
+              {t("common.retry")}
+            </AppButton>
+          }
+          message={t(`${NOTE}.loadFailed`)}
+          showIcon
+          type="warning"
+        />
       ) : (
         <>
           <div className={styles.noteBox}>

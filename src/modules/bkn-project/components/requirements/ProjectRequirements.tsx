@@ -126,7 +126,8 @@ export function ProjectRequirements({
   const { message, modal } = useAppServices();
   // undefined while loading, null before the first drafting.
   const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
-  const [documents, setDocuments] = useState<RequirementDocument[]>([]);
+  // null until read: nothing is said of documents not read.
+  const [documents, setDocuments] = useState<RequirementDocument[] | null>(null);
   // The kinetic needs as the live network implements them; null when they could not be read.
   const [logicNeeds, setLogicNeeds] = useState<LogicNeedView[] | null>(null);
   // What the network had before the project, which AI reads.
@@ -306,7 +307,7 @@ export function ProjectRequirements({
       documentName: (documentId: string) =>
         documentId === NETWORK_DOCUMENT_ID
           ? t("bknProject.networkExisting.background.name")
-          : (documents.find((document) => document.id === documentId)?.name ??
+          : (documents?.find((document) => document.id === documentId)?.name ??
             t(`${PREFIX}.removedDocument`)),
       openDocument: (documentId: string, range?: { end: number; start: number }) =>
         setViewing({ documentId, range }),
@@ -561,7 +562,7 @@ export function ProjectRequirements({
                     </AppButton>
                   }
                   description={t(
-                    documents.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
+                    documents?.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
                   )}
                   message={t(`${PREFIX}.notDrafted`)}
                   showIcon

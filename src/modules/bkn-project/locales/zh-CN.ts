@@ -1420,6 +1420,7 @@ export const bknProjectZhCN = {
         tooLong: "补充说明最多 {{count}} 个字。",
         tooLong_one: "补充说明最多 {{count}} 个字。",
         tooLong_other: "补充说明最多 {{count}} 个字。",
+        loadFailed: "暂时读不到补充说明，读到之前不能修改。",
       },
       panel: {
         title: "AI 助手",
