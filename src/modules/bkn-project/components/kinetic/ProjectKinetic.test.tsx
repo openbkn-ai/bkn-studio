@@ -323,7 +323,7 @@ describe("ProjectKinetic", () => {
     expect(
       screen.getByText("没有需求文档：AI 只能根据模型推测需要哪些指标和操作，建议先补充。"),
     ).toBeInTheDocument();
-    expect(await screen.findByText("已确认的概念模型：2 个对象类")).toBeInTheDocument();
+    expect(await screen.findByText("本项目已确认 2 个对象类")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "去上传需求文档" }));
     expect(location()).toContain("/resources?tab=documents");
   });
@@ -349,6 +349,35 @@ describe("ProjectKinetic", () => {
     expect(panel.getByText("延误率")).toBeInTheDocument();
     expect(panel.getByText("会带上：AI 参考的资料、补充说明和这段对话")).toBeInTheDocument();
     expect(mocks.listConversations).toHaveBeenCalledWith("p1", "kinetic");
+  });
+
+  it("pages the needs 20 a page, keeps ticks across pages, and starts filters on page 1", async () => {
+    const many = Array.from({ length: 25 }, (_, index) =>
+      view(need({ id: `m${index + 1}`, name: `指标${index + 1}` })),
+    );
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), needs: many });
+    renderPage();
+
+    const table = () => within(screen.getByRole("table"));
+    const row = (name: string) => table().getByText(name).closest("tr")!;
+    expect(await screen.findByText("指标1")).toBeInTheDocument();
+    expect(screen.getByText("共 25 条")).toBeInTheDocument();
+    expect(table().queryByText("指标21")).toBeNull();
+    fireEvent.click(within(row("指标1")).getByRole("checkbox"));
+    await screen.findByRole("button", { name: "问 AI（已选 1 条）" });
+
+    fireEvent.click(screen.getByTitle("2"));
+    expect(await table().findByText("指标21")).toBeInTheDocument();
+    fireEvent.click(within(row("指标21")).getByRole("checkbox"));
+    expect(await screen.findByRole("button", { name: "问 AI（已选 2 条）" })).toBeInTheDocument();
+
+    // A filter starts over from the first page.
+    const [kind] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(kind);
+    fireEvent.click(await screen.findByTitle("指标"));
+    expect(await table().findByText("指标1")).toBeInTheDocument();
+    expect(table().queryByText("指标21")).toBeNull();
+    expect(screen.getByRole("button", { name: "问 AI（已选 2 条）" })).toBeInTheDocument();
   });
 
   it("does not offer asking AI to others", async () => {
@@ -757,6 +786,39 @@ describe("ProjectKinetic", () => {
     ) as HTMLElement;
     expect(within(alert).getByRole("button", { name: "去概念建模" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "分析动力需求" })).toBeDisabled();
+    // Ask AI stays in sight, unusable, with the way to confirm the model.
+    expect(screen.getByRole("button", { name: "问 AI" })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "先确认概念模型" })[0]);
+    expect(mocks.onGoToModel).toHaveBeenCalled();
+  });
+
+  it("does not count what the network has as the project's confirmed model", async () => {
+    mocks.getStatus.mockResolvedValue({ confirmation: null });
+    mocks.getDraft.mockResolvedValue({
+      items: {
+        objectTypes: [
+          { adopted: true, existing: true, id: "suppliers", name: "供应商" },
+          { adopted: true, existing: true, id: "orders", name: "销售订单" },
+          { adopted: true, id: "bom", name: "物料清单" },
+        ],
+      },
+    });
+    renderPage();
+
+    expect(await screen.findByText("网络已有 2 个对象类")).toBeInTheDocument();
+    expect(screen.getByText("本项目还没确认概念模型")).toBeInTheDocument();
+    expect(screen.queryByText(/本项目已确认/)).toBeNull();
+  });
+
+  it("asks AI before any analysis once the model is confirmed", async () => {
+    mocks.getRequirements.mockResolvedValue(null);
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: "问 AI" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    expect(await screen.findByRole("complementary", { name: "AI 助手" })).toBeInTheDocument();
+    expect(mocks.listConversations).toHaveBeenCalledWith("p1", "kinetic");
   });
 
   it("analyses, and asks before starting over", async () => {

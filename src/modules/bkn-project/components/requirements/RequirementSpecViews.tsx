@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { Citations } from "@/modules/bkn-project/components/requirements/Citations";
 import { describeInput } from "@/modules/bkn-project/components/requirements/inputs";
 import { QuestionDevPanel } from "@/modules/bkn-project/components/requirements/QuestionDevPanel";
@@ -26,6 +27,7 @@ import {
   rejectedKindText,
   rejectedReasonText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import type { LogicNeedView } from "@/modules/bkn-project/types/kinetic";
 import type {
   RequirementChoice,
@@ -222,8 +224,9 @@ export function QuestionsView({
   const { t } = useTranslation();
   const asking = useContext(Asking);
   const scenarioName = (id: string) => spec.scenarios.find((item) => item.id === id)?.name ?? id;
+  const listPage = useListPage(spec.questions.length);
   // A question is a row: its text and tags, opened for its fields. Warnings head the opened row.
-  const items = spec.questions.map((question) => {
+  const items = listPage.slice(spec.questions).map((question) => {
     const warnings = [
       question.notes.includes("capability_without_basis")
         ? t(`${PREFIX}.questions.capabilityWithoutBasis`)
@@ -335,6 +338,7 @@ export function QuestionsView({
       ) : (
         <Empty text={t(`${PREFIX}.questions.none`)} />
       )}
+      {listPage.pagination ? <TablePaginationBar {...listPage.pagination} /> : null}
     </div>
   );
 }
@@ -384,11 +388,12 @@ export function ScenariosView({
 }) {
   const { t } = useTranslation();
   const asking = useContext(Asking);
+  const listPage = useListPage(spec.scenarios.length);
   return (
     <div className={styles.stack}>
       <AddItem kind="scenarios" />
       {spec.scenarios.length ? null : <Empty text={t(`${PREFIX}.scenarios.none`)} />}
-      {spec.scenarios.map((scenario) => {
+      {listPage.slice(spec.scenarios).map((scenario) => {
         const needIds = spec.logicNeeds
           .filter((need) => need.scenarioIds.includes(scenario.id))
           .map((need) => need.id);
@@ -431,6 +436,7 @@ export function ScenariosView({
           </section>
         );
       })}
+      {listPage.pagination ? <TablePaginationBar {...listPage.pagination} /> : null}
     </div>
   );
 }
@@ -439,6 +445,8 @@ export function ScenariosView({
 export function RulesView({ spec }: { spec: RequirementSpec }) {
   const { t } = useTranslation();
   const asking = useContext(Asking);
+  // What waits for the owner stays on every page; the rules are paged.
+  const listPage = useListPage(spec.rules.length);
   return (
     <div className={styles.stack}>
       {spec.conflicts.map((conflict) => (
@@ -449,7 +457,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
       ))}
       <AddItem kind="rules" />
       {spec.rules.length ? (
-        spec.rules.map((rule) => (
+        listPage.slice(spec.rules).map((rule) => (
           <section
             className={`${styles.card} ${asking?.flash.has(rule.id) ? ask.flash : ""}`}
             key={rule.id}
@@ -467,6 +475,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
       ) : (
         <Empty text={t(`${PREFIX}.rules.none`)} />
       )}
+      {listPage.pagination ? <TablePaginationBar {...listPage.pagination} /> : null}
     </div>
   );
 }
