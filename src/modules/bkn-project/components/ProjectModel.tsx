@@ -43,6 +43,7 @@ import {
 } from "@/modules/bkn-project/components/draft/DraftTables";
 import { RelationSuggestionsEntry } from "@/modules/bkn-project/components/draft/RelationSuggestionsDrawer";
 import {
+  catalogNamesOf,
   missingCatalogs,
   relationsWithUnadoptedEnds,
 } from "@/modules/bkn-project/components/draft/evidence";
@@ -62,6 +63,7 @@ import type {
   DraftItemKind,
   DraftObjectType,
 } from "@/modules/bkn-project/types/draft";
+import { listText } from "@/modules/bkn-project/components/publish/messages";
 import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
@@ -399,7 +401,13 @@ export function ProjectModel({
   // still reads are fixed by drafting again, so the two notices offer different actions.
   const projectMissing = missing.filter((id) => project.catalogIds.includes(id));
   const draftMissing = missing.filter((id) => !project.catalogIds.includes(id));
-  const catalogLabels = (ids: string[]) => ids.map((id) => catalogNames[id] ?? id).join(", ");
+  // Catalogs by name; those without a known name, as gone ones are, are said without one.
+  const catalogNotice = (key: string, ids: string[]) => {
+    const names = catalogNamesOf(ids, catalogNames);
+    return names
+      ? t(key, { names: listText(t, names) })
+      : t(`${key}Unnamed`, { count: ids.length });
+  };
   const unadoptedEnds = useMemo(
     () => (draft?.status === "ready" ? relationsWithUnadoptedEnds(draft) : []),
     [draft],
@@ -510,18 +518,14 @@ export function ProjectModel({
         <Alert
           action={catalogsLink("bknProject.model.catalogs.change")}
           description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
-          message={t("bknProject.model.notice.missingCatalogs", {
-            names: catalogLabels(projectMissing),
-          })}
+          message={catalogNotice("bknProject.model.notice.missingCatalogs", projectMissing)}
           showIcon
           type="error"
         />
       ) : null}
       {draftMissing.length ? (
         <Alert
-          message={t("bknProject.model.notice.draftReadsMissing", {
-            names: catalogLabels(draftMissing),
-          })}
+          message={catalogNotice("bknProject.model.notice.draftReadsMissing", draftMissing)}
           showIcon
           type="warning"
         />

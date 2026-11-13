@@ -282,6 +282,7 @@ export const bknProjectZhCN = {
           "这些表由网络里已有的对象类在用，索引由知识网络维护，这里只展示状态，不需要在项目里构建。",
         summary: "{{ready}} / {{total}} 张表的索引可用",
         notIndexed: "知识网络里还没有建索引",
+        tableUnnamed: "表名暂时读不到",
         open: "到知识网络中查看",
       },
       background: {
@@ -571,9 +572,21 @@ export const bknProjectZhCN = {
       notice: {
         draftReadsMissing:
           "草稿里有些表来自已不存在或你无权查看的数据目录 {{names}}，重新起草后会改读项目当前的数据目录。",
+        draftReadsMissingUnnamed:
+          "草稿里有些表来自已不存在或你无权查看的数据目录，重新起草后会改读项目当前的数据目录。",
+        draftReadsMissingUnnamed_one:
+          "草稿里有些表来自已不存在或你无权查看的数据目录，重新起草后会改读项目当前的数据目录。",
+        draftReadsMissingUnnamed_other:
+          "草稿里有些表来自已不存在或你无权查看的数据目录，重新起草后会改读项目当前的数据目录。",
         askOwner: "请联系项目负责人更换数据目录。",
         missingCatalogs:
           "数据目录 {{names}} 已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",
+        missingCatalogsUnnamed:
+          "项目有数据目录已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",
+        missingCatalogsUnnamed_one:
+          "项目有数据目录已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",
+        missingCatalogsUnnamed_other:
+          "项目有数据目录已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",
         unadoptedEnds:
           "有 {{count}} 个关系类已采纳，但它连接的对象类没有采纳。请取消采纳这些关系类，或先采纳两端的对象类。",
         unadoptedEnds_one:
@@ -1208,6 +1221,11 @@ export const bknProjectZhCN = {
       started_other: "已开始理解 {{count}} 张表",
       nothingToDo: "没有需要理解的表。如需重新理解，请勾选“重新理解所有表”。",
       skipped: "你在数据目录 {{names}} 没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
+      skippedUnnamed: "你在项目的数据目录没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
+      skippedUnnamed_one:
+        "你在项目的数据目录没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
+      skippedUnnamed_other:
+        "你在项目的数据目录没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
       failed: "没能开始语义理解，请稍后重试",
       progress: {
         summary: "语义理解：已完成 {{done}} / {{total}} 张表",
@@ -1222,6 +1240,7 @@ export const bknProjectZhCN = {
         show: "查看各表",
         hide: "收起",
         invisible: "无法查看数据目录 {{name}} 的理解进度：你没有该目录运行任务的权限。",
+        invisibleUnnamed: "无法查看项目一个数据目录的理解进度：你没有该目录运行任务的权限。",
         notApplied: "已完成，结果没有写入",
         loadFailed: "语义理解进度暂时读取不到",
         redraft: "语义理解更新了表和字段的名称，重新起草后草稿会使用新名称。",

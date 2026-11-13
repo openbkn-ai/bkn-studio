@@ -108,6 +108,25 @@ describe("ExistingIndexes", () => {
     expect(screen.getByText("bknProject.release.index.state.ready")).toBeInTheDocument();
   });
 
+  it("never lists a table by its id when it has no name", async () => {
+    const unnamed = item("parts", "unreadable");
+    unnamed.table = { catalogId: "", name: "", resourceId: "t_parts" };
+    const byId = item("lines", "unreadable");
+    byId.table = { catalogId: "", name: "t_lines", resourceId: "t_lines" };
+    getExistingIndexMock.mockResolvedValue({
+      counts: { unreadable: 2 },
+      objectTypes: [unnamed, byId],
+      tasksVisible: true,
+    });
+
+    render(<ExistingIndexes networkId="kn1" projectId="p1" />);
+
+    expect(await screen.findByText("Name parts")).toBeInTheDocument();
+    expect(screen.queryByText("t_parts")).not.toBeInTheDocument();
+    expect(screen.queryByText("t_lines")).not.toBeInTheDocument();
+    expect(screen.getAllByText("bknProject.networkExisting.index.tableUnnamed")).toHaveLength(2);
+  });
+
   it("shows nothing on a new network", async () => {
     getExistingIndexMock.mockResolvedValue({ counts: {}, objectTypes: [], tasksVisible: true });
 

@@ -18,6 +18,7 @@ import {
   UNDERSTANDING_STATUS_TONE,
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
+import { catalogNamesOf } from "@/modules/bkn-project/components/draft/evidence";
 import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
   getProjectStatus,
@@ -156,28 +157,29 @@ export function UnderstandingBar({
     return () => window.clearTimeout(timer);
   }, [running, load, reads]);
 
-  const catalogName = (id: string) => catalogNames[id] ?? id;
-
   const submit = async () => {
     setSubmitting(true);
     try {
       const submitted = await understandCatalogs(projectId, { all, applyMode });
       setAsking(false);
       const tables = submitted.reduce((sum, catalog) => sum + catalog.tables, 0);
-      const skipped = submitted.filter((catalog) => !catalog.permitted);
+      // A catalog that is gone is skipped too, but the page already says it is gone.
+      const skipped = submitted.filter((catalog) => !catalog.permitted && !catalog.missing);
       if (tables) {
         message.success(t("bknProject.understand.started", { count: tables }));
-      } else if (!skipped.length) {
+      } else if (!skipped.length && !submitted.some((catalog) => catalog.missing)) {
+        // Catalogs that are gone have nothing to understand; the page already says they are gone.
         message.info(t("bknProject.understand.nothingToDo"));
       }
       if (skipped.length) {
+        const names = catalogNamesOf(
+          skipped.map((catalog) => catalog.catalogId),
+          catalogNames,
+        );
         message.warning(
-          t("bknProject.understand.skipped", {
-            names: listText(
-              t,
-              skipped.map((catalog) => catalogName(catalog.catalogId)),
-            ),
-          }),
+          names
+            ? t("bknProject.understand.skipped", { names: listText(t, names) })
+            : t("bknProject.understand.skippedUnnamed", { count: skipped.length }),
         );
       }
       await load();
@@ -215,7 +217,8 @@ export function UnderstandingBar({
       : counts.unfinished
         ? t("bknProject.understand.progress.unfinished", { count: counts.unfinished })
         : t("bknProject.understand.progress.done");
-  const invisible = catalogs.filter((catalog) => !catalog.visible);
+  // A catalog that is gone has no progress to show, and the page already says it is gone.
+  const invisible = catalogs.filter((catalog) => !catalog.visible && !catalog.missing);
   const canRun = ownerIsCaller && !archived;
 
   return (
@@ -271,7 +274,11 @@ export function UnderstandingBar({
       </div>
       {invisible.map((catalog) => (
         <div className={styles.summary} key={catalog.catalogId}>
-          {t("bknProject.understand.progress.invisible", { name: catalogName(catalog.catalogId) })}
+          {catalogNames[catalog.catalogId]
+            ? t("bknProject.understand.progress.invisible", {
+                name: catalogNames[catalog.catalogId],
+              })
+            : t("bknProject.understand.progress.invisibleUnnamed")}
         </div>
       ))}
       {expanded ? (

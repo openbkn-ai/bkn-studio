@@ -183,6 +183,15 @@ export function missingCatalogs(
   return [...read].filter((id) => id && !visibleCatalogIds.has(id));
 }
 
+/**
+ * The names of the catalogs, or null when one has no known name: a catalog that is gone, or that
+ * the caller cannot see, is not in the catalog list, and its id means nothing to a person.
+ */
+export function catalogNamesOf(ids: string[], names: Record<string, string>): string[] | null {
+  const named = ids.map((id) => names[id]).filter(Boolean);
+  return named.length === ids.length ? named : null;
+}
+
 /** Why a field was left out or a table could not be read; unknown reasons read as other. */
 export function excludedReasonText(t: TFunction, reason: string | undefined, keyword?: string) {
   if (!reason) {

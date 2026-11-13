@@ -437,9 +437,10 @@ describe("ProjectModel", () => {
   it("reports catalogs that are gone, and nothing when the catalogs cannot be listed", async () => {
     getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
     const view = renderModel({ catalogIds: ["old-catalog"] });
-    expect(await screen.findByText(/bknProject.model.notice.missingCatalogs/)).toHaveTextContent(
-      "old-catalog",
-    );
+    // A catalog that is gone has no name to show, and its id means nothing to a person.
+    const notice = await screen.findByText(/bknProject.model.notice.missingCatalogsUnnamed/);
+    expect(notice).toHaveTextContent('"count":1');
+    expect(notice).not.toHaveTextContent("old-catalog");
     view.unmount();
 
     listCatalogsMock.mockRejectedValue(new Error("down"));
@@ -804,9 +805,9 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
     renderModel({ catalogIds: ["cat-001", "old-catalog"] });
 
-    expect(await screen.findByText(/bknProject.model.notice.missingCatalogs/)).toHaveTextContent(
-      "old-catalog",
-    );
+    expect(
+      await screen.findByText(/bknProject.model.notice.missingCatalogsUnnamed/),
+    ).not.toHaveTextContent("old-catalog");
     fireEvent.click(screen.getByRole("button", { name: "bknProject.model.catalogs.change" }));
     expect(onGoToResources).toHaveBeenCalled();
     // Catalogs are changed there, not here.
@@ -890,9 +891,9 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
     renderModel({ catalogIds: ["cat-001"] });
 
-    expect(await screen.findByText(/bknProject.model.notice.draftReadsMissing/)).toHaveTextContent(
-      "old-catalog",
-    );
+    expect(
+      await screen.findByText(/bknProject.model.notice.draftReadsMissingUnnamed/),
+    ).not.toHaveTextContent("old-catalog");
     expect(screen.queryByText(/bknProject.model.notice.missingCatalogs/)).not.toBeInTheDocument();
     // Changing catalogs again would not help, so the notice does not offer it.
     expect(

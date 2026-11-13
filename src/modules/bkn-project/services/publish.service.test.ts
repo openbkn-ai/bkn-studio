@@ -553,7 +553,12 @@ describe("publish.service", () => {
   it("asks for semantic understanding and reads its progress", async () => {
     const { getUnderstanding, understandCatalogs } = await importService();
     mockPost.mockResolvedValue({
-      data: { catalogs: [{ catalog_id: "c", permitted: false, tables: 0 }] },
+      data: {
+        catalogs: [
+          { catalog_id: "c", permitted: false, tables: 0 },
+          { catalog_id: "gone", missing: true, permitted: false, tables: 0 },
+        ],
+      },
     });
     mockGet.mockResolvedValue({
       data: {
@@ -565,12 +570,14 @@ describe("publish.service", () => {
             visible: true,
           },
           { catalog_id: "d", counts: {}, visible: false },
+          { catalog_id: "gone", counts: {}, missing: true, visible: false },
         ],
       },
     });
 
     expect(await understandCatalogs("p/1", { all: true, applyMode: "force" })).toEqual([
-      { catalogId: "c", permitted: false, tables: 0 },
+      { catalogId: "c", missing: false, permitted: false, tables: 0 },
+      { catalogId: "gone", missing: true, permitted: false, tables: 0 },
     ]);
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/catalogs:understand`,
@@ -581,6 +588,7 @@ describe("publish.service", () => {
       {
         catalogId: "c",
         counts: { completed: 1 },
+        missing: false,
         tables: [
           {
             applied: false,
@@ -592,7 +600,8 @@ describe("publish.service", () => {
         ],
         visible: true,
       },
-      { catalogId: "d", counts: {}, tables: [], visible: false },
+      { catalogId: "d", counts: {}, missing: false, tables: [], visible: false },
+      { catalogId: "gone", counts: {}, missing: true, tables: [], visible: false },
     ]);
     expect(mockGet).toHaveBeenCalledWith(`${prefix}/catalogs/understanding`, {
       skipErrorToast: true,

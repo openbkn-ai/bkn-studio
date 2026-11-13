@@ -131,8 +131,11 @@ export function DraftObjectDrawer({
                 objectType.document.reason
               ) : (
                 <>
-                  {objectType.table.name} ·{" "}
-                  {catalogNames[objectType.table.catalogId] ?? objectType.table.catalogId}
+                  {objectType.table.name}
+                  {/* A catalog without a known name, as one that is gone, is not named by its id. */}
+                  {catalogNames[objectType.table.catalogId]
+                    ? ` · ${catalogNames[objectType.table.catalogId]}`
+                    : null}
                 </>
               )}
             </Descriptions.Item>

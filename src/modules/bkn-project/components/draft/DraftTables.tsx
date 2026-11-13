@@ -282,7 +282,8 @@ function TableSource({
 }) {
   // The table by its name; which catalog it is in is a tooltip, not part of the cell.
   return (
-    <Tooltip title={catalogNames[table.catalogId] ?? table.catalogId}>
+    // A catalog without a known name, as one that is gone, gets no tooltip rather than its id.
+    <Tooltip title={catalogNames[table.catalogId]}>
       <span>{table.name}</span>
     </Tooltip>
   );

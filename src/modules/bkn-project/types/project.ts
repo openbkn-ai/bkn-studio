@@ -75,3 +75,10 @@ export type ProjectRelease = {
   networkId: string;
   version: string;
 };
+
+/**
+ * Object types BKN-project writes on a network for agents, beside what people model, such as the
+ * term library's domain term object type: published, but no business content, so what a network
+ * has is counted without them. bkn-project leaves them out of its own lists the same way.
+ */
+export const SYSTEM_OBJECT_TYPE_IDS: ReadonlySet<string> = new Set(["bkn_domain_terms"]);
