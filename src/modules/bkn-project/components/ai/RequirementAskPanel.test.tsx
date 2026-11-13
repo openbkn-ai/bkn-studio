@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   AskConversation,
+  AskPage,
   AskRef,
   AskTurn,
   Proposal,
@@ -116,7 +117,7 @@ const props = {
   onRemoveRef: vi.fn(),
   onSent: vi.fn(),
   onStale: vi.fn(),
-  page: "kinetic" as const,
+  page: "kinetic" as AskPage,
   projectId: "p1",
   refs: [] as AskRef[],
   subtitle: "Kinetic modeling",
