@@ -416,7 +416,13 @@ export const bknProjectZhCN = {
         title: "项目的数据目录",
         label: "数据目录",
         hint: "AI 会读取这些数据目录里的表来起草本体。更换后，当前草稿保持不变，重新起草时才会读取新的数据目录。",
-        removed: "数据目录 {{names}} 已不存在或你无权查看，保存后会从项目中移去。",
+        networkLabel: "网络在用",
+        networkHint: "知识网络里的对象类正在用这些数据目录，项目随网络一起使用，不能在这里移去。",
+        networkUnnamed: "你无权查看的数据目录",
+        addedLabel: "项目另外选用的数据目录",
+        removed: "有 {{count}} 个数据目录已不存在或你无权查看，保存后会从项目中移去。",
+        removed_one: "有 {{count}} 个数据目录已不存在或你无权查看，保存后会从项目中移去。",
+        removed_other: "有 {{count}} 个数据目录已不存在或你无权查看，保存后会从项目中移去。",
         loadFailed: "数据目录列表加载失败，暂时不能更换数据目录。",
         saved: "数据目录已更换，起草时会读取新的数据目录。",
       },
@@ -915,7 +921,8 @@ export const bknProjectZhCN = {
         network: {
           label: "知识网络",
           noun: "知识网络",
-          ok: "可用",
+          connected: "已连接",
+          open: "打开知识网络",
           missing: "已被删除",
           unreachable: "暂时无法确认",
           not_bound: "还没有知识网络",
@@ -938,11 +945,11 @@ export const bknProjectZhCN = {
         },
         networkMissing: "项目的知识网络已被删除，无法再确认或发布。可以归档此项目。",
         catalogsMissing:
-          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+          "项目选用的 {{count}} 个数据目录已不存在，用到它们的条目也查不到数据。请更换数据目录，再重新起草。",
         catalogsMissing_one:
-          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+          "项目选用的 {{count}} 个数据目录已不存在，用到它们的条目也查不到数据。请更换数据目录，再重新起草。",
         catalogsMissing_other:
-          "项目选用的 {{count}} 个数据目录已被删除。请重新选择数据目录，再重新起草。",
+          "项目选用的 {{count}} 个数据目录已不存在，用到它们的条目也查不到数据。请更换数据目录，再重新起草。",
         tablesMissing:
           "{{count}} 个条目所用的数据表已被删除或重建，现在查不到数据。重新起草可按现有的表重新绑定（会放弃已做的决定）。",
         tablesMissing_one:
@@ -1331,7 +1338,6 @@ export const bknProjectZhCN = {
         gone: "有 {{count}} 个已选的数据目录已不存在，请更改数据目录。",
         gone_one: "有 {{count}} 个已选的数据目录已不存在，请更改数据目录。",
         gone_other: "有 {{count}} 个已选的数据目录已不存在，请更改数据目录。",
-        unnamed: "未知目录",
         nameUnread: "—",
         goToModel: "去概念建模",
       },

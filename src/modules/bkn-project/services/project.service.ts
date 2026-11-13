@@ -34,6 +34,7 @@ type BackendProject = {
   id: string;
   kn_id: string;
   name: string;
+  network_catalog_ids?: string[] | null;
   other_projects: number;
   owner: { id: string; type: string };
   owner_name?: string;
@@ -55,6 +56,7 @@ export function mapProject(item: BackendProject): Project {
     id: item.id,
     knId: item.kn_id,
     name: item.name,
+    networkCatalogIds: item.network_catalog_ids ?? [],
     otherProjects: item.other_projects,
     owner: item.owner,
     ownerName: item.owner_name,

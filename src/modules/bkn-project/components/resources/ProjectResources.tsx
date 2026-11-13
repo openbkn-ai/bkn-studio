@@ -22,7 +22,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
-import { ExistingDot } from "@/modules/bkn-project/components/existing/ExistingMark";
+import { ExistingDot, ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import { UNDERSTANDING_STATUS_TONE } from "@/modules/bkn-project/components/publish/messages";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
@@ -177,11 +177,10 @@ export function ProjectResources({
     range?: { end: number; start: number };
   } | null>(null);
 
-  // "Unknown" only once the list is read and lacks it: not while it is read, or could not be.
-  const catalogName = (id: string) =>
-    catalogs
-      ? (catalogs.get(id) ?? t(`${PREFIX}.catalogs.unnamed`))
-      : t(`${PREFIX}.catalogs.nameUnread`);
+  // A catalog the list does not name, read or not, shows no name rather than a made-up one.
+  const catalogName = (id: string) => catalogs?.get(id) ?? t(`${PREFIX}.catalogs.nameUnread`);
+  // The catalogs the existing network's object types read: the network's, marked with its dot.
+  const networkCatalogs = project.networkCatalogIds ?? [];
   // The object types of the draft by the table they read, adopted or not.
   const usedBy = useMemo(() => {
     const byTable = new Map<string, string[]>();
@@ -217,7 +216,14 @@ export function ProjectResources({
     { dataIndex: "name", key: "name", title: t(`${PREFIX}.tables.name`) },
     {
       key: "catalog",
-      render: (_value, record) => catalogName(record.catalogId),
+      render: (_value, record) =>
+        networkCatalogs.includes(record.catalogId) ? (
+          <span title={t("bknProject.model.catalogs.networkLabel")}>
+            <ExistingLine>{catalogName(record.catalogId)}</ExistingLine>
+          </span>
+        ) : (
+          catalogName(record.catalogId)
+        ),
       title: t(`${PREFIX}.tables.catalog`),
     },
     {
@@ -244,7 +250,10 @@ export function ProjectResources({
     },
   ];
 
-  const goneCatalogs = catalogs ? project.catalogIds.filter((id) => !catalogs.has(id)).length : 0;
+  // Only a catalog the owner added can be gone: the network's are read from what it uses now.
+  const goneCatalogs = catalogs
+    ? project.catalogIds.filter((id) => !networkCatalogs.includes(id) && !catalogs.has(id)).length
+    : 0;
   const catalogsWait = !project.catalogIds.length || goneCatalogs > 0;
   const kbMounted = kbMode === "enabled" && Boolean(KnowledgeBaseResources);
   const kbWaits = kbMounted && Boolean(kbStatus?.needsAttention);
@@ -370,14 +379,19 @@ export function ProjectResources({
                   ) : null}
                   {project.catalogIds.length ? (
                     <>
-                      {/* Without a name to tell them apart, catalogs say so once. */}
+                      {/* Without a name to tell them apart, catalogs say so once. A catalog the
+                          list lacks once read is gone, which the warning above says already. */}
                       {[
                         ...new Set(
-                          invisible.map((catalog) =>
-                            t("bknProject.understand.progress.invisible", {
-                              name: catalogName(catalog.catalogId),
-                            }),
-                          ),
+                          invisible
+                            .filter((catalog) => !catalogs || catalogs.has(catalog.catalogId))
+                            .map((catalog) =>
+                              catalogs
+                                ? t("bknProject.understand.progress.invisible", {
+                                    name: catalogName(catalog.catalogId),
+                                  })
+                                : t("bknProject.understand.progress.invisibleUnnamed"),
+                            ),
                         ),
                       ].map((text) => (
                         <p className={styles.muted} key={text}>

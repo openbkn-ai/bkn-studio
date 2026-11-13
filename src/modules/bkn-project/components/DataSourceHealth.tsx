@@ -9,11 +9,13 @@ import { DeploymentUnitOutlined, FolderOpenOutlined, TableOutlined } from "@ant-
 import { Alert } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
+import { networkWorkspacePath } from "@/modules/bkn-project/types/workspace";
 import { setProjectArchived } from "@/modules/bkn-project/services/project.service";
 import { getProjectStatus } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
@@ -47,12 +49,13 @@ const ICONS = {
 const SOURCES = ["network", "catalogs", "tables"] as const;
 
 /**
- * Whether what the project reads still exists: its knowledge network, the data catalogs it
- * chose and the tables behind the items it adopted. A source that is gone says what it holds
- * back and what the owner can do about it.
+ * What the project reads: the knowledge network it is connected to, and whether the data catalogs
+ * and the tables behind the items it adopted still exist. A network has no health of its own: it is
+ * connected, or deleted. What is gone is said once, with its cause and what the owner can do.
  */
 export function DataSourceHealth({
   draftVersion,
+  networkName,
   onGoToModel,
   onGoToResources,
   onProjectChange,
@@ -63,6 +66,8 @@ export function DataSourceHealth({
    * project binds are read again then, not only when the page opens.
    */
   draftVersion?: string;
+  /** The connected network's name, linked to it; empty while it is read. */
+  networkName?: string;
   onGoToModel: () => void;
   /** Opens the requirements and resources page, where the catalogs are chosen. */
   onGoToResources: () => void;
@@ -172,23 +177,35 @@ export function DataSourceHealth({
       <div className={styles.cardHead}>
         <span className={styles.cardTitle}>{t(`${PREFIX}.title`)}</span>
       </div>
-      {/* Three sources side by side: icon, name and state, then what it means in a line. */}
+      {/* Three sources side by side: icon, name and state, then what it means in a line. The
+          network is only connected, by name; only its deletion is marked, as the notice says. */}
       <div className={styles.sources}>
         {SOURCES.map((source) => {
           const state = sources[source].state;
+          const connected = source === "network" && state === "ok";
           return (
             <div
-              className={state === "missing" ? styles.sourceMissing : styles.source}
+              className={
+                source === "network" && state === "missing" ? styles.sourceMissing : styles.source
+              }
               key={source}
             >
               <div className={styles.sourceHead}>
                 <span className={styles.sourceIcon}>{ICONS[source]}</span>
                 <span className={styles.sourceName}>{t(`${PREFIX}.${source}.label`)}</span>
-                <LightStatusTag tone={TONE[state] ?? "neutral"}>
-                  {t(`${PREFIX}.state.${state}`)}
+                <LightStatusTag tone={connected ? "info" : (TONE[state] ?? "neutral")}>
+                  {t(connected ? `${PREFIX}.network.connected` : `${PREFIX}.state.${state}`)}
                 </LightStatusTag>
               </div>
-              <span className={styles.sourceNote}>{value(source, sources[source])}</span>
+              <span className={styles.sourceNote}>
+                {connected ? (
+                  <Link className={styles.headerLink} to={networkWorkspacePath(project.knId)}>
+                    {networkName || t(`${PREFIX}.network.open`)}
+                  </Link>
+                ) : (
+                  value(source, sources[source])
+                )}
+              </span>
             </div>
           );
         })}
@@ -208,25 +225,18 @@ export function DataSourceHealth({
             type="error"
           />
         ) : null}
-        {catalogs.state === "missing" ? (
+        {/* A gone catalog is the cause of the tables read from it going: one notice says both,
+            and choosing the catalogs again is the one thing to do. */}
+        {catalogs.state === "missing" || tables.state === "missing" ? (
           <Alert
             action={
-              setCatalogs?.allowed && !project.archived ? (
-                <AppButton onClick={onGoToResources} size="small">
-                  {t(`${PREFIX}.chooseCatalogs`)}
-                </AppButton>
-              ) : null
-            }
-            description={hint}
-            message={t(`${PREFIX}.catalogsMissing`, { count: catalogs.missing })}
-            showIcon
-            type="error"
-          />
-        ) : null}
-        {tables.state === "missing" ? (
-          <Alert
-            action={
-              canChange ? (
+              catalogs.state === "missing" ? (
+                setCatalogs?.allowed && !project.archived ? (
+                  <AppButton onClick={onGoToResources} size="small">
+                    {t(`${PREFIX}.chooseCatalogs`)}
+                  </AppButton>
+                ) : null
+              ) : canChange ? (
                 <AppButton onClick={onGoToModel} size="small">
                   {t(`${PREFIX}.redraft`)}
                 </AppButton>
@@ -234,7 +244,7 @@ export function DataSourceHealth({
             }
             description={
               <>
-                {tables.affected.length ? (
+                {tables.state === "missing" && tables.affected.length ? (
                   <ul className={styles.affected}>
                     {affected.visible.map((item) => (
                       <li key={`${item.kind}:${item.id}`}>
@@ -246,11 +256,15 @@ export function DataSourceHealth({
                     ))}
                   </ul>
                 ) : null}
-                {affected.toggle}
-                {catalogs.state === "missing" ? null : hint}
+                {tables.state === "missing" ? affected.toggle : null}
+                {hint}
               </>
             }
-            message={t(`${PREFIX}.tablesMissing`, { count: tables.missing })}
+            message={
+              catalogs.state === "missing"
+                ? t(`${PREFIX}.catalogsMissing`, { count: catalogs.missing })
+                : t(`${PREFIX}.tablesMissing`, { count: tables.missing })
+            }
             showIcon
             type="error"
           />

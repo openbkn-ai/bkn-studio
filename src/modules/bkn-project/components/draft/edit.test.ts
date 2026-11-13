@@ -148,7 +148,8 @@ describe("draft edits", () => {
     expect(model.actions.adoptItem).toContain("{{name}}");
     expect(model.regenerateConfirm.content_other).toContain("{{count}}");
     expect(model.regenerateConfirm.contentUncounted).toBeTruthy();
-    expect(model.catalogs.removed).toContain("{{names}}");
+    expect(model.catalogs.removed_other).toContain("{{count}}");
+    expect(model.catalogs.removed).toContain("{{count}}");
     expect(model.notice.askOwner).toBeTruthy();
     expect(model.identity.savedAdopt).toContain("{{name}}");
     expect(model.restore.confirm).toContain("{{keyword}}");
