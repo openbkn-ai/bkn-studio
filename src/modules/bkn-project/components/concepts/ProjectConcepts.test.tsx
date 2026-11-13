@@ -409,13 +409,30 @@ describe("ProjectConcepts", () => {
     ).toBeInTheDocument();
   });
 
-  it("says how many parts of the documents are still to extract", async () => {
-    withRun({ error: "partial", extracted: true, pendingParts: 2, status: "ready" });
+  it("says how many parts of the documents are still to extract, and why they failed", async () => {
+    withRun({ error: "agent_timeout", extracted: true, pendingParts: 2, status: "ready" });
     renderConcepts();
 
     expect(
       await screen.findByText(/bknProject\.concepts\.requirements\.partial/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("bknProject.requirements.conceptsRunError.agent_timeout"),
+    ).toBeInTheDocument();
+  });
+
+  it("says the documents changed rather than parts left, once they did", async () => {
+    withRun({
+      error: "agent_timeout",
+      extracted: true,
+      pendingParts: 2,
+      stale: true,
+      status: "ready",
+    });
+    renderConcepts();
+
+    expect(await screen.findByText("bknProject.concepts.requirements.stale")).toBeInTheDocument();
+    expect(screen.queryByText(/bknProject\.concepts\.requirements\.partial/)).toBeNull();
   });
 
   it("says when the requirement documents changed since their concepts were extracted", async () => {

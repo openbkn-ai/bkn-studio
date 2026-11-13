@@ -914,8 +914,12 @@ export function ProjectConcepts({
             showIcon
             type="warning"
           />
-        ) : conceptsRun?.status === "ready" && conceptsRun.pendingParts > 0 ? (
+        ) : conceptsRun?.status === "ready" &&
+          conceptsRun.pendingParts > 0 &&
+          !conceptsRun.stale ? (
+          // Documents changed since are all read again: then the stale notice below says so.
           <Alert
+            description={conceptsRunErrorText(t, conceptsRun.error)}
             message={t(`${PREFIX}.requirements.partial`, { count: conceptsRun.pendingParts })}
             showIcon
             type="warning"
