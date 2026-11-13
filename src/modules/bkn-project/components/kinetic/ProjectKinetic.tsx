@@ -787,7 +787,18 @@ export function ProjectKinetic({
             />
           </>
         ) : (
-          <p className={styles.muted}>{t(`${KINETIC}.none`)}</p>
+          // After an analysis that found nothing new, say so rather than that none ran.
+          <p className={styles.muted}>
+            {t(
+              `${KINETIC}.${
+                run?.status === "ready"
+                  ? hasNetworkItems
+                    ? "analyzedCovered"
+                    : "analyzedNone"
+                  : "none"
+              }`,
+            )}
+          </p>
         )}
         {openNeed ? (
           <KineticNeedPanel

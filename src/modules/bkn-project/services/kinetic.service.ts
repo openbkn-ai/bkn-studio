@@ -70,6 +70,8 @@ type BackendLogicNeeds = {
         box_id?: string;
         description?: string;
         id: string;
+        /** The kind of need it implements; an older bkn-project leaves it to the type. */
+        kind?: string;
         name: string;
         need_ids?: string[] | null;
         owner_object_type_id?: string;
@@ -132,6 +134,7 @@ export const mapLogicNeeds = (data: BackendLogicNeeds): LogicNeeds => ({
     boxId: item.box_id ?? "",
     description: item.description ?? "",
     id: item.id,
+    kind: item.kind || (item.type === "object_metric" ? "metric" : item.type),
     name: item.name,
     needIds: item.need_ids ?? [],
     ownerObjectTypeId: item.owner_object_type_id ?? "",

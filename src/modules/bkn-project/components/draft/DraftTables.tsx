@@ -20,6 +20,7 @@ import {
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import {
   joinCountPhrase,
   keyCountPhrase,
@@ -311,7 +312,9 @@ export function DraftObjectsTable({
             {record.existing ? <ExistingMark /> : null}
             {value}
           </strong>
-          {record.description ? <span className={styles.muted}>{record.description}</span> : null}
+          {record.description ? (
+            <ClampedText className={styles.muted} text={record.description} />
+          ) : null}
         </button>
       ),
     },

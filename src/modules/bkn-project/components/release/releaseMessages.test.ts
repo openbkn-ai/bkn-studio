@@ -8,7 +8,28 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import { checkReasonText } from "@/modules/bkn-project/components/release/releaseMessages";
+import {
+  checkReasonText,
+  releaseNotes,
+} from "@/modules/bkn-project/components/release/releaseMessages";
+
+describe("release notes", () => {
+  it("words the note bkn-project writes when it turns on versioning, in either language", async () => {
+    await i18n.changeLanguage("zh-CN");
+    expect(releaseNotes(i18n.t, "Turned on by BKN-project for its projects").text).toBe(
+      "在这个知识网络上新建项目时开启了版本管理",
+    );
+    await i18n.changeLanguage("en-US");
+    expect(releaseNotes(i18n.t, "Turned on by BKN-project for its projects").text).toBe(
+      "Versioning turned on when a project was created on this knowledge network",
+    );
+    // A person's note stays as written, even one that quotes it.
+    expect(releaseNotes(i18n.t, "Turned on by BKN-project for its projects, then fixed").text).toBe(
+      "Turned on by BKN-project for its projects, then fixed",
+    );
+    await i18n.changeLanguage("zh-CN");
+  });
+});
 
 describe("knowledge-base review items in the release review", () => {
   beforeAll(async () => {

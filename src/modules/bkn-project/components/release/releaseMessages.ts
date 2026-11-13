@@ -261,8 +261,18 @@ export const capabilityReasonText = (t: TFunction, reason: string) =>
   t(`${PREFIX}.capabilityReason.${CAPABILITY_REASONS.has(reason) ? reason : "other"}`);
 
 /**
+ * Notes bkn-project writes itself, in English and the same each time, worded here by key: they
+ * are stored on the network's versions as written, older ones included.
+ */
+const SYSTEM_NOTES: Record<string, string> = {
+  // Turning on versions for a network a project is created on.
+  "Turned on by BKN-project for its projects": "versioningTurnedOn",
+};
+
+/**
  * A release's notes as people wrote them, and what was accepted to publish it: bkn-project
- * appends that as a line `Accepted: ` of codes, which the page words.
+ * appends that as a line `Accepted: ` of codes, which the page words. A note bkn-project wrote
+ * itself is worded in the page's language.
  */
 export function releaseNotes(t: TFunction, notes: string): { accepted: string; text: string } {
   const lines = notes.split("\n");
@@ -276,12 +286,14 @@ export function releaseNotes(t: TFunction, notes: string): { accepted: string; t
         .filter(Boolean)
         .map((code) => acceptedText(t, code))
     : [];
+  const text = lines
+    .filter((line) => line !== acceptedLine)
+    .join("\n")
+    .trim();
+  const system = SYSTEM_NOTES[text];
   return {
     accepted: accepted.length ? listOf(t, accepted) : "",
-    text: lines
-      .filter((line) => line !== acceptedLine)
-      .join("\n")
-      .trim(),
+    text: system ? t(`bknProject.release.systemNotes.${system}`) : text,
   };
 }
 

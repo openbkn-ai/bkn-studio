@@ -46,6 +46,8 @@ export type LogicNeedView = RequirementLogicNeed & {
  */
 export type LogicNetworkItem = LogicNeedTarget & {
   description: string;
+  /** The kind of need it implements: `api` for a function bound from an OpenAPI description. */
+  kind: string;
   name: string;
   needIds: string[];
   ownerObjectTypeId: string;

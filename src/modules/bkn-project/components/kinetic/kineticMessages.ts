@@ -73,12 +73,20 @@ const STATE_TONES: Record<NeedState, LightStatusTone> = {
 export const needStateTone = (state: NeedState) => STATE_TONES[state];
 
 /** The kinds the network's items are counted by, in the order the page names them. */
-const COUNTED = ["action_type", "function", "skill", "object_metric"] as const;
+const COUNTED = ["action_type", "function", "api", "skill", "object_metric"] as const;
+
+/** What an item counts as: an API is a function bound from an OpenAPI description. */
+const countedAs = (item: { kind?: string; type: string }) =>
+  item.kind === "api" ? "api" : item.type;
 
 /** "Already in the network: 7 action types, 4 functions; 3 new needs", kinds it has none of left out. */
-export function networkSummary(t: TFunction, items: { type: string }[], newNeeds: number) {
+export function networkSummary(
+  t: TFunction,
+  items: { kind?: string; type: string }[],
+  newNeeds: number,
+) {
   const counts = COUNTED.map((type) => ({
-    count: items.filter((item) => item.type === type).length,
+    count: items.filter((item) => countedAs(item) === type).length,
     type,
   }))
     .filter(({ count }) => count > 0)

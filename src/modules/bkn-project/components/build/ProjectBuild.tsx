@@ -56,7 +56,7 @@ export function ProjectBuild({
               <p className={styles.muted}>{t(`${PREFIX}.structured.description`)}</p>
               <IndexReadiness canRun={canRun} projectId={project.id} />
               {/* What the network already indexes: shown, not built, here. */}
-              <ExistingIndexes projectId={project.id} />
+              <ExistingIndexes networkId={project.knId} projectId={project.id} />
             </div>
           ),
         },

@@ -319,6 +319,7 @@ describe("ProjectKinetic", () => {
           boxId: "",
           description: "把订单改到新的承诺日期",
           id: "reschedule",
+          kind: "action_type",
           name: "订单改期",
           needIds: ["n3"],
           ownerObjectTypeId: "orders",
@@ -329,6 +330,7 @@ describe("ProjectKinetic", () => {
           boxId: "",
           description: "",
           id: "hold",
+          kind: "action_type",
           name: "暂停供货",
           needIds: [],
           ownerObjectTypeId: "suppliers",
@@ -339,7 +341,19 @@ describe("ProjectKinetic", () => {
           boxId: "box",
           description: "",
           id: "f9",
+          kind: "function",
           name: "算交期",
+          needIds: [],
+          ownerObjectTypeId: "",
+          ownerObjectTypeName: "",
+          type: "function",
+        },
+        {
+          boxId: "box2",
+          description: "",
+          id: "f10",
+          kind: "api",
+          name: "查汇率",
           needIds: [],
           ownerObjectTypeId: "",
           ownerObjectTypeName: "",
@@ -349,6 +363,7 @@ describe("ProjectKinetic", () => {
           boxId: "",
           description: "",
           id: "s9",
+          kind: "skill",
           name: "补货建议",
           needIds: [],
           ownerObjectTypeId: "",
@@ -361,7 +376,7 @@ describe("ProjectKinetic", () => {
     renderPage();
 
     expect(
-      await screen.findByText("网络已有 2 个行动类、1 个函数、1 个 Skill；新增需求 6 个"),
+      await screen.findByText("网络已有 2 个行动类、1 个函数、1 个 API、1 个 Skill；新增需求 6 个"),
     ).toBeInTheDocument();
     const section = within(screen.getByRole("region", { name: "网络已有" }));
     expect(
@@ -398,6 +413,7 @@ describe("ProjectKinetic", () => {
           boxId: "",
           description: "",
           id: "reschedule",
+          kind: "action_type",
           name: "订单改期",
           needIds: ["n3"],
           ownerObjectTypeId: "orders",
@@ -435,6 +451,7 @@ describe("ProjectKinetic", () => {
           boxId: "",
           description: "",
           id: "late",
+          kind: "metric",
           name: "延误率",
           needIds: ["n1"],
           ownerObjectTypeId: "orders",
@@ -687,6 +704,60 @@ describe("ProjectKinetic", () => {
       expect.objectContaining({ title: "全部重新分析？" }),
     );
     await waitFor(() => expect(mocks.analyzeKinetic).toHaveBeenCalledWith("p1", true));
+  });
+
+  it("says an analysis that found nothing new finished, on a new network and an existing one", async () => {
+    const done = requirements({
+      logicNeeds: [],
+      runs: {
+        concepts: null,
+        kinetic: {
+          byId: "me",
+          error: "",
+          retried: false,
+          startTime: 1,
+          stale: false,
+          status: "ready",
+          updateTime: 2,
+        },
+      },
+    });
+    mocks.getRequirements.mockResolvedValue(done);
+    mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), needs: [] });
+    const { unmount } = renderPage();
+
+    expect(
+      await screen.findByText(
+        "分析已完成：这个模型暂时不需要指标、函数或 Skill。需要时也可以手工添加。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/还没有动力需求/)).toBeNull();
+    unmount();
+
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      needs: [],
+      networkItems: [
+        {
+          boxId: "box",
+          description: "",
+          id: "f9",
+          kind: "function",
+          name: "算交期",
+          needIds: [],
+          ownerObjectTypeId: "",
+          ownerObjectTypeName: "",
+          type: "function",
+        },
+      ],
+    });
+    renderPage();
+    expect(
+      await screen.findByText(
+        "分析已完成：网络已有的内容已经覆盖这个模型，不需要新增动力需求。需要时也可以手工添加。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/还没有动力需求/)).toBeNull();
   });
 
   it("says while an analysis runs, and why one failed", async () => {

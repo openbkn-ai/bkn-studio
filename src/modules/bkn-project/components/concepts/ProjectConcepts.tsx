@@ -25,6 +25,7 @@ import {
   AskAiSidebar,
   type RevisionPreview,
 } from "@/modules/bkn-project/components/ai/AskAiSidebar";
+import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
@@ -610,7 +611,9 @@ export function ProjectConcepts({
               })}
             </span>
           ) : null}
-          {concept.description ? <span className={styles.muted}>{concept.description}</span> : null}
+          {concept.description ? (
+            <ClampedText className={styles.muted} text={concept.description} />
+          ) : null}
           {concept.merged.length ? (
             <span className={styles.muted}>
               {t(`${PREFIX}.merged`, {
@@ -685,15 +688,18 @@ export function ProjectConcepts({
           concept.verdict === "none" &&
           concept.suggested !== "none";
         return (
-          <span className={styles.muted}>
-            {concept.reason ||
+          <ClampedText
+            className={styles.muted}
+            text={
+              concept.reason ||
               (leftOut
                 ? t(`${PREFIX}.notAdopted`, {
                     because,
                     verdict: t(`${PREFIX}.verdict.${concept.suggested}`),
                   })
-                : because)}
-          </span>
+                : because)
+            }
+          />
         );
       },
       title: t(`${PREFIX}.columns.reason`),
