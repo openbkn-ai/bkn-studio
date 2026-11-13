@@ -9,7 +9,6 @@
 .card {
   composes: card from "../../knowledge-network/components/network/KnowledgeNetworkCard.module.css";
   --network-accent: var(--color-text-link);
-  min-height: 188px;
 }
 
 .archived {

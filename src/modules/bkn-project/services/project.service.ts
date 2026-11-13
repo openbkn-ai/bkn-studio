@@ -41,7 +41,6 @@ type BackendProject = {
 
 type BackendProjectList = {
   entries: BackendProject[] | null;
-  next_cursor: string | null;
   total: number;
 };
 
@@ -133,12 +132,12 @@ function mockList(query: ProjectListQuery): ProjectListResult {
     .filter((project) => !name || project.name.toLowerCase().includes(name))
     .sort((left, right) => right.create_time - left.create_time)
     .map((project) => mapProject({ ...project, other_projects: mockOtherProjects(project) }));
-  return { items: items.slice(0, query.limit), nextCursor: null, total: items.length };
+  return { items: items.slice(query.offset, query.offset + query.limit), total: items.length };
 }
 
 /* ------------------------------- API ------------------------------- */
 
-/** Lists the projects of the networks the caller can see, newest first, a cursor page at a time. */
+/** Lists the projects of the networks the caller can see, newest first, a numbered page at a time. */
 export async function listProjects(query: ProjectListQuery): Promise<ProjectListResult> {
   if (useMock) {
     return wait(mockList(query));
@@ -147,14 +146,13 @@ export async function listProjects(query: ProjectListQuery): Promise<ProjectList
     skipErrorToast: true,
     params: {
       archived: query.archived,
-      cursor: query.cursor || undefined,
       limit: query.limit,
       name: query.name.trim() || undefined,
+      offset: query.offset || undefined,
     },
   });
   return {
     items: (response.data.entries ?? []).map(mapProject),
-    nextCursor: response.data.next_cursor,
     total: response.data.total,
   };
 }

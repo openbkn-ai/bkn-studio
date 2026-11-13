@@ -47,16 +47,16 @@ describe("project.service", () => {
     vi.unstubAllEnvs();
   });
 
-  it("lists a cursor page with its filters and maps the entries", async () => {
+  it("lists a numbered page with its filters and maps the entries", async () => {
     mockGet.mockResolvedValue({
       data: { entries: [backendProject], next_cursor: "c2", total: 3 },
     });
     const { listProjects } = await importService();
 
-    const result = await listProjects({ archived: "all", cursor: "c1", limit: 20, name: " ord " });
+    const result = await listProjects({ archived: "all", limit: 20, name: " ord ", offset: 40 });
 
     expect(mockGet).toHaveBeenCalledWith("/bkn-project/v1/projects", {
-      params: { archived: "all", cursor: "c1", limit: 20, name: "ord" },
+      params: { archived: "all", limit: 20, name: "ord", offset: 40 },
       skipErrorToast: true,
     });
     expect(result).toEqual({
@@ -75,23 +75,22 @@ describe("project.service", () => {
           updateTime: 2,
         },
       ],
-      nextCursor: "c2",
       total: 3,
     });
   });
 
-  it("leaves out an empty name and cursor, and reads no entries as none", async () => {
+  it("leaves out an empty name and the first page's offset, and reads no entries as none", async () => {
     mockGet.mockResolvedValue({ data: { entries: null, next_cursor: null, total: 0 } });
     const { listProjects } = await importService();
 
-    const result = await listProjects({ archived: "false", limit: 20, name: "  " });
+    const result = await listProjects({ archived: "false", limit: 20, name: "  ", offset: 0 });
 
     const [, config] = mockGet.mock.calls[0] as [string, { params: Record<string, unknown> }];
     expect(config.params).toEqual({
       archived: "false",
-      cursor: undefined,
       limit: 20,
       name: undefined,
+      offset: undefined,
     });
     expect(result.items).toEqual([]);
   });

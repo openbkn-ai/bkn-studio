@@ -36,14 +36,14 @@ export type ProjectArchiveFilter = "all" | "false" | "true";
 
 export type ProjectListQuery = {
   archived: ProjectArchiveFilter;
-  cursor?: string;
   limit: number;
   name: string;
+  /** How many projects the page skips: (page - 1) * limit. */
+  offset: number;
 };
 
 export type ProjectListResult = {
   items: Project[];
-  nextCursor: string | null;
   total: number;
 };
 
