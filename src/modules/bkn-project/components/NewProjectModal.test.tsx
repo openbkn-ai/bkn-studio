@@ -69,6 +69,9 @@ function pickOption(placeholder: string, label: string) {
 describe("NewProjectModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    // The content language starts as the browser's.
+    vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
     startMock.mockResolvedValue({
       actionTypes: 0,
       catalogIds: [],
@@ -92,6 +95,33 @@ describe("NewProjectModal", () => {
         removeListener: vi.fn(),
       })),
     );
+  });
+
+  it("starts the content language as the browser's and sends the one chosen", async () => {
+    vi.spyOn(navigator, "language", "get").mockReturnValue("zh-TW");
+    createProjectMock.mockResolvedValue({ id: "p1" });
+    renderModal();
+
+    const chinese = screen.getByLabelText("bknProject.contentLanguage.options.zh");
+    const english = screen.getByLabelText("bknProject.contentLanguage.options.en");
+    expect(chinese).toBeChecked();
+    expect(english).not.toBeChecked();
+
+    fireEvent.click(english);
+    submitExisting();
+
+    await waitFor(() =>
+      expect(createProjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ namingLanguage: "en-US" }),
+      ),
+    );
+  });
+
+  it("defaults the content language to English for a browser in any other language", () => {
+    vi.spyOn(navigator, "language", "get").mockReturnValue("fr-FR");
+    renderModal();
+
+    expect(screen.getByLabelText("bknProject.contentLanguage.options.en")).toBeChecked();
   });
 
   it("requires a name and a network before creating", async () => {
@@ -122,10 +152,11 @@ describe("NewProjectModal", () => {
       catalogIds: ["c1"],
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 
-  it("starts from what an existing network has: says so and selects the catalogs it reads", async () => {
+  it("starts from what an existing network has: shows its catalogs as the network's, never stored", async () => {
     startMock.mockResolvedValue({
       actionTypes: 7,
       catalogIds: ["c1", "elsewhere"],
@@ -145,15 +176,22 @@ describe("NewProjectModal", () => {
 
     expect(await screen.findByText("bknProject.create.existingStart")).toBeInTheDocument();
     expect(startMock).toHaveBeenCalledWith("orders");
-    expect(screen.getByText("bknProject.create.catalogsFromNetwork")).toBeInTheDocument();
+    // The network's catalogs are shown with the blue dot, one the caller cannot see unnamed.
+    expect(screen.getByText("bknProject.model.catalogs.networkLabel")).toBeInTheDocument();
+    expect(screen.getAllByTestId("network-existing-line").map((line) => line.textContent)).toEqual([
+      "ERP",
+      "bknProject.model.catalogs.networkUnnamed",
+    ]);
+    expect(screen.getByText("bknProject.model.catalogs.addedLabel")).toBeInTheDocument();
     fireEvent.click(screen.getByText("bknProject.create.submit"));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
-    // Only catalogs the person can choose are selected; one not listed is left out.
+    // Only catalogs added on top are stored; the network's come with the network.
     expect(createProjectMock).toHaveBeenCalledWith({
-      catalogIds: ["c1"],
+      catalogIds: [],
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 
@@ -201,6 +239,7 @@ describe("NewProjectModal", () => {
     expect(createProjectMock).toHaveBeenCalledWith({
       catalogIds: [],
       name: "Orders",
+      namingLanguage: "en-US",
       newKnName: "Delivery",
     });
   });
@@ -242,6 +281,7 @@ describe("NewProjectModal", () => {
       enableVersioning: true,
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 

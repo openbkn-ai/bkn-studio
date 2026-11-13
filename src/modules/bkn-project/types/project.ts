@@ -17,6 +17,8 @@ export type ProjectAccount = {
  */
 export type Project = {
   archived: boolean;
+  /** The caller owns the project or administers the platform: may rename and delete it. */
+  canManage: boolean;
   baselineNetworkId: string;
   branch: string;
   catalogIds: string[];
@@ -24,6 +26,8 @@ export type Project = {
   id: string;
   knId: string;
   name: string;
+  /** The language of what the project generates, fixed when it is created. */
+  namingLanguage: ProjectNamingLanguage;
   /**
    * The catalogs among `catalogIds` that the network's object types read: the project takes them
    * from its existing network, which owns them. Empty on a network the project created.
@@ -37,10 +41,12 @@ export type Project = {
   updateTime: number;
 };
 
-export type ProjectArchiveFilter = "all" | "false" | "true";
+/** The languages a project's generated content may be in. */
+export const PROJECT_NAMING_LANGUAGES = ["zh-CN", "en-US"] as const;
+
+export type ProjectNamingLanguage = (typeof PROJECT_NAMING_LANGUAGES)[number];
 
 export type ProjectListQuery = {
-  archived: ProjectArchiveFilter;
   limit: number;
   name: string;
   /** How many projects the page skips: (page - 1) * limit. */
@@ -56,6 +62,37 @@ export type ProjectListResult = {
 export type CreateProjectInput = {
   catalogIds: string[];
   /** The owner confirmed that edits to the chosen network take effect only once published. */
+  enableVersioning?: boolean;
+  knId?: string;
+  name: string;
+  namingLanguage: ProjectNamingLanguage;
+  newKnName?: string;
+};
+
+/** bkn-project refuses larger project packages. */
+export const MAX_PROJECT_PACKAGE_BYTES = 50 * 1024 * 1024;
+
+/** What a project package holds, as read before importing it. */
+export type ProjectPackagePreview = {
+  catalogs: ProjectCatalog[];
+  contents: {
+    confirmedFiles: number;
+    documents: number;
+    draft: boolean;
+    /** Further parts the package brings, such as "terms" or "knowledge_base". */
+    editions: string[];
+    requirement: boolean;
+  };
+  formatVersion: number;
+  kn: ProjectNetwork;
+  name: string;
+  namingLanguage: ProjectNamingLanguage;
+};
+
+/** How a package becomes a project here. Exactly one of `knId` and `newKnName` is set. */
+export type ImportProjectInput = {
+  /** Each package catalog id to the id of a catalog of this environment. */
+  catalogMapping: Record<string, string>;
   enableVersioning?: boolean;
   knId?: string;
   name: string;

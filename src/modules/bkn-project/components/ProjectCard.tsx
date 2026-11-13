@@ -44,12 +44,13 @@ const STAGE_TONES: Record<ProjectStage, LightStatusTone> = {
 const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type ProjectCardProps = {
-  /** The caller owns the project and may archive or restore it. */
+  /** The caller owns the project. */
   isOwner: boolean;
   networkName?: string;
-  onArchive: (project: Project) => void;
+  onDelete: (project: Project) => void;
+  onEdit: (project: Project) => void;
+  onExport: (project: Project) => void;
   onOpen: (project: Project) => void;
-  onUnarchive: (project: Project) => void;
   project: Project;
 };
 
@@ -77,9 +78,10 @@ function releaseView(t: TFunction, status: ProjectStatus) {
 export function ProjectCard({
   isOwner,
   networkName,
-  onArchive,
+  onDelete,
+  onEdit,
+  onExport,
   onOpen,
-  onUnarchive,
   project,
 }: ProjectCardProps) {
   const { t } = useTranslation();
@@ -105,16 +107,18 @@ export function ProjectCard({
   const release = status && !project.archived ? releaseView(t, status) : null;
   const publishedVersion = stage === "published" ? status?.release?.version : undefined;
 
+  // As a network's card: edit, export, delete; editing and deleting are for its managers.
   const menuItems: MenuProps["items"] = [
     { key: "open", label: t("bknProject.list.card.open") },
-    ...(isOwner
-      ? [
-          project.archived
-            ? { key: "unarchive", label: t("bknProject.list.unarchive") }
-            : { key: "archive", label: t("bknProject.list.archive") },
-        ]
-      : []),
+    ...(project.canManage ? [{ key: "edit", label: t("common.edit") }] : []),
+    { key: "export", label: t("bknProject.manage.export.action") },
+    ...(project.canManage ? [{ danger: true, key: "delete", label: t("common.delete") }] : []),
   ];
+  const actions: Record<string, (record: Project) => void> = {
+    delete: onDelete,
+    edit: onEdit,
+    export: onExport,
+  };
 
   return (
     <article
@@ -159,13 +163,7 @@ export function ProjectCard({
             items: menuItems,
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
-              if (key === "archive") {
-                onArchive(project);
-              } else if (key === "unarchive") {
-                onUnarchive(project);
-              } else {
-                onOpen(project);
-              }
+              (actions[key] ?? onOpen)(project);
             },
           }}
           overlayClassName={styles.cardMenu}

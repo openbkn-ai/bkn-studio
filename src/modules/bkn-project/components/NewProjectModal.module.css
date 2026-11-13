@@ -33,3 +33,12 @@
   margin: -12px 0 16px;
   overflow-wrap: anywhere;
 }
+
+.networkCatalogs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
