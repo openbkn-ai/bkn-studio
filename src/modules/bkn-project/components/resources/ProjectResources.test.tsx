@@ -137,6 +137,7 @@ const understanding = (tables: [string, string][]): UnderstandingCatalog[] => [
   {
     catalogId: "cat-001",
     counts: {},
+    missing: false,
     tables: tables.map(([name, status]) => ({
       applied: true,
       finishTime: null,

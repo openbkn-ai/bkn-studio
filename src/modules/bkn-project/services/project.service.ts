@@ -20,6 +20,7 @@ import type {
   ProjectNetwork,
   ProjectRelease,
 } from "@/modules/bkn-project/types/project";
+import { SYSTEM_OBJECT_TYPE_IDS } from "@/modules/bkn-project/types/project";
 
 const API_PREFIX = "/bkn-project/v1/projects";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -343,10 +344,13 @@ export type ExistingNetworkStart = {
 
 /** Reads what a project created on the existing network would start from. */
 export async function getExistingNetworkStart(networkId: string): Promise<ExistingNetworkStart> {
-  const [statistics, objectTypes] = await Promise.all([
+  const [statistics, listed] = await Promise.all([
     getKnowledgeNetworkStatistics(networkId),
     listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true }),
   ]);
+  // The network's system object types are no content it brings, nor are the catalogs they read.
+  const objectTypes = listed.filter((item) => !SYSTEM_OBJECT_TYPE_IDS.has(item.id));
+  const systemCount = listed.length - objectTypes.length;
   const resourceIds = objectTypes
     .map((item) =>
       item.dataSource?.type === "resource" || !item.dataSource?.type ? item.dataSource?.id : "",
@@ -360,7 +364,9 @@ export async function getExistingNetworkStart(networkId: string): Promise<Existi
     ),
     conceptGroups: statistics?.conceptGroupsTotal ?? 0,
     functions: statistics?.functionsTotal ?? 0,
-    objectTypes: statistics?.objectTypesTotal ?? objectTypes.length,
+    objectTypes: statistics
+      ? Math.max(statistics.objectTypesTotal - systemCount, 0)
+      : objectTypes.length,
     relationTypes: statistics?.relationTypesTotal ?? 0,
     skills: statistics?.skillsTotal ?? 0,
   };

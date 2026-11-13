@@ -56,6 +56,7 @@ function catalog(statuses: UnderstandingStatus[], catalogId = "cat-1"): Understa
   return {
     catalogId,
     counts,
+    missing: false,
     tables: statuses.map((status, at) => ({
       applied: status === "completed",
       finishTime: status === "completed" ? 1 : null,
@@ -150,8 +151,8 @@ describe("UnderstandingBar", () => {
   it("asks what to understand and reports what was started and skipped", async () => {
     getUnderstandingMock.mockResolvedValue([catalog(["not_started", "not_started"])]);
     understandCatalogsMock.mockResolvedValue([
-      { catalogId: "cat-1", permitted: true, tables: 2 },
-      { catalogId: "cat-2", permitted: false, tables: 0 },
+      { catalogId: "cat-1", missing: false, permitted: true, tables: 2 },
+      { catalogId: "cat-2", missing: false, permitted: false, tables: 0 },
     ]);
     renderBar();
 
@@ -177,7 +178,9 @@ describe("UnderstandingBar", () => {
 
   it("says when nothing needed understanding", async () => {
     getUnderstandingMock.mockResolvedValue([catalog(["completed"])]);
-    understandCatalogsMock.mockResolvedValue([{ catalogId: "cat-1", permitted: true, tables: 0 }]);
+    understandCatalogsMock.mockResolvedValue([
+      { catalogId: "cat-1", missing: false, permitted: true, tables: 0 },
+    ]);
     renderBar();
 
     fireEvent.click(await screen.findByRole("button", { name: "语义理解" }));
@@ -294,7 +297,7 @@ describe("UnderstandingBar", () => {
   it("lists each table's status and the catalogs whose progress cannot be seen", async () => {
     getUnderstandingMock.mockResolvedValue([
       catalog(["completed", "failed"]),
-      { catalogId: "cat-2", counts: {}, tables: [], visible: false },
+      { catalogId: "cat-2", counts: {}, missing: false, tables: [], visible: false },
     ]);
     renderBar();
 
@@ -307,6 +310,44 @@ describe("UnderstandingBar", () => {
     expect(screen.getByText("未完成")).toBeInTheDocument();
     // A finished visit without anything running shows no hint to draft again.
     expect(screen.queryByRole("button", { name: /重新起草/ })).toBeNull();
+  });
+
+  it("says nothing of a catalog that is gone, and no id for one without a name", async () => {
+    getUnderstandingMock.mockResolvedValue([
+      catalog(["completed"]),
+      { catalogId: "gone-1", counts: {}, missing: true, tables: [], visible: false },
+      { catalogId: "hidden-1", counts: {}, missing: false, tables: [], visible: false },
+    ]);
+    renderBar();
+
+    expect(await screen.findByText("语义理解已完成")).toBeInTheDocument();
+    // The page already says the gone catalog is gone; it is no missing permission.
+    expect(screen.queryByText(/gone-1/)).toBeNull();
+    expect(screen.queryByText(/hidden-1/)).toBeNull();
+    expect(screen.getAllByText(/你没有该目录运行任务的权限/)).toHaveLength(1);
+    expect(
+      screen.getByText("无法查看项目一个数据目录的理解进度：你没有该目录运行任务的权限。"),
+    ).toBeInTheDocument();
+  });
+
+  it("does not report a catalog that is gone as skipped for permission", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started"])]);
+    understandCatalogsMock.mockResolvedValue([
+      { catalogId: "cat-1", missing: false, permitted: true, tables: 1 },
+      { catalogId: "gone-1", missing: true, permitted: false, tables: 0 },
+      { catalogId: "hidden-1", missing: false, permitted: false, tables: 0 },
+    ]);
+    renderBar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "语义理解" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: /开\s*始/ }));
+
+    await waitFor(() => expect(messageMock.success).toHaveBeenCalledWith("已开始理解 1 张表"));
+    expect(messageMock.warning).toHaveBeenCalledTimes(1);
+    expect(messageMock.warning).toHaveBeenCalledWith(
+      "你在项目的数据目录没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
+    );
   });
 
   it("offers nothing to run for others, an archived project, or when progress cannot be read", async () => {

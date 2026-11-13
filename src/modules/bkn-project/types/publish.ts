@@ -226,6 +226,8 @@ export type UnderstandInput = {
 /** A catalog semantic understanding was asked for; skipped when the owner may not run tasks there. */
 export type UnderstandSubmitted = {
   catalogId: string;
+  /** The catalog no longer exists: skipped for that, not for a missing permission. */
+  missing: boolean;
   permitted: boolean;
   tables: number;
 };
@@ -246,6 +248,8 @@ export type UnderstandingTable = {
 export type UnderstandingCatalog = {
   catalogId: string;
   counts: Partial<Record<UnderstandingStatus, number>>;
+  /** The catalog no longer exists: not visible for that, not for a missing permission. */
+  missing: boolean;
   tables: UnderstandingTable[];
   /** False when the caller may not see the catalog's tasks: the progress is unknown. */
   visible: boolean;

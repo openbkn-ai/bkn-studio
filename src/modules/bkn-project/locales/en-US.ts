@@ -305,6 +305,7 @@ export const bknProjectEnUS = {
           "Object types the network already has read these tables. The knowledge network keeps their indexes: they are shown here and need no build in the project.",
         summary: "{{ready}} / {{total}} table indexes ready",
         notIndexed: "Not indexed in the knowledge network yet",
+        tableUnnamed: "Table name unavailable",
         open: "View in the knowledge network",
       },
       background: {
@@ -622,9 +623,21 @@ export const bknProjectEnUS = {
       notice: {
         draftReadsMissing:
           "Some tables of the draft come from data catalogs {{names}}, which no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
+        draftReadsMissingUnnamed:
+          "Some tables of the draft come from data catalogs that no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
+        draftReadsMissingUnnamed_one:
+          "Some tables of the draft come from a data catalog that no longer exists or you cannot see. Drafting again reads the project's current catalogs.",
+        draftReadsMissingUnnamed_other:
+          "Some tables of the draft come from data catalogs that no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
         askOwner: "Ask the project owner to change the data catalogs.",
         missingCatalogs:
           "Data catalogs {{names}} no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
+        missingCatalogsUnnamed:
+          "{{count}} of the project's data catalogs no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
+        missingCatalogsUnnamed_one:
+          "The project's data catalog no longer exists, or you cannot see it. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
+        missingCatalogsUnnamed_other:
+          "{{count}} of the project's data catalogs no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
         unadoptedEnds:
           "{{count}} relation types are adopted although an object type they connect is not. Unadopt them, or adopt the object types at both ends first.",
         unadoptedEnds_one:
@@ -1297,6 +1310,12 @@ export const bknProjectEnUS = {
         "No table needs understanding. To understand them again, check “Understand every table again”.",
       skipped:
         "You cannot run tasks in the data catalogs {{names}}, so they were skipped. Ask the catalog administrator for access, then try again.",
+      skippedUnnamed:
+        "You cannot run tasks in {{count}} of the project's data catalogs, so they were skipped. Ask the catalog administrator for access, then try again.",
+      skippedUnnamed_one:
+        "You cannot run tasks in one of the project's data catalogs, so it was skipped. Ask the catalog administrator for access, then try again.",
+      skippedUnnamed_other:
+        "You cannot run tasks in {{count}} of the project's data catalogs, so they were skipped. Ask the catalog administrator for access, then try again.",
       failed: "Semantic understanding could not start. Try again later.",
       progress: {
         summary: "Semantic understanding: {{done}} of {{total}} tables done",
@@ -1312,6 +1331,8 @@ export const bknProjectEnUS = {
         hide: "Hide",
         invisible:
           "The progress of data catalog {{name}} cannot be shown: you cannot run tasks in this catalog.",
+        invisibleUnnamed:
+          "The progress of one of the project's data catalogs cannot be shown: you cannot run tasks in it.",
         notApplied: "Done, result not written",
         loadFailed: "The progress of semantic understanding could not be loaded",
         redraft:

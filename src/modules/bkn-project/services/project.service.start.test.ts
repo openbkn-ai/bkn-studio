@@ -56,6 +56,19 @@ describe("getExistingNetworkStart", () => {
     });
   });
 
+  it("leaves out the term object type and the catalog it reads", async () => {
+    objectTypesMock.mockResolvedValue([
+      { dataSource: { id: "t1", type: "resource" }, id: "orders" },
+      { dataSource: { id: "bkn_terms_1", type: "resource" }, id: "bkn_domain_terms" },
+    ]);
+    statisticsMock.mockResolvedValue({ objectTypesTotal: 2 });
+
+    const start = await getExistingNetworkStart("supply");
+
+    expect(start.objectTypes).toBe(1);
+    expect(resourcesMock).toHaveBeenCalledWith(["t1"]);
+  });
+
   it("counts none when the statistics cannot be read", async () => {
     statisticsMock.mockResolvedValue(null);
 

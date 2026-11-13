@@ -75,7 +75,13 @@ export function ExistingIndexes({
     },
     {
       key: "table",
-      render: (_value, item) => item.table.name || item.table.resourceId,
+      // Named as vega-backend or the definition names it; never by its id, which says nothing.
+      render: (_value, item) =>
+        item.table.name && item.table.name !== item.table.resourceId ? (
+          item.table.name
+        ) : (
+          <span className={styles.muted}>{t(`${PREFIX}.tableUnnamed`)}</span>
+        ),
       title: t("bknProject.release.index.table"),
     },
     {

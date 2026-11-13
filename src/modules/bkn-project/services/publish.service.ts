@@ -182,7 +182,7 @@ type BackendIndex = {
 };
 
 type BackendSubmitted = {
-  catalogs: { catalog_id: string; permitted: boolean; tables: number }[] | null;
+  catalogs: { catalog_id: string; missing?: boolean; permitted: boolean; tables: number }[] | null;
 };
 
 type BackendUnderstanding = {
@@ -190,6 +190,7 @@ type BackendUnderstanding = {
     | {
         catalog_id: string;
         counts: UnderstandingCatalog["counts"] | null;
+        missing?: boolean;
         tables?:
           | {
               applied?: boolean;
@@ -386,6 +387,7 @@ function mapUnderstanding(understanding: BackendUnderstanding): UnderstandingCat
   return (understanding.catalogs ?? []).map((catalog) => ({
     catalogId: catalog.catalog_id,
     counts: catalog.counts ?? {},
+    missing: catalog.missing ?? false,
     tables: (catalog.tables ?? []).map((table) => ({
       applied: table.applied ?? false,
       finishTime: table.finish_time || null,
@@ -813,7 +815,7 @@ async function mockUnderstandingOf(projectId: string): Promise<UnderstandingCata
     own.forEach((table) => {
       counts[table.status] = (counts[table.status] ?? 0) + 1;
     });
-    return { catalogId, counts, tables: own, visible: true };
+    return { catalogId, counts, missing: false, tables: own, visible: true };
   });
 }
 
@@ -974,6 +976,7 @@ export async function understandCatalogs(
     return wait(
       before.map((catalog) => ({
         catalogId: catalog.catalogId,
+        missing: false,
         permitted: true,
         tables: catalog.tables.filter((table) => input.all || table.status === "not_started")
           .length,
@@ -990,6 +993,7 @@ export async function understandCatalogs(
   );
   return (response.data.catalogs ?? []).map((catalog) => ({
     catalogId: catalog.catalog_id,
+    missing: catalog.missing ?? false,
     permitted: catalog.permitted,
     tables: catalog.tables,
   }));
