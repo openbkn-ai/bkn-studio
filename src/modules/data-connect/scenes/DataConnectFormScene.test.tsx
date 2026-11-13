@@ -509,7 +509,7 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("reloads the latest record after an update conflict", async () => {
-    updateDataConnectRecordMock.mockRejectedValue({
+    updateDataConnectRecordMock.mockRejectedValueOnce({
       isAxiosError: true,
       response: { status: 409 },
     });
@@ -564,6 +564,9 @@ describe("DataConnectFormScene · connection preflight", () => {
     render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
 
     await screen.findByDisplayValue("orders");
+    fireEvent.change(screen.getByDisplayValue("db.example.com"), {
+      target: { value: "changed.example.com" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     expect(await screen.findByDisplayValue("latest orders")).toBeTruthy();
@@ -573,6 +576,17 @@ describe("DataConnectFormScene · connection preflight", () => {
       expect.objectContaining({ expectedUpdateTime: 100 }),
       { skipErrorToast: true },
     );
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "Renamed after refresh" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(2));
+    expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+      connectorConfig: undefined,
+    });
+    expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+      expectedUpdateTime: 200,
+    });
   });
 
   it("omits declared sensitive variables when hydrating an existing connector form", async () => {
@@ -607,6 +621,69 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(values).not.toContain("private-option");
     expect(values).not.toContain("private-key");
     expect(values).toContain("public");
+  });
+
+  it.each([["api_key", "arbitrary"], "invalid"])(
+    "preserves stored configuration on metadata-only edits with sensitive declaration %j",
+    async (declaration) => {
+      mockSensitiveVariableEditCatalog(declaration);
+      render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+      await screen.findByDisplayValue("sqlserver-orders");
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "Renamed API" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+      expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({ name: "Renamed API" });
+      expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+        connectorConfig: undefined,
+      });
+      expect(messageErrorMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not require hidden connector credentials for metadata-only edits", async () => {
+    mockSQLServerEditCatalog({}, { password: undefined });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "Renamed SQL Server" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+      connectorConfig: undefined,
+    });
+    expect(document.querySelector(".ant-form-item-has-error")).toBeNull();
+  });
+
+  it("requires declared sensitive variables when replacing connection configuration", async () => {
+    mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    const variables = await screen.findByDisplayValue(/public_value/);
+    fireEvent.change(variables, { target: { value: JSON.stringify({ public_value: "changed" }) } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() =>
+      expect(messageErrorMock).toHaveBeenCalledWith("dataConnect.sensitiveVariablesRequired"),
+    );
+    expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+  });
+
+  it("submits complete replacement variables when new credentials are entered", async () => {
+    mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    const variables = await screen.findByDisplayValue(/public_value/);
+    const replacement = { api_key: "new-key", arbitrary: "new-option", public_value: "changed" };
+    fireEvent.change(variables, { target: { value: JSON.stringify(replacement) } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+      connectorConfig: {
+        variables: replacement,
+        sensitive_variables: ["api_key", "arbitrary"],
+      },
+    });
   });
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
@@ -652,7 +729,10 @@ describe("DataConnectFormScene · connection preflight", () => {
         category: "table",
         description: "",
         enabled: true,
-        fieldConfig: { options: connectorField("Options", "object", false) },
+        fieldConfig: {
+          host: connectorField("Host", "string", true),
+          options: connectorField("Options", "object", false),
+        },
         mode: "local",
         name: type,
         type,
@@ -667,6 +747,9 @@ describe("DataConnectFormScene · connection preflight", () => {
       };
       expect(tested.connectorType).toBe(type);
       expect(tested.connectorConfig.options).toEqual(options);
+      fireEvent.change(screen.getByDisplayValue("sqlserver.example.com"), {
+        target: { value: "sqlserver-updated.example.com" },
+      });
       fireEvent.click(screen.getByRole("button", { name: "common.save" }));
       await waitFor(() =>
         expect(updateDataConnectRecordMock).toHaveBeenCalledWith(
@@ -1443,5 +1526,30 @@ function mockSQLServerEditCatalog(
     type: "physical",
     updateTime: "-",
     updaterName: "-",
+  });
+}
+
+function mockSensitiveVariableEditCatalog(declaration: unknown) {
+  mockSQLServerEditCatalog(
+    {},
+    {
+      password: undefined,
+      variables: { api_key: "private-key", arbitrary: "private-option", public_value: "public" },
+      sensitive_variables: declaration,
+    },
+    "custom",
+  );
+  getDataConnectConnectorTypeMock.mockResolvedValue({
+    available: true,
+    category: "api",
+    description: "",
+    enabled: true,
+    fieldConfig: {
+      variables: connectorField("Variables", "object", false),
+      sensitive_variables: connectorField("Sensitive variables", "array", false),
+    },
+    mode: "local",
+    name: "Custom",
+    type: "custom",
   });
 }

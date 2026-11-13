@@ -86,6 +86,8 @@ export const dataConnectZhCN = {
     configStepTitle: "填写连接配置",
     configStepDescription: "按所选连接器填写访问参数。",
     encryptedFieldEditHint: "敏感字段不回显，请重新输入。",
+    sensitiveVariablesEditHint: "修改连接配置时需补全敏感变量；只改名称、描述或标签无需重新输入。",
+    sensitiveVariablesRequired: "请补全敏感变量后再提交完整连接配置：{{fields}}。",
     encryptedFieldPlaceholder: "请输入{{field}}",
     createFlowHint: "保存时会校验参数并测试连接。",
     editFlowHint: "不可更换连接器类型；启停请在列表操作。",

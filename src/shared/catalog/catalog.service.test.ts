@@ -109,6 +109,25 @@ describe("catalog.service · listCatalogs", () => {
     expect(body).not.toHaveProperty("category");
   });
 
+  it("omits connector_config from metadata-only update requests", async () => {
+    const { updateCatalog } = await import("@/shared/catalog/catalog.service");
+    await updateCatalog("catalog-api", {
+      connectorType: "http",
+      description: "updated",
+      enabled: true,
+      expectedUpdateTime: 123,
+      name: "Renamed",
+      tags: [],
+    });
+    const body = putMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(body).not.toHaveProperty("connector_config");
+    expect(body).toMatchObject({
+      name: "Renamed",
+      description: "updated",
+      expected_update_time: 123,
+    });
+  });
+
   it("passes the physical type to Vega before pagination", async () => {
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");
 
@@ -197,6 +216,32 @@ describe("catalog.service · mock listCatalogs", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("preserves stored credentials on metadata edits and fully replaces explicit configurations", async () => {
+    const { getCatalog, updateCatalog } = await import("@/shared/catalog/catalog.service");
+    const original = await getCatalog("cat-001");
+    if (!original) throw new Error("Expected Catalog fixture");
+    const config = {
+      variables: { token: "stored-token", public_value: "public" },
+      sensitive_variables: ["token"],
+    };
+    await updateCatalog(original.id, { ...original, connectorConfig: config });
+    const stored = await getCatalog(original.id);
+    if (!stored) throw new Error("Expected updated Catalog");
+    const { connectorConfig: storedConfig, ...metadata } = stored;
+    expect(storedConfig).toEqual(config);
+    await updateCatalog(stored.id, { ...metadata, name: "Renamed", tags: ["updated"] });
+    const updated = await getCatalog(stored.id);
+    expect(updated).toMatchObject({ name: "Renamed", tags: ["updated"], connectorConfig: config });
+    if (!updated) throw new Error("Expected renamed Catalog");
+    await updateCatalog(updated.id, {
+      ...updated,
+      connectorConfig: { variables: { public_value: "changed" } },
+    });
+    expect((await getCatalog(updated.id))?.connectorConfig).toEqual({
+      variables: { public_value: "changed" },
+    });
   });
 
   it("provides enterprise database mock connections with their connector-specific fields", async () => {

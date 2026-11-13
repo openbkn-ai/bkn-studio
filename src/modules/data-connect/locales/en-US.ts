@@ -95,6 +95,10 @@ export const dataConnectEnUS = {
     configStepTitle: "Configure data connection",
     configStepDescription: "Fill in access parameters for the selected connector.",
     encryptedFieldEditHint: "Sensitive fields are not echoed. Re-enter them.",
+    sensitiveVariablesEditHint:
+      "Re-enter sensitive variables when changing connection settings. Renaming or editing descriptions and tags does not require credentials.",
+    sensitiveVariablesRequired:
+      "Complete the sensitive variables before replacing connection settings: {{fields}}.",
     encryptedFieldPlaceholder: "Enter {{field}}",
     createFlowHint: "Saving validates parameters and tests the connection.",
     editFlowHint: "Connector type cannot change. Enable or disable from the list.",
