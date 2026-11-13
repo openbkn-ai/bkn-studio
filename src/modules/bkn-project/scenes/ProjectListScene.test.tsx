@@ -354,7 +354,9 @@ describe("ProjectListScene", () => {
     const { onOk } = confirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };
     await onOk();
 
-    const offsets = listProjectsMock.mock.calls.map(([query]) => (query as { offset: number }).offset);
+    const offsets = listProjectsMock.mock.calls.map(
+      ([query]) => (query as { offset: number }).offset,
+    );
     expect(offsets.slice(-1)).toEqual([12]);
     await waitFor(() =>
       expect(listProjectsMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })),
