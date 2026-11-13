@@ -462,6 +462,7 @@ export function ProjectModel({
       archived={project.archived}
       catalogNames={catalogNames}
       hasDraft={draft !== null}
+      namingLanguage={project.namingLanguage}
       onRedraft={startGenerate}
       ownerIsCaller={ownerIsCaller}
       projectId={project.id}

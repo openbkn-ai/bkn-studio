@@ -19,6 +19,7 @@ import {
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
 import { catalogNamesOf } from "@/modules/bkn-project/components/draft/evidence";
+import { namingLanguageLabelKey } from "@/modules/bkn-project/components/manage/projectLanguage";
 import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
   getProjectStatus,
@@ -32,6 +33,7 @@ import type {
   UnderstandApplyMode,
   UnderstandingCatalog,
 } from "@/modules/bkn-project/types/publish";
+import type { ProjectNamingLanguage } from "@/modules/bkn-project/types/project";
 
 import styles from "../ProjectModel.module.css";
 
@@ -62,6 +64,7 @@ export function UnderstandingBar({
   archived,
   catalogNames,
   hasDraft,
+  namingLanguage,
   onRedraft,
   ownerIsCaller,
   projectId,
@@ -71,6 +74,8 @@ export function UnderstandingBar({
   catalogNames: Record<string, string>;
   /** Only a draft drafted before the names changed can be drafted again with them. */
   hasDraft: boolean;
+  /** The project's content language: understanding always runs in it, so it is shown, not chosen. */
+  namingLanguage: ProjectNamingLanguage;
   onRedraft: () => void;
   ownerIsCaller: boolean;
   projectId: string;
@@ -323,6 +328,11 @@ export function UnderstandingBar({
       >
         <Space direction="vertical" size={12}>
           <span>{t("bknProject.understand.dialog.intro")}</span>
+          <span>
+            {t("bknProject.understand.dialog.language", {
+              language: t(namingLanguageLabelKey(namingLanguage)),
+            })}
+          </span>
           <Radio.Group
             onChange={(event) => setApplyMode(event.target.value as UnderstandApplyMode)}
             value={applyMode}

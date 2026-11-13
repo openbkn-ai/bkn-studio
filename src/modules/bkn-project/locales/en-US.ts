@@ -1360,6 +1360,7 @@ export const bknProjectEnUS = {
         title: "Run semantic understanding",
         intro:
           "Semantic understanding gives the tables and fields of the project's data catalogs business names and descriptions, which drafting uses. Run it before drafting.",
+        language: "Language: {{language}} (the project's content language)",
         fillEmpty: "Fill in only missing names and descriptions, keeping manual edits",
         force: "Replace existing names and descriptions",
         forceHint: "Short English names are never replaced.",

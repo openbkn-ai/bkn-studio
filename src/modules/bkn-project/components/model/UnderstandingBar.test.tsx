@@ -76,6 +76,7 @@ function renderBar(props: Partial<Parameters<typeof UnderstandingBar>[0]> = {}) 
       archived={false}
       catalogNames={{ "cat-1": "供应链", "cat-2": "财务" }}
       hasDraft
+      namingLanguage="zh-CN"
       onRedraft={onRedraft}
       ownerIsCaller
       projectId="p1"
@@ -86,6 +87,15 @@ function renderBar(props: Partial<Parameters<typeof UnderstandingBar>[0]> = {}) 
 }
 
 describe("UnderstandingBar", () => {
+  it("shows the project's content language in the dialog, with nothing to choose", async () => {
+    getUnderstandingMock.mockResolvedValue([catalog(["not_started"])]);
+    renderBar({ namingLanguage: "en-US" });
+    fireEvent.click(await screen.findByRole("button", { name: "语义理解" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("理解语言：English（项目内容语言）")).toBeInTheDocument();
+    expect(dialog.queryByRole("combobox")).toBeNull();
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage("zh-CN");
@@ -160,6 +170,8 @@ describe("UnderstandingBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "语义理解" }));
     const dialog = within(await screen.findByRole("dialog"));
     expect(dialog.getByRole("radio", { name: /只补充空缺/ })).toBeChecked();
+    // The language is the project's: shown, never chosen.
+    expect(dialog.getByText("理解语言：中文（项目内容语言）")).toBeInTheDocument();
     fireEvent.click(dialog.getByText("覆盖已有的名称和说明"));
     fireEvent.click(dialog.getByRole("button", { name: /开\s*始/ }));
 
