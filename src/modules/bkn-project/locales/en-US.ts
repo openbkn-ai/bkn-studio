@@ -12,7 +12,6 @@ export const bknProjectEnUS = {
       "Each project brings requirements, ontology and releases together for one business knowledge network.",
     list: {
       searchPlaceholder: "Search project names",
-      showArchived: "Show archived",
       create: "New project",
       refresh: "Refresh",
       loadFailed: "Failed to load projects",
@@ -48,17 +47,78 @@ export const bknProjectEnUS = {
         "Several projects may change one knowledge network; publishing checks whether another project has changed its live version.",
       ownerYou: "You",
       ownerSomeone: "Another member",
-      archive: "Archive",
-      unarchive: "Restore",
-      archiveConfirm: {
-        title: 'Archive project "{{name}}"?',
-        content:
-          "Archived projects are hidden from the default list. Published versions are not affected, and you can restore the project at any time.",
-        ok: "Archive",
+    },
+    contentLanguage: {
+      label: "Content language",
+      hint: "AI-generated concepts, requirements, questions and other content use this language. It can't be changed after creation and doesn't affect the interface language.",
+      options: {
+        zh: "Chinese",
+        en: "English",
       },
-      archiveSuccess: "Archived",
-      unarchiveSuccess: "Restored",
-      archiveFailed: "Operation failed",
+    },
+    manage: {
+      notOwner: "Only the project owner or an administrator can do this.",
+      notFound: "The project no longer exists, or you can't see it.",
+      releasePublishing: "A version of this project is being published. Try again later.",
+      edit: {
+        title: "Edit project",
+        success: "Project saved",
+        failed: "Failed to save the project",
+        languageFixed:
+          "The content language is set when the project is created and can't be changed.",
+      },
+      delete: {
+        title: 'Delete project "{{name}}"?',
+        warning: "This can't be undone.",
+        removes:
+          "The project's own material is deleted: requirement documents, specification, model draft, build and regression records.",
+        withdraws: "A version that is prepared but not published is withdrawn.",
+        keeps: "The knowledge network and its published versions are kept.",
+        typeName: 'Type the project name "{{name}}" to confirm',
+        typeNameLabel: "Project name",
+        success: 'Project "{{name}}" deleted',
+        failed: "Failed to delete the project",
+      },
+      export: {
+        action: "Export",
+        failed: 'Failed to export project "{{name}}"',
+      },
+    },
+    import: {
+      button: "Import",
+      title: "Import project",
+      submit: "Import",
+      success: "Project imported",
+      failed: "Failed to import the project",
+      packageName: "Project in the file",
+      sourceNetwork: "Original knowledge network",
+      contents: {
+        label: "Contents",
+        documents: "{{count}} requirement documents",
+        documents_one: "{{count}} requirement document",
+        documents_other: "{{count}} requirement documents",
+        requirement: "requirement specification",
+        draft: "model draft (to confirm after import)",
+        confirmed: "{{count}} confirmed model files",
+        confirmed_one: "{{count}} confirmed model file",
+        confirmed_other: "{{count}} confirmed model files",
+        terms: "terms",
+        knowledgeBase: "knowledge base extraction results",
+      },
+      catalogs: {
+        label: "Data catalog matching",
+        hint: "Choose the data catalog in this environment for each data catalog in the file. Catalogs with the same ID or name are preselected; check them.",
+        from: "Data catalog in the file",
+        to: "Data catalog here",
+        toLabel: 'Data catalog for "{{name}}"',
+      },
+      errors: {
+        invalidPackage: "This file isn't a project export, or it's damaged.",
+        unsupportedVersion: "This file comes from a newer version and can't be imported here yet.",
+        tooLarge: "The file is larger than {{max}} MB and can't be imported.",
+        catalogMapping: "Choose a data catalog in this environment for each data catalog.",
+        catalogMissing: "A chosen data catalog no longer exists. Choose again.",
+      },
     },
     create: {
       title: "New project",
@@ -1003,7 +1063,7 @@ export const bknProjectEnUS = {
           not_bound: "Nothing adopted yet",
         },
         networkMissing:
-          "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can archive the project.",
+          "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can delete the project from the project list.",
         catalogsMissing:
           "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
         catalogsMissing_one:
@@ -1022,7 +1082,6 @@ export const bknProjectEnUS = {
         },
         unreachable: "Can't check the {{what}} right now; will check again",
         archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
-        archive: "Archive project",
         chooseCatalogs: "Choose catalogs again",
         redraft: "Draft again",
       },

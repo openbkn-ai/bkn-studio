@@ -7,14 +7,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPost, mockPut } = vi.hoisted(() => ({
+const { mockDelete, mockGet, mockPatch, mockPost, mockPut } = vi.hoisted(() => ({
+  mockDelete: vi.fn(),
   mockGet: vi.fn(),
+  mockPatch: vi.fn(),
   mockPost: vi.fn(),
   mockPut: vi.fn(),
 }));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: mockGet, post: mockPost, put: mockPut },
+  http: { delete: mockDelete, get: mockGet, patch: mockPatch, post: mockPost, put: mockPut },
 }));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
@@ -53,10 +55,10 @@ describe("project.service", () => {
     });
     const { listProjects } = await importService();
 
-    const result = await listProjects({ archived: "all", limit: 20, name: " ord ", offset: 40 });
+    const result = await listProjects({ limit: 20, name: " ord ", offset: 40 });
 
     expect(mockGet).toHaveBeenCalledWith("/bkn-project/v1/projects", {
-      params: { archived: "all", limit: 20, name: "ord", offset: 40 },
+      params: { limit: 20, name: "ord", offset: 40 },
       skipErrorToast: true,
     });
     expect(result).toEqual({
@@ -65,11 +67,14 @@ describe("project.service", () => {
           archived: false,
           baselineNetworkId: "orders_v1_0_0",
           branch: "project/p1",
+          canManage: false,
           catalogIds: [],
           createTime: 1,
           id: "p1",
           knId: "orders",
           name: "Orders",
+          // Projects from before content languages were chosen are in Chinese.
+          namingLanguage: "zh-CN",
           otherProjects: 2,
           owner: { id: "u1", type: "user" },
           updateTime: 2,
@@ -83,11 +88,10 @@ describe("project.service", () => {
     mockGet.mockResolvedValue({ data: { entries: null, next_cursor: null, total: 0 } });
     const { listProjects } = await importService();
 
-    const result = await listProjects({ archived: "false", limit: 20, name: "  ", offset: 0 });
+    const result = await listProjects({ limit: 20, name: "  ", offset: 0 });
 
     const [, config] = mockGet.mock.calls[0] as [string, { params: Record<string, unknown> }];
     expect(config.params).toEqual({
-      archived: "false",
       limit: 20,
       name: undefined,
       offset: undefined,
@@ -99,7 +103,12 @@ describe("project.service", () => {
     mockPost.mockResolvedValue({ data: backendProject });
     const { createProject } = await importService();
 
-    await createProject({ catalogIds: ["c1"], knId: "orders", name: " Orders " });
+    await createProject({
+      catalogIds: ["c1"],
+      knId: "orders",
+      name: " Orders ",
+      namingLanguage: "en-US",
+    });
 
     expect(mockPost).toHaveBeenCalledWith(
       "/bkn-project/v1/projects",
@@ -108,13 +117,20 @@ describe("project.service", () => {
         enable_versioning: undefined,
         kn_id: "orders",
         name: "Orders",
+        naming_language: "en-US",
         new_kn: undefined,
       },
       { skipErrorToast: true },
     );
 
     // Turning versioning on for a network that does not keep versions, once the owner confirmed.
-    await createProject({ catalogIds: [], enableVersioning: true, knId: "orders", name: "O" });
+    await createProject({
+      catalogIds: [],
+      enableVersioning: true,
+      knId: "orders",
+      name: "O",
+      namingLanguage: "zh-CN",
+    });
     expect(mockPost.mock.calls[1][1]).toMatchObject({ enable_versioning: true, kn_id: "orders" });
   });
 
@@ -122,13 +138,19 @@ describe("project.service", () => {
     mockPost.mockResolvedValue({ data: backendProject });
     const { createProject } = await importService();
 
-    await createProject({ catalogIds: [], name: "Orders", newKnName: " Delivery " });
+    await createProject({
+      catalogIds: [],
+      name: "Orders",
+      namingLanguage: "zh-CN",
+      newKnName: " Delivery ",
+    });
 
     expect(mockPost.mock.calls[0][1]).toEqual({
       catalog_ids: [],
       enable_versioning: undefined,
       kn_id: undefined,
       name: "Orders",
+      naming_language: "zh-CN",
       new_kn: { name: "Delivery" },
     });
   });
@@ -147,17 +169,70 @@ describe("project.service", () => {
     expect(project.catalogIds).toEqual(["c2"]);
   });
 
-  it("archives and unarchives with the custom methods", async () => {
-    mockPost.mockResolvedValue({ data: backendProject });
-    const { setProjectArchived } = await importService();
+  it("renames and deletes a project, and maps who may manage it", async () => {
+    mockPatch.mockResolvedValue({
+      data: { ...backendProject, can_manage: true, name: "New", naming_language: "en-US" },
+    });
+    mockDelete.mockResolvedValue({ data: null });
+    const { deleteProject, renameProject } = await importService();
 
-    await setProjectArchived("p1", true);
-    await setProjectArchived("p1", false);
+    const renamed = await renameProject("p 1", " New ");
+    await deleteProject("p 1");
 
-    expect(mockPost.mock.calls.map((call) => call[0] as string)).toEqual([
-      "/bkn-project/v1/projects/p1:archive",
-      "/bkn-project/v1/projects/p1:unarchive",
-    ]);
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/bkn-project/v1/projects/p%201",
+      { name: "New" },
+      { skipErrorToast: true },
+    );
+    expect(renamed).toMatchObject({ canManage: true, name: "New", namingLanguage: "en-US" });
+    expect(mockDelete).toHaveBeenCalledWith("/bkn-project/v1/projects/p%201", {
+      skipErrorToast: true,
+    });
+  });
+
+  it("previews and imports a package as multipart form data", async () => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        catalogs: [{ id: "c1", name: "ERP" }],
+        contents: {
+          confirmed_files: 0,
+          documents: 2,
+          draft: true,
+          editions: null,
+          requirement: true,
+        },
+        format_version: 1,
+        kn: { id: "orders", name: "Orders" },
+        name: "Orders",
+        naming_language: "en-US",
+      },
+    });
+    mockPost.mockResolvedValueOnce({ data: backendProject });
+    const { importProjectPackage, previewProjectPackage } = await importService();
+    const file = new File(["zip"], "orders.bknproj");
+
+    const preview = await previewProjectPackage(file);
+    await importProjectPackage(file, {
+      catalogMapping: { c1: "c9" },
+      knId: "orders",
+      name: " Orders ",
+    });
+
+    expect(preview).toMatchObject({
+      catalogs: [{ id: "c1", name: "ERP" }],
+      contents: { documents: 2, editions: [] },
+      namingLanguage: "en-US",
+    });
+    const [previewUrl, previewBody] = mockPost.mock.calls[0] as [string, FormData];
+    expect(previewUrl).toBe("/bkn-project/v1/project-packages/preview");
+    expect(previewBody.get("file")).toBe(file);
+    const [importUrl, importBody] = mockPost.mock.calls[1] as [string, FormData];
+    expect(importUrl).toBe("/bkn-project/v1/project-packages/import");
+    expect(JSON.parse(importBody.get("options") as string)).toEqual({
+      catalog_mapping: { c1: "c9" },
+      kn_id: "orders",
+      name: "Orders",
+    });
   });
 
   it("lists every visible network in one request", async () => {

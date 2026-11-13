@@ -10,11 +10,9 @@ import { Alert } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
-import { setProjectArchived } from "@/modules/bkn-project/services/project.service";
 import { getProjectStatus } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type {
@@ -55,7 +53,6 @@ export function DataSourceHealth({
   draftVersion,
   onGoToModel,
   onGoToResources,
-  onProjectChange,
   project,
 }: {
   /**
@@ -66,11 +63,9 @@ export function DataSourceHealth({
   onGoToModel: () => void;
   /** Opens the requirements and resources page, where the catalogs are chosen. */
   onGoToResources: () => void;
-  onProjectChange: (project: Project) => void;
   project: Project;
 }) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
   const [status, setStatus] = useState<ProjectStatus | null>(null);
   const [failed, setFailed] = useState(false);
   const [reads, setReads] = useState(0);
@@ -133,23 +128,7 @@ export function DataSourceHealth({
   }
 
   const action = (name: string) => status.nextActions.find((item) => item.action === name);
-  const archive = action("archive");
   const setCatalogs = action("set_catalogs");
-  const archiveProject = () =>
-    void modal.confirm({
-      cancelText: t("common.cancel"),
-      content: t("bknProject.list.archiveConfirm.content"),
-      okText: t("bknProject.list.archiveConfirm.ok"),
-      onOk: async () => {
-        try {
-          onProjectChange(await setProjectArchived(project.id, true));
-          message.success(t("bknProject.list.archiveSuccess"));
-        } catch {
-          // The request layer shows bkn-project's localized message.
-        }
-      },
-      title: t("bknProject.list.archiveConfirm.title", { name: project.name }),
-    });
   // The owner of an archived project unarchives it first; others ask the owner.
   const hint = project.archived
     ? t(`${PREFIX}.archived`)
@@ -195,18 +174,7 @@ export function DataSourceHealth({
       </div>
       <div className={styles.notices}>
         {network.state === "missing" ? (
-          <Alert
-            action={
-              archive?.allowed && !project.archived ? (
-                <AppButton danger onClick={archiveProject} size="small">
-                  {t(`${PREFIX}.archive`)}
-                </AppButton>
-              ) : null
-            }
-            message={t(`${PREFIX}.networkMissing`)}
-            showIcon
-            type="error"
-          />
+          <Alert message={t(`${PREFIX}.networkMissing`)} showIcon type="error" />
         ) : null}
         {catalogs.state === "missing" ? (
           <Alert

@@ -69,6 +69,9 @@ function pickOption(placeholder: string, label: string) {
 describe("NewProjectModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    // The content language starts as the browser's.
+    vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
     startMock.mockResolvedValue({
       actionTypes: 0,
       catalogIds: [],
@@ -92,6 +95,33 @@ describe("NewProjectModal", () => {
         removeListener: vi.fn(),
       })),
     );
+  });
+
+  it("starts the content language as the browser's and sends the one chosen", async () => {
+    vi.spyOn(navigator, "language", "get").mockReturnValue("zh-TW");
+    createProjectMock.mockResolvedValue({ id: "p1" });
+    renderModal();
+
+    const chinese = screen.getByLabelText("bknProject.contentLanguage.options.zh");
+    const english = screen.getByLabelText("bknProject.contentLanguage.options.en");
+    expect(chinese).toBeChecked();
+    expect(english).not.toBeChecked();
+
+    fireEvent.click(english);
+    submitExisting();
+
+    await waitFor(() =>
+      expect(createProjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ namingLanguage: "en-US" }),
+      ),
+    );
+  });
+
+  it("defaults the content language to English for a browser in any other language", () => {
+    vi.spyOn(navigator, "language", "get").mockReturnValue("fr-FR");
+    renderModal();
+
+    expect(screen.getByLabelText("bknProject.contentLanguage.options.en")).toBeChecked();
   });
 
   it("requires a name and a network before creating", async () => {
@@ -122,6 +152,7 @@ describe("NewProjectModal", () => {
       catalogIds: ["c1"],
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 
@@ -154,6 +185,7 @@ describe("NewProjectModal", () => {
       catalogIds: ["c1"],
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 
@@ -201,6 +233,7 @@ describe("NewProjectModal", () => {
     expect(createProjectMock).toHaveBeenCalledWith({
       catalogIds: [],
       name: "Orders",
+      namingLanguage: "en-US",
       newKnName: "Delivery",
     });
   });
@@ -242,6 +275,7 @@ describe("NewProjectModal", () => {
       enableVersioning: true,
       knId: "orders",
       name: "Orders",
+      namingLanguage: "en-US",
     });
   });
 

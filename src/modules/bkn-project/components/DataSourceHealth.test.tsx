@@ -13,22 +13,10 @@ import type { Project } from "@/modules/bkn-project/types/project";
 import type { DataSources, ProjectStatus } from "@/modules/bkn-project/types/publish";
 
 const getProjectStatusMock = vi.hoisted(() => vi.fn());
-const setProjectArchivedMock = vi.hoisted(() => vi.fn());
-const confirmMock = vi.hoisted(() => vi.fn());
-const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
-
-vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
-}));
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getProjectStatus: getProjectStatusMock,
-}));
-
-vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/bkn-project/services/project.service")>()),
-  setProjectArchived: setProjectArchivedMock,
 }));
 
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
@@ -80,16 +68,10 @@ const action = (name: string, allowed = true, reason?: string) => ({
 function renderHealth(of: Project = project) {
   const onGoToModel = vi.fn();
   const onGoToResources = vi.fn();
-  const onProjectChange = vi.fn();
   const view = renderWithoutAntdStyles(
-    <DataSourceHealth
-      onGoToModel={onGoToModel}
-      onGoToResources={onGoToResources}
-      onProjectChange={onProjectChange}
-      project={of}
-    />,
+    <DataSourceHealth onGoToModel={onGoToModel} onGoToResources={onGoToResources} project={of} />,
   );
-  return { onGoToModel, onGoToResources, onProjectChange, view };
+  return { onGoToModel, onGoToResources, view };
 }
 
 describe("DataSourceHealth", () => {
@@ -151,7 +133,6 @@ describe("DataSourceHealth", () => {
         draftVersion="ready:1"
         onGoToModel={vi.fn()}
         onGoToResources={vi.fn()}
-        onProjectChange={vi.fn()}
         project={project}
       />,
     );
@@ -162,7 +143,6 @@ describe("DataSourceHealth", () => {
         draftVersion="ready:2"
         onGoToModel={vi.fn()}
         onGoToResources={vi.fn()}
-        onProjectChange={vi.fn()}
         project={project}
       />,
     );
@@ -205,8 +185,6 @@ describe("DataSourceHealth", () => {
       screen.getByText("关系类「下单」（连接表 order_links）已查不到数据"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/ot_customer|rt_order|catalog_missing/)).toBeNull();
-    // The network is there, so archiving is not what the page suggests.
-    expect(screen.queryByRole("button", { name: "归档项目" })).toBeNull();
 
     // Catalogs are chosen with the project's other inputs; drafting again is on the modeling page.
     fireEvent.click(screen.getByRole("button", { name: "重新选择数据目录" }));
@@ -235,7 +213,7 @@ describe("DataSourceHealth", () => {
     expect(screen.queryByText(/「条目4」/)).toBeNull();
   });
 
-  it("offers to archive a project whose network is gone, after asking", async () => {
+  it("says a project whose network is gone can be deleted, and offers no archiving", async () => {
     getProjectStatusMock.mockResolvedValue(
       status(
         {
@@ -246,18 +224,15 @@ describe("DataSourceHealth", () => {
         [action("archive")],
       ),
     );
-    setProjectArchivedMock.mockResolvedValue({ ...project, archived: true });
-    const { onProjectChange } = renderHealth();
+    renderHealth();
 
     expect(
-      await screen.findByText("项目的知识网络已被删除，无法再确认或发布。可以归档此项目。"),
+      await screen.findByText(
+        "项目的知识网络已被删除，无法再确认或发布。可以在项目列表中删除此项目。",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("还没有采用的条目")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "归档项目" }));
-    const [{ onOk }] = confirmMock.mock.calls[0] as [{ onOk: () => Promise<unknown> }];
-    await onOk();
-    expect(setProjectArchivedMock).toHaveBeenCalledWith("p1", true);
-    expect(onProjectChange).toHaveBeenCalledWith({ ...project, archived: true });
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("offers no change on an archived project, and asks others to contact the owner", async () => {

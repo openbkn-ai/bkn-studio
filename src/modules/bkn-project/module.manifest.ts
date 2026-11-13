@@ -24,7 +24,8 @@ export const bknProjectModuleManifest = {
     {
       id: "bkn-project.list",
       exportName: "ProjectListScene",
-      description: "Projects of the visible knowledge networks: search, archive filter, create.",
+      description:
+        "Projects of the visible knowledge networks: search, create, import, edit, export, delete.",
       inputs: [],
     },
     {

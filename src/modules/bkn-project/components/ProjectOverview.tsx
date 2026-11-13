@@ -13,8 +13,10 @@ import {
   CopyOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  EditOutlined,
   FileSearchOutlined,
   FunctionOutlined,
+  GlobalOutlined,
   ProjectOutlined,
   RocketOutlined,
   UserOutlined,
@@ -38,6 +40,8 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import { DataSourceHealth } from "@/modules/bkn-project/components/DataSourceHealth";
+import { ProjectEditModal } from "@/modules/bkn-project/components/manage/ProjectEditModal";
+import { namingLanguageLabelKey } from "@/modules/bkn-project/components/manage/projectLanguage";
 import { ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
 import { useNetworkExisting } from "@/modules/bkn-project/components/existing/useNetworkExisting";
 import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftConceptGraph";
@@ -115,6 +119,7 @@ export function ProjectOverview({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, runtimeConfig } = useAppServices();
+  const [editing, setEditing] = useState(false);
   const directory = useAccountDirectory();
   const go = (section: ProjectSection, tab?: string) =>
     void navigate(
@@ -526,6 +531,13 @@ export function ProjectOverview({
             </span>
             <div className={kn.overviewHeaderName}>{project.name}</div>
           </div>
+          {project.canManage ? (
+            <div className={kn.overviewHeaderTitleRight}>
+              <AppButton icon={<EditOutlined />} onClick={() => setEditing(true)}>
+                {t("common.edit")}
+              </AppButton>
+            </div>
+          ) : null}
         </div>
         <div className={kn.overviewHeaderFooter}>
           <DeploymentUnitOutlined />
@@ -554,6 +566,13 @@ export function ProjectOverview({
             {t("bknProject.overview.fields.owner")}:
           </span>
           <span className={kn.overviewHeaderFooterValue}>{owner}</span>
+          <GlobalOutlined />
+          <span className={kn.overviewHeaderFooterLabel}>
+            {t("bknProject.contentLanguage.label")}:
+          </span>
+          <span className={kn.overviewHeaderFooterValue}>
+            {t(namingLanguageLabelKey(project.namingLanguage))}
+          </span>
           <ClockCircleOutlined />
           <span className={kn.overviewHeaderFooterLabel}>
             {t("bknProject.overview.fields.updated")}:
@@ -578,11 +597,20 @@ export function ProjectOverview({
         </div>
       </section>
 
+      <ProjectEditModal
+        onCancel={() => setEditing(false)}
+        onSaved={(next) => {
+          setEditing(false);
+          message.success(t("bknProject.manage.edit.success"));
+          onProjectChange(next);
+        }}
+        project={editing ? project : null}
+      />
+
       <DataSourceHealth
         draftVersion={draft ? `${draft.status}:${draft.updateTime}` : undefined}
         onGoToModel={() => go("model")}
         onGoToResources={() => go("resources", "catalogs")}
-        onProjectChange={onProjectChange}
         project={project}
       />
 

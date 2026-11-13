@@ -6,7 +6,7 @@
  */
 
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, Input, Spin, Tooltip } from "antd";
+import { Alert, Input, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -19,11 +19,14 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { NewProjectModal } from "@/modules/bkn-project/components/NewProjectModal";
+import { ProjectDeleteModal } from "@/modules/bkn-project/components/manage/ProjectDeleteModal";
+import { ProjectEditModal } from "@/modules/bkn-project/components/manage/ProjectEditModal";
+import { ProjectImport } from "@/modules/bkn-project/components/manage/ProjectImport";
 import { ProjectCard } from "@/modules/bkn-project/components/ProjectCard";
 import {
+  exportProject,
   listProjectNetworks,
   listProjects,
-  setProjectArchived,
 } from "@/modules/bkn-project/services/project.service";
 import type { Project, ProjectCatalog, ProjectNetwork } from "@/modules/bkn-project/types/project";
 import { projectSectionPath } from "@/modules/bkn-project/types/workspace";
@@ -37,7 +40,7 @@ export const PROJECT_PAGE_SIZE = 12;
 
 export function ProjectListScene() {
   const { t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const currentUserId = runtimeConfig.currentUser.id;
   // Only the local viewer scenario is read-only. Project creation has no independent
@@ -46,7 +49,6 @@ export function ProjectListScene() {
 
   const [keyword, setKeyword] = useState("");
   const [name, setName] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PROJECT_PAGE_SIZE);
 
@@ -60,6 +62,8 @@ export function ProjectListScene() {
   const [catalogs, setCatalogs] = useState<ProjectCatalog[]>([]);
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState<Project | null>(null);
 
   // Each load takes a number; only the latest one may write the list, so a slow answer to an
   // earlier filter or page never replaces the current one.
@@ -71,7 +75,6 @@ export function ProjectListScene() {
     setLoadError(null);
     try {
       const result = await listProjects({
-        archived: showArchived ? "all" : "false",
         limit: pageSize,
         name,
         offset: (page - 1) * pageSize,
@@ -79,7 +82,7 @@ export function ProjectListScene() {
       if (load !== latestLoad.current) {
         return;
       }
-      // A page emptied since, as by archiving its last project, moves to the last one left.
+      // A page emptied since, as by deleting its last project, moves to the last one left.
       const lastPage = Math.max(1, Math.ceil(result.total / pageSize));
       if (result.items.length === 0 && page > lastPage) {
         setPage(lastPage);
@@ -99,7 +102,7 @@ export function ProjectListScene() {
         setLoading(false);
       }
     }
-  }, [name, page, pageSize, showArchived, t]);
+  }, [name, page, pageSize, t]);
 
   const loadReferences = useCallback(async () => {
     setNetworksError(null);
@@ -133,8 +136,6 @@ export function ProjectListScene() {
 
   const networkNames = Object.fromEntries(networks.map((network) => [network.id, network.name]));
 
-  const resetPaging = () => setPage(1);
-
   // Searches as the name is typed, as the knowledge network list does.
   const searchedName = useDebouncedValue(keyword).trim();
   useEffect(() => {
@@ -144,17 +145,21 @@ export function ProjectListScene() {
     }
   }, [name, searchedName]);
 
-  const handleShowArchived = (checked: boolean) => {
-    setShowArchived(checked);
-    resetPaging();
-  };
-
   // Networks or catalogs that failed to load are read again when the dialog that needs them opens.
-  const openCreate = () => {
+  const reloadFailedReferences = () => {
     if (networksError || catalogsError) {
       void loadReferences();
     }
+  };
+
+  const openCreate = () => {
+    reloadFailedReferences();
     setCreateOpen(true);
+  };
+
+  const handleImported = (project: Project) => {
+    message.success(t("bknProject.import.success"));
+    void navigate(projectSectionPath(project.id, "overview"));
   };
 
   const handleCreated = (project: Project) => {
@@ -172,29 +177,25 @@ export function ProjectListScene() {
     }
   };
 
-  const changeArchived = async (project: Project, archived: boolean) => {
-    try {
-      await setProjectArchived(project.id, archived);
-      message.success(
-        t(archived ? "bknProject.list.archiveSuccess" : "bknProject.list.unarchiveSuccess"),
-      );
-      await loadProjects();
-    } catch {
-      // The request layer shows bkn-project's localized message.
-    }
+  const handleExport = (project: Project) => {
+    exportProject(project).catch(() =>
+      message.error(t("bknProject.manage.export.failed", { name: project.name })),
+    );
   };
 
-  const handleArchive = (project: Project) => {
-    void modal.confirm({
-      title: t("bknProject.list.archiveConfirm.title", { name: project.name }),
-      content: t("bknProject.list.archiveConfirm.content"),
-      okText: t("bknProject.list.archiveConfirm.ok"),
-      cancelText: t("common.cancel"),
-      onOk: () => changeArchived(project, true),
-    });
+  const handleSaved = (project: Project) => {
+    setEditing(null);
+    message.success(t("bknProject.manage.edit.success"));
+    setItems((current) => current.map((item) => (item.id === project.id ? project : item)));
   };
 
-  const filtered = name !== "" || showArchived;
+  const handleDeleted = (project: Project) => {
+    setDeleting(null);
+    message.success(t("bknProject.manage.delete.success", { name: project.name }));
+    void loadProjects();
+  };
+
+  const filtered = name !== "";
 
   const openProject = (project: Project) => {
     void navigate(projectSectionPath(project.id, "overview"));
@@ -214,6 +215,17 @@ export function ProjectListScene() {
               {t("bknProject.list.create")}
             </AppButton>
           ) : null}
+          {canCreateProject ? (
+            <ProjectImport
+              catalogs={catalogs}
+              catalogsError={catalogsError}
+              className={styles.toolbarButton}
+              networks={networks}
+              networksError={networksError}
+              onImported={handleImported}
+              onOpen={reloadFailedReferences}
+            />
+          ) : null}
         </div>
         <div className={styles.toolbarRight}>
           <Input
@@ -224,12 +236,6 @@ export function ProjectListScene() {
             prefix={<SearchOutlined className={styles.searchIcon} />}
             value={keyword}
           />
-          <Checkbox
-            checked={showArchived}
-            onChange={(event) => handleShowArchived(event.target.checked)}
-          >
-            {t("bknProject.list.showArchived")}
-          </Checkbox>
           <div className={styles.toolbarActions}>
             <Tooltip title={t("bknProject.list.refresh")}>
               <button
@@ -280,9 +286,10 @@ export function ProjectListScene() {
                     isOwner={project.owner.id === currentUserId}
                     key={project.id}
                     networkName={networkNames[project.knId]}
-                    onArchive={handleArchive}
+                    onDelete={setDeleting}
+                    onEdit={setEditing}
+                    onExport={handleExport}
                     onOpen={openProject}
-                    onUnarchive={(record) => void changeArchived(record, false)}
                     project={project}
                   />
                 ))}
@@ -320,6 +327,12 @@ export function ProjectListScene() {
           open={createOpen}
         />
       ) : null}
+      <ProjectEditModal onCancel={() => setEditing(null)} onSaved={handleSaved} project={editing} />
+      <ProjectDeleteModal
+        onCancel={() => setDeleting(null)}
+        onDeleted={handleDeleted}
+        project={deleting}
+      />
     </section>
   );
 }
