@@ -238,9 +238,14 @@ export const bknProjectZhCN = {
         doneAll: "抽取完成，各类资料都已处理",
         doneOne: "这一类已重新抽取",
         someFailed: "抽取已结束，{{names}}没有完成，可以稍后只重抽这一类",
+        withReason: "{{what}}{{reason}}",
+        partial_one:
+          "已抽出部分需求概念，还有 {{count}} 段文档没有抽完；再次抽取需求文档时只补抽这几段，已抽出的会保留。",
+        partial_other:
+          "已抽出部分需求概念，还有 {{count}} 段文档没有抽完；再次抽取需求文档时只补抽这几段，已抽出的会保留。",
         failed: {
           table: "上次抽取没有完成，可以稍后重抽",
-          document: "上次没能从需求文档抽取到概念，可以稍后重抽",
+          document: "上次没能从需求文档抽取到概念。",
           busy: "需求正在处理中，稍后再抽取",
           knowledgeBase: "上次从调试文件抽取没有完成，可以稍后重抽",
         },
@@ -1819,6 +1824,7 @@ export const bknProjectZhCN = {
         proposalChanged: "内容有变化，请重新问。",
         stale: "列表刚有变化，已重新读取，请再点一次。",
         drafting: {
+          concepts: "正在抽取需求概念，完成后再采纳。",
           kinetic: "正在分析动力需求，完成后再采纳。",
           scenarios: "正在生成业务场景，完成后再采纳。",
         },
@@ -2437,6 +2443,22 @@ export const bknProjectZhCN = {
         rules: "业务规则 {{count}}",
         rules_one: "业务规则 {{count}}",
         rules_other: "业务规则 {{count}}",
+      },
+      conceptsRunError: {
+        agent_rejected: "AI 服务拒绝了这次请求，请联系管理员检查模型设置后再抽取。",
+        agent_unavailable: "暂时连不上 AI 服务，请过几分钟再抽取。",
+        agent_failed: "AI 这次没有给出可用的结果，请重新抽取。",
+        agent_timeout: "AI 处理超时，请重新抽取。",
+        output_invalid: "AI 返回的结果不完整，请重新抽取。",
+        output_too_long:
+          "有一段需求文档内容太多，AI 一次写不完。可以把这份文档拆成几份小一些的再上传，然后重新抽取。",
+        interrupted: "抽取期间需求有人修改过，这次结果没有写入，请重新抽取。",
+        other: "请重新抽取。",
+      },
+      busy: {
+        concepts: "正在抽取需求概念，完成后再生成业务场景。",
+        kinetic: "正在分析动力需求，完成后再生成业务场景。",
+        scenarios: "正在生成业务场景，请等它完成。",
       },
       draftError: {
         agent_rejected: "起草请求被拒绝了，请检查资料后重试。",

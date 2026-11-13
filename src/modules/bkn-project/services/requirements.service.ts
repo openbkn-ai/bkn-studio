@@ -99,6 +99,8 @@ type BackendRun = {
   error?: string;
   /** What the last run that ended ready read; absent until one did. */
   inputs?: unknown;
+  /** Parts of the documents the last run that wrote could not read. */
+  pending_parts?: string[] | null;
   retried?: boolean;
   stale?: boolean;
   start_time?: number;
@@ -274,6 +276,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
             error: concepts.error ?? "",
             // Extracted once a run ended ready: a run failing after it keeps those concepts.
             extracted: concepts.inputs !== undefined && concepts.inputs !== null,
+            pendingParts: concepts.pending_parts?.length ?? 0,
             stale: concepts.stale ?? false,
             status: concepts.status,
           },

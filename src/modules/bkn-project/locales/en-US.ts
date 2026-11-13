@@ -258,10 +258,14 @@ export const bknProjectEnUS = {
         doneOne: "This source was extracted again",
         someFailed:
           "Extraction finished, but {{names}} did not complete. Extract only that source again later.",
+        withReason: "{{what}} {{reason}}",
+        partial_one:
+          "Some requirement concepts were extracted; {{count}} part of the documents is not done yet. Extracting the requirement documents again reads only that part and keeps what was extracted.",
+        partial_other:
+          "Some requirement concepts were extracted; {{count}} parts of the documents are not done yet. Extracting the requirement documents again reads only those parts and keeps what was extracted.",
         failed: {
           table: "The last extraction did not complete. Try again later.",
-          document:
-            "No concepts could be extracted from the requirement documents. Try again later.",
+          document: "No concepts could be extracted from the requirement documents.",
           busy: "The requirements are being processed. Extract again later.",
           knowledgeBase:
             "The last extraction from the debug files did not complete. Try again later.",
@@ -1956,6 +1960,7 @@ export const bknProjectEnUS = {
         proposalChanged: "The content changed since. Please ask again.",
         stale: "The list just changed and was read again. Please click once more.",
         drafting: {
+          concepts: "Requirement concepts are being extracted. Adopt once that is done.",
           kinetic: "Kinetic needs are being analysed. Adopt once that is done.",
           scenarios: "Business scenarios are being generated. Adopt once that is done.",
         },
@@ -2619,6 +2624,27 @@ export const bknProjectEnUS = {
         rules: "Business rules {{count}}",
         rules_one: "Business rules {{count}}",
         rules_other: "Business rules {{count}}",
+      },
+      conceptsRunError: {
+        agent_rejected:
+          "The AI service refused the request. Ask an administrator to check the model settings, then extract again.",
+        agent_unavailable:
+          "The AI service cannot be reached right now. Extract again in a few minutes.",
+        agent_failed: "The AI gave no usable result this time. Extract again.",
+        agent_timeout: "The AI took too long. Extract again.",
+        output_invalid: "The AI's result was incomplete. Extract again.",
+        output_too_long:
+          "Part of a requirement document is more than the AI can write up at once. Split the document into smaller ones, upload them, then extract again.",
+        interrupted:
+          "The requirements were changed while extracting, so nothing was written. Extract again.",
+        other: "Extract again.",
+      },
+      busy: {
+        concepts:
+          "Requirement concepts are being extracted. Generate the business scenarios once that is done.",
+        kinetic:
+          "Kinetic needs are being analysed. Generate the business scenarios once that is done.",
+        scenarios: "Business scenarios are being generated. Wait for it to finish.",
       },
       draftError: {
         agent_rejected: "The drafting request was refused; check the documents and try again.",

@@ -36,6 +36,7 @@ import {
   draftErrorText,
   refusedInputs,
   requirementErrorText,
+  runningWork,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import {
   QuestionsView,
@@ -292,6 +293,10 @@ export function ProjectRequirements({
       } else if (code === "Requirement.ModelNotConfirmed") {
         setBlocked("modelNotConfirmed");
         setConfirmed(false);
+      } else if (code === "Requirement.Drafting") {
+        // Say which work holds the requirements, read as they are now.
+        const work = runningWork(await getRequirements(project.id).catch(() => null));
+        message.warning(work ? t(`${PREFIX}.busy.${work}`) : requirementErrorText(t, code));
       } else {
         message.error(requirementErrorText(t, code));
       }

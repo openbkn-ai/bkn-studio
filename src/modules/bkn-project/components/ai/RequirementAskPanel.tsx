@@ -20,7 +20,10 @@ import {
   proposalView,
 } from "@/modules/bkn-project/components/ai/proposals";
 import { ProposalCard, ProposalsBar } from "@/modules/bkn-project/components/ai/ProposalCard";
-import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import {
+  requirementErrorText,
+  runningWork,
+} from "@/modules/bkn-project/components/requirements/requirementMessages";
 import {
   ASK_MAX_REFS,
   ASK_POLL_MS,
@@ -32,7 +35,10 @@ import {
   startConversation,
 } from "@/modules/bkn-project/services/conversations.service";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
-import { POLL_FAILURE_LIMIT } from "@/modules/bkn-project/services/requirements.service";
+import {
+  getRequirements,
+  POLL_FAILURE_LIMIT,
+} from "@/modules/bkn-project/services/requirements.service";
 import type {
   AskConversation,
   AskItemKind,
@@ -253,7 +259,9 @@ export function RequirementAskPanel({
         message.warning(t(`${PREFIX}.stale`));
         onStale();
       } else if (code === "Requirement.Drafting") {
-        message.warning(t(`${PREFIX}.drafting.${page}`));
+        // The work holding the requirements may be another page's, such as extracting concepts.
+        const work = runningWork(await getRequirements(projectId).catch(() => null));
+        message.warning(t(`${PREFIX}.drafting.${work ?? page}`));
       } else {
         message.error(requirementErrorText(t, code));
       }

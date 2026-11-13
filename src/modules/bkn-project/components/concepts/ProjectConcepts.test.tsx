@@ -320,6 +320,49 @@ describe("ProjectConcepts", () => {
     ).toBeTruthy();
   });
 
+  const documentsRow = async () => {
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    return sources.querySelector('[data-source="document"]') as HTMLElement;
+  };
+
+  const withConceptsRun = (run: Record<string, unknown>) =>
+    requirements.getRequirements.mockResolvedValue({
+      spec: {
+        conceptsRun: { error: "", extracted: true, pendingParts: 0, stale: false, ...run },
+        runs: { concepts: { status: run.status, updateTime: 2 }, kinetic: null },
+      },
+      updateTime: 9,
+    });
+
+  it("says why extracting the requirement documents failed, and what to do", async () => {
+    withConceptsRun({ error: "output_too_long", status: "failed" });
+    renderConcepts();
+
+    const row = await documentsRow();
+    await waitFor(() =>
+      expect(row.textContent).toContain("bknProject.requirements.conceptsRunError.output_too_long"),
+    );
+    expect(row.textContent).toContain("bknProject.concepts.run.failed.document");
+  });
+
+  it("says how many parts of the documents are left and why, until the documents change", async () => {
+    withConceptsRun({ error: "agent_timeout", pendingParts: 2, status: "ready" });
+    const view = renderConcepts();
+
+    let row = await documentsRow();
+    await waitFor(() => expect(row.textContent).toContain("bknProject.concepts.run.partial"));
+    expect(row.textContent).toContain("bknProject.requirements.conceptsRunError.agent_timeout");
+    view.unmount();
+
+    withConceptsRun({ error: "agent_timeout", pendingParts: 2, stale: true, status: "ready" });
+    renderConcepts();
+    row = await documentsRow();
+    await waitFor(() => expect(requirements.getRequirements).toHaveBeenCalled());
+    expect(row.textContent).not.toContain("bknProject.concepts.run.partial");
+  });
+
   it("counts four figures over the data side and lists it grouped by its data", async () => {
     renderConcepts();
 
@@ -616,6 +659,37 @@ describe("ProjectConcepts", () => {
     const doc = await row("customer");
     expect(doc.getByText('bknProject.concepts.origin.knowledgeBaseFiles:{"count":2}')).toBeTruthy();
     expect(doc.getByText('bknProject.concepts.sameName:{"name":"Customer"}')).toBeTruthy();
+  });
+
+  it("says why extracting the documents failed right after this page extracted them", async () => {
+    requirements.extractRequirementConcepts.mockResolvedValue({});
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const documents = sources.querySelector('[data-source="document"]') as HTMLElement;
+    requirements.getRequirements.mockResolvedValue({
+      spec: {
+        conceptsRun: {
+          error: "output_too_long",
+          extracted: false,
+          pendingParts: 0,
+          stale: false,
+          status: "failed",
+        },
+        runs: { concepts: { status: "failed", updateTime: 3 }, kinetic: null },
+      },
+      updateTime: 9,
+    });
+    fireEvent.click(within(documents).getByRole("button", { name: /runOne.againOf/ }));
+    await confirmRun();
+
+    await waitFor(() =>
+      expect(documents.textContent).toContain(
+        "bknProject.requirements.conceptsRunError.output_too_long",
+      ),
+    );
   });
 
   it("extracts one source alone from its row", async () => {

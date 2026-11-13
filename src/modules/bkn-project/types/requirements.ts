@@ -218,6 +218,8 @@ export type RequirementSpec = {
     error: string;
     /** A run ended ready once: its concepts stand, even while another runs or after one failed. */
     extracted: boolean;
+    /** Parts of the documents still to read: the next extraction reads only them. */
+    pendingParts: number;
     /** The documents changed since the concepts were extracted. */
     stale: boolean;
     /** `running`, `ready` or `failed`. */

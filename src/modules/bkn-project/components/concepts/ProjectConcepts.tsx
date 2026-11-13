@@ -26,6 +26,7 @@ import {
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import { conceptsRunErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { askConcepts } from "@/modules/bkn-project/services/ask.service";
 import {
@@ -469,9 +470,15 @@ export function ProjectConcepts({
     for (const key of keys) {
       const turn = outcome[key];
       if (turn?.state === "failed") {
-        failed[key] = t(
+        const what = t(
           `${PREFIX}.run.failed.${key === "document" && turn.error === "busy" ? "busy" : key}`,
         );
+        // A requirement run that ended failed says why, as the row does once read again.
+        const [code, why] = (turn.error ?? "").split(":", 2);
+        failed[key] =
+          key === "document" && code === "requirements"
+            ? t(`${PREFIX}.run.withReason`, { reason: conceptsRunErrorText(t, why ?? ""), what })
+            : what;
       }
     }
     setRunFailed(failed);
@@ -584,9 +591,21 @@ export function ProjectConcepts({
     count: counts.documents,
     extracted: Boolean(conceptsRun?.extracted),
     extractedAt: conceptsRunRecord?.status === "ready" ? conceptsRunRecord.updateTime : null,
+    // Why the documents' last extraction failed and what to do; parts it left while the documents
+    // stay as they were are read alone next time. Documents changed since are all read again.
     failed:
       runFailed.document ??
-      (conceptsRun?.status === "failed" ? t(`${PREFIX}.run.failed.document`) : ""),
+      (conceptsRun?.status === "failed"
+        ? t(`${PREFIX}.run.withReason`, {
+            reason: conceptsRunErrorText(t, conceptsRun.error),
+            what: t(`${PREFIX}.run.failed.document`),
+          })
+        : conceptsRun?.status === "ready" && conceptsRun.pendingParts > 0 && !conceptsRun.stale
+          ? t(`${PREFIX}.run.withReason`, {
+              reason: conceptsRunErrorText(t, conceptsRun.error),
+              what: t(`${PREFIX}.run.partial`, { count: conceptsRun.pendingParts }),
+            })
+          : ""),
     produced: requirementList.length,
     running: extractingRequirements,
   };
