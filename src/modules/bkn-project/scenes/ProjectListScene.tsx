@@ -13,10 +13,10 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
-import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { getMockUserRole } from "@/framework/runtime/mock-user";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { NewProjectModal } from "@/modules/bkn-project/components/NewProjectModal";
 import { ProjectCard } from "@/modules/bkn-project/components/ProjectCard";
@@ -31,13 +31,9 @@ import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectListScene.module.css";
 
-/** Fills whole rows of the card grid at its common widths. */
-export const PROJECT_PAGE_SIZE = 24;
-
-/** bkn-project answers a cursor it did not issue, or one gone stale, with this code. */
-const INVALID_CURSOR_CODE = "BknProject.InvalidParameter.Cursor";
-/** The catalogs read in one request for the names on the cards and the new-project picker. */
-const CATALOG_PAGE_SIZE = 500;
+/** The page sizes of the knowledge network list, so both card lists page alike. */
+const PROJECT_PAGE_SIZE_OPTIONS = ["12", "24", "36"];
+export const PROJECT_PAGE_SIZE = 12;
 
 export function ProjectListScene() {
   const { t } = useTranslation();
@@ -51,13 +47,11 @@ export function ProjectListScene() {
   const [keyword, setKeyword] = useState("");
   const [name, setName] = useState("");
   const [showArchived, setShowArchived] = useState(false);
-  // cursors[i] opens page i; the first page has none.
-  const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
-  const page = cursors.length - 1;
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PROJECT_PAGE_SIZE);
 
   const [items, setItems] = useState<Project[]>([]);
   const [total, setTotal] = useState(0);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -65,8 +59,6 @@ export function ProjectListScene() {
   const [networksError, setNetworksError] = useState<string | null>(null);
   const [catalogs, setCatalogs] = useState<ProjectCatalog[]>([]);
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
-  // The cards name their catalogs once the list is read, or say it could not be.
-  const [catalogsRead, setCatalogsRead] = useState<"failed" | "read" | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Each load takes a number; only the latest one may write the list, so a slow answer to an
@@ -80,34 +72,34 @@ export function ProjectListScene() {
     try {
       const result = await listProjects({
         archived: showArchived ? "all" : "false",
-        cursor: cursors[cursors.length - 1],
-        limit: PROJECT_PAGE_SIZE,
+        limit: pageSize,
         name,
+        offset: (page - 1) * pageSize,
       });
       if (load !== latestLoad.current) {
         return;
       }
+      // A page emptied since, as by archiving its last project, moves to the last one left.
+      const lastPage = Math.max(1, Math.ceil(result.total / pageSize));
+      if (result.items.length === 0 && page > lastPage) {
+        setPage(lastPage);
+        return;
+      }
       setItems(result.items);
       setTotal(result.total);
-      setNextCursor(result.nextCursor);
     } catch (error) {
       if (load !== latestLoad.current) {
         return;
       }
-      if (cursors.length > 1 && extractRequestErrorDetails(error).code === INVALID_CURSOR_CODE) {
-        setCursors([undefined]);
-        return;
-      }
       setItems([]);
       setTotal(0);
-      setNextCursor(null);
       setLoadError(requestFailureText(t, error));
     } finally {
       if (load === latestLoad.current) {
         setLoading(false);
       }
     }
-  }, [cursors, name, showArchived, t]);
+  }, [name, page, pageSize, showArchived, t]);
 
   const loadReferences = useCallback(async () => {
     setNetworksError(null);
@@ -117,28 +109,17 @@ export function ProjectListScene() {
       setNetworks([]);
       setNetworksError(requestFailureText(t, error));
     }
-    // One read serves the catalog names of the list and the picker of the new-project dialog.
+    // The catalogs the new-project dialog offers.
     setCatalogsError(null);
     try {
-      // Every page, so a card never takes a catalog past the first for one the viewer cannot read.
-      const read: ProjectCatalog[] = [];
-      for (let page = 1; ; page += 1) {
-        const result = await listCatalogs(
-          catalogListAllQuery({ page, pageSize: CATALOG_PAGE_SIZE }),
-          { skipErrorToast: true },
-        );
-        read.push(...result.items.map(({ id, name }) => ({ id, name })));
-        if (result.items.length === 0 || page * CATALOG_PAGE_SIZE >= result.total) {
-          break;
-        }
-      }
-      setCatalogs(read);
-      setCatalogsRead("read");
+      const result = await listCatalogs(catalogListAllQuery({ pageSize: 500 }), {
+        skipErrorToast: true,
+      });
+      setCatalogs(result.items.map(({ id, name }) => ({ id, name })));
     } catch (error) {
-      // The cards say the names could not be read now; the dialog shows the failure.
+      // The dialog shows the failure.
       setCatalogs([]);
       setCatalogsError(requestFailureText(t, error));
-      setCatalogsRead("failed");
     }
   }, [t]);
 
@@ -151,16 +132,15 @@ export function ProjectListScene() {
   }, [loadReferences]);
 
   const networkNames = Object.fromEntries(networks.map((network) => [network.id, network.name]));
-  const catalogNames = Object.fromEntries(catalogs.map((catalog) => [catalog.id, catalog.name]));
 
-  const resetPaging = () => setCursors([undefined]);
+  const resetPaging = () => setPage(1);
 
   // Searches as the name is typed, as the knowledge network list does.
   const searchedName = useDebouncedValue(keyword).trim();
   useEffect(() => {
     if (searchedName !== name) {
       setName(searchedName);
-      setCursors([undefined]);
+      setPage(1);
     }
   }, [name, searchedName]);
 
@@ -181,6 +161,15 @@ export function ProjectListScene() {
     setCreateOpen(false);
     message.success(t("bknProject.create.success"));
     void navigate(projectSectionPath(project.id, "overview"));
+  };
+
+  // Refreshing starts again from the first page; on it, the list is read again.
+  const refresh = () => {
+    if (page === 1) {
+      void loadProjects();
+    } else {
+      setPage(1);
+    }
   };
 
   const changeArchived = async (project: Project, archived: boolean) => {
@@ -247,7 +236,7 @@ export function ProjectListScene() {
                 aria-label={t("bknProject.list.refresh")}
                 className={styles.iconButton}
                 disabled={loading}
-                onClick={() => void loadProjects()}
+                onClick={refresh}
                 type="button"
               >
                 <ReloadOutlined />
@@ -288,7 +277,6 @@ export function ProjectListScene() {
               <div className={styles.grid}>
                 {items.map((project) => (
                   <ProjectCard
-                    catalogNames={catalogsRead === "read" ? catalogNames : catalogsRead}
                     isOwner={project.owner.id === currentUserId}
                     key={project.id}
                     networkName={networkNames[project.knId]}
@@ -303,22 +291,22 @@ export function ProjectListScene() {
           </div>
         </Spin>
 
-        <div className={styles.pager}>
-          <span className={styles.total}>{t("bknProject.list.total", { count: total })}</span>
-          {page > 0 || nextCursor ? (
-            <>
-              <AppButton disabled={page === 0} onClick={() => setCursors(cursors.slice(0, -1))}>
-                {t("bknProject.list.prevPage")}
-              </AppButton>
-              <AppButton
-                disabled={!nextCursor}
-                onClick={() => nextCursor && setCursors([...cursors, nextCursor])}
-              >
-                {t("bknProject.list.nextPage")}
-              </AppButton>
-            </>
-          ) : null}
-        </div>
+        {items.length > 0 ? (
+          <div className={styles.paginationBar}>
+            <TablePaginationBar
+              current={page}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              pageSize={pageSize}
+              pageSizeOptions={PROJECT_PAGE_SIZE_OPTIONS}
+              showSizeChanger
+              showTotal={(nextTotal) => t("common.total", { total: nextTotal })}
+              total={total}
+            />
+          </div>
+        ) : null}
       </div>
 
       {canCreateProject ? (

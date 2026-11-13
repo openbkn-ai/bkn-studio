@@ -11,7 +11,7 @@ import {
   ProjectOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Spin, Tag, Tooltip, type MenuProps } from "antd";
+import { Dropdown, Tag, Tooltip, type MenuProps } from "antd";
 import type { TFunction } from "i18next";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
@@ -44,12 +44,6 @@ const STAGE_TONES: Record<ProjectStage, LightStatusTone> = {
 const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type ProjectCardProps = {
-  /**
-   * The names of the catalogs the caller may read; null while they are read, "failed" when they
-   * could not be. A catalog missing from them, one the caller may not read or one deleted since,
-   * is counted, never named by its id.
-   */
-  catalogNames: Record<string, string> | "failed" | null;
   /** The caller owns the project and may archive or restore it. */
   isOwner: boolean;
   networkName?: string;
@@ -81,7 +75,6 @@ function releaseView(t: TFunction, status: ProjectStatus) {
 
 /** A project in the list, as the knowledge network list shows a network. */
 export function ProjectCard({
-  catalogNames,
   isOwner,
   networkName,
   onArchive,
@@ -119,21 +112,6 @@ export function ProjectCard({
           project.archived
             ? { key: "unarchive", label: t("bknProject.list.unarchive") }
             : { key: "archive", label: t("bknProject.list.archive") },
-        ]
-      : []),
-  ];
-
-  const names = catalogNames && catalogNames !== "failed" ? catalogNames : {};
-  const named = project.catalogIds.filter((id) => Object.hasOwn(names, id));
-  const unnamed = project.catalogIds.length - named.length;
-  const catalogs = [
-    ...named.map((id) => names[id]),
-    ...(unnamed
-      ? [
-          t(
-            `bknProject.list.card.${catalogNames === "failed" ? "catalogNamesUnavailable" : "unreadableCatalogs"}`,
-            { count: unnamed },
-          ),
         ]
       : []),
   ];
@@ -225,22 +203,6 @@ export function ProjectCard({
                 </Tag>
               </Tooltip>
             ) : null}
-          </dd>
-        </div>
-        <div className={styles.fact}>
-          <dt>{t("bknProject.list.card.catalogs")}</dt>
-          <dd>
-            {!catalogNames && project.catalogIds.length > 0 ? (
-              <Spin size="small" />
-            ) : catalogs.length > 0 ? (
-              <Tooltip title={catalogs.join(t("bknProject.list.card.separator"))}>
-                <span className={styles.ellipsis}>
-                  {catalogs.join(t("bknProject.list.card.separator"))}
-                </span>
-              </Tooltip>
-            ) : (
-              <span className={styles.muted}>—</span>
-            )}
           </dd>
         </div>
       </dl>

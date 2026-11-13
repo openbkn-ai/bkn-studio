@@ -62,16 +62,6 @@
   margin-top: 14px;
 }
 
-.pager {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.total {
-  color: var(--color-text-tertiary);
-  font-size: 13px;
+.paginationBar {
+  composes: paginationBar from "../../knowledge-network/scenes/KnowledgeNetworkListScene.module.css";
 }
