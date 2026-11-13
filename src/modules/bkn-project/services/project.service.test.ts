@@ -70,6 +70,7 @@ describe("project.service", () => {
           id: "p1",
           knId: "orders",
           name: "Orders",
+          networkCatalogIds: [],
           otherProjects: 2,
           owner: { id: "u1", type: "user" },
           updateTime: 2,
@@ -77,6 +78,19 @@ describe("project.service", () => {
       ],
       total: 3,
     });
+  });
+
+  it("tells the catalogs a project takes from its existing network", async () => {
+    const { mapProject } = await importService();
+
+    const mapped = mapProject({
+      ...backendProject,
+      catalog_ids: ["c-network", "c-mine"],
+      network_catalog_ids: ["c-network"],
+    });
+
+    expect(mapped.catalogIds).toEqual(["c-network", "c-mine"]);
+    expect(mapped.networkCatalogIds).toEqual(["c-network"]);
   });
 
   it("leaves out an empty name and the first page's offset, and reads no entries as none", async () => {

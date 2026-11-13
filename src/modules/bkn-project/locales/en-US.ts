@@ -453,8 +453,17 @@ export const bknProjectEnUS = {
         title: "The project's data catalogs",
         label: "Data catalogs",
         hint: "AI drafts the ontology from the tables in these catalogs. Changing them keeps the current draft; the new catalogs are read when you draft again.",
+        networkLabel: "In use by the network",
+        networkHint:
+          "Object types of the knowledge network use these data catalogs. The project uses them with the network, so they cannot be removed here.",
+        networkUnnamed: "A data catalog you cannot see",
+        addedLabel: "Other data catalogs of the project",
         removed:
-          "Data catalogs {{names}} no longer exist or you cannot see them; saving removes them from the project.",
+          "{{count}} data catalogs no longer exist or you cannot see them; saving removes them from the project.",
+        removed_one:
+          "A data catalog no longer exists or you cannot see it; saving removes it from the project.",
+        removed_other:
+          "{{count}} data catalogs no longer exist or you cannot see them; saving removes them from the project.",
         loadFailed: "The data catalogs could not be listed, so they cannot be changed for now.",
         saved: "Data catalogs changed. Drafting reads the new catalogs.",
       },
@@ -981,7 +990,8 @@ export const bknProjectEnUS = {
         network: {
           label: "Knowledge network",
           noun: "knowledge network",
-          ok: "Available",
+          connected: "Connected",
+          open: "Open the knowledge network",
           missing: "Deleted",
           unreachable: "Can't confirm right now",
           not_bound: "No knowledge network yet",
@@ -1005,11 +1015,11 @@ export const bknProjectEnUS = {
         networkMissing:
           "This project's knowledge network has been deleted; it can no longer be confirmed or published. You can archive the project.",
         catalogsMissing:
-          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+          "{{count}} of the project's data catalogs no longer exist, so the items using them return no data. Change the data catalogs, then draft again.",
         catalogsMissing_one:
-          "{{count}} of the project's data catalogs has been deleted. Choose the catalogs again, then draft again.",
+          "One of the project's data catalogs no longer exists, so the items using it return no data. Change the data catalogs, then draft again.",
         catalogsMissing_other:
-          "{{count}} of the project's data catalogs have been deleted. Choose the catalogs again, then draft again.",
+          "{{count}} of the project's data catalogs no longer exist, so the items using them return no data. Change the data catalogs, then draft again.",
         tablesMissing:
           "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
         tablesMissing_one:
@@ -1433,7 +1443,6 @@ export const bknProjectEnUS = {
         gone: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
         gone_one: "{{count}} selected data catalog no longer exists. Change the data catalogs.",
         gone_other: "{{count}} selected data catalogs no longer exist. Change the data catalogs.",
-        unnamed: "Unknown catalog",
         nameUnread: "—",
         goToModel: "Go to concept modeling",
       },
