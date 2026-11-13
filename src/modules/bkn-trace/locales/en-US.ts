@@ -214,6 +214,18 @@ export const bknTraceEnUS = {
         "Shows the selected operation and its explicit links. Numbers identify choices, not execution order.",
       returnFact: "Return to selected fact",
       current: {
+        taskFailure: {
+          agent_timeout:
+            "Claim attribution timed out. You can retry; the original call records are unchanged.",
+          agent_failed:
+            "Claim attribution failed. You can retry; the original call records are unchanged.",
+          invalid_agent_result:
+            "The attribution result failed validation and was not published. You can retry.",
+          generation_cancelled:
+            "Generation was cancelled. The original call records are unchanged.",
+          still_running:
+            "Generation is still running. Read again later to resume without another model call.",
+        },
         language: "Generation language",
         generatedLanguage: "Evidence-chain language: {{language}}",
         replaceLanguage:

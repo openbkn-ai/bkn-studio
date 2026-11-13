@@ -17,6 +17,8 @@ import {
   generateCurrentExplanation,
   readCurrentExplanation,
   type CurrentExplanation,
+  type ExplanationFailureCode,
+  ExplanationTaskError,
 } from "./current-explanation.service";
 import styles from "./CurrentExplanationPanel.module.css";
 
@@ -39,6 +41,7 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
   const [value, setValue] = useState<CurrentExplanation>();
   const [busy, setBusy] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [failureCode, setFailureCode] = useState<ExplanationFailureCode>();
   const [readAttempt, setReadAttempt] = useState(0);
   const request = useRef<symbol | undefined>(undefined);
   useEffect(() => {
@@ -47,12 +50,16 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
     setValue(undefined);
     setBusy(true);
     setFailed(false);
+    setFailureCode(undefined);
     void readCurrentExplanation(interactionId)
       .then((result) => {
         if (request.current === token) setValue(result);
       })
-      .catch(() => {
-        if (request.current === token) setFailed(true);
+      .catch((error: unknown) => {
+        if (request.current === token) {
+          setFailed(true);
+          if (error instanceof ExplanationTaskError) setFailureCode(error.generationCode);
+        }
       })
       .finally(() => {
         if (request.current === token) setBusy(false);
@@ -67,11 +74,15 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
     request.current = token;
     setBusy(true);
     setFailed(false);
+    setFailureCode(undefined);
     try {
       const result = await generateCurrentExplanation(interactionId, locale);
       if (request.current === token) setValue(result);
-    } catch {
-      if (request.current === token) setFailed(true);
+    } catch (error) {
+      if (request.current === token) {
+        setFailed(true);
+        if (error instanceof ExplanationTaskError) setFailureCode(error.generationCode);
+      }
     } finally {
       if (request.current === token) setBusy(false);
     }
@@ -120,11 +131,13 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
             className={styles.metaAction}
             disabled={busy}
             onClick={() =>
-              failed && !value ? setReadAttempt((attempt) => attempt + 1) : void generate()
+              failed && !value && !failureCode
+                ? setReadAttempt((attempt) => attempt + 1)
+                : void generate()
             }
           >
             {t(
-              failed && !value
+              failed && !value && !failureCode
                 ? "bknTrace.evidenceChain.current.retryRead"
                 : value?.view
                   ? "bknTrace.evidenceChain.current.refresh"
@@ -141,11 +154,15 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
         <Alert
           type="error"
           showIcon
-          message={t(
-            failed && !value
-              ? "bknTrace.evidenceChain.current.readFailed"
-              : "bknTrace.evidenceChain.current.failed",
-          )}
+          message={
+            failureCode
+              ? t(`bknTrace.evidenceChain.current.taskFailure.${failureCode}`)
+              : t(
+                  failed && !value
+                    ? "bknTrace.evidenceChain.current.readFailed"
+                    : "bknTrace.evidenceChain.current.failed",
+                )
+          }
         />
       )}
       {!busy && !failed && value?.status === "not_generated" && (

@@ -11,10 +11,12 @@ import { beforeEach, expect, it, vi } from "vitest";
 import i18n from "@/app/locales/i18n";
 const read = vi.hoisted(() => vi.fn());
 const generate = vi.hoisted(() => vi.fn());
-vi.mock("./current-explanation.service", () => ({
+vi.mock("./current-explanation.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./current-explanation.service")>()),
   readCurrentExplanation: read,
   generateCurrentExplanation: generate,
 }));
+import { ExplanationTaskError } from "./current-explanation.service";
 import { CurrentExplanationPanel } from "./CurrentExplanationPanel";
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
@@ -185,4 +187,15 @@ it("preserves the saved language on failure and resets the default for another i
   panel.rerender(<CurrentExplanationPanel interactionId="other" />);
   await waitFor(() => expect(read).toHaveBeenCalledWith("other"));
   expect(screen.getByRole("combobox")).toHaveValue("zh-CN");
+});
+
+it("shows task failure separately from a read failure and retries generation", async () => {
+  const error = new ExplanationTaskError("agent_timeout");
+  read.mockRejectedValue(error);
+  generate.mockResolvedValue({ status: "not_generated" });
+  render(<CurrentExplanationPanel interactionId="i" />);
+  await screen.findByText(/结论识别任务超时/);
+  fireEvent.click(screen.getByRole("button", { name: "查看证据链" }));
+  await waitFor(() => expect(generate).toHaveBeenCalledWith("i", "zh-CN"));
+  expect(read).toHaveBeenCalledTimes(1);
 });

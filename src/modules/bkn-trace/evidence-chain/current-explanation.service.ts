@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isAxiosError } from "axios";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { http } from "@/framework/request/http";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { EvidenceChainView } from "./evidence-chain.types";
 export interface CurrentExplanation {
   status: "not_generated" | "ready";
@@ -237,10 +239,164 @@ function parse(value: unknown, id: string): CurrentExplanation {
     throw new Error("unsupported explanation locale");
   return { status: "ready", generatedAt: row.generated_at, locale: row.locale ?? "zh-CN", view };
 }
+export type ExplanationFailureCode =
+  | "agent_timeout"
+  | "agent_failed"
+  | "invalid_agent_result"
+  | "generation_cancelled"
+  | "still_running";
+export class ExplanationTaskError extends Error {
+  constructor(readonly generationCode: ExplanationFailureCode) {
+    super(generationCode);
+  }
+}
+type PendingExplanation = {
+  jobId?: string;
+  retryJobId?: string;
+  locale: SupportedLocale;
+  failed?: boolean;
+};
+function pendingKey(id: string): string {
+  const runtime = getRuntimeConfig();
+  return (
+    "bkn-trace:explanation-task:" + JSON.stringify([runtime.apiBaseUrl, runtime.currentUser.id, id])
+  );
+}
+function readPending(key: string): PendingExplanation | undefined {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return undefined;
+    const value = JSON.parse(raw) as Partial<PendingExplanation>;
+    if (value.locale !== "zh-CN" && value.locale !== "en-US") return undefined;
+    for (const id of [value.jobId, value.retryJobId]) {
+      if (id !== undefined && (typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,50}$/.test(id)))
+        return undefined;
+    }
+    if (value.failed !== undefined && typeof value.failed !== "boolean") return undefined;
+    return value as PendingExplanation;
+  } catch {
+    return undefined;
+  }
+}
+function savePending(key: string, value?: PendingExplanation): void {
+  try {
+    if (value) sessionStorage.setItem(key, JSON.stringify(value));
+    else sessionStorage.removeItem(key);
+  } catch {
+    /* Storage may be disabled; a retry still reuses the server task key. */
+  }
+}
+function taskEnvelope(
+  value: unknown,
+  id: string,
+): { status: "generating" | "failed"; job_id: string; error_code?: string } | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  if (row.status !== "generating" && row.status !== "failed") return undefined;
+  if (
+    row.schema_version !== "1" ||
+    row.interaction_id !== id ||
+    typeof row.job_id !== "string" ||
+    !/^[a-zA-Z0-9_-]{1,50}$/.test(row.job_id)
+  )
+    throw new Error("invalid explanation task scope");
+  return row as { status: "generating" | "failed"; job_id: string; error_code?: string };
+}
+async function finishTask(
+  id: string,
+  key: string,
+  value: unknown,
+  pending: PendingExplanation,
+): Promise<CurrentExplanation> {
+  const deadline = Date.now() + 180_000;
+  for (;;) {
+    if (key !== pendingKey(id)) throw new Error("explanation identity changed");
+    const task = taskEnvelope(value, id);
+    if (!task) {
+      const result = parse(value, id);
+      savePending(key);
+      return result;
+    }
+    pending = { jobId: task.job_id, locale: pending.locale, failed: task.status === "failed" };
+    savePending(key, pending);
+    if (task.status === "failed") {
+      const codes: ExplanationFailureCode[] = [
+        "agent_timeout",
+        "agent_failed",
+        "invalid_agent_result",
+        "generation_cancelled",
+      ];
+      const code = codes.find((candidate) => candidate === task.error_code) ?? "agent_failed";
+      throw new ExplanationTaskError(code);
+    }
+    if (Date.now() >= deadline) throw new ExplanationTaskError("still_running");
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (key !== pendingKey(id)) throw new Error("explanation identity changed");
+    const response = await taskRequest(
+      key,
+      http.get<unknown>(explanationURL(id), {
+        params: { job_id: task.job_id },
+        headers: { "Accept-Language": pending.locale },
+        skipErrorToast: true,
+        timeout: 30_000,
+      }),
+    );
+    value = response.data;
+  }
+}
+async function taskRequest<T>(key: string, request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    if (isAxiosError(error) && [401, 403, 404, 409].includes(error.response?.status ?? 0))
+      savePending(key);
+    throw error;
+  }
+}
+
+function explanationURL(id: string): string {
+  return `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`;
+}
+async function startTask(
+  id: string,
+  key: string,
+  pending: PendingExplanation,
+): Promise<CurrentExplanation> {
+  // Record intent before the POST: a refresh after a lost response can safely
+  // repeat it; BKN Agent's durable idempotency key prevents another model call.
+  savePending(key, pending);
+  const response = await taskRequest(
+    key,
+    http.post<unknown>(
+      explanationURL(id),
+      {
+        locale: pending.locale,
+        ...(pending.retryJobId ? { retry_job_id: pending.retryJobId } : {}),
+      },
+      { headers: { Prefer: "respond-async" }, skipErrorToast: true, timeout: 30_000 },
+    ),
+  );
+  return finishTask(id, key, response.data, pending);
+}
 export async function readCurrentExplanation(id: string): Promise<CurrentExplanation> {
-  const response = await http.get<unknown>(
-    `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`,
-    { skipErrorToast: true },
+  const key = pendingKey(id);
+  const pending = readPending(key);
+  if (pending?.jobId) {
+    const response = await taskRequest(
+      key,
+      http.get<unknown>(explanationURL(id), {
+        params: { job_id: pending.jobId },
+        headers: { "Accept-Language": pending.locale },
+        skipErrorToast: true,
+        timeout: 30_000,
+      }),
+    );
+    return finishTask(id, key, response.data, pending);
+  }
+  if (pending) return startTask(id, key, pending);
+  const response = await taskRequest(
+    key,
+    http.get<unknown>(explanationURL(id), { skipErrorToast: true }),
   );
   return parse(response.data, id);
 }
@@ -248,10 +404,10 @@ export async function generateCurrentExplanation(
   id: string,
   locale: SupportedLocale,
 ): Promise<CurrentExplanation> {
-  const response = await http.post<unknown>(
-    `/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`,
-    { locale },
-    { skipErrorToast: true, timeout: 120_000 },
-  );
-  return parse(response.data, id);
+  const key = pendingKey(id);
+  const previous = readPending(key);
+  if (previous?.jobId && !previous.failed && previous.locale === locale)
+    return readCurrentExplanation(id);
+  const retryJobId = previous?.failed && previous.locale === locale ? previous.jobId : undefined;
+  return startTask(id, key, { locale, retryJobId });
 }
