@@ -26,6 +26,8 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 import { AiPromptComposer } from "@/modules/knowledge-network/components/shared/AiPromptComposer";
 
+import { ProposalCard, ProposalsBar, type ProposalStatus } from "./ProposalCard";
+
 import styles from "./AskAiSidebar.module.css";
 
 const PREFIX = "bknProject.model.ask";
@@ -109,6 +111,8 @@ type Proposal<R extends Revision> = {
   revisions: R[];
   /** The changes to apply, by their place in `revisions`; all of them at first. */
   selected: number[];
+  /** Where each change stands, adopting one by one: waiting, adopted or declined. */
+  statuses: ProposalStatus[];
 };
 
 /**
@@ -119,8 +123,8 @@ type Proposal<R extends Revision> = {
  * editor forgets the conversation.
  *
  * Beside a page that writes each change as it is adopted, such as the concepts, `askWith` asks and
- * `adopt` writes the chosen changes one by one; one that fails stays to adopt again, and what was
- * adopted is changed on the page, not taken back here.
+ * each change is adopted or declined on its own, or all of them at once; `adopt` writes one, one
+ * that fails stays to adopt again, and what was adopted is changed on the page, not taken back here.
  */
 export function AskAiSidebar<R extends Revision = AskRevision>({
   adopt,
@@ -163,7 +167,8 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
   const settle = useRef<number | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
   const [proposal, setProposal] = useState<Proposal<R> | null>(null);
-  const [adopting, setAdopting] = useState(false);
+  // Which change is being adopted, or all of them; null when none is.
+  const [adopting, setAdopting] = useState<number | "all" | null>(null);
   const [undo, setUndo] = useState<{ take: UndoApply } | null>(null);
   const [promptRequest, setPromptRequest] = useState<{ revision: number; value: string }>();
   const turns = useRef<AskTurn[]>([]);
@@ -235,6 +240,7 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
           previews: reply.revisions.map((revision) => previewNow.current(revision)),
           revisions: reply.revisions,
           selected: reply.revisions.map((_, index) => index),
+          statuses: reply.revisions.map(() => ""),
         });
       }
     } catch (error) {
@@ -267,46 +273,59 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
     setUndo(null);
   };
 
-  const apply = async () => {
+  const apply = () => {
     if (!proposal) {
       return;
     }
-    if (!adopt) {
-      if (onApply) {
-        setUndo({ take: onApply(proposal.selected.map((index) => proposal.revisions[index])) });
-      }
-      setProposal(null);
+    if (onApply) {
+      setUndo({ take: onApply(proposal.selected.map((index) => proposal.revisions[index])) });
+    }
+    setProposal(null);
+  };
+
+  /**
+   * Adopts changes in order, one by one, each marked adopted as it is written; one that fails
+   * stops the rest, which wait to be adopted again.
+   */
+  const adoptChanges = async (indexes: number[], all: boolean) => {
+    if (!proposal || !adopt || !indexes.length) {
       return;
     }
-    // Written one by one, in order: what is left, failed or not chosen, can be adopted next.
-    setAdopting(true);
-    const left: number[] = [];
-    let failed = false;
-    for (const index of proposal.revisions.keys()) {
-      if (
-        !proposal.selected.includes(index) ||
-        failed ||
-        !(await adopt(proposal.revisions[index]))
-      ) {
-        failed ||= proposal.selected.includes(index);
-        left.push(index);
+    setAdopting(all ? "all" : indexes[0]);
+    let done = 0;
+    for (const index of indexes) {
+      if (!(await adopt(proposal.revisions[index]))) {
+        break;
       }
+      done += 1;
+      setProposal((current) =>
+        current
+          ? {
+              ...current,
+              statuses: current.statuses.map((status, at) => (at === index ? "adopted" : status)),
+            }
+          : current,
+      );
     }
-    setAdopting(false);
-    setProposal(
-      left.length
-        ? {
-            dropped: [],
-            previews: left.map((index) => proposal.previews[index]),
-            revisions: left.map((index) => proposal.revisions[index]),
-            selected: [],
-          }
-        : null,
-    );
-    if (!failed) {
-      message.success(t(`${PREFIX}.adopted`));
+    setAdopting(null);
+    if (done === indexes.length) {
+      message.success(
+        indexes.length === 1
+          ? t("bknProject.ask.panel.adopted", { name: proposal.previews[indexes[0]].label })
+          : t("bknProject.ask.panel.adoptedAll", { count: indexes.length }),
+      );
     }
   };
+
+  const decline = (index: number) =>
+    setProposal((current) =>
+      current
+        ? {
+            ...current,
+            statuses: current.statuses.map((status, at) => (at === index ? "declined" : status)),
+          }
+        : current,
+    );
 
   const takeBack = () => {
     if (undo?.take()) {
@@ -340,7 +359,12 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
         </div>
         <div className={styles.actions}>
           {messages.length ? (
-            <Button disabled={generating || adopting} onClick={restart} size="small" type="text">
+            <Button
+              disabled={generating || adopting !== null}
+              onClick={restart}
+              size="small"
+              type="text"
+            >
               {t(`${PREFIX}.newConversation`)}
             </Button>
           ) : null}
@@ -396,18 +420,69 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
             ) : null}
           </div>
         )}
-        {proposal && !generating ? (
+        {proposal && !generating && adopt ? (
           <div className={styles.proposal}>
             {proposal.revisions.length ? (
               <>
                 <strong>{t(`${PREFIX}.proposalTitle`)}</strong>
-                <p>{t(`${PREFIX}.${adopt ? "adoptHint" : "proposalHint"}`)}</p>
+                <p>{t(`${PREFIX}.adoptHint`)}</p>
+                {proposal.revisions.map((revision, index) => {
+                  const shown = proposal.previews[index];
+                  return (
+                    <ProposalCard
+                      after={shown.after}
+                      before={shown.before}
+                      busy={adopting === index}
+                      disabled={adopting !== null}
+                      key={index}
+                      label={shown.label}
+                      onAdopt={() => void adoptChanges([index], false)}
+                      onDecline={() => decline(index)}
+                      reason={revision.reason}
+                      status={proposal.statuses[index]}
+                    />
+                  );
+                })}
+              </>
+            ) : null}
+            {proposal.dropped.length ? (
+              <div className={styles.dropped}>
+                <span>{t(`${PREFIX}.dropped.title`, { count: proposal.dropped.length })}</span>
+                <ul>
+                  {proposal.dropped.map((item, index) => (
+                    <li key={index}>{droppedText(item)}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {proposal.revisions.length > 1 ? (
+              <ProposalsBar
+                busy={adopting === "all"}
+                disabled={adopting !== null}
+                onAdoptAll={() =>
+                  void adoptChanges(
+                    proposal.statuses
+                      .map((status, index) => (status ? -1 : index))
+                      .filter((index) => index >= 0),
+                    true,
+                  )
+                }
+                pending={proposal.statuses.filter((status) => !status).length}
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {proposal && !generating && !adopt ? (
+          <div className={styles.proposal}>
+            {proposal.revisions.length ? (
+              <>
+                <strong>{t(`${PREFIX}.proposalTitle`)}</strong>
+                <p>{t(`${PREFIX}.proposalHint`)}</p>
                 {proposal.revisions.map((revision, index) => {
                   const shown = proposal.previews[index];
                   return (
                     <Checkbox
                       checked={proposal.selected.includes(index)}
-                      disabled={adopting}
                       key={index}
                       onChange={(event) =>
                         setProposal({
@@ -449,17 +524,10 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
             ) : null}
             {proposal.revisions.length ? (
               <Space>
-                <Button
-                  disabled={!proposal.selected.length}
-                  loading={adopting}
-                  onClick={() => void apply()}
-                  type="primary"
-                >
-                  {t(`${PREFIX}.${adopt ? "adoptSelected" : "apply"}`)}
+                <Button disabled={!proposal.selected.length} onClick={apply} type="primary">
+                  {t(`${PREFIX}.apply`)}
                 </Button>
-                <Button disabled={adopting} onClick={() => setProposal(null)}>
-                  {t(`${PREFIX}.reject`)}
-                </Button>
+                <Button onClick={() => setProposal(null)}>{t(`${PREFIX}.reject`)}</Button>
               </Space>
             ) : null}
           </div>
@@ -498,7 +566,7 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
       <div className={styles.composer}>
         <AiPromptComposer
           // No question while the changes chosen are being written: they are of this answer.
-          checking={adopting}
+          checking={adopting !== null}
           generating={generating}
           inputLabel={t(`${PREFIX}.question`)}
           onStop={() => asking.current?.abort()}

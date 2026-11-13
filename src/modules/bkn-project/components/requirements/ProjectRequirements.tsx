@@ -12,11 +12,16 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
+import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
+import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import {
+  Asking,
   Citing,
   Editing,
+  type SpecAsking,
   type SpecEditing,
 } from "@/modules/bkn-project/components/requirements/citing";
 import {
@@ -48,6 +53,7 @@ import {
   decideChoice,
   draftRequirements,
   editItem,
+  getNetworkBackground,
   getRequirements,
   listDocuments,
   NETWORK_DOCUMENT_ID,
@@ -57,7 +63,8 @@ import {
   resolveConflict,
   reviewRequirements,
 } from "@/modules/bkn-project/services/requirements.service";
-import type { LogicNeedView } from "@/modules/bkn-project/types/kinetic";
+import type { AskItemKind } from "@/modules/bkn-project/types/conversations";
+import type { LogicNeedView, LogicNetworkItem } from "@/modules/bkn-project/types/kinetic";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type {
   RequirementChoice,
@@ -75,6 +82,7 @@ type Dialog =
   | { choice: RequirementChoice; type: "choice" }
   | { conflict: RequirementConflict; type: "conflict" };
 
+import ask from "../ai/RequirementAsk.module.css";
 import styles from "./Requirements.module.css";
 
 const PREFIX = "bknProject.requirements";
@@ -99,11 +107,14 @@ type Tab = (typeof TABS)[number];
  * project's other inputs, on the requirements and resources page.
  */
 export function ProjectRequirements({
+  onGoToKinetic,
   onGoToModel,
   onGoToResources,
   ownerIsCaller,
   project,
 }: {
+  /** Opens kinetic modeling, where the kinetic needs are. */
+  onGoToKinetic?: () => void;
   /** Opens ontology modeling, where the object types scenarios are generated from are adopted. */
   onGoToModel: () => void;
   /** Opens the requirements and resources page, where the documents are uploaded. */
@@ -118,6 +129,16 @@ export function ProjectRequirements({
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
   // The kinetic needs as the live network implements them; null when they could not be read.
   const [logicNeeds, setLogicNeeds] = useState<LogicNeedView[] | null>(null);
+  // What the network had before the project, which AI reads.
+  const [networkItems, setNetworkItems] = useState<LogicNetworkItem[]>([]);
+  // The confirmed model's object types; null while unread.
+  const [adoptedObjectTypes, setAdoptedObjectTypes] = useState<number | null>(null);
+  // The network has a description or SKILL.md, which generating and Ask AI read.
+  const [background, setBackground] = useState(false);
+  // Ask AI beside the lists, with the scenarios and questions ticked to ask about.
+  const [asking, setAsking] = useState(false);
+  const [selected, setSelected] = useState<{ id: string; kind: "questions" | "scenarios" }[]>([]);
+  const [flash, flashItems] = useFlash();
   // Reads failed in a row: following a drafting stops at the limit and the page offers to refresh.
   const [failures, setFailures] = useState(0);
   const [drafting, setDrafting] = useState(false);
@@ -171,7 +192,15 @@ export function ProjectRequirements({
   useEffect(() => {
     let active = true;
     getLogicNeeds(project.id)
-      .then((next) => active && setLogicNeeds(next.needs))
+      .then((next) => {
+        if (active) {
+          setLogicNeeds(next.needs);
+          setNetworkItems(next.networkItems ?? []);
+        }
+      })
+      .catch(() => undefined);
+    getNetworkBackground(project.id)
+      .then((found) => active && setBackground(found !== null))
       .catch(() => undefined);
     return () => {
       active = false;
@@ -183,6 +212,11 @@ export function ProjectRequirements({
     let active = true;
     getDraft(project.id)
       .then((draft) => {
+        if (active) {
+          setAdoptedObjectTypes(
+            draft ? draft.items.objectTypes.filter((item) => item.adopted).length : 0,
+          );
+        }
         if (active && draft) {
           setDrafted([
             ...draft.items.objectTypes.map(({ id, name, properties }) => ({
@@ -386,232 +420,347 @@ export function ProjectRequirements({
   const started = Boolean(spec && (spec.scenarios.length || spec.questions.length));
   const outdated = spec?.questions.filter((question) => question.ontologyChanged).length ?? 0;
   const activeTab: Tab = tab ?? "questions";
+  // Asking needs a specification: the items it changes are kept in it.
+  const canAsk = canEdit && requirements !== null;
+  const refs = selected
+    .map(({ id, kind }) => {
+      const name =
+        kind === "scenarios"
+          ? spec?.scenarios.find((item) => item.id === id)?.name
+          : spec?.questions.find((item) => item.id === id)?.text;
+      return name === undefined ? null : { id, kind, name };
+    })
+    .filter((ref) => ref !== null);
+  const askingContext: SpecAsking | null = canAsk
+    ? {
+        flash,
+        selected: new Set(selected.map(({ id }) => id)),
+        toggle: (kind, id) => {
+          const ticked = !selected.some((item) => item.id === id);
+          setSelected(
+            ticked ? [...selected, { id, kind }] : selected.filter((item) => item.id !== id),
+          );
+          // Ticking is for asking: the panel opens to ask about them.
+          if (ticked) {
+            setAsking(true);
+          }
+        },
+      }
+    : null;
+  /** Shows the tab of what was changed from a conversation, the first of them. */
+  const showChanged = (changed: { id: string; kind: AskItemKind }[]) => {
+    const first = changed[0]?.kind;
+    if (first === "questions" || first === "scenarios" || first === "rules") {
+      setTab(first);
+    }
+    flashItems(changed.map((item) => item.id));
+  };
   return (
     <Citing.Provider value={citing}>
       <Editing.Provider value={editing}>
-        <div className={styles.page}>
-          <div className={styles.head}>
-            {requirements && (started || !ready) ? (
-              <LightStatusTag
-                tone={ready ? "success" : requirements.status === "failed" ? "error" : "info"}
-              >
-                {t(`${PREFIX}.version`, {
-                  status: t(
-                    `${PREFIX}.status.${ready ? "ready" : isDrafting ? "drafting" : "failed"}`,
-                  ),
-                  version: requirements.version,
-                })}
-              </LightStatusTag>
-            ) : null}
-            <span className={styles.spacer} />
-            {requirements ? <RequirementsExport projectId={project.id} ready={ready} /> : null}
-            {canEdit && ready && waiting.length ? (
-              <AppButton
-                disabled={saving}
-                onClick={() => void apply((time) => reviewRequirements(project.id, time, waiting))}
-                type="primary"
-              >
-                {t(`${PREFIX}.review.acceptAll`, { count: waiting.length })}
-              </AppButton>
-            ) : null}
-            {canEdit ? (
-              <AppButton
-                disabled={isDrafting}
-                loading={drafting}
-                onClick={() => void draft(false)}
-                type={started ? "default" : "primary"}
-              >
-                {t(`${PREFIX}.${started ? "redraft" : "draft"}`)}
-              </AppButton>
-            ) : null}
-            {canEdit && started ? (
-              <AppButton danger disabled={isDrafting || drafting} onClick={startOver} type="text">
-                {t(`${PREFIX}.startOver`)}
-              </AppButton>
-            ) : null}
-          </div>
-          {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
-          {blocked ? (
-            <Alert
-              action={
-                <AppButton onClick={onGoToModel} size="small">
-                  {t(`${PREFIX}.goToModel`)}
-                </AppButton>
-              }
-              message={t(
-                blocked === "modelNotConfirmed"
-                  ? `${PREFIX}.modelNotConfirmed`
-                  : `${PREFIX}.error.NoAdoptedOntology`,
-              )}
-              showIcon
-              type="warning"
-            />
-          ) : null}
-          {!requirements || (ready && !started) ? (
-            <Alert
-              action={
-                <AppButton onClick={() => onGoToResources("documents")} size="small">
-                  {t(`${PREFIX}.goToDocuments`)}
-                </AppButton>
-              }
-              description={t(
-                documents.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
-              )}
-              message={t(`${PREFIX}.notDrafted`)}
-              showIcon
-              type="info"
-            />
-          ) : isDrafting ? (
-            <Alert message={draftingText} showIcon type="info" />
-          ) : requirements?.status === "failed" ? (
-            <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
-          ) : null}
-          {requirements?.stale ? (
-            <Alert message={t(`${PREFIX}.stale`)} showIcon type="warning" />
-          ) : null}
-          {ready && outdated ? (
-            <Alert
-              action={
-                canEdit ? (
-                  <AppButton disabled={drafting} onClick={() => void draft(false)} size="small">
-                    {t(`${PREFIX}.redraft`)}
+        <Asking.Provider value={askingContext}>
+          <div className={ask.layout}>
+            <div className={`${styles.page} ${ask.main}`}>
+              <div className={styles.head}>
+                {requirements && (started || !ready) ? (
+                  <LightStatusTag
+                    tone={ready ? "success" : requirements.status === "failed" ? "error" : "info"}
+                  >
+                    {t(`${PREFIX}.version`, {
+                      status: t(
+                        `${PREFIX}.status.${ready ? "ready" : isDrafting ? "drafting" : "failed"}`,
+                      ),
+                      version: requirements.version,
+                    })}
+                  </LightStatusTag>
+                ) : null}
+                <span className={styles.spacer} />
+                {requirements ? <RequirementsExport projectId={project.id} ready={ready} /> : null}
+                {canEdit && ready && waiting.length ? (
+                  <AppButton
+                    disabled={saving}
+                    onClick={() =>
+                      void apply((time) => reviewRequirements(project.id, time, waiting))
+                    }
+                    type="primary"
+                  >
+                    {t(`${PREFIX}.review.acceptAll`, { count: waiting.length })}
                   </AppButton>
-                ) : undefined
-              }
-              description={t(`${PREFIX}.review.outdatedDetail`, { count: outdated })}
-              message={t(`${PREFIX}.review.outdated`)}
-              showIcon
-              type="warning"
-            />
-          ) : null}
-          {ready && requirements.ontologyUncovered.length ? (
-            <Alert
-              message={t(`${PREFIX}.review.uncovered`, {
-                count: requirements.ontologyUncovered.length,
-                names: requirements.ontologyUncovered
-                  .map((item) => item.name)
-                  .join(t("bknProject.listSeparator")),
-              })}
-              showIcon
-              type="info"
-            />
-          ) : null}
-          {ready && waiting.length ? (
-            <p className={styles.muted}>
-              {t(`${PREFIX}.review.waiting`, { count: waiting.length })}
-            </p>
-          ) : null}
-          {ready && (requirements.unresolvedConflicts || requirements.undecidedChoices) ? (
-            <Alert
-              action={
-                <AppButton onClick={() => setTab("rules")} size="small">
-                  {t(`${PREFIX}.goDecide`)}
-                </AppButton>
-              }
-              message={
-                // Only what waits is named.
-                requirements.unresolvedConflicts && requirements.undecidedChoices
-                  ? t(`${PREFIX}.waiting.both`, {
-                      choices: requirements.undecidedChoices,
-                      conflicts: requirements.unresolvedConflicts,
-                    })
-                  : requirements.unresolvedConflicts
-                    ? t(`${PREFIX}.waiting.conflicts`, { count: requirements.unresolvedConflicts })
-                    : t(`${PREFIX}.waiting.choices`, { count: requirements.undecidedChoices })
-              }
-              showIcon
-              type="warning"
-            />
-          ) : null}
-          {spec && (spec.tablesOmitted || spec.catalogsUnlisted.length) ? (
-            <p className={styles.muted}>
-              {spec.catalogsUnlisted.length
-                ? t(`${PREFIX}.catalogsUnlisted`, { count: spec.catalogsUnlisted.length })
-                : t(`${PREFIX}.tablesOmitted`, { count: spec.tablesOmitted })}
-            </p>
-          ) : null}
-          {spec ? (
-            <>
-              <Segmented<Tab>
-                onChange={setTab}
-                options={TABS.map((value) => ({
-                  label: t(`${PREFIX}.tabs.${value}`, {
-                    count: {
-                      questions: spec.questions.length,
-                      rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
-                      scenarios: spec.scenarios.length,
-                    }[value],
-                  }),
-                  value,
-                }))}
-                value={activeTab}
+                ) : null}
+                {canEdit ? (
+                  <AppButton
+                    disabled={isDrafting}
+                    loading={drafting}
+                    onClick={() => void draft(false)}
+                    type={started ? "default" : "primary"}
+                  >
+                    {t(`${PREFIX}.${started ? "redraft" : "draft"}`)}
+                  </AppButton>
+                ) : null}
+                {canEdit && started ? (
+                  <AppButton
+                    danger
+                    disabled={isDrafting || drafting}
+                    onClick={startOver}
+                    type="text"
+                  >
+                    {t(`${PREFIX}.startOver`)}
+                  </AppButton>
+                ) : null}
+                {canAsk ? (
+                  <AppButton
+                    aria-pressed={asking}
+                    onClick={() => setAsking(!asking)}
+                    type={asking ? "default" : "primary"}
+                  >
+                    {refs.length
+                      ? t("bknProject.ask.button.selected", { count: refs.length })
+                      : t("bknProject.ask.button.label")}
+                  </AppButton>
+                ) : null}
+              </div>
+              <AskSources
+                canEdit={canEdit}
+                concepts={spec?.concepts.length ?? 0}
+                documents={documents}
+                hasBackground={background}
+                kineticNeeds={spec?.logicNeeds.length ?? 0}
+                networkItems={networkItems}
+                objectTypes={adoptedObjectTypes}
+                onGoToKinetic={onGoToKinetic}
+                onGoToModel={onGoToModel}
+                onOpenDocuments={() => onGoToResources("documents")}
+                onViewBackground={() => setViewing({ documentId: NETWORK_DOCUMENT_ID })}
+                onViewRules={() => setTab("rules")}
+                page="scenarios"
+                projectId={project.id}
+                rules={spec?.rules.length ?? 0}
               />
-              {activeTab === "questions" ? (
-                <QuestionsView
-                  drafted={drafted}
-                  itemName={itemName}
-                  logicNeeds={logicNeeds}
+              {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
+              {blocked ? (
+                <Alert
+                  action={
+                    <AppButton onClick={onGoToModel} size="small">
+                      {t(`${PREFIX}.goToModel`)}
+                    </AppButton>
+                  }
+                  message={t(
+                    blocked === "modelNotConfirmed"
+                      ? `${PREFIX}.modelNotConfirmed`
+                      : `${PREFIX}.error.NoAdoptedOntology`,
+                  )}
+                  showIcon
+                  type="warning"
+                />
+              ) : null}
+              {!requirements || (ready && !started) ? (
+                <Alert
+                  action={
+                    <AppButton onClick={() => onGoToResources("documents")} size="small">
+                      {t(`${PREFIX}.goToDocuments`)}
+                    </AppButton>
+                  }
+                  description={t(
+                    documents.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
+                  )}
+                  message={t(`${PREFIX}.notDrafted`)}
+                  showIcon
+                  type="info"
+                />
+              ) : isDrafting ? (
+                <Alert message={draftingText} showIcon type="info" />
+              ) : requirements?.status === "failed" ? (
+                <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
+              ) : null}
+              {requirements?.stale ? (
+                <Alert message={t(`${PREFIX}.stale`)} showIcon type="warning" />
+              ) : null}
+              {ready && outdated ? (
+                <Alert
+                  action={
+                    canEdit ? (
+                      <AppButton disabled={drafting} onClick={() => void draft(false)} size="small">
+                        {t(`${PREFIX}.redraft`)}
+                      </AppButton>
+                    ) : undefined
+                  }
+                  description={t(`${PREFIX}.review.outdatedDetail`, { count: outdated })}
+                  message={t(`${PREFIX}.review.outdated`)}
+                  showIcon
+                  type="warning"
+                />
+              ) : null}
+              {ready && requirements.ontologyUncovered.length ? (
+                <Alert
+                  message={t(`${PREFIX}.review.uncovered`, {
+                    count: requirements.ontologyUncovered.length,
+                    names: requirements.ontologyUncovered
+                      .map((item) => item.name)
+                      .join(t("bknProject.listSeparator")),
+                  })}
+                  showIcon
+                  type="info"
+                />
+              ) : null}
+              {ready && waiting.length ? (
+                <p className={styles.muted}>
+                  {t(`${PREFIX}.review.waiting`, { count: waiting.length })}
+                </p>
+              ) : null}
+              {ready && (requirements.unresolvedConflicts || requirements.undecidedChoices) ? (
+                <Alert
+                  action={
+                    <AppButton onClick={() => setTab("rules")} size="small">
+                      {t(`${PREFIX}.goDecide`)}
+                    </AppButton>
+                  }
+                  message={
+                    // Only what waits is named.
+                    requirements.unresolvedConflicts && requirements.undecidedChoices
+                      ? t(`${PREFIX}.waiting.both`, {
+                          choices: requirements.undecidedChoices,
+                          conflicts: requirements.unresolvedConflicts,
+                        })
+                      : requirements.unresolvedConflicts
+                        ? t(`${PREFIX}.waiting.conflicts`, {
+                            count: requirements.unresolvedConflicts,
+                          })
+                        : t(`${PREFIX}.waiting.choices`, { count: requirements.undecidedChoices })
+                  }
+                  showIcon
+                  type="warning"
+                />
+              ) : null}
+              {spec && (spec.tablesOmitted || spec.catalogsUnlisted.length) ? (
+                <p className={styles.muted}>
+                  {spec.catalogsUnlisted.length
+                    ? t(`${PREFIX}.catalogsUnlisted`, { count: spec.catalogsUnlisted.length })
+                    : t(`${PREFIX}.tablesOmitted`, { count: spec.tablesOmitted })}
+                </p>
+              ) : null}
+              {spec ? (
+                <>
+                  <Segmented<Tab>
+                    onChange={setTab}
+                    options={TABS.map((value) => ({
+                      label: t(`${PREFIX}.tabs.${value}`, {
+                        count: {
+                          questions: spec.questions.length,
+                          rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
+                          scenarios: spec.scenarios.length,
+                        }[value],
+                      }),
+                      value,
+                    }))}
+                    value={activeTab}
+                  />
+                  {activeTab === "questions" ? (
+                    <QuestionsView
+                      drafted={drafted}
+                      itemName={itemName}
+                      logicNeeds={logicNeeds}
+                      projectId={project.id}
+                      spec={spec}
+                    />
+                  ) : activeTab === "scenarios" ? (
+                    <ScenariosView logicNeeds={logicNeeds} spec={spec} />
+                  ) : (
+                    <RulesView spec={spec} />
+                  )}
+                  {canAsk ? (
+                    <p className={styles.muted}>{t("bknProject.ask.select.hint.scenarios")}</p>
+                  ) : null}
+                  <RejectedNote spec={spec} />
+                </>
+              ) : null}
+              {viewing ? (
+                <DocumentViewer
+                  documentId={viewing.documentId}
+                  onClose={() => setViewing(null)}
                   projectId={project.id}
+                  range={viewing.range}
+                />
+              ) : null}
+              {spec && dialog?.type === "item" ? (
+                <ItemDialog
+                  drafted={drafted}
+                  inputErrors={inputErrors}
+                  itemId={dialog.itemId}
+                  kind={dialog.kind}
+                  onCancel={() => {
+                    setDialog(null);
+                    setInputErrors({});
+                  }}
+                  onSave={(fields) =>
+                    apply((time) =>
+                      dialog.itemId
+                        ? editItem(project.id, dialog.kind, dialog.itemId, fields, time)
+                        : addItem(project.id, dialog.kind, fields, time),
+                    )
+                  }
+                  saving={saving}
                   spec={spec}
                 />
-              ) : activeTab === "scenarios" ? (
-                <ScenariosView logicNeeds={logicNeeds} spec={spec} />
-              ) : (
-                <RulesView spec={spec} />
-              )}
-              <RejectedNote spec={spec} />
-            </>
-          ) : null}
-          {viewing ? (
-            <DocumentViewer
-              documentId={viewing.documentId}
-              onClose={() => setViewing(null)}
-              projectId={project.id}
-              range={viewing.range}
-            />
-          ) : null}
-          {spec && dialog?.type === "item" ? (
-            <ItemDialog
-              drafted={drafted}
-              inputErrors={inputErrors}
-              itemId={dialog.itemId}
-              kind={dialog.kind}
-              onCancel={() => {
-                setDialog(null);
-                setInputErrors({});
-              }}
-              onSave={(fields) =>
-                apply((time) =>
-                  dialog.itemId
-                    ? editItem(project.id, dialog.kind, dialog.itemId, fields, time)
-                    : addItem(project.id, dialog.kind, fields, time),
-                )
-              }
-              saving={saving}
-              spec={spec}
-            />
-          ) : null}
-          {dialog?.type === "conflict" ? (
-            <ConflictDialog
-              conflict={dialog.conflict}
-              onCancel={() => setDialog(null)}
-              onSave={(ruling) =>
-                void apply((time) => resolveConflict(project.id, dialog.conflict.id, ruling, time))
-              }
-              saving={saving}
-            />
-          ) : null}
-          {dialog?.type === "choice" ? (
-            <ChoiceDialog
-              choice={dialog.choice}
-              onCancel={() => setDialog(null)}
-              onSave={(decision) =>
-                void apply((time) => decideChoice(project.id, dialog.choice.id, decision, time))
-              }
-              saving={saving}
-            />
-          ) : null}
-        </div>
+              ) : null}
+              {dialog?.type === "conflict" ? (
+                <ConflictDialog
+                  conflict={dialog.conflict}
+                  onCancel={() => setDialog(null)}
+                  onSave={(ruling) =>
+                    void apply((time) =>
+                      resolveConflict(project.id, dialog.conflict.id, ruling, time),
+                    )
+                  }
+                  saving={saving}
+                />
+              ) : null}
+              {dialog?.type === "choice" ? (
+                <ChoiceDialog
+                  choice={dialog.choice}
+                  onCancel={() => setDialog(null)}
+                  onSave={(decision) =>
+                    void apply((time) => decideChoice(project.id, dialog.choice.id, decision, time))
+                  }
+                  saving={saving}
+                />
+              ) : null}
+            </div>
+            {asking && canAsk ? (
+              <div className={ask.side}>
+                <RequirementAskPanel
+                  names={{
+                    logicNeed: (id) => spec?.logicNeeds.find((need) => need.id === id)?.name ?? "",
+                    objectType: (id) =>
+                      drafted.find((item) => item.id === id && item.kind === "object_type")?.name ??
+                      "",
+                    scenario: (id) => spec?.scenarios.find((item) => item.id === id)?.name ?? "",
+                  }}
+                  onClose={() => setAsking(false)}
+                  onDecided={(next, changed) => {
+                    latest.current += 1;
+                    if (next) {
+                      setRequirements(next);
+                    } else {
+                      void load();
+                    }
+                    showChanged(changed);
+                  }}
+                  onRemoveRef={(ref) => setSelected(selected.filter((item) => item.id !== ref.id))}
+                  onSent={() => setSelected([])}
+                  onStale={() => void load()}
+                  page="scenarios"
+                  projectId={project.id}
+                  refs={refs}
+                  subtitle={t("bknProject.ask.panel.subtitle.scenarios", {
+                    questions: spec?.questions.length ?? 0,
+                    scenarios: spec?.scenarios.length ?? 0,
+                  })}
+                  updateTime={requirements?.updateTime}
+                />
+              </div>
+            ) : null}
+          </div>
+        </Asking.Provider>
       </Editing.Provider>
     </Citing.Provider>
   );

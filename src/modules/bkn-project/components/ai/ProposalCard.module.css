@@ -1,0 +1,89 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/* One proposed change: its kind, what it changes, from what to what, and why. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  font-size: 13px;
+}
+
+.decided {
+  opacity: 0.75;
+}
+
+.declined .label {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.op {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 3px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary-600);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.label {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.detail,
+.reason {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.diffKey {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

@@ -16,6 +16,9 @@ import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
+import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
+import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
 import {
   KINETIC,
   logicKindText,
@@ -59,8 +62,10 @@ import {
   addItem,
   analyzeKinetic,
   editItem,
+  getNetworkBackground,
   getRequirements,
   listDocuments,
+  NETWORK_DOCUMENT_ID,
   POLL_FAILURE_LIMIT,
   removeItem,
   REQUIREMENTS_POLL_MS,
@@ -73,12 +78,13 @@ import type {
 } from "@/modules/bkn-project/types/kinetic";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { RequirementDocument, Requirements } from "@/modules/bkn-project/types/requirements";
-import { projectSectionPath } from "@/modules/bkn-project/types/workspace";
+import { projectResourcesPath, projectSectionPath } from "@/modules/bkn-project/types/workspace";
 import type {
   ActionTypeNavigationContext,
   ObjectMetricNavigationContext,
 } from "@/modules/knowledge-network";
 
+import ask from "../ai/RequirementAsk.module.css";
 import styles from "./Kinetic.module.css";
 
 const ALL = "all";
@@ -121,8 +127,16 @@ export function ProjectKinetic({
   const [failures, setFailures] = useState(0);
   // null while unknown; the analysis needs a confirmed model.
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
-  const [documents, setDocuments] = useState<RequirementDocument[]>([]);
+  // null while unread.
+  const [documents, setDocuments] = useState<RequirementDocument[] | null>(null);
   const [objectTypes, setObjectTypes] = useState<{ id: string; name: string }[]>([]);
+  const [draftRead, setDraftRead] = useState(false);
+  // The network has a description or SKILL.md, which the analysis and Ask AI read.
+  const [background, setBackground] = useState(false);
+  // Ask AI beside the list, with the needs ticked to ask about.
+  const [asking, setAsking] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [flash, flashItems] = useFlash();
   // The network's own object types, to name those its items act on that the draft does not have.
   const [networkObjects, setNetworkObjects] = useState<{ id: string; name: string }[]>([]);
   const [kind, setKind] = useState<string>(ALL);
@@ -176,16 +190,22 @@ export function ProjectKinetic({
       .then((next) => active && setDocuments(next))
       .catch(() => undefined);
     getDraft(project.id)
-      .then(
-        (draft) =>
-          active &&
-          draft &&
+      .then((draft) => {
+        if (!active) {
+          return;
+        }
+        setDraftRead(true);
+        if (draft) {
           setObjectTypes(
             draft.items.objectTypes
               .filter((item) => item.adopted)
               .map(({ id, name }) => ({ id, name })),
-          ),
-      )
+          );
+        }
+      })
+      .catch(() => undefined);
+    getNetworkBackground(project.id)
+      .then((found) => active && setBackground(found !== null))
       .catch(() => undefined);
     return () => {
       active = false;
@@ -337,7 +357,7 @@ export function ProjectKinetic({
   const citing = useMemo(
     () => ({
       documentName: (documentId: string) =>
-        documents.find((document) => document.id === documentId)?.name ??
+        documents?.find((document) => document.id === documentId)?.name ??
         t("bknProject.requirements.removedDocument"),
       openDocument: (documentId: string, range?: { end: number; start: number }) =>
         setViewing({ documentId, range }),
@@ -498,6 +518,12 @@ export function ProjectKinetic({
   const questionsOf = (needId: string) =>
     spec?.questions.filter((question) => question.logicNeedIds.includes(needId)).length ?? 0;
   const notConfirmed = confirmed === false;
+  // Asking needs a specification: the needs it changes are kept in it.
+  const canAsk = canEdit && requirements !== null;
+  const refs = selected
+    .map((id) => needs.find((need) => need.id === id))
+    .filter((need): need is LogicNeedView => need !== undefined)
+    .map((need) => ({ id: need.id, kind: "logic_needs" as const, name: need.name }));
 
   const columns: ColumnsType<{ need: LogicNeedView; state: NeedState }> = [
     {
@@ -624,237 +650,317 @@ export function ProjectKinetic({
 
   return (
     <Citing.Provider value={citing}>
-      <div className={styles.page}>
-        <div className={styles.head}>
-          <p className={styles.intro}>{t(`${KINETIC}.intro`)}</p>
-          {editable && waiting.length ? (
-            <AppButton
-              disabled={saving}
-              onClick={() =>
-                void apply((time) =>
-                  reviewRequirements(
-                    project.id,
-                    time,
-                    waiting.map(({ id }) => ({ id, kind: "logic_needs" as const })),
-                  ),
-                )
-              }
-              type="primary"
-            >
-              {t(`${KINETIC}.review.acceptAll`, { count: waiting.length })}
-            </AppButton>
-          ) : null}
-          {editable ? (
-            <AppButton onClick={() => setDialog({ needId: null })}>
-              {t(`${KINETIC}.editing.add`)}
-            </AppButton>
-          ) : null}
-          {canEdit ? (
-            notConfirmed ? (
-              <Tooltip title={t(`${KINETIC}.modelNotConfirmed`)}>
-                <span>{analyzeButton}</span>
-              </Tooltip>
-            ) : (
-              analyzeButton
-            )
-          ) : null}
-          {canEdit && run ? (
-            <AppButton
-              danger
-              disabled={notConfirmed || running || analyzing}
-              onClick={startOver}
-              type="text"
-            >
-              {t(`${KINETIC}.startOver`)}
-            </AppButton>
-          ) : null}
-        </div>
-        {notConfirmed ? (
-          <Alert
-            action={
-              <AppButton onClick={onGoToModel} size="small">
-                {t(`${KINETIC}.goToModel`)}
+      <div className={ask.layout}>
+        <div className={`${styles.page} ${ask.main}`}>
+          <div className={styles.head}>
+            <p className={styles.intro}>{t(`${KINETIC}.intro`)}</p>
+            {editable && waiting.length ? (
+              <AppButton
+                disabled={saving}
+                onClick={() =>
+                  void apply((time) =>
+                    reviewRequirements(
+                      project.id,
+                      time,
+                      waiting.map(({ id }) => ({ id, kind: "logic_needs" as const })),
+                    ),
+                  )
+                }
+                type="primary"
+              >
+                {t(`${KINETIC}.review.acceptAll`, { count: waiting.length })}
               </AppButton>
-            }
-            message={t(`${KINETIC}.modelNotConfirmed`)}
-            showIcon
-            type="warning"
-          />
-        ) : null}
-        {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
-        {running ? <Alert message={t(`${KINETIC}.running`)} showIcon type="info" /> : null}
-        {run?.status === "failed" ? (
-          <Alert
-            message={t(`${KINETIC}.failed`, { reason: runErrorText(t, run.error) })}
-            showIcon
-            type="error"
-          />
-        ) : null}
-        {run?.stale && !running ? (
-          <Alert message={t(`${KINETIC}.runStale`)} showIcon type="warning" />
-        ) : null}
-        {liveChanged ? (
-          <Alert
-            action={
-              <AppButton onClick={onGoToRelease} size="small">
-                {t(`${KINETIC}.goToRelease`)}
+            ) : null}
+            {editable ? (
+              <AppButton onClick={() => setDialog({ needId: null })}>
+                {t(`${KINETIC}.editing.add`)}
               </AppButton>
-            }
-            closable
-            message={t(`${KINETIC}.commitHint`)}
-            onClose={() => setLiveChanged(false)}
-            showIcon
-            type="success"
-          />
-        ) : null}
-        {/* Before the network runs a version nothing is implemented live: that is not a failure. */}
-        {logic && !logic.live ? (
-          <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
-        ) : null}
-        {/* A network the project started from runs already: what it has can be linked now. */}
-        {existingNetwork ? (
-          <Alert message={t(`${KINETIC}.liveBeforeRelease`)} showIcon type="info" />
-        ) : null}
-        {!live || logic?.reason ? (
-          <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
-        ) : null}
-        {/* Waiting for the first release is said only while the network runs no version. */}
-        <Alert
-          message={t(`${KINETIC}.${logic?.live ? "liveNoteRunning" : "liveNote"}`)}
-          showIcon
-          type="info"
-        />
-        {hasNetworkItems ? (
-          <p className={`${styles.muted} ${styles.row}`}>
-            <InNetworkDot />
-            {networkSummary(t, networkItems, newNeeds)}
-          </p>
-        ) : null}
-        {live && needs.length ? (
-          <div className={styles.stats}>
-            {(["implemented", "pending", "waitingRelease"] as const).map((state) => (
-              <div className={styles.stat} key={state}>
-                <span className={styles.muted}>{t(`${KINETIC}.stats.${state}`)}</span>
-                <span className={styles.statValue}>
-                  {state === "pending" ? count("pending") + count("broken") : count(state)}
-                </span>
-              </div>
-            ))}
+            ) : null}
+            {canEdit ? (
+              notConfirmed ? (
+                <Tooltip title={t(`${KINETIC}.modelNotConfirmed`)}>
+                  <span>{analyzeButton}</span>
+                </Tooltip>
+              ) : (
+                analyzeButton
+              )
+            ) : null}
+            {canEdit && run ? (
+              <AppButton
+                danger
+                disabled={notConfirmed || running || analyzing}
+                onClick={startOver}
+                type="text"
+              >
+                {t(`${KINETIC}.startOver`)}
+              </AppButton>
+            ) : null}
+            {canAsk ? (
+              <AppButton
+                aria-pressed={asking}
+                onClick={() => setAsking(!asking)}
+                type={asking ? "default" : "primary"}
+              >
+                {refs.length
+                  ? t("bknProject.ask.button.selected", { count: refs.length })
+                  : t("bknProject.ask.button.label")}
+              </AppButton>
+            ) : null}
           </div>
-        ) : null}
-        {hasNetworkItems ? (
-          <KineticNetworkItems
-            items={networkItems}
-            needs={needs}
-            networkId={networkId}
-            objectName={objectName}
-            onOpenNeed={setOpenId}
-            reason={logic?.networkItemsReason ?? ""}
+          {notConfirmed ? (
+            <Alert
+              action={
+                <AppButton onClick={onGoToModel} size="small">
+                  {t(`${KINETIC}.goToModel`)}
+                </AppButton>
+              }
+              message={t(`${KINETIC}.modelNotConfirmed`)}
+              showIcon
+              type="warning"
+            />
+          ) : null}
+          {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
+          {running ? <Alert message={t(`${KINETIC}.running`)} showIcon type="info" /> : null}
+          {run?.status === "failed" ? (
+            <Alert
+              message={t(`${KINETIC}.failed`, { reason: runErrorText(t, run.error) })}
+              showIcon
+              type="error"
+            />
+          ) : null}
+          {run?.stale && !running ? (
+            <Alert message={t(`${KINETIC}.runStale`)} showIcon type="warning" />
+          ) : null}
+          {liveChanged ? (
+            <Alert
+              action={
+                <AppButton onClick={onGoToRelease} size="small">
+                  {t(`${KINETIC}.goToRelease`)}
+                </AppButton>
+              }
+              closable
+              message={t(`${KINETIC}.commitHint`)}
+              onClose={() => setLiveChanged(false)}
+              showIcon
+              type="success"
+            />
+          ) : null}
+          {/* Before the network runs a version nothing is implemented live: that is not a failure. */}
+          {logic && !logic.live ? (
+            <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
+          ) : null}
+          {/* A network the project started from runs already: what it has can be linked now. */}
+          {existingNetwork ? (
+            <Alert message={t(`${KINETIC}.liveBeforeRelease`)} showIcon type="info" />
+          ) : null}
+          {!live || logic?.reason ? (
+            <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
+          ) : null}
+          {/* Waiting for the first release is said only while the network runs no version. */}
+          <Alert
+            message={t(`${KINETIC}.${logic?.live ? "liveNoteRunning" : "liveNote"}`)}
+            showIcon
+            type="info"
           />
-        ) : null}
-        {needs.length > 0 && newNeeds === 0 ? (
-          <p className={styles.muted}>{t(`${KINETIC}.allCovered`)}</p>
-        ) : needs.length ? (
-          <>
-            <div className={styles.filters}>
-              <Select
-                aria-label={t(`${KINETIC}.filter.kind`)}
-                className={styles.filter}
-                onChange={setKind}
-                options={[
-                  { label: t(`${KINETIC}.filter.all`), value: ALL },
-                  ...LOGIC_KINDS.map((value) => ({ label: logicKindText(t, value), value })),
-                ]}
-                prefix={t(`${KINETIC}.filter.kind`)}
-                value={kind}
-              />
-              {live ? (
+          <AskSources
+            canEdit={canEdit}
+            documents={documents}
+            hasBackground={background}
+            networkItems={networkItems}
+            objectTypes={draftRead ? objectTypes.length : null}
+            onGoToModel={onGoToModel}
+            onOpenDocuments={() => void navigate(projectResourcesPath(project.id, "documents"))}
+            onViewBackground={() => setViewing({ documentId: NETWORK_DOCUMENT_ID })}
+            onViewRules={() => void navigate(projectSectionPath(project.id, "scenarios"))}
+            page="kinetic"
+            projectId={project.id}
+            rules={spec?.rules.length ?? 0}
+          />
+          {hasNetworkItems ? (
+            <p className={`${styles.muted} ${styles.row}`}>
+              <InNetworkDot />
+              {networkSummary(t, networkItems, newNeeds)}
+            </p>
+          ) : null}
+          {live && needs.length ? (
+            <div className={styles.stats}>
+              {(["implemented", "pending", "waitingRelease"] as const).map((state) => (
+                <div className={styles.stat} key={state}>
+                  <span className={styles.muted}>{t(`${KINETIC}.stats.${state}`)}</span>
+                  <span className={styles.statValue}>
+                    {state === "pending" ? count("pending") + count("broken") : count(state)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {hasNetworkItems ? (
+            <KineticNetworkItems
+              items={networkItems}
+              needs={needs}
+              networkId={networkId}
+              objectName={objectName}
+              onOpenNeed={setOpenId}
+              reason={logic?.networkItemsReason ?? ""}
+            />
+          ) : null}
+          {needs.length > 0 && newNeeds === 0 ? (
+            <p className={styles.muted}>{t(`${KINETIC}.allCovered`)}</p>
+          ) : needs.length ? (
+            <>
+              <div className={styles.filters}>
                 <Select
-                  aria-label={t(`${KINETIC}.filter.state`)}
+                  aria-label={t(`${KINETIC}.filter.kind`)}
                   className={styles.filter}
-                  onChange={setStateFilter}
+                  onChange={setKind}
                   options={[
                     { label: t(`${KINETIC}.filter.all`), value: ALL },
-                    ...NEED_STATES.map((value) => ({ label: needStateText(t, value), value })),
+                    ...LOGIC_KINDS.map((value) => ({ label: logicKindText(t, value), value })),
                   ]}
-                  prefix={t(`${KINETIC}.filter.state`)}
-                  value={stateFilter}
+                  prefix={t(`${KINETIC}.filter.kind`)}
+                  value={kind}
                 />
+                {live ? (
+                  <Select
+                    aria-label={t(`${KINETIC}.filter.state`)}
+                    className={styles.filter}
+                    onChange={setStateFilter}
+                    options={[
+                      { label: t(`${KINETIC}.filter.all`), value: ALL },
+                      ...NEED_STATES.map((value) => ({ label: needStateText(t, value), value })),
+                    ]}
+                    prefix={t(`${KINETIC}.filter.state`)}
+                    value={stateFilter}
+                  />
+                ) : null}
+              </div>
+              <AppTable<{ need: LogicNeedView; state: NeedState }>
+                columns={columns}
+                dataSource={shown}
+                locale={{ emptyText: t(`${KINETIC}.noneFiltered`) }}
+                pagination={shown.length > 20 ? { pageSize: 20 } : false}
+                rowClassName={(entry) => (flash.has(entry.need.id) ? ask.flash : "")}
+                rowKey={(entry) => entry.need.id}
+                rowSelection={
+                  canAsk
+                    ? {
+                        columnTitle: t("bknProject.ask.select.column"),
+                        getCheckboxProps: (entry) => ({
+                          title: t("bknProject.ask.select.item", { name: entry.need.name }),
+                        }),
+                        onChange: (keys) => {
+                          setSelected(keys.map(String));
+                          // Ticking is for asking: the panel opens to ask about them.
+                          if (keys.length) {
+                            setAsking(true);
+                          }
+                        },
+                        selectedRowKeys: selected,
+                      }
+                    : undefined
+                }
+                size="middle"
+              />
+              {canAsk ? (
+                <p className={styles.muted}>{t("bknProject.ask.select.hint.kinetic")}</p>
               ) : null}
-            </div>
-            <AppTable<{ need: LogicNeedView; state: NeedState }>
-              columns={columns}
-              dataSource={shown}
-              locale={{ emptyText: t(`${KINETIC}.noneFiltered`) }}
-              pagination={shown.length > 20 ? { pageSize: 20 } : false}
-              rowKey={(entry) => entry.need.id}
-              size="middle"
+            </>
+          ) : (
+            // After an analysis that found nothing new, say so rather than that none ran.
+            <p className={styles.muted}>
+              {t(
+                `${KINETIC}.${
+                  run?.status === "ready"
+                    ? hasNetworkItems
+                      ? "analyzedCovered"
+                      : "analyzedNone"
+                    : "none"
+                }`,
+              )}
+            </p>
+          )}
+          {openNeed ? (
+            <KineticNeedPanel
+              canEdit={editable}
+              existingNetwork={existingNetwork}
+              executor={needs.find(
+                (item) => item.id === openNeed.executedBy && canExecute(item.kind),
+              )}
+              metricsMode={metricsMode}
+              need={openNeed}
+              networkId={networkId}
+              objectName={objectName}
+              onClose={() => setOpenId(null)}
+              onGoToModel={onGoToModel}
+              onImplement={implement}
+              onLink={link}
+              onUnlink={unlink}
+              projectId={project.id}
+              questions={questionsOf(openNeed.id)}
+              saving={saving}
             />
-          </>
-        ) : (
-          // After an analysis that found nothing new, say so rather than that none ran.
-          <p className={styles.muted}>
-            {t(
-              `${KINETIC}.${
-                run?.status === "ready"
-                  ? hasNetworkItems
-                    ? "analyzedCovered"
-                    : "analyzedNone"
-                  : "none"
-              }`,
-            )}
-          </p>
-        )}
-        {openNeed ? (
-          <KineticNeedPanel
-            canEdit={editable}
-            existingNetwork={existingNetwork}
-            executor={needs.find(
-              (item) => item.id === openNeed.executedBy && canExecute(item.kind),
-            )}
-            metricsMode={metricsMode}
-            need={openNeed}
-            networkId={networkId}
-            objectName={objectName}
-            onClose={() => setOpenId(null)}
-            onGoToModel={onGoToModel}
-            onImplement={implement}
-            onLink={link}
-            onUnlink={unlink}
-            projectId={project.id}
-            questions={questionsOf(openNeed.id)}
-            saving={saving}
-          />
-        ) : null}
-        {dialog ? (
-          <KineticNeedDialog
-            need={
-              dialog.needId
-                ? (spec?.logicNeeds.find((need) => need.id === dialog.needId) ?? null)
-                : null
-            }
-            executors={(spec?.logicNeeds ?? []).filter(
-              (need) => canExecute(need.kind) && need.id !== dialog.needId,
-            )}
-            objectTypes={objectTypes}
-            onCancel={() => setDialog(null)}
-            onSave={(fields) =>
-              apply((time) =>
+          ) : null}
+          {dialog ? (
+            <KineticNeedDialog
+              need={
                 dialog.needId
-                  ? editItem(project.id, "logic_needs", dialog.needId, fields, time)
-                  : addItem(project.id, "logic_needs", fields, time),
-              )
-            }
-            saving={saving}
-          />
-        ) : null}
-        {viewing ? (
-          <DocumentViewer
-            documentId={viewing.documentId}
-            onClose={() => setViewing(null)}
-            projectId={project.id}
-            range={viewing.range}
-          />
+                  ? (spec?.logicNeeds.find((need) => need.id === dialog.needId) ?? null)
+                  : null
+              }
+              executors={(spec?.logicNeeds ?? []).filter(
+                (need) => canExecute(need.kind) && need.id !== dialog.needId,
+              )}
+              objectTypes={objectTypes}
+              onCancel={() => setDialog(null)}
+              onSave={(fields) =>
+                apply((time) =>
+                  dialog.needId
+                    ? editItem(project.id, "logic_needs", dialog.needId, fields, time)
+                    : addItem(project.id, "logic_needs", fields, time),
+                )
+              }
+              saving={saving}
+            />
+          ) : null}
+          {viewing ? (
+            <DocumentViewer
+              documentId={viewing.documentId}
+              onClose={() => setViewing(null)}
+              projectId={project.id}
+              range={viewing.range}
+            />
+          ) : null}
+        </div>
+        {asking && canAsk ? (
+          <div className={ask.side}>
+            <RequirementAskPanel
+              names={{
+                logicNeed: (id) => spec?.logicNeeds.find((need) => need.id === id)?.name ?? "",
+                objectType: (id) =>
+                  objectTypes.find((item) => item.id === id)?.name ??
+                  networkObjects.find((item) => item.id === id)?.name ??
+                  "",
+                scenario: (id) => spec?.scenarios.find((item) => item.id === id)?.name ?? "",
+              }}
+              onClose={() => setAsking(false)}
+              onDecided={(next, changed) => {
+                latest.current += 1;
+                if (next) {
+                  setRequirements(next);
+                }
+                flashItems(changed.map((item) => item.id));
+                void load();
+              }}
+              onRemoveRef={(ref) => setSelected((ids) => ids.filter((id) => id !== ref.id))}
+              onSent={() => setSelected([])}
+              onStale={() => void load()}
+              page="kinetic"
+              projectId={project.id}
+              refs={refs}
+              subtitle={t("bknProject.ask.panel.subtitle.kinetic", { count: needs.length })}
+              updateTime={updateTime}
+            />
+          </div>
         ) : null}
       </div>
     </Citing.Provider>

@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   editItem: vi.fn(),
   getCandidates: vi.fn(),
+  getSupplement: vi.fn(),
+  listConversations: vi.fn(),
   getDraft: vi.fn(),
   getExistingDefinitions: vi.fn(),
   getLogicNeeds: vi.fn(),
@@ -69,6 +71,14 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
   listDocuments: mocks.listDocuments,
   removeItem: mocks.removeItem,
   reviewRequirements: mocks.reviewRequirements,
+}));
+
+vi.mock("@/modules/bkn-project/services/conversations.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/bkn-project/services/conversations.service")
+  >()),
+  getSupplement: mocks.getSupplement,
+  listConversations: mocks.listConversations,
 }));
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
@@ -300,6 +310,50 @@ describe("ProjectKinetic", () => {
     mocks.unlink.mockResolvedValue(requirements());
     mocks.analyzeKinetic.mockResolvedValue(requirements());
     mocks.confirm.mockImplementation(({ onOk }: { onOk: () => unknown }) => void onOk());
+    mocks.getSupplement.mockResolvedValue({ by: null, text: "", time: 0 });
+    mocks.listConversations.mockResolvedValue([]);
+  });
+
+  it("says what AI reads, and that without documents it can only guess", async () => {
+    renderPage();
+
+    expect(await screen.findByText("AI 参考的资料")).toBeInTheDocument();
+    expect(
+      screen.getByText("没有需求文档：AI 只能根据模型推测需要哪些指标和操作，建议先补充。"),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("已确认的概念模型：2 个对象类")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "去上传需求文档" }));
+    expect(location()).toContain("/resources?tab=documents");
+  });
+
+  it("ticks needs to ask AI about them, and says which came from asking", async () => {
+    mocks.getLogicNeeds.mockResolvedValue({
+      ...logicNeeds(),
+      needs: logicNeeds().needs.map((item) =>
+        item.id === "n2" ? { ...item, source: "ask" } : item,
+      ),
+    });
+    renderPage();
+
+    const metric = (await screen.findByText("延误率")).closest("tr")!;
+    expect(
+      within(screen.getByText("催单排序").closest("tr")!).getByText("问 AI"),
+    ).toBeInTheDocument();
+    fireEvent.click(within(metric).getByRole("checkbox"));
+
+    expect(await screen.findByRole("button", { name: "问 AI（已选 1 条）" })).toBeInTheDocument();
+    // The panel opens with the ticked need as a reference of the next question.
+    const panel = within(await screen.findByRole("complementary", { name: "AI 助手" }));
+    expect(panel.getByText("延误率")).toBeInTheDocument();
+    expect(panel.getByText("会带上：AI 参考的资料、补充说明和这段对话")).toBeInTheDocument();
+    expect(mocks.listConversations).toHaveBeenCalledWith("p1", "kinetic");
+  });
+
+  it("does not offer asking AI to others", async () => {
+    renderPage(undefined, false);
+    await screen.findByText("延误率");
+    expect(screen.queryByRole("button", { name: "问 AI" })).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
   it("lists each need with its kind, basis, objects and where its implementation stands", async () => {
@@ -696,10 +750,10 @@ describe("ProjectKinetic", () => {
     mocks.getStatus.mockResolvedValue({ confirmation: null });
     renderPage();
 
-    expect(
-      await screen.findByText("概念模型还没确认，确认后才能分析动力需求。"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "去概念建模" })).toBeInTheDocument();
+    const alert = (await screen.findByText("概念模型还没确认，确认后才能分析动力需求。")).closest(
+      ".ant-alert",
+    ) as HTMLElement;
+    expect(within(alert).getByRole("button", { name: "去概念建模" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "分析动力需求" })).toBeDisabled();
   });
 
@@ -1077,7 +1131,7 @@ describe("ProjectKinetic", () => {
       fireEvent.mouseDown(dialog.getByRole("combobox", { name: "执行方式" }));
       // Only APIs and MCP tools carry out an action.
       expect(await screen.findByTitle("调用 MCP 工具「查物流」")).toBeInTheDocument();
-      expect(screen.queryByTitle(/算运费/)).toBeNull();
+      expect(screen.queryByTitle(/^调用.*算运费/)).toBeNull();
       fireEvent.click(await screen.findByTitle("调用「改期接口」接口"));
       fireEvent.click(dialog.getByRole("button", { name: /保\s*存/ }));
 

@@ -167,6 +167,7 @@ type BackendSpec = {
           ontology_changed?: boolean;
           relative_window?: boolean;
           scenario_ids?: string[] | null;
+          source?: string;
           template: string;
           text: string;
           type: string;
@@ -174,7 +175,9 @@ type BackendSpec = {
     | null;
   logic_needs?: BackendLogicNeed[] | null;
   rejected?: { kind: string; reason: string; text: string }[] | null;
-  rules?: (BackendCited & { compiles_to: string; id: string; statement: string })[] | null;
+  rules?:
+    | (BackendCited & { compiles_to: string; id: string; source?: string; statement: string })[]
+    | null;
   runs?: { concepts?: BackendRun | null; kinetic?: BackendRun | null } | null;
   scenarios?:
     | (BackendCited &
@@ -185,6 +188,7 @@ type BackendSpec = {
           knowledge?: string[] | null;
           name: string;
           ontology_changed?: boolean;
+          source?: string;
           trigger: string;
         })[]
     | null;
@@ -342,6 +346,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       ontologyChanged: question.ontology_changed ?? false,
       relativeWindow: question.relative_window ?? false,
       scenarioIds: question.scenario_ids ?? [],
+      ...(question.source ? { source: question.source } : {}),
       template: question.template,
       text: question.text,
       type: question.type,
@@ -353,6 +358,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       compilesTo: rule.compiles_to,
       edited: rule.edited ?? false,
       id: rule.id,
+      ...(rule.source ? { source: rule.source } : {}),
       statement: rule.statement,
     })),
     runs: { concepts: mapRun(spec.runs?.concepts), kinetic: mapRun(spec.runs?.kinetic) },
@@ -365,6 +371,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       knowledge: scenario.knowledge ?? [],
       name: scenario.name,
       ontologyChanged: scenario.ontology_changed ?? false,
+      ...(scenario.source ? { source: scenario.source } : {}),
       trigger: scenario.trigger,
     })),
     tablesOmitted: spec.tables_omitted ?? 0,

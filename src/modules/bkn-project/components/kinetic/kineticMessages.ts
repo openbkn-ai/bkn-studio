@@ -27,7 +27,7 @@ export const logicKindText = word("kind", LOGIC_KINDS);
 
 export const metricTypeText = word("metricType", METRIC_TYPES);
 
-export const sourceText = word("source", ["documents", "analysis", "scenarios", "person"]);
+export const sourceText = word("source", ["documents", "analysis", "scenarios", "person", "ask"]);
 
 export const candidateReasonText = word("panel.candidateReason", [
   "same_name",
@@ -79,20 +79,25 @@ const COUNTED = ["action_type", "function", "api", "skill", "object_metric"] as 
 const countedAs = (item: { kind?: string; type: string }) =>
   item.kind === "api" ? "api" : item.type;
 
+/** "7 action types, 4 functions", kinds the network has none of left out. */
+export function networkItemCounts(t: TFunction, items: { kind?: string; type: string }[]) {
+  return COUNTED.map((type) => ({
+    count: items.filter((item) => countedAs(item) === type).length,
+    type,
+  }))
+    .filter(({ count }) => count > 0)
+    .map(({ count, type }) => t(`${KINETIC}.network.count.${type}`, { count }))
+    .join(t("bknProject.listSeparator"));
+}
+
 /** "Already in the network: 7 action types, 4 functions; 3 new needs", kinds it has none of left out. */
 export function networkSummary(
   t: TFunction,
   items: { kind?: string; type: string }[],
   newNeeds: number,
 ) {
-  const counts = COUNTED.map((type) => ({
-    count: items.filter((item) => countedAs(item) === type).length,
-    type,
-  }))
-    .filter(({ count }) => count > 0)
-    .map(({ count, type }) => t(`${KINETIC}.network.count.${type}`, { count }));
   return t(`${KINETIC}.network.summary`, {
     count: newNeeds,
-    items: counts.join(t("bknProject.listSeparator")),
+    items: networkItemCounts(t, items),
   });
 }

@@ -37,6 +37,8 @@ const resolveConflictMock = vi.hoisted(() => vi.fn());
 const decideChoiceMock = vi.hoisted(() => vi.fn());
 const setConceptMappingMock = vi.hoisted(() => vi.fn());
 const getLogicNeedsMock = vi.hoisted(() => vi.fn());
+const listConversationsMock = vi.hoisted(() => vi.fn());
+const getSupplementMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
@@ -45,6 +47,14 @@ vi.mock("@/framework/context/use-app-services", () => ({
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
   getDraft: getDraftMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/conversations.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/bkn-project/services/conversations.service")
+  >()),
+  getSupplement: getSupplementMock,
+  listConversations: listConversationsMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/kinetic.service", () => ({
@@ -270,6 +280,8 @@ describe("ProjectRequirements", () => {
     listDocumentsMock.mockResolvedValue(documents);
     getRequirementsMock.mockResolvedValue(requirements());
     getLogicNeedsMock.mockResolvedValue({ needs: [], networkId: "n", reason: "", updateTime: 1 });
+    getSupplementMock.mockResolvedValue({ by: null, text: "", time: 0 });
+    listConversationsMock.mockResolvedValue([]);
     getDraftMock.mockResolvedValue({
       items: {
         objectTypes: [
@@ -287,6 +299,32 @@ describe("ProjectRequirements", () => {
         relationTypes: [{ id: "order_customer", name: "订单的客户" }],
       },
     });
+  });
+
+  it("ticks scenarios and questions to ask AI about them, and says which came from asking", async () => {
+    const base = requirements();
+    getRequirementsMock.mockResolvedValue({
+      ...base,
+      spec: {
+        ...base.spec,
+        scenarios: base.spec.scenarios.map((item) => ({ ...item, source: "ask" })),
+      },
+    });
+    renderPage();
+
+    expect(await screen.findByText("AI 参考的资料")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "选择「某个客户哪些订单晚了？」用来问 AI" }),
+    );
+    expect(await screen.findByRole("button", { name: "问 AI（已选 1 条）" })).toBeInTheDocument();
+    const panel = within(await screen.findByRole("complementary", { name: "AI 助手" }));
+    expect(panel.getByText("某个客户哪些订单晚了？")).toBeInTheDocument();
+    expect(listConversationsMock).toHaveBeenCalledWith("p1", "scenarios");
+
+    fireEvent.click(screen.getByText("业务场景 1"));
+    expect(await screen.findByText("依据：问 AI")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "选择「交付延误预警」用来问 AI" }));
+    expect(await screen.findByRole("button", { name: "问 AI（已选 2 条）" })).toBeInTheDocument();
   });
 
   it("shows the questions first, naming what they need as the draft does", async () => {
@@ -329,7 +367,7 @@ describe("ProjectRequirements", () => {
     expect(screen.getByText("销售经理")).toBeInTheDocument();
 
     // The concepts are judged on the concept extraction page.
-    expect(screen.queryByText(/^候选概念/)).toBeNull();
+    expect(screen.queryByRole("radio", { name: /^候选概念/ })).toBeNull();
     expect(screen.getAllByRole("radio").map((tab) => tab.closest("label")?.textContent)).toEqual([
       "场景问题 1",
       "业务场景 1",
@@ -460,10 +498,10 @@ describe("ProjectRequirements", () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "生成业务场景" }));
-    expect(
-      await screen.findByText("先在概念建模中采纳对象类，再生成业务场景。"),
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
+    const alert = (await screen.findByText("先在概念建模中采纳对象类，再生成业务场景。")).closest(
+      ".ant-alert",
+    ) as HTMLElement;
+    fireEvent.click(within(alert).getByRole("button", { name: "去概念建模" }));
     expect(onGoToModel).toHaveBeenCalled();
     expect(messageMock.error).not.toHaveBeenCalled();
   });
@@ -479,8 +517,10 @@ describe("ProjectRequirements", () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "生成业务场景" }));
-    expect(await screen.findByText("先在概念建模中确认模型，再生成业务场景。")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "去概念建模" }));
+    const alert = (await screen.findByText("先在概念建模中确认模型，再生成业务场景。")).closest(
+      ".ant-alert",
+    ) as HTMLElement;
+    fireEvent.click(within(alert).getByRole("button", { name: "去概念建模" }));
     expect(onGoToModel).toHaveBeenCalled();
     expect(messageMock.error).not.toHaveBeenCalled();
   });
