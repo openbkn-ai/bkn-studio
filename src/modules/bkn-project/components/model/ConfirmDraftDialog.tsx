@@ -17,6 +17,7 @@ import {
   pendingBecauseText,
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
+import { editDraftItem, getDraft } from "@/modules/bkn-project/services/draft.service";
 import {
   confirmDraft,
   getProjectPending,
@@ -45,6 +46,23 @@ function adoptedCounts(draft: Draft) {
     objects: draft.items.objectTypes.filter((item) => item.adopted && !item.existing).length,
     relations,
   };
+}
+
+/** Adopted knowledge-base objects the draft adds, and whether anything else would be confirmed. */
+function documentsOf(draft: Draft) {
+  const documents = draft.items.objectTypes.filter(
+    (item) => item.adopted && !item.existing && item.document,
+  );
+  const tables = new Set(
+    draft.items.objectTypes.filter((item) => item.adopted && !item.document).map((item) => item.id),
+  );
+  const tablesLeft =
+    draft.items.objectTypes.some((item) => item.adopted && !item.existing && !item.document) ||
+    draft.items.relationTypes.some(
+      (item) =>
+        item.adopted && !item.existing && tables.has(item.source) && tables.has(item.target),
+    );
+  return { documents, tablesLeft };
 }
 
 /**
@@ -91,6 +109,8 @@ export function ConfirmDraft({
    */
   const [refusedConflicts, setRefusedConflicts] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
+  /** Why the knowledge-base objects could not be made ready, as the refusal said; null otherwise. */
+  const [documentsProblem, setDocumentsProblem] = useState<string | null>(null);
 
   // Read again whenever the draft changes, as each edit can change what confirming needs.
   // A failed read keeps what was read before, so an open dialog stays as it was.
@@ -199,19 +219,58 @@ export function ConfirmDraft({
     // A refusal counts for the confirmation it refused; a new one asks from the status first.
     setRefusedConflicts(null);
     setUndecided(null);
+    setDocumentsProblem(null);
     setOpen(true);
+  };
+
+  const flags = () => ({
+    ...(needsPartial ? { acceptPartial } : {}),
+    ...(needsUndecided ? { acceptUndecided } : {}),
+    ...(needsConflicts ? { acceptUnresolvedConflicts: acceptConflicts } : {}),
+  });
+
+  /**
+   * Confirms what the tables make while the knowledge base is not ready: its objects are left out
+   * with the reason noted, so they can be adopted again once it is.
+   */
+  const confirmTablesFirst = async () => {
+    setSending(true);
+    onSendingChange?.(true);
+    try {
+      const fresh = await getDraft(projectId);
+      if (!fresh) {
+        throw new Error("draft gone");
+      }
+      const { documents } = documentsOf(fresh);
+      let updateTime = fresh.updateTime;
+      for (const item of documents) {
+        updateTime = (
+          await editDraftItem(projectId, "object_types", item.id, updateTime, {
+            adopted: false,
+            reason: t("bknProject.confirm.dialog.documentsDeferReason"),
+          })
+        ).updateTime;
+      }
+      await confirmDraft(projectId, { ...flags(), updateTime });
+      setOpen(false);
+      message.success(
+        t("bknProject.confirm.dialog.documentsDeferred", { count: documents.length }),
+      );
+      onConfirmed();
+    } catch (error) {
+      message.error(refusalText(t, error, "bknProject.confirm.failed", names));
+      onStale();
+    } finally {
+      setSending(false);
+      onSendingChange?.(false);
+    }
   };
 
   const send = async () => {
     setSending(true);
     onSendingChange?.(true);
     try {
-      await confirmDraft(projectId, {
-        ...(needsPartial ? { acceptPartial } : {}),
-        ...(needsUndecided ? { acceptUndecided } : {}),
-        ...(needsConflicts ? { acceptUnresolvedConflicts: acceptConflicts } : {}),
-        updateTime: draft.updateTime,
-      });
+      await confirmDraft(projectId, { ...flags(), updateTime: draft.updateTime });
       setOpen(false);
       message.success(t("bknProject.confirm.done"));
       onConfirmed();
@@ -231,7 +290,11 @@ export function ConfirmDraft({
         setOpen(false);
         message.warning(refusalText(t, error));
         onShowPending();
-      } else if (code === "Draft.Stale" || code === "Draft.DocumentDataNotReady") {
+      } else if (code === "Draft.DocumentDataNotReady" || code === "Draft.DocumentDataItemFailed") {
+        // The dialog stays: it says which item stopped and why, and offers the tables first.
+        setDocumentsProblem(refusalText(t, error));
+        onStale();
+      } else if (code === "Draft.Stale") {
         setOpen(false);
         message.warning(refusalText(t, error));
         onStale();
@@ -245,6 +308,8 @@ export function ConfirmDraft({
   };
 
   const counts = adoptedCounts(draft);
+  const { documents, tablesLeft } = documentsOf(draft);
+  const canDefer = documents.length > 0 && tablesLeft;
   const ready =
     (!needsUndecided || (acceptUndecided && undecided !== null)) &&
     (!needsPartial || acceptPartial) &&
@@ -282,6 +347,31 @@ export function ConfirmDraft({
         title={t("bknProject.confirm.dialog.title")}
       >
         <div className={styles.page}>
+          {documentsProblem ? (
+            <Alert
+              action={
+                canDefer ? (
+                  <AppButton
+                    disabled={sending}
+                    onClick={() => void confirmTablesFirst()}
+                    size="small"
+                  >
+                    {t("bknProject.confirm.dialog.documentsNotReadyAction")}
+                  </AppButton>
+                ) : undefined
+              }
+              description={
+                canDefer
+                  ? t("bknProject.confirm.dialog.documentsNotReadyHelp", {
+                      count: documents.length,
+                    })
+                  : undefined
+              }
+              message={documentsProblem}
+              showIcon
+              type="warning"
+            />
+          ) : null}
           <span>{t("bknProject.confirm.dialog.summary", counts)}</span>
           {status.confirmation ? (
             <span className={styles.summary}>{t("bknProject.confirm.dialog.replaces")}</span>

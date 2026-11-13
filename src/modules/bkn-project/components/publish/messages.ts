@@ -50,6 +50,7 @@ export const KNOWN_REFUSALS = [
   "Draft.Stale",
   "Draft.NotReady",
   "Draft.DocumentDataNotReady",
+  "Draft.DocumentDataItemFailed",
   "Draft.DualSourceNotConfirmed",
   "Draft.BusinessIdentityNotVerified",
   "Draft.BusinessIdentityNotUnique",
@@ -113,7 +114,27 @@ export function refusalText(
         })
       : t("bknProject.errors.Lineage.DefinitionsExistUnnamed");
   }
+  if (code === "Draft.DocumentDataItemFailed") {
+    return documentDataItemText(t, projectErrorDetails(error));
+  }
   return t(`bknProject.errors.${code}`);
+}
+
+const DOCUMENT_DATA_REASONS = new Set(["field", "format", "permission", "mismatch", "unavailable"]);
+
+/** Which knowledge-base item could not be made ready to hold extracted content, and why. */
+function documentDataItemText(t: TFunction, details: unknown) {
+  const { field, name, reason } = (details ?? {}) as Record<string, unknown>;
+  if (typeof name !== "string" || !name) {
+    return t("bknProject.errors.Draft.DocumentDataNotReady");
+  }
+  const known =
+    typeof reason === "string" && DOCUMENT_DATA_REASONS.has(reason) ? reason : "unavailable";
+  const why =
+    known === "field" && typeof field === "string" && field
+      ? t("bknProject.errors.Draft.DocumentDataReason.field", { field })
+      : t(`bknProject.errors.Draft.DocumentDataReason.${known === "field" ? "format" : known}`);
+  return t("bknProject.errors.Draft.DocumentDataItemFailed", { name, reason: why });
 }
 
 /** Reasons said with the count of what waits; without a count they fall back to the general text. */
