@@ -685,6 +685,28 @@ describe("ProjectConcepts", () => {
     expect(service.generateDraft).toHaveBeenLastCalledWith("p1", { discardDecisions: true });
   });
 
+  it("asks before anything starts when the draft has decisions, and cancelling starts nothing", async () => {
+    service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 2 }));
+    assistant.understandCatalogs.mockResolvedValue([]);
+    service.getDraft.mockResolvedValue({
+      items: { decisions: [{ action: "adopt" }] },
+      status: "ready",
+      updateTime: 7,
+    });
+    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
+    renderConcepts();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.reextract" }));
+    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
+    // Cancelling is the dialog closing without its OK: nothing was started behind it.
+    expect(assistant.understandCatalogs).not.toHaveBeenCalled();
+    expect(service.generateDraft).not.toHaveBeenCalled();
+
+    await confirmMock.mock.calls[0][0].onOk();
+    expect(assistant.understandCatalogs).toHaveBeenCalledWith("p1");
+    expect(service.generateDraft).toHaveBeenLastCalledWith("p1", { discardDecisions: true });
+  });
+
   it("names a table's concept as semantic understanding did, marked lightly, with the table as an alias", async () => {
     service.getConcepts.mockResolvedValue(
       concepts({

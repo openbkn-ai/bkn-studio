@@ -443,31 +443,49 @@ export function ProjectConcepts({
     }
   };
 
-  // Extracting again over decisions discards them, so it asks first, as the modeling page does.
+  // Extracting again over decisions discards them, so it asks first, as the modeling page does:
+  // nothing starts before the owner agrees, and cancelling starts nothing.
+  const confirmExtract = (count: number | null) => {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content:
+        count === null
+          ? t("bknProject.model.regenerateConfirm.contentUncounted")
+          : t("bknProject.model.regenerateConfirm.content", { count }),
+      okButtonProps: { danger: true },
+      okText: t("bknProject.model.regenerateConfirm.ok"),
+      onOk: () => extract(true),
+      title: t("bknProject.model.regenerateConfirm.title"),
+    });
+  };
+
   // Tables semantic understanding has not named are understood first, as far as the person may:
   // the concepts take the business names once it finishes.
   const extract = async (discardDecisions: boolean) => {
-    setBusy("extract");
-    if (concepts?.notUnderstood) {
-      await understandCatalogs(project.id).catch(() => undefined);
+    const decided = draft?.items.decisions.length ?? 0;
+    if (!discardDecisions && decided > 0) {
+      confirmExtract(decided);
+      return;
     }
+    setBusy("extract");
     try {
+      if (!discardDecisions) {
+        // Decisions made since the draft was read are asked about before anything starts.
+        const fresh = await getDraft(project.id).catch(() => null);
+        if (fresh?.items.decisions.length) {
+          setDraft(fresh);
+          confirmExtract(fresh.items.decisions.length);
+          return;
+        }
+      }
+      if (concepts?.notUnderstood) {
+        await understandCatalogs(project.id).catch(() => undefined);
+      }
       setDraft(await generateDraft(project.id, discardDecisions ? { discardDecisions } : {}));
     } catch (error) {
       if (!discardDecisions && draftErrorCode(error) === "HasDecisions") {
         const fresh = await getDraft(project.id).catch(() => null);
-        void modal.confirm({
-          cancelText: t("common.cancel"),
-          content: fresh
-            ? t("bknProject.model.regenerateConfirm.content", {
-                count: fresh.items.decisions.length,
-              })
-            : t("bknProject.model.regenerateConfirm.contentUncounted"),
-          okButtonProps: { danger: true },
-          okText: t("bknProject.model.regenerateConfirm.ok"),
-          onOk: () => extract(true),
-          title: t("bknProject.model.regenerateConfirm.title"),
-        });
+        confirmExtract(fresh ? fresh.items.decisions.length : null);
       } else {
         message.error(requestFailureText(t, error));
       }
