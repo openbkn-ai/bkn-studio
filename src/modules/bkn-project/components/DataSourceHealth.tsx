@@ -182,7 +182,7 @@ export function DataSourceHealth({
       <div className={styles.sources}>
         {SOURCES.map((source) => {
           const state = sources[source].state;
-          const connected = source === "network" && state !== "missing";
+          const connected = source === "network" && state === "ok";
           return (
             <div
               className={
