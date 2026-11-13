@@ -44,16 +44,24 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
   const [failureCode, setFailureCode] = useState<ExplanationFailureCode>();
   const [readAttempt, setReadAttempt] = useState(0);
   const request = useRef<symbol | undefined>(undefined);
+  const controller = useRef<AbortController | undefined>(undefined);
   useEffect(() => {
+    controller.current?.abort();
+    const active = new AbortController();
+    controller.current = active;
     const token = Symbol();
     request.current = token;
     setValue(undefined);
     setBusy(true);
     setFailed(false);
     setFailureCode(undefined);
-    void readCurrentExplanation(interactionId)
+    void readCurrentExplanation(interactionId, active.signal)
       .then((result) => {
-        if (request.current === token) setValue(result);
+        if (request.current === token) {
+          setValue(result);
+          setFailureCode(result.generationFailure);
+          setFailed(!!result.generationFailure);
+        }
       })
       .catch((error: unknown) => {
         if (request.current === token) {
@@ -66,18 +74,26 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
       });
     return () => {
       request.current = undefined;
+      controller.current?.abort();
     };
   }, [interactionId, readAttempt]);
   const generate = async () => {
     if (busy) return;
+    controller.current?.abort();
+    const active = new AbortController();
+    controller.current = active;
     const token = Symbol();
     request.current = token;
     setBusy(true);
     setFailed(false);
     setFailureCode(undefined);
     try {
-      const result = await generateCurrentExplanation(interactionId, locale);
-      if (request.current === token) setValue(result);
+      const result = await generateCurrentExplanation(interactionId, locale, active.signal);
+      if (request.current === token) {
+        setValue(result);
+        setFailureCode(result.generationFailure);
+        setFailed(!!result.generationFailure);
+      }
     } catch (error) {
       if (request.current === token) {
         setFailed(true);

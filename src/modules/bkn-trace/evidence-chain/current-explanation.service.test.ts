@@ -359,3 +359,72 @@ it("rejects a task belonging to another interaction instead of polling it", asyn
   );
   expect(get).not.toHaveBeenCalled();
 });
+
+for (const code of ["agent_timeout", "generation_cancelled"]) {
+  it(`reads the saved view after a persisted ${code} and retains explicit retry identity`, async () => {
+    post.mockResolvedValueOnce({ data: { ...generatingTask, status: "failed", error_code: code } });
+    await expect(generateCurrentExplanation("i", "en-US")).rejects.toMatchObject({
+      generationCode: code,
+    });
+    get.mockResolvedValue({ data: readyTaskResult() });
+    await expect(readCurrentExplanation("i")).resolves.toMatchObject({
+      status: "ready",
+      generationFailure: code,
+    });
+    expect(get).toHaveBeenCalledWith(expect.any(String), { skipErrorToast: true });
+    post.mockResolvedValue({ data: readyTaskResult() });
+    await generateCurrentExplanation("i", "en-US");
+    expect(post.mock.calls[1]?.[1]).toEqual({ locale: "en-US", retry_job_id: "task-1" });
+  });
+}
+
+it("falls back to the saved view when a resumed task becomes failed", async () => {
+  vi.useFakeTimers();
+  post.mockResolvedValue({ data: generatingTask });
+  get.mockRejectedValueOnce(new Error("offline"));
+  const started = generateCurrentExplanation("i", "en-US");
+  const rejected = expect(started).rejects.toThrow("offline");
+  await vi.advanceTimersByTimeAsync(1500);
+  await rejected;
+  get
+    .mockResolvedValueOnce({
+      data: { ...generatingTask, status: "failed", error_code: "agent_timeout" },
+    })
+    .mockResolvedValueOnce({ data: readyTaskResult() });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({
+    status: "ready",
+    generationFailure: "agent_timeout",
+  });
+  expect(post).toHaveBeenCalledTimes(1);
+});
+
+for (const status of [400, 413, 422, 429, 503]) {
+  it(`does not automatically repeat a POST rejected with HTTP ${status}`, async () => {
+    post.mockRejectedValue(
+      Object.assign(new Error("rejected"), { isAxiosError: true, response: { status } }),
+    );
+    await expect(generateCurrentExplanation("i", "en-US")).rejects.toThrow("rejected");
+    get.mockResolvedValue({
+      data: { schema_version: "1", interaction_id: "i", status: "not_generated" },
+    });
+    await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "not_generated" });
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+}
+
+it("aborts polling without cancelling or forgetting the native task", async () => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  post.mockResolvedValue({ data: generatingTask });
+  const pending = generateCurrentExplanation("i", "en-US", controller.signal);
+  const aborted = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  await vi.advanceTimersByTimeAsync(0);
+  controller.abort();
+  await aborted;
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(get).not.toHaveBeenCalled();
+  expect(post.mock.calls[0]?.[2]).toMatchObject({ signal: controller.signal });
+  get.mockResolvedValue({ data: readyTaskResult() });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "ready" });
+  expect(post).toHaveBeenCalledTimes(1);
+});
