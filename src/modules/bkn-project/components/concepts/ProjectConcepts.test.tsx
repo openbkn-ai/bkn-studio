@@ -224,9 +224,15 @@ describe("ProjectConcepts", () => {
     });
   });
 
-  const withRun = (run: { error?: string; extracted: boolean; stale?: boolean; status: string }) =>
+  const withRun = (run: {
+    error?: string;
+    extracted: boolean;
+    pendingParts?: number;
+    stale?: boolean;
+    status: string;
+  }) =>
     requirements.getRequirements.mockResolvedValue({
-      spec: { conceptsRun: { error: "", stale: false, ...run } },
+      spec: { conceptsRun: { error: "", pendingParts: 0, stale: false, ...run } },
     });
 
   it("judges a requirement concept in the specification, as its category", async () => {
@@ -390,6 +396,25 @@ describe("ProjectConcepts", () => {
 
     expect(
       await screen.findByText("bknProject.concepts.requirements.failedKept"),
+    ).toBeInTheDocument();
+  });
+
+  it("says why extracting the requirement concepts failed, in words and with what to do", async () => {
+    withRun({ error: "output_too_long", extracted: false, status: "failed" });
+    renderConcepts();
+
+    expect(await screen.findByText("bknProject.concepts.requirements.failed")).toBeInTheDocument();
+    expect(
+      screen.getByText("bknProject.requirements.conceptsRunError.output_too_long"),
+    ).toBeInTheDocument();
+  });
+
+  it("says how many parts of the documents are still to extract", async () => {
+    withRun({ error: "partial", extracted: true, pendingParts: 2, status: "ready" });
+    renderConcepts();
+
+    expect(
+      await screen.findByText(/bknProject\.concepts\.requirements\.partial/),
     ).toBeInTheDocument();
   });
 

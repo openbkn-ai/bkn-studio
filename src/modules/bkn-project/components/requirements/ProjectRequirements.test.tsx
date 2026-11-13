@@ -544,6 +544,32 @@ describe("ProjectRequirements", () => {
     expect(messageMock.error).not.toHaveBeenCalled();
   });
 
+  it("says which work holds the requirements when generating has to wait", async () => {
+    getRequirementsMock.mockResolvedValueOnce(null);
+    draftRequirementsMock.mockRejectedValueOnce(
+      new AxiosError("x", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: { error_code: "BknProject.Requirement.Drafting" },
+        status: 409,
+      } as AxiosResponse),
+    );
+    renderPage();
+
+    const generate = await screen.findByRole("button", { name: "生成业务场景" });
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        spec: {
+          ...requirements().spec,
+          runs: { concepts: { status: "running" } as never, kinetic: null },
+        },
+      }),
+    );
+    fireEvent.click(generate);
+    await waitFor(() =>
+      expect(messageMock.warning).toHaveBeenCalledWith("正在抽取需求概念，完成后再生成业务场景。"),
+    );
+    expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
   it("leads to concept modeling when the model is not confirmed yet", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
     draftRequirementsMock.mockRejectedValueOnce(

@@ -31,6 +31,7 @@ import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import { conceptsRunErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import { askConcepts } from "@/modules/bkn-project/services/ask.service";
 import {
   projectErrorCode,
@@ -901,13 +902,21 @@ export function ProjectConcepts({
         {extractingRequirements ? (
           <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
         ) : conceptsRun?.status === "failed" ? (
-          // What the last run that ended extracted stands: say so, rather than an empty page.
+          // What the last run that ended extracted stands: say so, rather than an empty page, and
+          // say why this one failed and what to do.
           <Alert
+            description={conceptsRunErrorText(t, conceptsRun.error)}
             message={t(
               conceptsRun.extracted
                 ? `${PREFIX}.requirements.failedKept`
                 : `${PREFIX}.requirements.failed`,
             )}
+            showIcon
+            type="warning"
+          />
+        ) : conceptsRun?.status === "ready" && conceptsRun.pendingParts > 0 ? (
+          <Alert
+            message={t(`${PREFIX}.requirements.partial`, { count: conceptsRun.pendingParts })}
             showIcon
             type="warning"
           />

@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   deleteConversation: vi.fn(),
   getConversation: vi.fn(),
   listConversations: vi.fn(),
+  getRequirements: vi.fn(),
   message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
   startConversation: vi.fn(),
 }));
@@ -51,6 +52,11 @@ vi.mock("@/modules/bkn-project/services/conversations.service", async (importOri
   getConversation: mocks.getConversation,
   listConversations: mocks.listConversations,
   startConversation: mocks.startConversation,
+}));
+
+vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
+  getRequirements: mocks.getRequirements,
 }));
 
 import { RequirementAskPanel } from "./RequirementAskPanel";
@@ -246,6 +252,32 @@ describe("RequirementAskPanel", () => {
     fireEvent.click(adopt[0]);
     await waitFor(() => expect(props.onStale).toHaveBeenCalled());
     expect(mocks.message.warning).toHaveBeenCalledWith(`${PANEL}.stale`);
+  });
+
+  it("names the work that holds the requirements when adopting has to wait", async () => {
+    mocks.listConversations.mockResolvedValue([conversation([turn({ proposals: twoProposals })])]);
+    mocks.decideProposals.mockRejectedValue(refused("Requirement.Drafting"));
+    mocks.getRequirements.mockResolvedValueOnce({
+      spec: { runs: { concepts: { status: "running" }, kinetic: null } },
+      status: "ready",
+    });
+    render({ page: "scenarios" });
+
+    const adopt = await screen.findAllByRole("button", {
+      name: /^bknProject\.ask\.proposal\.adoptItem/,
+    });
+    fireEvent.click(adopt[0]);
+    await waitFor(() =>
+      expect(mocks.message.warning).toHaveBeenCalledWith(`${PANEL}.drafting.concepts`),
+    );
+
+    // Nothing readable: the page's own work.
+    mocks.getRequirements.mockRejectedValueOnce(new Error("offline"));
+    await waitFor(() => expect(adopt[0]).not.toBeDisabled());
+    fireEvent.click(adopt[0]);
+    await waitFor(() =>
+      expect(mocks.message.warning).toHaveBeenCalledWith(`${PANEL}.drafting.scenarios`),
+    );
   });
 
   it("asks with the ticked items, waits for the answer, and shows it when it comes", async () => {

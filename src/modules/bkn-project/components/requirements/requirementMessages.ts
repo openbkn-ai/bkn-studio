@@ -7,6 +7,8 @@
 
 import type { TFunction } from "i18next";
 
+import type { Requirements } from "@/modules/bkn-project/types/requirements";
+
 /**
  * Requirement codes are for machines; the page words them. Every set is open: a value the page
  * does not know reads as "other", never as the code.
@@ -28,6 +30,34 @@ export const draftErrorText = word("draftError", [
   "output_invalid",
   "interrupted",
 ]);
+
+/** Why extracting the requirement concepts failed, in business words with what to do next. */
+export const conceptsRunErrorText = word("conceptsRunError", [
+  "agent_rejected",
+  "agent_unavailable",
+  "agent_failed",
+  "agent_timeout",
+  "output_invalid",
+  "output_too_long",
+  "interrupted",
+]);
+
+/** The work holding the specification: one at a time, so others wait for it. */
+export type RequirementWork = "concepts" | "kinetic" | "scenarios";
+
+/** What is running on the specification, read as it is now; null when nothing is. */
+export function runningWork(requirements: Requirements | null): RequirementWork | null {
+  if (!requirements) {
+    return null;
+  }
+  if (requirements.status === "drafting") {
+    return "scenarios";
+  }
+  if (requirements.spec.runs.concepts?.status === "running") {
+    return "concepts";
+  }
+  return requirements.spec.runs.kinetic?.status === "running" ? "kinetic" : null;
+}
 
 export const categoryText = word("category", [
   "object",
