@@ -10,6 +10,8 @@ import { AxiosError, type AxiosResponse } from "axios";
 import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DRAFT_POLL_MS } from "@/modules/bkn-project/services/draft.service";
+import { POLL_FAILURE_LIMIT } from "@/modules/bkn-project/services/requirements.service";
 import type { Concept, Concepts } from "@/modules/bkn-project/types/concepts";
 import type { Project } from "@/modules/bkn-project/types/project";
 
@@ -318,6 +320,68 @@ describe("ProjectConcepts", () => {
     expect(await screen.findByText("bknProject.concepts.requirements.running")).toBeInTheDocument();
     // While it runs, its concepts wait: none is judged meanwhile.
     expect((await row("On-time rate")).queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
+  });
+
+  it("keeps following an extraction past a failed read of it, and offers to refresh at the limit", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const running = {
+        spec: { conceptsRun: { error: "", extracted: false, stale: false, status: "running" } },
+      };
+      const failure = new Error("signed out");
+      requirements.getRequirements
+        .mockResolvedValueOnce(running)
+        .mockRejectedValueOnce(failure)
+        .mockResolvedValueOnce(running)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      renderConcepts();
+      expect(
+        await screen.findByText("bknProject.concepts.requirements.running"),
+      ).toBeInTheDocument();
+
+      // A failed read keeps the run as last read: it is read again, not dropped.
+      for (let read = 2; read <= 3 + POLL_FAILURE_LIMIT; read += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+        });
+        await waitFor(() => expect(requirements.getRequirements).toHaveBeenCalledTimes(read));
+        expect(screen.getByText("bknProject.concepts.requirements.running")).toBeInTheDocument();
+      }
+      expect(await screen.findByText("bknProject.readStalled")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS * 3);
+      });
+      expect(requirements.getRequirements).toHaveBeenCalledTimes(3 + POLL_FAILURE_LIMIT);
+
+      fireEvent.click(screen.getByRole("button", { name: "common.refresh" }));
+      await waitFor(() => expect(screen.queryByText("bknProject.readStalled")).toBeNull());
+      expect(screen.queryByText("bknProject.concepts.requirements.running")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps following a drafting while only the specification cannot be read", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const drafting = { items: { decisions: [] }, status: "drafting", updateTime: 5 };
+      requirements.getRequirements.mockRejectedValue(new Error("signed out"));
+      service.getDraft.mockResolvedValue(drafting);
+      renderConcepts();
+      await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(1));
+
+      for (let read = 2; read <= 2 + POLL_FAILURE_LIMIT; read += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+        });
+        await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(read));
+      }
+      expect(screen.queryByText("bknProject.readStalled")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the last extracted concepts when extracting again failed, and says so", async () => {

@@ -44,6 +44,7 @@ import {
   readImplementedReturn,
   useObjectMetricsMode,
 } from "@/modules/bkn-project/components/kinetic/needs";
+import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
@@ -60,6 +61,7 @@ import {
   editItem,
   getRequirements,
   listDocuments,
+  POLL_FAILURE_LIMIT,
   removeItem,
   REQUIREMENTS_POLL_MS,
   reviewRequirements,
@@ -115,7 +117,8 @@ export function ProjectKinetic({
   const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
   // The needs as the live network implements them; null when that could not be read.
   const [logic, setLogic] = useState<LogicNeeds | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Reads failed in a row: following a run stops at the limit and the page offers to refresh.
+  const [failures, setFailures] = useState(0);
   // null while unknown; the analysis needs a confirmed model.
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
@@ -148,11 +151,11 @@ export function ProjectKinetic({
       if (read === latest.current) {
         setRequirements(nextRequirements);
         setLogic(nextLogic);
-        setFailed(false);
+        setFailures(0);
       }
     } catch {
       if (read === latest.current) {
-        setFailed(true);
+        setFailures((count) => count + 1);
       }
     } finally {
       setReads((count) => count + 1);
@@ -214,13 +217,14 @@ export function ProjectKinetic({
 
   const run = requirements?.spec.runs.kinetic ?? null;
   const running = run?.status === "running";
+  const stalled = failures >= POLL_FAILURE_LIMIT;
   useEffect(() => {
-    if (!running) {
+    if (!running || stalled) {
       return undefined;
     }
     const timer = window.setTimeout(() => void load(), REQUIREMENTS_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [load, reads, running]);
+  }, [load, reads, running, stalled]);
 
   const updateTime = logic?.updateTime ?? requirements?.updateTime;
 
@@ -454,7 +458,7 @@ export function ProjectKinetic({
         : reviewRequirements(project.id, time, [], [{ id: need.id, kind: "logic_needs" }]),
     );
 
-  if (failed && requirements === undefined) {
+  if (failures > 0 && requirements === undefined) {
     return (
       <Alert
         action={
@@ -677,6 +681,7 @@ export function ProjectKinetic({
             type="warning"
           />
         ) : null}
+        {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
         {running ? <Alert message={t(`${KINETIC}.running`)} showIcon type="info" /> : null}
         {run?.status === "failed" ? (
           <Alert

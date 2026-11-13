@@ -5,12 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import { mapSpec } from "@/modules/bkn-project/services/requirements.service";
+import {
+  mapSpec,
+  POLL_FAILURE_LIMIT,
+  REQUIREMENTS_POLL_MS,
+} from "@/modules/bkn-project/services/requirements.service";
 import type { LogicNeeds, LogicNeedView } from "@/modules/bkn-project/types/kinetic";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
@@ -90,6 +94,16 @@ const project: Project = {
   name: "p",
   otherProjects: 0,
   owner: { id: "me", type: "user" },
+  updateTime: 1,
+};
+
+const RUN = {
+  byId: "me",
+  error: "",
+  retried: false,
+  startTime: 1,
+  stale: false,
+  status: "ready",
   updateTime: 1,
 };
 
@@ -221,6 +235,17 @@ function renderPage(state?: unknown, owner = true) {
 }
 
 const location = () => screen.getByTestId("location").textContent ?? "";
+
+/** Lets the page's next reads of a running analysis happen, one poll at a time. */
+async function readAgain(times: number) {
+  for (let read = 0; read < times; read += 1) {
+    const before = mocks.getRequirements.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REQUIREMENTS_POLL_MS);
+    });
+    await waitFor(() => expect(mocks.getRequirements).toHaveBeenCalledTimes(before + 1));
+  }
+}
 
 async function openNeed(name: string, cta: string) {
   const row = (await screen.findByText(name)).closest("tr")!;
@@ -788,6 +813,69 @@ describe("ProjectKinetic", () => {
     expect(
       await screen.findByText("没能分析动力需求：分析超时了，请重新分析。"),
     ).toBeInTheDocument();
+  });
+
+  it("reads a running analysis past a failed read and shows the needs once it is done", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const run = { ...RUN, status: "running" };
+      // Without the live read the needs show from the specification.
+      mocks.getLogicNeeds.mockRejectedValue(new Error("unavailable"));
+      mocks.getRequirements
+        .mockResolvedValueOnce(
+          requirements({ logicNeeds: [], runs: { concepts: null, kinetic: run } }),
+        )
+        .mockRejectedValueOnce(new Error("signed out for a moment"))
+        .mockResolvedValue(
+          requirements({ runs: { concepts: null, kinetic: { ...run, status: "ready" } } }),
+        );
+      renderPage();
+      expect(await screen.findByText(/正在分析概念模型和需求文档/)).toBeInTheDocument();
+
+      await readAgain(2);
+      expect(await screen.findByText("延误率")).toBeInTheDocument();
+      expect(screen.queryByText(/暂时读不到最新进度/)).toBeNull();
+      expect(mocks.getRequirements).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops reading after failed reads in a row, says so and reads again on refresh", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const run = { ...RUN, status: "running" };
+      // Without the live read the needs show from the specification.
+      mocks.getLogicNeeds.mockRejectedValue(new Error("unavailable"));
+      const failure = new Error("signed out");
+      mocks.getRequirements
+        .mockResolvedValueOnce(
+          requirements({ logicNeeds: [], runs: { concepts: null, kinetic: run } }),
+        )
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockResolvedValue(
+          requirements({ runs: { concepts: null, kinetic: { ...run, status: "ready" } } }),
+        );
+      renderPage();
+      expect(await screen.findByText(/正在分析概念模型和需求文档/)).toBeInTheDocument();
+
+      await readAgain(POLL_FAILURE_LIMIT);
+      expect(
+        await screen.findByText("暂时读不到最新进度，页面显示的可能不是最新内容。"),
+      ).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REQUIREMENTS_POLL_MS * 3);
+      });
+      expect(mocks.getRequirements).toHaveBeenCalledTimes(1 + POLL_FAILURE_LIMIT);
+
+      fireEvent.click(screen.getByRole("button", { name: /刷\s*新/ }));
+      expect(await screen.findByText("延误率")).toBeInTheDocument();
+      expect(screen.queryByText(/暂时读不到最新进度/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("links a candidate a person chooses, never by itself", async () => {

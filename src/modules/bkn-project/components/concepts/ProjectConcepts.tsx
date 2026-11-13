@@ -26,6 +26,7 @@ import {
   type RevisionPreview,
 } from "@/modules/bkn-project/components/ai/AskAiSidebar";
 import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
+import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
@@ -38,6 +39,7 @@ import {
   editItem,
   extractRequirementConcepts,
   getRequirements,
+  POLL_FAILURE_LIMIT,
 } from "@/modules/bkn-project/services/requirements.service";
 import {
   acceptDraftSuggestions,
@@ -164,6 +166,10 @@ export function ProjectConcepts({
   // The specification, for the run extracting the documents' concepts; null when unread.
   const [requirements, setRequirements] = useState<Requirements | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Reads failed in a row, of the page and of the specification's run: following a run stops
+  // at the limit and the page offers to refresh.
+  const [failures, setFailures] = useState(0);
+  const [runFailures, setRunFailures] = useState(0);
   const [reads, setReads] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -183,16 +189,22 @@ export function ProjectConcepts({
       const [nextDraft, next, nextRequirements] = await Promise.all([
         getDraft(project.id),
         getConcepts(project.id),
-        // The run only adds to the page: a failed read shows none.
-        getRequirements(project.id).catch(() => null),
+        // The run only adds to the page: a failed read keeps the run as last read, so a run
+        // going on is still followed.
+        getRequirements(project.id).catch(() => undefined),
       ]);
       setDraft(nextDraft);
       setConcepts(next);
-      setRequirements(nextRequirements);
+      if (nextRequirements !== undefined) {
+        setRequirements(nextRequirements);
+      }
+      setFailures(0);
+      setRunFailures((count) => (nextRequirements === undefined ? count + 1 : 0));
       setLoadError(null);
       return true;
     } catch (error) {
       setLoadError(requestFailureText(t, error));
+      setFailures((count) => count + 1);
       return false;
     } finally {
       setReads((count) => count + 1);
@@ -207,13 +219,19 @@ export function ProjectConcepts({
   const drafting = draft?.status === "drafting";
   const conceptsRun = requirements?.spec.conceptsRun;
   const extractingRequirements = conceptsRun?.status === "running";
+  const following = drafting || extractingRequirements;
+  // Only the extraction is read from the specification: its failed reads leave drafting alone.
+  const stalled =
+    (following && failures >= POLL_FAILURE_LIMIT) ||
+    (extractingRequirements && runFailures >= POLL_FAILURE_LIMIT);
   useEffect(() => {
-    if (!drafting && !extractingRequirements) {
+    if (!following || stalled) {
       return undefined;
     }
     const timer = window.setTimeout(() => void load(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [drafting, extractingRequirements, load, reads]);
+  }, [following, load, reads, stalled]);
+  const stalledNotice = stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null;
 
   // A refused change is not replayed: the page says why until it is dealt with. A draft someone
   // else changed meanwhile is read again on request; an item of a knowledge-base selection no
@@ -517,6 +535,7 @@ export function ProjectConcepts({
   if (!concepts.concepts.length && !drafting) {
     return (
       <div className={styles.page}>
+        {stalledNotice}
         {documentSource}
         <EmptyStatePanel
           action={
@@ -873,6 +892,7 @@ export function ProjectConcepts({
             type="info"
           />
         ) : null}
+        {stalledNotice}
         {extractingRequirements ? (
           <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
         ) : conceptsRun?.status === "failed" ? (
