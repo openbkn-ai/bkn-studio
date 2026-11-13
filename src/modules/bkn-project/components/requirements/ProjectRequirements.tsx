@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
+import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import {
   Citing,
@@ -50,6 +51,7 @@ import {
   getRequirements,
   listDocuments,
   NETWORK_DOCUMENT_ID,
+  POLL_FAILURE_LIMIT,
   removeItem,
   REQUIREMENTS_POLL_MS,
   resolveConflict,
@@ -116,7 +118,8 @@ export function ProjectRequirements({
   const [documents, setDocuments] = useState<RequirementDocument[]>([]);
   // The kinetic needs as the live network implements them; null when they could not be read.
   const [logicNeeds, setLogicNeeds] = useState<LogicNeedView[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Reads failed in a row: following a drafting stops at the limit and the page offers to refresh.
+  const [failures, setFailures] = useState(0);
   const [drafting, setDrafting] = useState(false);
   // Generating was refused because no object type is adopted yet.
   const [blocked, setBlocked] = useState<"modelNotConfirmed" | "noOntology" | null>(null);
@@ -148,11 +151,11 @@ export function ProjectRequirements({
       if (read === latest.current) {
         setRequirements(nextRequirements);
         setDocuments(nextDocuments);
-        setFailed(false);
+        setFailures(0);
       }
     } catch {
       if (read === latest.current) {
-        setFailed(true);
+        setFailures((count) => count + 1);
       }
     } finally {
       setReads((count) => count + 1);
@@ -208,13 +211,14 @@ export function ProjectRequirements({
   }, [project.id]);
 
   const isDrafting = requirements?.status === "drafting";
+  const stalled = failures >= POLL_FAILURE_LIMIT;
   useEffect(() => {
-    if (!isDrafting) {
+    if (!isDrafting || stalled) {
       return undefined;
     }
     const timer = window.setTimeout(() => void load(), REQUIREMENTS_POLL_MS);
     return () => window.clearTimeout(timer);
-  }, [isDrafting, load, reads]);
+  }, [isDrafting, load, reads, stalled]);
   const objectTypes = drafted.filter((item) => item.kind === "object_type").length;
   // Generating takes longer the larger the model: say so rather than promise a minute or two.
   const draftingMinutes =
@@ -343,7 +347,7 @@ export function ProjectRequirements({
         }
       : null;
 
-  if (failed && requirements === undefined) {
+  if (failures > 0 && requirements === undefined) {
     return (
       <Alert
         action={
@@ -426,6 +430,7 @@ export function ProjectRequirements({
               </AppButton>
             ) : null}
           </div>
+          {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
           {blocked ? (
             <Alert
               action={

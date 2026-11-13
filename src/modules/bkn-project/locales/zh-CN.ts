@@ -1182,6 +1182,7 @@ export const bknProjectZhCN = {
       discard: "不保存，离开",
       stay: "留在这一页",
     },
+    readStalled: "暂时读不到最新进度，页面显示的可能不是最新内容。",
     sentenceSeparator: "",
     understand: {
       hint: {

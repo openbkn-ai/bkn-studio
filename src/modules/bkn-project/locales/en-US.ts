@@ -1268,6 +1268,7 @@ export const bknProjectEnUS = {
       discard: "Leave without saving",
       stay: "Stay on this page",
     },
+    readStalled: "Couldn't get the latest progress. What you see may be out of date.",
     sentenceSeparator: " ",
     understand: {
       hint: {

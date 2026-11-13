@@ -39,6 +39,12 @@ const requirementsPath = (projectId: string) =>
 /** How often a specification being drafted is read again. */
 export const REQUIREMENTS_POLL_MS = 5000;
 
+/**
+ * How many reads in a row may fail while a background run is followed before the page stops
+ * reading again and offers to refresh: a passing failure is read past, a lasting one is said.
+ */
+export const POLL_FAILURE_LIMIT = 3;
+
 /** What bkn-project takes per document and per project. */
 export const DOCUMENT_LIMITS = { extensions: [".md", ".markdown", ".txt"], maxBytes: 1 << 20 };
 

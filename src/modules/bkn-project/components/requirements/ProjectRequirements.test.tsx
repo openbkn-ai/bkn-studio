@@ -5,12 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import { mapSpec } from "@/modules/bkn-project/services/requirements.service";
+import {
+  mapSpec,
+  POLL_FAILURE_LIMIT,
+  REQUIREMENTS_POLL_MS,
+} from "@/modules/bkn-project/services/requirements.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { RequirementDocument, Requirements } from "@/modules/bkn-project/types/requirements";
 
@@ -378,6 +382,44 @@ describe("ProjectRequirements", () => {
         "正在基于概念模型和动力模型生成业务场景和问题，已经用了 6 分钟。模型较大时可能需要几分钟，完成后这里会自动更新。",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("stops reading a drafting after failed reads in a row, says so and reads again on refresh", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const failure = new Error("signed out");
+      getRequirementsMock
+        .mockResolvedValueOnce(
+          requirements({ spec: mapSpec({}), status: "drafting", updateTime: Date.now() }),
+        )
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      renderPage();
+      expect(
+        await screen.findByText("正在基于概念模型和动力模型生成业务场景和问题，通常需要一两分钟。"),
+      ).toBeInTheDocument();
+
+      for (let read = 2; read <= 1 + POLL_FAILURE_LIMIT; read += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(REQUIREMENTS_POLL_MS);
+        });
+        await waitFor(() => expect(getRequirementsMock).toHaveBeenCalledTimes(read));
+      }
+      expect(
+        await screen.findByText("暂时读不到最新进度，页面显示的可能不是最新内容。"),
+      ).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REQUIREMENTS_POLL_MS * 3);
+      });
+      expect(getRequirementsMock).toHaveBeenCalledTimes(1 + POLL_FAILURE_LIMIT);
+
+      fireEvent.click(screen.getByRole("button", { name: /刷\s*新/ }));
+      expect(await screen.findByText("某个客户哪些订单晚了？")).toBeInTheDocument();
+      expect(screen.queryByText(/暂时读不到最新进度/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("generates from the adopted ontology before the first time, with documents optional", async () => {
