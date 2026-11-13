@@ -7,12 +7,18 @@
 
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DRAFT_POLL_MS } from "@/modules/bkn-project/services/draft.service";
-import { POLL_FAILURE_LIMIT } from "@/modules/bkn-project/services/requirements.service";
-import type { Concept, Concepts } from "@/modules/bkn-project/types/concepts";
+import type {
+  ProjectKnowledgeBaseModelProps,
+  ProjectKnowledgeBaseModelStatus,
+} from "@/framework/extension/registry";
+import type {
+  Concept,
+  Concepts,
+  RequirementConceptMatch,
+} from "@/modules/bkn-project/types/concepts";
 import type { Project } from "@/modules/bkn-project/types/project";
 
 const translate = vi.hoisted(
@@ -35,47 +41,50 @@ const messageMock = vi.hoisted(() => ({
   success: vi.fn(),
   warning: vi.fn(),
 }));
-const confirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => Promise<void> }) => void>());
+const confirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => void }) => void>());
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: messageMock, modal: { confirm: confirmMock } }),
 }));
 
 const service = vi.hoisted(() => ({
-  acceptDraftSuggestions: vi.fn(),
+  addDraftCatalogs: vi.fn(),
+  draftSourceChanges: vi.fn(),
   generateDraft: vi.fn(),
   getConcepts: vi.fn(),
   getDraft: vi.fn(),
+  getSourceChanges: vi.fn(),
   judgeConcept: vi.fn(),
   mergeConcept: vi.fn(),
   reviseConcept: vi.fn(),
 }));
-const assistant = vi.hoisted(() => ({ askConcepts: vi.fn(), understandCatalogs: vi.fn() }));
+vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  ...service,
+}));
+const publish = vi.hoisted(() => ({ getUnderstanding: vi.fn(), understandCatalogs: vi.fn() }));
+vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
+  ...publish,
+}));
+const assistant = vi.hoisted(() => ({ askConcepts: vi.fn() }));
 vi.mock("@/modules/bkn-project/services/ask.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/ask.service")>()),
   askConcepts: assistant.askConcepts,
 }));
-vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
-  understandCatalogs: assistant.understandCatalogs,
-}));
 const requirements = vi.hoisted(() => ({
-  editItem: vi.fn(),
   extractRequirementConcepts: vi.fn(),
   getRequirements: vi.fn(),
+  listDocuments: vi.fn(),
+  matchRequirementConcept: vi.fn(),
 }));
 vi.mock("@/modules/bkn-project/services/requirements.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
   ...requirements,
 }));
 
-vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
-  ...service,
-}));
-
 // The edition's panel for extracting a model from the knowledge-base files.
 const slots = vi.hoisted(() => ({
-  kbModel: null as null | ((props: { canEdit: boolean; draftUpdateTime: number }) => ReactElement),
+  kbModel: null as null | ((props: ProjectKnowledgeBaseModelProps) => ReactElement),
 }));
 vi.mock("@/framework/extension/registry", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/framework/extension/registry")>()),
@@ -87,12 +96,19 @@ import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ProjectConcepts } from "./ProjectConcepts";
 
-const project = { archived: false, id: "p1", knId: "orders" } as Project;
+const project = {
+  archived: false,
+  catalogIds: ["c1"],
+  contentLanguage: "zh-CN",
+  id: "p1",
+  knId: "orders",
+} as unknown as Project;
 
 function concept(extra: Partial<Concept>): Concept {
   return {
     ai: false,
     aliases: [],
+    binding: { id: "", kind: "table", name: "" },
     blocked: null,
     description: "",
     item: null,
@@ -110,62 +126,112 @@ function concept(extra: Partial<Concept>): Concept {
   };
 }
 
-function concepts(extra: Partial<Concepts> = {}): Concepts {
+const table = (id: string) => ({ id, kind: "table" as const, name: id });
+const dataset = { id: "ds", kind: "dataset" as const, name: "Contract extraction" };
+
+function requirement(extra: Partial<RequirementConceptMatch>): RequirementConceptMatch {
   return {
-    concepts: [
-      concept({
-        item: { adopted: true, id: "orders", kind: "object_types" },
-        key: "object_types/orders",
-        name: "Orders",
-        sources: [
-          { documentIds: [], id: "r_orders", kind: "table", name: "orders" },
-          { documentIds: ["d1"], id: "k1", kind: "requirement", name: "Order" },
-        ],
-      }),
-      concept({
-        blocked: "needs_identity",
-        item: { adopted: false, id: "visits", kind: "object_types" },
-        judged: { by: { id: "me", type: "user" }, time: 1 },
-        key: "object_types/visits",
-        name: "Visits",
-        state: "blocked",
-      }),
-      concept({
-        item: { adopted: true, id: "currency", kind: "value_types" },
-        key: "value_types/currency",
-        name: "Currency",
-        state: "in_model",
-        suggested: "values",
-        suggestedBecause: "code_table",
-        verdict: "values",
-      }),
-      concept({
-        key: "requirement_concepts/k3",
-        name: "On-time rate",
-        reason: "Computed from deliveries",
-        sources: [{ documentIds: ["d1"], id: "k3", kind: "requirement", name: "On-time rate" }],
-        state: "judged",
-        verdict: "kinetic",
-      }),
-    ],
-    counts: { blocked: 1, in_model: 1, judged: 1, pending: 1, "verdict:object": 2 },
-    draftUpdateTime: 5,
-    notUnderstood: 0,
-    requirementUpdateTime: 9,
+    basis: "",
+    by: "ai",
+    category: "object",
+    definition: "",
+    id: "r",
+    match: null,
+    quote: "",
+    state: "pending",
+    term: "r",
     ...extra,
   };
 }
 
-const onGoToKinetic = vi.fn();
-const onGoToModel = vi.fn();
+function concepts(extra: Partial<Concepts> = {}): Concepts {
+  return {
+    concepts: [
+      concept({
+        binding: table("r_customers"),
+        item: { adopted: true, id: "customers", kind: "object_types" },
+        key: "object_types/customers",
+        name: "Customer",
+        sources: [{ documentIds: [], id: "r_customers", kind: "table", name: "customers" }],
+      }),
+      concept({
+        binding: table("r_orders"),
+        item: { adopted: true, id: "orders", kind: "object_types" },
+        key: "object_types/orders",
+        name: "Order",
+        reason: "",
+        sources: [{ documentIds: [], id: "r_orders", kind: "table", name: "orders" }],
+        state: "in_model",
+      }),
+      concept({
+        binding: table("r_supplier"),
+        item: { adopted: true, id: "supplier", kind: "object_types" },
+        key: "object_types/supplier",
+        name: "Supplier",
+        sources: [{ documentIds: [], id: "supplier", kind: "network", name: "Supplier" }],
+        state: "in_model",
+      }),
+      concept({
+        binding: dataset,
+        item: { adopted: false, id: "certificate", kind: "object_types" },
+        key: "object_types/certificate",
+        name: "Certificate",
+        sources: [{ documentIds: [], id: "f1", kind: "document", name: "" }],
+        suggestedBecause: "document_entity",
+      }),
+      concept({
+        binding: table("r_meta"),
+        item: { adopted: false, id: "meta", kind: "object_types" },
+        judged: { by: { id: "me", type: "user" }, time: 1 },
+        key: "object_types/meta",
+        name: "Sample meta",
+        state: "judged",
+        verdict: "none",
+      }),
+      // A requirement concept listed on its own belongs to the requirement tab.
+      concept({
+        binding: null,
+        key: "requirement_concepts/k9",
+        name: "Credit limit",
+        sources: [{ documentIds: ["d1"], id: "k9", kind: "requirement", name: "Credit limit" }],
+      }),
+    ],
+    counts: {},
+    draftUpdateTime: 5,
+    notUnderstood: 0,
+    requirementUpdateTime: 9,
+    requirements: [
+      requirement({
+        basis: "the customers table records clients",
+        id: "k1",
+        match: {
+          binding: table("r_customers"),
+          key: "object_types/customers",
+          name: "Customer",
+          target: { id: "r_customers", kind: "table" },
+        },
+        quote: "every client's orders",
+        term: "Client",
+      }),
+      requirement({
+        basis: "no table holds a limit",
+        id: "k9",
+        state: "unmatched",
+        term: "Credit limit",
+      }),
+    ],
+    ...extra,
+  };
+}
+
 const onGoToResources = vi.fn();
 const onOpenItem = vi.fn();
 
 function renderConcepts(ownerIsCaller = true) {
   return renderWithoutAntdStyles(
     <ProjectConcepts
-      onGoToKinetic={onGoToKinetic}
-      onGoToModel={onGoToModel}
+      onGoToKinetic={vi.fn()}
+      onGoToModel={vi.fn()}
       onGoToResources={onGoToResources}
       onOpenItem={onOpenItem}
       ownerIsCaller={ownerIsCaller}
@@ -177,20 +243,17 @@ function renderConcepts(ownerIsCaller = true) {
 const row = async (name: string) =>
   within((await screen.findByText(name)).closest("tr") as HTMLElement);
 
-/** The alert a text is shown in. */
-function alertOf(text: HTMLElement) {
-  const alert = text.closest<HTMLElement>('[role="alert"]');
-  if (!alert) {
-    throw new Error("not in an alert");
-  }
-  return alert;
-}
-
-function conflict(code: string) {
+function refused(code: string, status = 409) {
   return new AxiosError(code, "ERR_BAD_REQUEST", undefined, undefined, {
     data: { description: code, error_code: `BknProject.Draft.${code}` },
-    status: 409,
+    status,
   } as AxiosResponse);
+}
+
+/** Runs the confirmation the page asked for. */
+async function confirmRun() {
+  await waitFor(() => expect(confirmMock).toHaveBeenCalled());
+  act(() => confirmMock.mock.calls.at(-1)![0].onOk());
 }
 
 describe("ProjectConcepts", () => {
@@ -216,793 +279,420 @@ describe("ProjectConcepts", () => {
     kb.mode = "hidden";
     slots.kbModel = null;
     service.getConcepts.mockResolvedValue(concepts());
-    requirements.getRequirements.mockResolvedValue(null);
     service.getDraft.mockResolvedValue({
-      items: { decisions: [] },
+      createTime: 1,
+      items: { decisions: [], objectTypes: [] },
       status: "ready",
       updateTime: 5,
     });
-  });
-
-  const withRun = (run: { error?: string; extracted: boolean; stale?: boolean; status: string }) =>
     requirements.getRequirements.mockResolvedValue({
-      spec: { conceptsRun: { error: "", stale: false, ...run } },
+      spec: {
+        conceptsRun: { error: "", extracted: true, stale: false, status: "ready" },
+        runs: { concepts: { status: "ready", updateTime: 2 }, kinetic: null },
+      },
+      updateTime: 9,
     });
-
-  it("judges a requirement concept in the specification, as its category", async () => {
-    requirements.editItem.mockResolvedValue({});
-    renderConcepts();
-
-    const rate = await row("On-time rate");
-    fireEvent.mouseDown(rate.getByRole("combobox", { name: /verdictOf.*On-time rate/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
-
-    await waitFor(() =>
-      expect(requirements.editItem).toHaveBeenCalledWith(
-        "p1",
-        "concepts",
-        "k3",
-        { category: "not_ontology" },
-        9,
-      ),
-    );
-    // Not through the draft: the kinetic needs read the specification.
-    expect(service.judgeConcept).not.toHaveBeenCalled();
-    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
+    requirements.listDocuments.mockResolvedValue([{ id: "d1" }]);
+    publish.getUnderstanding.mockResolvedValue([
+      { catalogId: "c1", tables: [{ resourceId: "r_customers" }, { resourceId: "r_orders" }] },
+    ]);
   });
 
-  it("shows what the network already has as found there, read only and marked", async () => {
-    service.getConcepts.mockResolvedValue(
-      concepts({
-        concepts: [
-          concept({
-            item: { adopted: true, id: "supply_sales_order", kind: "object_types" },
-            key: "object_types/supply_sales_order",
-            name: "销售订单",
-            sources: [
-              { documentIds: [], id: "supply_sales_order", kind: "network", name: "销售订单" },
-              { documentIds: [], id: "t_orders", kind: "table", name: "orders" },
-            ],
-            // Even one the reply left pending is not judged here.
-            state: "pending",
-            suggestedBecause: "network",
-          }),
-        ],
-      }),
-    );
+  it("lists the sources with what they hold and made, and the network's concepts", async () => {
     renderConcepts();
 
-    const order = await row("销售订单");
-    expect(order.getByText(/^bknProject\.concepts\.source\.network/)).toBeInTheDocument();
-    expect(order.getByText("bknProject.concepts.because.network")).toBeInTheDocument();
-    expect(order.getAllByRole("img", { name: "bknProject.model.existing.mark" })).toHaveLength(2);
-    // Judged and merged in the knowledge network, not here.
-    expect(order.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
-    expect(order.queryByRole("combobox", { name: /mergeIntoOf/ })).toBeNull();
-    expect(order.queryByRole("button", { name: /confirmOf/ })).toBeNull();
-  });
-
-  it("leads from a kinetic concept to kinetic modeling", async () => {
-    renderConcepts();
-
-    fireEvent.click(
-      (await row("On-time rate")).getByRole("button", {
-        name: "bknProject.concepts.destination.kinetic",
-      }),
-    );
-    expect(onGoToKinetic).toHaveBeenCalled();
-  });
-
-  it("extracts the requirement documents' concepts, and says when there are no documents", async () => {
-    requirements.extractRequirementConcepts.mockRejectedValueOnce(
-      new AxiosError("no", "ERR_BAD_REQUEST", undefined, undefined, {
-        data: { description: "no", error_code: "BknProject.Requirement.NoDocuments" },
-        status: 400,
-      } as AxiosResponse),
-    );
-    renderConcepts();
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "bknProject.concepts.requirements.extract" }),
-    );
-    await waitFor(() =>
-      expect(messageMock.error).toHaveBeenCalledWith(
-        "bknProject.concepts.requirements.noDocuments",
-      ),
-    );
-
-    requirements.extractRequirementConcepts.mockResolvedValue({
-      spec: { conceptsRun: { error: "", extracted: false, stale: false, status: "running" } },
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: "bknProject.concepts.requirements.extract" }),
-    );
-    expect(await screen.findByText("bknProject.concepts.requirements.running")).toBeInTheDocument();
-    // While it runs, its concepts wait: none is judged meanwhile.
-    expect((await row("On-time rate")).queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
-  });
-
-  it("keeps following an extraction past a failed read of it, and offers to refresh at the limit", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const running = {
-        spec: { conceptsRun: { error: "", extracted: false, stale: false, status: "running" } },
-      };
-      const failure = new Error("signed out");
-      requirements.getRequirements
-        .mockResolvedValueOnce(running)
-        .mockRejectedValueOnce(failure)
-        .mockResolvedValueOnce(running)
-        .mockRejectedValueOnce(failure)
-        .mockRejectedValueOnce(failure)
-        .mockRejectedValueOnce(failure);
-      renderConcepts();
-      expect(
-        await screen.findByText("bknProject.concepts.requirements.running"),
-      ).toBeInTheDocument();
-
-      // A failed read keeps the run as last read: it is read again, not dropped.
-      for (let read = 2; read <= 3 + POLL_FAILURE_LIMIT; read += 1) {
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
-        });
-        await waitFor(() => expect(requirements.getRequirements).toHaveBeenCalledTimes(read));
-        expect(screen.getByText("bknProject.concepts.requirements.running")).toBeInTheDocument();
-      }
-      expect(await screen.findByText("bknProject.readStalled")).toBeInTheDocument();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS * 3);
-      });
-      expect(requirements.getRequirements).toHaveBeenCalledTimes(3 + POLL_FAILURE_LIMIT);
-
-      fireEvent.click(screen.getByRole("button", { name: "common.refresh" }));
-      await waitFor(() => expect(screen.queryByText("bknProject.readStalled")).toBeNull());
-      expect(screen.queryByText("bknProject.concepts.requirements.running")).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("keeps following a drafting while only the specification cannot be read", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const drafting = { items: { decisions: [] }, status: "drafting", updateTime: 5 };
-      requirements.getRequirements.mockRejectedValue(new Error("signed out"));
-      service.getDraft.mockResolvedValue(drafting);
-      renderConcepts();
-      await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(1));
-
-      for (let read = 2; read <= 2 + POLL_FAILURE_LIMIT; read += 1) {
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
-        });
-        await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(read));
-      }
-      expect(screen.queryByText("bknProject.readStalled")).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("keeps the last extracted concepts when extracting again failed, and says so", async () => {
-    withRun({ extracted: true, status: "failed" });
-    renderConcepts();
-
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    expect(tables.getByText('bknProject.concepts.sources.name.table:{"count":2}')).toBeTruthy();
     expect(
-      await screen.findByText("bknProject.concepts.requirements.failedKept"),
-    ).toBeInTheDocument();
-  });
-
-  it("says when the requirement documents changed since their concepts were extracted", async () => {
-    withRun({ extracted: true, stale: true, status: "ready" });
-    renderConcepts();
-
-    expect(await screen.findByText("bknProject.concepts.requirements.stale")).toBeInTheDocument();
-  });
-
-  it("says what the concepts come from, without knowledge-base wording in the community image", async () => {
-    renderConcepts();
-
+      tables.getByText(/bknProject.concepts.sources.produced.table:\{"count":3\}/),
+    ).toBeTruthy();
+    const documents = within(sources.querySelector('[data-source="document"]') as HTMLElement);
+    expect(documents.getByText(/bknProject.concepts.sources.unmatched:\{"count":1\}/)).toBeTruthy();
+    // No knowledge-base row without the edition's panel.
+    expect(sources.querySelector('[data-source="knowledgeBase"]')).toBeNull();
     expect(
-      await screen.findByText('bknProject.concepts.summaryCore:{"requirements":2,"tables":1}'),
-    ).toBeInTheDocument();
-    const orders = await row("Orders");
-    expect(
-      orders.getByText('bknProject.concepts.source.table:{"name":"orders"}'),
-    ).toBeInTheDocument();
-    expect(
-      orders.getByText('bknProject.concepts.source.requirement:{"name":"Order"}'),
-    ).toBeInTheDocument();
-    // Drafting's reason, worded, where no person gave one.
-    expect(orders.getByText("bknProject.concepts.because.table_entity")).toBeInTheDocument();
-    expect((await row("On-time rate")).getByText("Computed from deliveries")).toBeInTheDocument();
-  });
-
-  it("counts the knowledge-base files where the edition has them", async () => {
-    kb.mode = "enabled";
-    renderConcepts();
-
-    expect(
-      await screen.findByText(
-        'bknProject.concepts.summary:{"documents":0,"requirements":2,"tables":1}',
+      within(sources).getByText(
+        'bknProject.concepts.sources.network:{"count":1,"structured":1,"unstructured":0}',
       ),
-    ).toBeInTheDocument();
+    ).toBeTruthy();
   });
 
-  it("judges a concept over the draft read, which is the adoption", async () => {
-    const judged = concepts();
-    judged.concepts[0] = { ...judged.concepts[0], state: "in_model", verdict: "event" };
-    service.judgeConcept.mockResolvedValue(judged);
+  it("counts four figures over the data side and lists it grouped by its data", async () => {
     renderConcepts();
 
-    const orders = await row("Orders");
-    fireEvent.mouseDown(orders.getByRole("combobox", { name: /verdictOf.*Orders/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.event"));
+    const stats = (await screen.findByText("bknProject.concepts.stats.total")).closest("dl")!;
+    const figure = (key: string) =>
+      within(stats).getByText(`bknProject.concepts.stats.${key}`).nextElementSibling?.textContent;
+    expect(figure("total")).toBe("5");
+    expect(figure("pending")).toBe("2");
+    expect(figure("confirmed")).toBe("2");
+    expect(figure("excluded")).toBe("1");
+    expect(within(stats).getByText('bknProject.concepts.stats.network:{"count":1}')).toBeTruthy();
 
-    await waitFor(() =>
-      expect(service.judgeConcept).toHaveBeenCalledWith("p1", 5, {
-        key: "object_types/orders",
-        reason: "",
-        verdict: "event",
-      }),
+    // At first only what waits for a person: the structured group, then the unstructured one.
+    const groups = screen.getAllByText(/bknProject.concepts.group\./);
+    expect(groups.map((group) => group.textContent)).toEqual([
+      'bknProject.concepts.kind.structured bknProject.concepts.group.structured:{"count":1}',
+      'bknProject.concepts.kind.unstructured bknProject.concepts.group.unstructured:{"count":1}',
+    ]);
+    expect(screen.queryByText("Credit limit")).toBeNull();
+    expect(screen.queryByText("Order")).toBeNull();
+
+    // All of them: the network's comes last of its group, with the blue dot.
+    fireEvent.click(screen.getAllByText("bknProject.concepts.filter.all")[1]);
+    const names = (await screen.findAllByText(/^(Customer|Order|Supplier|Sample meta)$/)).map(
+      (node) => node.textContent,
     );
-    expect(
-      (await row("Orders")).getByText("bknProject.concepts.state.in_model"),
-    ).toBeInTheDocument();
+    expect(names.at(-1)).toBe("Supplier");
+    expect((await row("Supplier")).getAllByRole("img").length).toBeGreaterThan(0);
   });
 
-  it("confirms a pending concept as suggested", async () => {
+  it("confirms and leaves out a concept", async () => {
     service.judgeConcept.mockResolvedValue(concepts());
     renderConcepts();
 
-    fireEvent.click((await row("Orders")).getByRole("button", { name: /confirmOf.*Orders/ }));
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /confirmOf.*Customer/ }));
     await waitFor(() =>
       expect(service.judgeConcept).toHaveBeenCalledWith("p1", 5, {
-        key: "object_types/orders",
+        key: "object_types/customers",
         reason: "",
         verdict: "object",
       }),
     );
-    // Judged concepts have nothing left to confirm.
-    expect((await row("Visits")).queryByRole("button", { name: /confirmOf/ })).toBeNull();
-  });
-
-  it("keeps a saved judgment saved when reading the draft again fails", async () => {
-    service.judgeConcept.mockResolvedValue(concepts());
-    service.getDraft
-      .mockResolvedValueOnce({ items: { decisions: [] }, status: "ready", updateTime: 5 })
-      .mockRejectedValue(new Error("down"));
-    renderConcepts();
-
-    fireEvent.click((await row("Orders")).getByRole("button", { name: /confirmOf.*Orders/ }));
-    await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(2));
-    expect(messageMock.error).not.toHaveBeenCalled();
-  });
-
-  it("offers only the verdicts a concept's item can take", async () => {
-    renderConcepts();
-
-    fireEvent.mouseDown(
-      (await row("Currency")).getByRole("combobox", { name: /verdictOf.*Currency/ }),
-    );
-    await screen.findByRole("listbox");
-    expect(
-      [...document.querySelectorAll(".ant-select-item-option")].map((option) => option.textContent),
-    ).toEqual([
-      "bknProject.concepts.verdict.values",
-      "bknProject.concepts.verdict.property",
-      "bknProject.concepts.verdict.none",
-    ]);
-  });
-
-  it("offers a value list to a concept of the knowledge-base files, with drafting's reason", async () => {
-    service.getConcepts.mockResolvedValue(
-      concepts({
-        concepts: [
-          concept({
-            key: "document_concepts/c1",
-            name: "Ward status",
-            reason: "A fixed list of states",
-            sources: [{ documentIds: [], id: "f1", kind: "document", name: "" }],
-            suggested: "values",
-            suggestedBecause: "document_concept",
-            verdict: "values",
-          }),
-        ],
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /excludeOf.*Customer/ }));
+    await waitFor(() =>
+      expect(service.judgeConcept).toHaveBeenLastCalledWith("p1", 5, {
+        key: "object_types/customers",
+        reason: "",
+        verdict: "none",
       }),
     );
-    renderConcepts();
-
-    const ward = await row("Ward status");
-    expect(ward.getByText("A fixed list of states")).toBeInTheDocument();
-    fireEvent.mouseDown(ward.getByRole("combobox", { name: /verdictOf.*Ward status/ }));
-    await screen.findByRole("listbox");
-    expect(
-      [...document.querySelectorAll(".ant-select-item-option")].map((option) => option.textContent),
-    ).toContain("bknProject.concepts.verdict.values");
   });
 
-  it("says what a blocked concept waits for and leads to where it is settled", async () => {
+  it("merges only into objects bound to the same kind of data", async () => {
+    service.mergeConcept.mockResolvedValue(concepts());
     renderConcepts();
 
-    const visits = await row("Visits");
-    expect(visits.getByText("bknProject.concepts.blocked.needs_identity")).toBeInTheDocument();
-    fireEvent.click(visits.getByRole("button", { name: "bknProject.concepts.blocked.action" }));
-    expect(onOpenItem).toHaveBeenCalledWith({ adopted: false, id: "visits", kind: "object_types" });
-    // A requirement concept with no item to be says so.
-    expect(
-      (await row("On-time rate")).getByText("bknProject.concepts.destination.kinetic"),
-    ).toBeInTheDocument();
-  });
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /mergeIntoOf.*Customer/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Order")).toBeTruthy();
+    expect(within(dialog).getByText("Supplier")).toBeTruthy();
+    expect(within(dialog).queryByText("Certificate")).toBeNull();
+    expect(within(dialog).queryByText("Sample meta")).toBeNull();
+    expect(within(dialog).getByText("bknProject.concepts.mergeOther.structured")).toBeTruthy();
 
-  it("accepts all suggestions, saying how many wait for a person", async () => {
-    service.acceptDraftSuggestions.mockResolvedValue({ accepted: 3, draft: {}, skipped: 1 });
-    renderConcepts();
-
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.acceptAll" }));
-    // Asked first: nothing is judged until the person agrees.
-    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
-    expect(service.acceptDraftSuggestions).not.toHaveBeenCalled();
-    await confirmMock.mock.calls[0][0].onOk();
-    expect(service.acceptDraftSuggestions).toHaveBeenCalledWith("p1", 5);
-    expect(messageMock.success).toHaveBeenCalledWith(
-      'bknProject.concepts.acceptedSkipped:{"accepted":3,"count":1}',
-    );
-  });
-
-  it("merges a concept into another and takes it out again", async () => {
-    const merged = concepts();
-    merged.concepts = [
-      {
-        ...merged.concepts[0],
-        merged: [{ key: "requirement_concepts/k3", name: "On-time rate" }],
-      },
-      ...merged.concepts.slice(1, 3),
-    ];
-    service.mergeConcept.mockResolvedValue(merged);
-    renderConcepts();
-
-    fireEvent.mouseDown(
-      (await row("On-time rate")).getByRole("combobox", { name: /mergeIntoOf.*On-time rate/ }),
-    );
-    fireEvent.click(await screen.findByTitle("Orders"));
+    fireEvent.click(within(dialog).getByText("Order"));
     await waitFor(() =>
       expect(service.mergeConcept).toHaveBeenCalledWith(
         "p1",
         5,
-        "requirement_concepts/k3",
+        "object_types/customers",
         "object_types/orders",
       ),
     );
+  });
 
+  it("says why ticked concepts of both kinds are not merged, and offers a relation instead", async () => {
+    renderConcepts();
+
+    fireEvent.click((await row("Customer")).getByRole("checkbox", { name: /tick.*Customer/ }));
     fireEvent.click(
-      await screen.findByRole("button", {
-        name: 'bknProject.concepts.unmerge:{"name":"On-time rate"}',
+      (await row("Certificate")).getByRole("checkbox", { name: /tick.*Certificate/ }),
+    );
+    expect(screen.getByText('bknProject.concepts.selection.count:{"count":2}')).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.mergeTicked.action" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("bknProject.concepts.cross.title")).toBeTruthy();
+    expect(within(dialog).getByText("bknProject.concepts.cross.why")).toBeTruthy();
+    expect(service.mergeConcept).not.toHaveBeenCalled();
+  });
+
+  it("says a merge across kinds was refused", async () => {
+    service.mergeConcept.mockRejectedValue(refused("CrossBindingMerge", 400));
+    renderConcepts();
+
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /mergeIntoOf.*Customer/ }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByText("Order"));
+    expect(await screen.findByText("bknProject.concepts.cross.refused")).toBeTruthy();
+  });
+
+  it("keeps ticks across pages", async () => {
+    const many = Array.from({ length: 25 }, (_, index) =>
+      concept({
+        binding: table(`r_${index}`),
+        item: { adopted: true, id: `t${index}`, kind: "object_types" },
+        key: `object_types/t${index}`,
+        name: `Table ${index}`,
       }),
     );
+    service.getConcepts.mockResolvedValue(concepts({ concepts: many, requirements: [] }));
+    renderConcepts();
+
+    fireEvent.click((await row("Table 0")).getByRole("checkbox"));
+    expect(screen.queryByText("Table 20")).toBeNull();
+    fireEvent.click(screen.getByTitle("2"));
+    fireEvent.click((await row("Table 20")).getByRole("checkbox"));
+    expect(screen.getByText('bknProject.concepts.selection.count:{"count":2}')).toBeTruthy();
+  });
+
+  it("shows one notice, tables not understood before requirement concepts not in the data", async () => {
+    service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 2 }));
+    const { unmount } = renderConcepts();
+    expect(
+      await screen.findByText('bknProject.concepts.notice.notUnderstood:{"count":2}'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/bknProject.concepts.notice.unmatched/)).toBeNull();
+    unmount();
+
+    service.getConcepts.mockResolvedValue(concepts());
+    renderConcepts();
+    expect(
+      await screen.findByText(
+        'bknProject.concepts.notice.unmatched:{"count":1,"names":"Credit limit"}',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.notice.settle" }));
+    expect(await screen.findByText("bknProject.concepts.requirement.notInData")).toBeTruthy();
+  });
+
+  it("confirms, changes and leaves out a requirement concept's match", async () => {
+    requirements.matchRequirementConcept.mockResolvedValue({ updateTime: 10 });
+    renderConcepts();
+    fireEvent.click(await screen.findByText('bknProject.concepts.tabs.requirement:{"count":2}'));
+
+    const client = await row("Client");
+    expect(client.getByText("Customer")).toBeTruthy();
+    fireEvent.click(client.getByRole("button", { name: /requirement.confirmOf/ }));
     await waitFor(() =>
-      expect(service.mergeConcept).toHaveBeenLastCalledWith("p1", 5, "requirement_concepts/k3", ""),
+      expect(requirements.matchRequirementConcept).toHaveBeenCalledWith(
+        "p1",
+        "k1",
+        { target: { id: "r_customers", kind: "table" } },
+        9,
+      ),
+    );
+
+    // One nothing in the data is cannot be confirmed: it is matched by hand, given data, or left out.
+    const limit = await row("Credit limit");
+    expect(limit.queryByRole("button", { name: /requirement.confirmOf/ })).toBeNull();
+    fireEvent.click(limit.getByText("bknProject.concepts.requirement.addCatalog"));
+    expect(onGoToResources).toHaveBeenCalledWith("catalogs");
+
+    fireEvent.click(limit.getByRole("button", { name: /requirement.changeOf/ }));
+    const dialog = await screen.findByRole("dialog");
+    // Only objects to match to: a table's or a knowledge-base extraction's, never a new one.
+    expect(within(dialog).queryByText("Sample meta")).toBeNull();
+    expect(within(dialog).getByText("Certificate")).toBeTruthy();
+    fireEvent.click(within(dialog).getByText("Certificate"));
+    await waitFor(() =>
+      expect(requirements.matchRequirementConcept).toHaveBeenLastCalledWith(
+        "p1",
+        "k9",
+        { target: { id: "certificate", kind: "object_type" } },
+        9,
+      ),
+    );
+
+    fireEvent.click((await row("Client")).getByRole("button", { name: /requirement.excludeOf/ }));
+    await waitFor(() =>
+      expect(requirements.matchRequirementConcept).toHaveBeenLastCalledWith(
+        "p1",
+        "k1",
+        { excluded: true, target: { id: "r_customers", kind: "table" } },
+        9,
+      ),
     );
   });
 
-  it("keeps a stale refusal on the page and reads again only when asked", async () => {
-    service.judgeConcept.mockRejectedValue(conflict("Stale"));
-    renderConcepts();
-
-    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
-
-    const alert = alertOf(await screen.findByText("bknProject.concepts.stale"));
-    expect(messageMock.warning).not.toHaveBeenCalled();
-    expect(service.getConcepts).toHaveBeenCalledTimes(1);
-    expect(service.judgeConcept).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(within(alert).getByRole("button", { name: "bknProject.concepts.reload" }));
-    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByText("bknProject.concepts.stale")).toBeNull());
-    expect(service.judgeConcept).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the stale refusal when reading again fails", async () => {
-    service.judgeConcept.mockRejectedValue(conflict("Stale"));
-    renderConcepts();
-
-    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
-    const alert = alertOf(await screen.findByText("bknProject.concepts.stale"));
-
-    service.getConcepts.mockRejectedValueOnce(new Error("offline"));
-    fireEvent.click(within(alert).getByRole("button", { name: "bknProject.concepts.reload" }));
-    await waitFor(() => expect(service.getConcepts).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByText("bknProject.concepts.stale")).toBeInTheDocument());
-  });
-
-  it("says a concept of a knowledge-base selection no longer in use cannot be judged, offering no reload", async () => {
-    service.judgeConcept.mockRejectedValue(conflict("DocumentSourceChanged"));
-    renderConcepts();
-
-    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
-
-    const alert = alertOf(await screen.findByText("bknProject.concepts.sourceChanged"));
-    // Reading again would be refused the same way.
-    expect(within(alert).queryByRole("button", { name: "bknProject.concepts.reload" })).toBeNull();
-  });
-
-  it("keeps a refusal while the page reads itself again during an extraction", async () => {
-    withRun({ extracted: true, status: "running" });
-    const polls: Array<() => void> = [];
-    const realSetTimeout = window.setTimeout.bind(window);
-    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
-    setTimeoutSpy.mockImplementation(((handler: () => void, delay?: number) => {
-      if (delay === 5000) {
-        polls.push(handler);
-        return 0;
-      }
-      return realSetTimeout(handler, delay);
-    }) as typeof window.setTimeout);
-    service.judgeConcept.mockRejectedValue(conflict("DocumentSourceChanged"));
-    renderConcepts();
-
-    fireEvent.mouseDown((await row("Orders")).getByRole("combobox", { name: /verdictOf.*Orders/ }));
-    fireEvent.click(await screen.findByTitle("bknProject.concepts.verdict.none"));
-    await screen.findByText("bknProject.concepts.sourceChanged");
-
-    const reads = service.getConcepts.mock.calls.length;
-    act(() => {
-      polls.splice(0).forEach((poll) => poll());
-    });
-    await waitFor(() => expect(service.getConcepts.mock.calls.length).toBeGreaterThan(reads));
-    expect(screen.getByText("bknProject.concepts.sourceChanged")).toBeInTheDocument();
-    setTimeoutSpy.mockRestore();
-  });
-
-  it("keeps a refused merge on the page in the server's words", async () => {
-    service.mergeConcept.mockRejectedValue(
-      new AxiosError("bad", "ERR_BAD_REQUEST", undefined, undefined, {
-        data: { description: "合并没有保存", error_code: "BknProject.Draft.InvalidRequestBody" },
-        status: 400,
-      } as AxiosResponse),
-    );
-    renderConcepts();
-
-    fireEvent.mouseDown(
-      (await row("Orders")).getByRole("combobox", { name: /mergeIntoOf.*Orders/ }),
-    );
-    fireEvent.click(await screen.findByTitle("Visits"));
-
-    expect(alertOf(await screen.findByText("合并没有保存"))).toBeInTheDocument();
-  });
-
-  it("asks before extracting again over decisions, and discards them only when told", async () => {
-    service.generateDraft.mockRejectedValueOnce(conflict("HasDecisions"));
-    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
+  it("extracts from every source in turn, keeping what was decided", async () => {
+    service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 1 }));
+    publish.understandCatalogs.mockResolvedValue([]);
+    service.generateDraft.mockRejectedValue(refused("HasDecisions"));
+    service.getSourceChanges.mockResolvedValue({ signature: "s1", state: "changed" });
+    service.draftSourceChanges.mockResolvedValue({ status: "ready" });
+    requirements.extractRequirementConcepts.mockResolvedValue({});
     renderConcepts();
 
     fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.reextract" }));
-    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
-    await confirmMock.mock.calls[0][0].onOk();
-    expect(service.generateDraft).toHaveBeenLastCalledWith("p1", { discardDecisions: true });
+    await confirmRun();
+
+    await waitFor(() =>
+      expect(messageMock.success).toHaveBeenCalledWith("bknProject.concepts.run.doneAll"),
+    );
+    expect(publish.understandCatalogs).toHaveBeenCalledWith("p1");
+    expect(service.draftSourceChanges).toHaveBeenCalledWith("p1", "s1");
+    expect(requirements.extractRequirementConcepts).toHaveBeenCalledWith("p1");
+    expect(service.generateDraft.mock.invocationCallOrder[0]).toBeLessThan(
+      requirements.extractRequirementConcepts.mock.invocationCallOrder[0],
+    );
   });
 
-  it("names a table's concept as semantic understanding did, marked lightly, with the table as an alias", async () => {
-    service.getConcepts.mockResolvedValue(
-      concepts({
-        concepts: [
-          concept({
-            ai: true,
-            aliases: ["erp_material"],
-            description: "Material master data",
-            item: { adopted: true, id: "erp_material", kind: "object_types" },
-            key: "object_types/erp_material",
-            name: "Material",
-            suggestedBecause: "table_understood",
-          }),
+  it("shows each source's progress while a run goes on", async () => {
+    service.generateDraft.mockReturnValue(new Promise(() => undefined));
+    renderConcepts();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.reextract" }));
+    await confirmRun();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    expect(
+      await tables.findByText("bknProject.concepts.sources.steps.table.candidates"),
+    ).toBeTruthy();
+    expect(tables.getByText("bknProject.concepts.sources.running")).toBeTruthy();
+    const documents = within(sources.querySelector('[data-source="document"]') as HTMLElement);
+    expect(documents.getByText("bknProject.concepts.sources.waiting")).toBeTruthy();
+    // No source may be started alone meanwhile.
+    expect(documents.getByRole("button", { name: /runOne.againOf/ })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("adds the tables to a draft a knowledge-base extraction made, keeping what it holds", async () => {
+    service.getDraft.mockResolvedValue({
+      createTime: 1,
+      items: {
+        adding: null,
+        decisions: [],
+        draftedCatalogIds: [],
+        objectTypes: [{ document: { role: "entity" }, existing: false, id: "invoice" }],
+      },
+      status: "ready",
+      updateTime: 5,
+    });
+    service.addDraftCatalogs.mockResolvedValue({ status: "ready" });
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    fireEvent.click(tables.getByRole("button", { name: /runOne.againOf/ }));
+    await confirmRun();
+
+    await waitFor(() => expect(service.addDraftCatalogs).toHaveBeenCalledWith("p1", ["c1"]));
+    expect(service.generateDraft).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sources card for a project with only knowledge-base files", async () => {
+    kb.mode = "enabled";
+    slots.kbModel = () => <span>panel</span>;
+    service.getConcepts.mockResolvedValue(concepts({ concepts: [], requirements: [] }));
+    requirements.listDocuments.mockResolvedValue([]);
+    publish.getUnderstanding.mockResolvedValue([{ catalogId: "c1", tables: [] }]);
+    renderConcepts();
+
+    expect(
+      await screen.findByRole("region", { name: "bknProject.concepts.sources.title" }),
+    ).toBeTruthy();
+    expect(screen.getByText("panel")).toBeTruthy();
+    expect(screen.queryByText("bknProject.concepts.empty.title")).toBeNull();
+  });
+
+  it("names a knowledge-base concept's files, and warns of one named as a table's object", async () => {
+    const base = concepts();
+    base.concepts.push(
+      concept({
+        binding: dataset,
+        item: { adopted: false, id: "customer_doc", kind: "object_types" },
+        key: "object_types/customer_doc",
+        name: "customer",
+        sources: [
+          { documentIds: [], id: "f1", kind: "document", name: "" },
+          { documentIds: [], id: "f2", kind: "document", name: "" },
         ],
       }),
     );
+    service.getConcepts.mockResolvedValue(base);
     renderConcepts();
 
-    expect(await screen.findByText("Material")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "bknProject.concepts.aiMark" })).toBeInTheDocument();
-    expect(
-      screen.getByText(`bknProject.concepts.aliases:${JSON.stringify({ names: "erp_material" })}`),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        `bknProject.concepts.understoodWith:${JSON.stringify({ description: "Material master data" })}`,
-      ),
-    ).toBeInTheDocument();
+    const doc = await row("customer");
+    expect(doc.getByText('bknProject.concepts.origin.knowledgeBaseFiles:{"count":2}')).toBeTruthy();
+    expect(doc.getByText('bknProject.concepts.sameName:{"name":"Customer"}')).toBeTruthy();
   });
 
-  it("says tables are not understood yet, and understands them before extracting again", async () => {
-    service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 2 }));
-    assistant.understandCatalogs.mockResolvedValue([]);
-    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
+  it("extracts one source alone from its row", async () => {
+    requirements.extractRequirementConcepts.mockResolvedValue({});
     renderConcepts();
 
-    expect(
-      await screen.findByText(`bknProject.concepts.notUnderstood:${JSON.stringify({ count: 2 })}`),
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.reextract" }));
-    await waitFor(() => expect(service.generateDraft).toHaveBeenCalledWith("p1", {}));
-    expect(assistant.understandCatalogs).toHaveBeenCalledWith("p1");
-  });
-
-  it("asks AI about the concepts and adopts all its changes, one by one, as decisions", async () => {
-    const define = {
-      field: "define",
-      reason: "A business name",
-      value: { description: "", key: "object_types/orders", name: "Sales order" },
-    };
-    const verdict = {
-      field: "verdict",
-      reason: "",
-      value: { key: "object_types/orders", verdict: "event" },
-    };
-    assistant.askConcepts.mockResolvedValue({
-      answer: "Rename it.",
-      dropped: [],
-      revisions: [define, verdict],
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
     });
-    const next = concepts({ draftUpdateTime: 6 });
-    service.reviseConcept
-      .mockResolvedValueOnce(next)
-      .mockResolvedValueOnce(concepts({ draftUpdateTime: 7 }));
-    renderConcepts();
+    const documents = within(sources.querySelector('[data-source="document"]') as HTMLElement);
+    fireEvent.click(documents.getByRole("button", { name: /runOne.againOf/ }));
+    await confirmRun();
 
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
-      target: { value: "Name them" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
-    expect(await screen.findByText("Rename it.")).toBeInTheDocument();
-    expect(assistant.askConcepts).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: "p1", question: "Name them" }),
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `bknProject.ask.proposal.adoptAll:${JSON.stringify({ count: 2 })}`,
-      }),
-    );
-    await waitFor(() => expect(service.reviseConcept).toHaveBeenCalledTimes(2));
-    expect(service.reviseConcept).toHaveBeenNthCalledWith(1, "p1", 5, define);
-    // The second is written over the draft the first left.
-    expect(service.reviseConcept).toHaveBeenNthCalledWith(2, "p1", 6, verdict);
     await waitFor(() =>
-      expect(messageMock.success).toHaveBeenCalledWith(
-        `bknProject.ask.panel.adoptedAll:${JSON.stringify({ count: 2 })}`,
-      ),
+      expect(messageMock.success).toHaveBeenCalledWith("bknProject.concepts.run.doneOne"),
     );
-    expect(screen.getAllByText("bknProject.ask.proposal.adoptedTag")).toHaveLength(2);
+    expect(requirements.extractRequirementConcepts).toHaveBeenCalledTimes(1);
+    expect(service.generateDraft).not.toHaveBeenCalled();
   });
 
-  it("adopts or declines each change AI proposes on its own", async () => {
-    const define = {
-      field: "define",
-      reason: "",
-      value: { description: "", key: "object_types/orders", name: "Sales order" },
-    };
-    const verdict = {
-      field: "verdict",
-      reason: "",
-      value: { key: "object_types/orders", verdict: "event" },
-    };
-    assistant.askConcepts.mockResolvedValue({
-      answer: "Rename it.",
-      dropped: [],
-      revisions: [define, verdict],
+  it("asks the edition's panel to extract the knowledge-base files last, and waits for it", async () => {
+    kb.mode = "enabled";
+    const status = (extra: Partial<ProjectKnowledgeBaseModelStatus>) => ({
+      added: 0,
+      debugFiles: 6,
+      finishTime: null,
+      handledRequest: 0,
+      phase: null,
+      state: "idle" as const,
+      ...extra,
     });
-    service.reviseConcept.mockResolvedValue(concepts({ draftUpdateTime: 6 }));
+    const seen: number[] = [];
+    slots.kbModel = function Panel({ onStatus, runRequest = 0 }: ProjectKnowledgeBaseModelProps) {
+      useEffect(() => {
+        seen.push(runRequest);
+        onStatus?.(
+          runRequest
+            ? status({ finishTime: 3, handledRequest: runRequest, state: "succeeded" })
+            : status({}),
+        );
+      }, [onStatus, runRequest]);
+      return <span>panel</span>;
+    };
+    service.generateDraft.mockResolvedValue({ status: "ready" });
+    requirements.extractRequirementConcepts.mockResolvedValue({});
     renderConcepts();
 
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "bknProject.model.ask.question" }), {
-      target: { value: "Name them" },
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
     });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
-    await screen.findByText("Rename it.");
-
-    // Declining is the person's own: nothing is written.
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /^bknProject\.ask\.proposal\.declineItem/ })[0],
+    await waitFor(() =>
+      expect(
+        within(sources).getByText('bknProject.concepts.sources.name.knowledgeBase:{"count":6}'),
+      ).toBeTruthy(),
     );
-    expect(await screen.findByText("bknProject.ask.proposal.declinedTag")).toBeInTheDocument();
-    expect(service.reviseConcept).not.toHaveBeenCalled();
-    // One left: no adopting all of them.
-    expect(
-      screen.queryByRole("button", { name: /^bknProject\.ask\.proposal\.adoptAll/ }),
-    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.reextract" }));
+    await confirmRun();
 
-    fireEvent.click(screen.getByRole("button", { name: /^bknProject\.ask\.proposal\.adoptItem/ }));
-    await waitFor(() => expect(service.reviseConcept).toHaveBeenCalledWith("p1", 5, verdict));
-    expect(service.reviseConcept).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("bknProject.ask.proposal.adoptedTag")).toBeInTheDocument();
-    expect(screen.getByText("bknProject.ask.proposal.allDone")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(messageMock.success).toHaveBeenCalledWith("bknProject.concepts.run.doneAll"),
+    );
+    expect(seen).toContain(1);
   });
 
-  it("asks nothing new while the chosen changes are being adopted", async () => {
-    assistant.askConcepts.mockResolvedValue({
-      answer: "Rename it.",
-      dropped: [],
-      revisions: [
-        { field: "verdict", reason: "", value: { key: "object_types/orders", verdict: "event" } },
-      ],
-    });
-    let finish: (value: Concepts) => void = () => undefined;
-    service.reviseConcept.mockReturnValue(
-      new Promise<Concepts>((resolve) => {
-        finish = resolve;
-      }),
-    );
+  it("asks AI about the ticked concepts, beside the list from the start", async () => {
+    assistant.askConcepts.mockResolvedValue({ answer: "ok", dropped: [], revisions: [] });
     renderConcepts();
 
-    fireEvent.click(await screen.findByRole("button", { name: "bknProject.concepts.ask" }));
-    const question = screen.getByRole("textbox", { name: "bknProject.model.ask.question" });
-    fireEvent.change(question, { target: { value: "Name them" } });
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.submit" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: /^bknProject\.ask\.proposal\.adoptItem/ }),
-    );
-
-    await waitFor(() => expect(question).toBeDisabled());
-    expect(
-      screen.getByRole("button", { name: "bknProject.model.ask.newConversation" }),
-    ).toBeDisabled();
-    act(() => {
-      finish(concepts({ draftUpdateTime: 6 }));
-    });
-    await waitFor(() => expect(question).not.toBeDisabled());
+    fireEvent.click((await row("Customer")).getByRole("checkbox", { name: /tick.*Customer/ }));
+    expect(await screen.findByText('bknProject.concepts.refs:{"names":"Customer"}')).toBeTruthy();
   });
 
-  it("shows others the judgments without letting them change any", async () => {
+  it("is read only for others", async () => {
     renderConcepts(false);
 
-    expect(await screen.findByText("bknProject.concepts.readOnly")).toBeInTheDocument();
-    expect(screen.queryByRole("combobox")).toBeNull();
-    expect(screen.queryByRole("button", { name: "bknProject.concepts.acceptAll" })).toBeNull();
-  });
-
-  it("counts what is in the model as the modeling page does, confirmed or not", async () => {
-    renderConcepts();
-
-    // Orders, adopted by drafting and not yet confirmed, and Currency, confirmed.
-    const stat = (await screen.findByText("bknProject.concepts.stats.inModel")).closest(
-      "div",
-    ) as HTMLElement;
-    expect(within(stat).getByText("2")).toBeInTheDocument();
-    expect(
-      within(stat).getByText('bknProject.concepts.stats.inModelPending:{"count":1}'),
-    ).toBeInTheDocument();
-  });
-
-  it("says when drafting found a concept but left it out, and what it could be judged", async () => {
-    const base = concepts();
-    service.getConcepts.mockResolvedValue({
-      ...base,
-      concepts: [
-        ...base.concepts,
-        concept({
-          item: { adopted: false, id: "orders_to_products", kind: "relation_types" },
-          key: "relation_types/orders_to_products",
-          name: "Products of order",
-          suggested: "relation",
-          suggestedBecause: "name_match",
-          verdict: "none",
-        }),
-      ],
-    });
-    renderConcepts();
-
-    expect(
-      (await row("Products of order")).getByText(
-        'bknProject.concepts.notAdopted:{"because":"bknProject.concepts.because.name_match","verdict":"bknProject.concepts.verdict.relation"}',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("starts extracting from the knowledge-base files here, also before any concept", async () => {
-    kb.mode = "enabled";
-    slots.kbModel = ({ canEdit, draftUpdateTime }) => (
-      <span>{`kb-model:${canEdit}:${draftUpdateTime}`}</span>
-    );
-    service.getConcepts.mockResolvedValue({
-      concepts: [],
-      counts: {},
-      draftUpdateTime: 0,
-      requirementUpdateTime: 0,
-    });
-    service.getDraft.mockResolvedValue(null);
-    renderConcepts();
-
-    expect(await screen.findByText("kb-model:true:0")).toBeInTheDocument();
-    expect(screen.getByText("bknProject.concepts.empty.title")).toBeInTheDocument();
-  });
-
-  it("lists the catalog tables as candidates before extracting, judged once extracted", async () => {
-    service.getConcepts.mockResolvedValue({
-      concepts: [
-        concept({
-          ai: true,
-          aliases: ["orders"],
-          description: "客户下的订单",
-          key: "table_concepts/r_orders",
-          name: "订单",
-          sources: [
-            { documentIds: [], id: "r_orders", kind: "table", name: "orders" },
-            { documentIds: ["d1"], id: "k1", kind: "requirement", name: "订单" },
-          ],
-          suggestedBecause: "table_understood",
-        }),
-        concept({
-          item: { adopted: true, id: "supply_region", kind: "object_types" },
-          key: "object_types/supply_region",
-          name: "区域",
-          sources: [{ documentIds: [], id: "supply_region", kind: "network", name: "区域" }],
-          state: "in_model",
-          suggestedBecause: "network",
-        }),
-      ],
-      counts: { in_model: 1, pending: 1 },
-      draftUpdateTime: 0,
-      notUnderstood: 0,
-      requirementUpdateTime: 9,
-    });
-    service.getDraft.mockResolvedValue(null);
-    service.generateDraft.mockResolvedValue({ items: { decisions: [] }, status: "drafting" });
-    renderConcepts();
-
-    const orders = await row("订单");
-    expect(screen.getByText("bknProject.concepts.candidates")).toBeInTheDocument();
-    expect(orders.getByText("bknProject.concepts.destination.candidate")).toBeInTheDocument();
-    // Not judged in the specification, nor here before extracting: no item is it yet.
-    expect(orders.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
-    expect(orders.queryByRole("img", { name: "bknProject.model.existing.mark" })).toBeNull();
-    // What the network already has is marked as before.
-    expect(
-      (await row("区域")).getAllByRole("img", { name: "bknProject.model.existing.mark" }),
-    ).toHaveLength(2);
-    expect(screen.queryByText("bknProject.concepts.empty.title")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "bknProject.concepts.extract" }));
-    await waitFor(() => expect(service.generateDraft).toHaveBeenCalledWith("p1", {}));
-  });
-
-  it("offers no confirming or merging of a table's candidate, even beside a ready draft", async () => {
-    service.getConcepts.mockResolvedValue(
-      concepts({
-        concepts: [
-          ...concepts().concepts,
-          concept({
-            key: "table_concepts/r_late",
-            name: "Late table",
-            sources: [{ documentIds: [], id: "r_late", kind: "table", name: "late" }],
-          }),
-        ],
-      }),
-    );
-    renderConcepts();
-
-    const late = await row("Late table");
-    expect(late.queryByRole("button", { name: /confirmOf/ })).toBeNull();
-    expect(late.queryByRole("combobox", { name: /mergeIntoOf/ })).toBeNull();
-    expect(late.queryByRole("combobox", { name: /verdictOf/ })).toBeNull();
-  });
-
-  it("leads to the sources while there is nothing to extract from", async () => {
-    service.getConcepts.mockResolvedValue({
-      concepts: [],
-      counts: {},
-      draftUpdateTime: 0,
-      requirementUpdateTime: 0,
-    });
-    service.getDraft.mockResolvedValue(null);
-    renderConcepts();
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "bknProject.concepts.empty.action" }),
-    );
-    expect(onGoToResources).toHaveBeenCalled();
+    expect(await screen.findByText("bknProject.concepts.readOnly")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /confirmOf/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /runOne/ })).toBeNull();
   });
 });

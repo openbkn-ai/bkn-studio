@@ -245,6 +245,32 @@ export type ProjectKnowledgeBaseModelProps = {
   draftUpdateTime: number;
   canEdit: boolean;
   onChanged: () => void;
+  /**
+   * How the panel shows: "panel" (the default) with its own start button and progress; "status"
+   * in a row of the concept extraction page's sources card, where the page starts extractions and
+   * words the row from `onStatus`, so the panel shows only what needs the person, such as a problem.
+   */
+  variant?: "panel" | "status";
+  /** A start the page asks for: each new value above 0 starts an extraction, when one can run. */
+  runRequest?: number;
+  /** What the panel knows of the extraction, reported once read and whenever it changes. */
+  onStatus?: (status: ProjectKnowledgeBaseModelStatus) => void;
+};
+
+/** The knowledge-base model extraction as the concept extraction page words it. */
+export type ProjectKnowledgeBaseModelStatus = {
+  /** The debug files it extracts from; null while unknown. */
+  debugFiles: number | null;
+  /** idle before any extraction, or the last one's state. */
+  state: "idle" | "running" | "succeeded" | "failed" | "stopped";
+  /** What a running extraction is doing; null when none runs. */
+  phase: "reading" | "analyzing" | "writing" | null;
+  /** When the last extraction ended, in milliseconds; null when none did. */
+  finishTime: number | null;
+  /** The objects, relations and concepts the last extraction added. */
+  added: number;
+  /** The last `runRequest` the panel acted on, started or refused; 0 before any. */
+  handledRequest: number;
 };
 export function extensionProjectKnowledgeBaseModel() {
   return installed.find((e) => e.capability === "knowledge_base" && e.projectKnowledgeBaseModel)

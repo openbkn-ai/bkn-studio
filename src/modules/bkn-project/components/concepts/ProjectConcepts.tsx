@@ -5,8 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Segmented, Select, Spin } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Alert, Spin, Tabs, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,128 +15,83 @@ import { BknProjectKbSlot } from "@/framework/entitlement/BknProjectKbSlot";
 import {
   extensionProjectConceptSource,
   extensionProjectKnowledgeBaseModel,
+  type ProjectKnowledgeBaseModelStatus,
 } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import {
   AskAiSidebar,
   type RevisionPreview,
 } from "@/modules/bkn-project/components/ai/AskAiSidebar";
-import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
-import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
-import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
+import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { askConcepts } from "@/modules/bkn-project/services/ask.service";
 import {
-  projectErrorCode,
-  understandCatalogs,
-} from "@/modules/bkn-project/services/publish.service";
-import {
-  editItem,
-  extractRequirementConcepts,
-  getRequirements,
-  POLL_FAILURE_LIMIT,
-} from "@/modules/bkn-project/services/requirements.service";
-import {
-  acceptDraftSuggestions,
   DRAFT_POLL_MS,
-  generateDraft,
   getConcepts,
   getDraft,
   judgeConcept,
   mergeConcept,
   reviseConcept,
 } from "@/modules/bkn-project/services/draft.service";
+import { getUnderstanding, projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import {
+  getRequirements,
+  listDocuments,
+  matchRequirementConcept,
+  POLL_FAILURE_LIMIT,
+} from "@/modules/bkn-project/services/requirements.service";
 import type {
   Concept,
   ConceptRevision,
   Concepts,
-  ConceptState,
   ConceptVerdict,
+  RequirementConceptMatch,
+  RequirementMatchTarget,
 } from "@/modules/bkn-project/types/concepts";
-import { CONCEPT_STATES } from "@/modules/bkn-project/types/concepts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 
-import { conceptsInModel, modelVerdict } from "./inModel";
+import { ConceptSources, type SourceFacts } from "./ConceptSources";
+import {
+  dataConcepts,
+  inNetwork,
+  kindOf,
+  originOf,
+  type RequirementFilter,
+  statusOf,
+  unmatched,
+} from "./conceptView";
+import { DataConcepts, type DataFilters } from "./DataConcepts";
 import styles from "./ProjectConcepts.module.css";
+import { RequirementConcepts } from "./RequirementConcepts";
+import {
+  CONCEPT_SOURCES,
+  type ConceptSourceKey,
+  type KnowledgeBaseOutcome,
+  useConceptRun,
+} from "./useConceptRun";
 
 const PREFIX = "bknProject.concepts";
-
-/** The key prefix of a requirement concept no draft item is. */
-const REQUIREMENT_CONCEPT = "requirement_concepts/";
-
-/** The key prefix of a catalog table's concept before drafting: judged once drafting makes it an item. */
-const TABLE_CONCEPT = "table_concepts/";
-
-/** A catalog table's concept listed before drafting. */
-function tableCandidate(concept: Concept) {
-  return concept.key.startsWith(TABLE_CONCEPT);
-}
-
-/** The specification's category of a verdict, as a requirement concept is judged there. */
-const categoryOf = (verdict: ConceptVerdict) => (verdict === "none" ? "not_ontology" : verdict);
-
-const STATE_TONE: Record<ConceptState, LightStatusTone> = {
-  blocked: "warning",
-  in_model: "success",
-  judged: "info",
-  pending: "neutral",
-};
-
-/** The verdicts that fit a concept: what its item can be, or anything for one with no item. */
-const VERDICTS_OF: Record<"none" | NonNullable<Concept["item"]>["kind"], ConceptVerdict[]> = {
-  // A concept of the knowledge-base files may be a value list, as drafting can suggest.
-  none: ["object", "event", "property", "values", "relation", "kinetic", "none"],
-  object_types: ["object", "event", "property", "kinetic", "none"],
-  relation_types: ["relation", "none"],
-  value_types: ["values", "property", "none"],
-};
-
-/** The code drafting gave for its suggestion, as the page words it. */
-function becauseKey(code: string) {
-  if (code.startsWith("document")) {
-    return "document";
-  }
-  if (code.startsWith("requirement_")) {
-    return "requirement";
-  }
-  return [
-    "table_entity",
-    "table_understood",
-    "ai",
-    "code_table",
-    "foreign_key",
-    "name_match",
-    "stem_match",
-    "link_table",
-    "manual",
-    "network",
-  ].includes(code)
-    ? code
-    : "other";
-}
-
-/** A concept of what the network already has: read only here. */
-function inNetwork(concept: Concept) {
-  return concept.sources.some((source) => source.kind === "network");
-}
-
-type Filter = "all" | ConceptState;
 
 /** Why a judgment or merge was refused, and whether reading the page again can help. */
 type Refusal = { reload: boolean; text: string };
 
+/** What the page reads besides the concepts: how much each source holds. */
+type SourceCounts = { catalogs: number; documents: number | null; tables: number | null };
+
+/** How many unmatched names the notice lists before it says how many more. */
+const NOTICE_NAMES = 5;
+
 /**
- * Concept extraction: what the project's tables, knowledge-base samples and requirement
- * documents hold, each concept judged as an object, an event, a property, a value list, a
- * relation, kinetic, or not included. Judging is adopting: the concept's item goes into the
- * concept model or out of it at once; one that cannot go in yet says what it waits for.
+ * Concept extraction: the concepts of the project's sources, the data tables, the requirement
+ * documents and, where the edition has them, the knowledge-base files. One action extracts from
+ * them in turn, each source showing its progress; one source can be extracted alone. The data
+ * side's concepts are judged, merged within their kind of data, or left out; the requirement
+ * concepts are matched to the data, never objects of their own. Ask AI stays beside the list.
  */
 export function ProjectConcepts({
   onGoToKinetic,
@@ -150,7 +104,7 @@ export function ProjectConcepts({
   /** Opens kinetic modeling, where what is judged kinetic is implemented. */
   onGoToKinetic: () => void;
   onGoToModel: () => void;
-  onGoToResources: () => void;
+  onGoToResources: (tab?: ResourceTab) => void;
   /** Opens a concept's item on the concept modeling page, where what blocks it is settled. */
   onOpenItem: (item: NonNullable<Concept["item"]>) => void;
   ownerIsCaller: boolean;
@@ -166,6 +120,11 @@ export function ProjectConcepts({
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   // The specification, for the run extracting the documents' concepts; null when unread.
   const [requirements, setRequirements] = useState<Requirements | null>(null);
+  const [counts, setCounts] = useState<SourceCounts>({
+    catalogs: project.catalogIds.length,
+    documents: null,
+    tables: null,
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
   // Reads failed in a row, of the page and of the specification's run: following a run stops
   // at the limit and the page offers to refresh.
@@ -173,31 +132,66 @@ export function ProjectConcepts({
   const [runFailures, setRunFailures] = useState(0);
   const [reads, setReads] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
-  // Why the last judgment or merge was refused, kept on the page until it is dealt with.
   const [refusal, setRefusal] = useState<Refusal | null>(null);
-  // Ask AI beside the list; what it proposes is adopted over the concepts as they are now.
-  const [asking, setAsking] = useState(false);
+  const [tab, setTab] = useState<"data" | "requirement">("data");
+  const [filters, setFilters] = useState<DataFilters>({
+    origin: "all",
+    query: "",
+    status: "pending",
+    verdict: "all",
+  });
+  const filterChosen = useRef(false);
+  const [requirementFilter, setRequirementFilter] = useState<RequirementFilter>("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  // What Ask AI is asked about besides the ticked concepts, such as a requirement concept.
+  const [askRefs, setAskRefs] = useState<string[]>([]);
+  const [asking, setAsking] = useState(true);
+  // What failed in the last run, by source, as words.
+  const [runFailed, setRunFailed] = useState<Partial<Record<ConceptSourceKey, string>>>({});
+  const [kbStatus, setKbStatus] = useState<ProjectKnowledgeBaseModelStatus | null>(null);
+  const [kbRequest, setKbRequest] = useState(0);
+  const kbStatusRef = useRef<ProjectKnowledgeBaseModelStatus | null>(null);
+  const kbWaiter = useRef<{
+    request: number;
+    resolve: (outcome: KnowledgeBaseOutcome) => void;
+  } | null>(null);
   const current = useRef<Concepts | undefined>(undefined);
   useEffect(() => {
     current.current = concepts;
   }, [concepts]);
   const canEdit = ownerIsCaller && !project.archived;
+  const knowledgeBaseShown = Boolean(KnowledgeBaseModel) && kbMode !== "hidden";
 
   // Tells whether the page was read: a failed read keeps what was shown before.
   const load = useCallback(async (): Promise<boolean> => {
     try {
-      const [nextDraft, next, nextRequirements] = await Promise.all([
+      const [nextDraft, next, nextRequirements, documents, understanding] = await Promise.all([
         getDraft(project.id),
         getConcepts(project.id),
         // The run only adds to the page: a failed read keeps the run as last read, so a run
         // going on is still followed.
         getRequirements(project.id).catch(() => undefined),
+        listDocuments(project.id).catch(() => undefined),
+        getUnderstanding(project.id).catch(() => undefined),
       ]);
       setDraft(nextDraft);
       setConcepts(next);
       if (nextRequirements !== undefined) {
         setRequirements(nextRequirements);
+      }
+      setCounts((before) => ({
+        catalogs: understanding?.length ?? before.catalogs,
+        documents: documents?.length ?? before.documents,
+        tables: understanding
+          ? understanding.reduce((sum, catalog) => sum + catalog.tables.length, 0)
+          : before.tables,
+      }));
+      // At first the list shows what waits for a person, when anything does.
+      if (!filterChosen.current) {
+        filterChosen.current = true;
+        if (!dataConcepts(next.concepts).some((concept) => statusOf(concept) === "pending")) {
+          setFilters((before) => ({ ...before, status: "all" }));
+        }
       }
       setFailures(0);
       setRunFailures((count) => (nextRequirements === undefined ? count + 1 : 0));
@@ -215,13 +209,42 @@ export function ProjectConcepts({
     void load();
   }, [load]);
 
-  // Extracting runs in the background, from the tables or from the requirement documents: read
-  // again until it ends.
+  // Extracting the knowledge-base files is the edition's: the page asks for a start and waits for
+  // the panel to say it ended.
+  const onKbStatus = useCallback((status: ProjectKnowledgeBaseModelStatus) => {
+    kbStatusRef.current = status;
+    setKbStatus(status);
+    const waiter = kbWaiter.current;
+    if (waiter && status.handledRequest >= waiter.request && status.state !== "running") {
+      kbWaiter.current = null;
+      waiter.resolve(status.state === "failed" ? "failed" : "done");
+    }
+  }, []);
+  const extractKnowledgeBase = useCallback((): Promise<KnowledgeBaseOutcome> => {
+    if (!kbStatusRef.current?.debugFiles) {
+      return Promise.resolve("skipped");
+    }
+    return new Promise((resolve) => {
+      setKbRequest((request) => {
+        kbWaiter.current = { request: request + 1, resolve };
+        return request + 1;
+      });
+    });
+  }, []);
+
+  const { run, start } = useConceptRun({
+    catalogIds: project.catalogIds,
+    extractKnowledgeBase,
+    notUnderstood: Boolean(concepts?.notUnderstood),
+    onSourceDone: load,
+    projectId: project.id,
+  });
+
+  // Extracting runs in the background, here or from another page: read again until it ends.
   const drafting = draft?.status === "drafting";
   const conceptsRun = requirements?.spec.conceptsRun;
   const extractingRequirements = conceptsRun?.status === "running";
-  const following = drafting || extractingRequirements;
-  // Only the extraction is read from the specification: its failed reads leave drafting alone.
+  const following = !run && (drafting || extractingRequirements);
   const stalled =
     (following && failures >= POLL_FAILURE_LIMIT) ||
     (extractingRequirements && runFailures >= POLL_FAILURE_LIMIT);
@@ -232,11 +255,8 @@ export function ProjectConcepts({
     const timer = window.setTimeout(() => void load(), DRAFT_POLL_MS);
     return () => window.clearTimeout(timer);
   }, [following, load, reads, stalled]);
-  const stalledNotice = stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null;
 
-  // A refused change is not replayed: the page says why until it is dealt with. A draft someone
-  // else changed meanwhile is read again on request; an item of a knowledge-base selection no
-  // longer in use is refused however often it is read, so reading again is not offered.
+  // A refused change is not replayed: the page says why until it is dealt with.
   const refused = (error: unknown, failedKey: string) => {
     const code = projectErrorCode(error);
     if (
@@ -247,42 +267,25 @@ export function ProjectConcepts({
       setRefusal({ reload: true, text: t(`${PREFIX}.stale`) });
     } else if (draftErrorCode(error) === "DocumentSourceChanged") {
       setRefusal({ reload: false, text: t(`${PREFIX}.sourceChanged`) });
+    } else if (draftErrorCode(error) === "MergeKindMismatch") {
+      setRefusal({ reload: false, text: t(`${PREFIX}.mergeKindRefused`) });
+    } else if (draftErrorCode(error) === "CrossBindingMerge") {
+      setRefusal({ reload: false, text: t(`${PREFIX}.cross.refused`) });
     } else {
       setRefusal({ reload: false, text: requestFailureText(t, error, `${PREFIX}.${failedKey}`) });
     }
   };
 
-  // The draft moved on with what was written. Reading it only tells whether it is being
-  // extracted, so a failed read keeps the one before: what was written stands either way.
+  // The draft moved on with what was written; a failed read keeps the one before.
   const readDraftAgain = () => {
     getDraft(project.id).then(setDraft, () => undefined);
   };
 
   const judge = async (concept: Concept, verdict: ConceptVerdict) => {
-    // A table's concept before drafting is no item and no requirement concept: nothing judges it yet.
-    if (!concepts || tableCandidate(concept)) {
+    if (!concepts) {
       return;
     }
     setBusy(concept.key);
-    // A requirement concept no item is is judged in the specification, as its category.
-    if (!concept.item) {
-      try {
-        await editItem(
-          project.id,
-          "concepts",
-          concept.key.slice(REQUIREMENT_CONCEPT.length),
-          { category: categoryOf(verdict) },
-          concepts.requirementUpdateTime,
-        );
-        setRefusal(null);
-        await load();
-      } catch (error) {
-        refused(error, "judgeFailed");
-      } finally {
-        setBusy(null);
-      }
-      return;
-    }
     try {
       setConcepts(
         await judgeConcept(project.id, concepts.draftUpdateTime, {
@@ -300,7 +303,50 @@ export function ProjectConcepts({
     }
   };
 
-  const merge = async (key: string, into = "") => {
+  // Confirming or leaving out the ticked concepts one after another, each over the draft the last
+  // one wrote; what waits for no one, or is the network's, is skipped.
+  const judgeMany = async (list: Concept[], mode: "confirm" | "none") => {
+    let read = current.current;
+    if (!read) {
+      return;
+    }
+    setBusy("many");
+    let done = 0;
+    try {
+      for (const concept of list) {
+        const status = statusOf(concept);
+        if (
+          status === "network" ||
+          status === "candidate" ||
+          (mode === "confirm" && status !== "pending") ||
+          (mode === "none" && status === "excluded")
+        ) {
+          continue;
+        }
+        read = await judgeConcept(project.id, read.draftUpdateTime, {
+          key: concept.key,
+          reason: "",
+          verdict: mode === "confirm" ? concept.verdict : "none",
+        });
+        done++;
+      }
+      setRefusal(null);
+      setSelected([]);
+      message.success(
+        t(`${PREFIX}.selection.${mode === "confirm" ? "confirmed" : "excluded"}`, {
+          count: done,
+        }),
+      );
+    } catch (error) {
+      refused(error, "judgeFailed");
+    } finally {
+      setConcepts(read);
+      readDraftAgain();
+      setBusy(null);
+    }
+  };
+
+  const merge = async (key: string, into: string) => {
     if (!concepts) {
       return;
     }
@@ -316,53 +362,22 @@ export function ProjectConcepts({
     }
   };
 
-  // Extracting the requirement documents' concepts keeps what a person edited of them.
-  const extractRequirements = async () => {
-    setBusy("requirements");
-    try {
-      setRequirements(await extractRequirementConcepts(project.id));
-      message.success(t(`${PREFIX}.requirements.started`));
-    } catch (error) {
-      const code = projectErrorCode(error);
-      message.error(
-        code === "Requirement.NoDocuments"
-          ? t(`${PREFIX}.requirements.noDocuments`)
-          : code === "Requirement.Drafting"
-            ? t(`${PREFIX}.requirements.busy`)
-            : requestFailureText(t, error),
-      );
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  // Judging every pending concept at once is asked first: what it skips stays for a person.
-  const acceptAll = () => {
-    if (!concepts) {
+  const matchRequirement = async (
+    requirement: RequirementConceptMatch,
+    match: { excluded?: boolean; target: RequirementMatchTarget | null },
+  ) => {
+    if (!requirements) {
       return;
     }
-    void modal.confirm({
-      cancelText: t("common.cancel"),
-      content: t(`${PREFIX}.acceptContent`),
-      okText: t(`${PREFIX}.acceptAll`),
-      onOk: () => acceptSuggestions(concepts.draftUpdateTime),
-      title: t(`${PREFIX}.acceptTitle`),
-    });
-  };
-
-  const acceptSuggestions = async (updateTime: number) => {
-    setBusy("accept");
+    setBusy(requirement.id);
     try {
-      const { accepted, skipped } = await acceptDraftSuggestions(project.id, updateTime);
-      message.success(
-        skipped
-          ? t(`${PREFIX}.acceptedSkipped`, { accepted, count: skipped })
-          : t(`${PREFIX}.accepted`, { count: accepted }),
+      setRequirements(
+        await matchRequirementConcept(project.id, requirement.id, match, requirements.updateTime),
       );
       setRefusal(null);
       await load();
     } catch (error) {
-      refused(error, "judgeFailed");
+      refused(error, "requirement.matchFailed");
     } finally {
       setBusy(null);
     }
@@ -423,7 +438,7 @@ export function ProjectConcepts({
       case "merge":
         return {
           after: t(`${PREFIX}.revise.into`, {
-            name: find(revision.value.into)?.name ?? revision.value.into,
+            name: find(revision.value.into)?.name ?? t(`${PREFIX}.revise.unknown`),
           }),
           before: t(`${PREFIX}.revise.kept`),
           label,
@@ -443,79 +458,79 @@ export function ProjectConcepts({
     }
   };
 
-  // Extracting again over decisions discards them, so it asks first, as the modeling page does.
-  // Tables semantic understanding has not named are understood first, as far as the person may:
-  // the concepts take the business names once it finishes.
-  const extract = async (discardDecisions: boolean) => {
-    setBusy("extract");
-    if (concepts?.notUnderstood) {
-      await understandCatalogs(project.id).catch(() => undefined);
-    }
-    try {
-      setDraft(await generateDraft(project.id, discardDecisions ? { discardDecisions } : {}));
-    } catch (error) {
-      if (!discardDecisions && draftErrorCode(error) === "HasDecisions") {
-        const fresh = await getDraft(project.id).catch(() => null);
-        void modal.confirm({
-          cancelText: t("common.cancel"),
-          content: fresh
-            ? t("bknProject.model.regenerateConfirm.content", {
-                count: fresh.items.decisions.length,
-              })
-            : t("bknProject.model.regenerateConfirm.contentUncounted"),
-          okButtonProps: { danger: true },
-          okText: t("bknProject.model.regenerateConfirm.ok"),
-          onOk: () => extract(true),
-          title: t("bknProject.model.regenerateConfirm.title"),
-        });
-      } else {
-        message.error(requestFailureText(t, error));
+  const data = useMemo(() => dataConcepts(concepts?.concepts ?? []), [concepts]);
+  const requirementList = concepts?.requirements ?? [];
+  const waiting = unmatched(requirementList);
+
+  const runSources = async (keys: ConceptSourceKey[]) => {
+    setRunFailed({});
+    const outcome = await start(keys);
+    const failed: Partial<Record<ConceptSourceKey, string>> = {};
+    for (const key of keys) {
+      const turn = outcome[key];
+      if (turn?.state === "failed") {
+        failed[key] = t(
+          `${PREFIX}.run.failed.${key === "document" && turn.error === "busy" ? "busy" : key}`,
+        );
       }
-    } finally {
-      setBusy(null);
+    }
+    setRunFailed(failed);
+    filterChosen.current = true;
+    setFilters((before) => ({ ...before, status: "pending" }));
+    const names = (Object.keys(failed) as ConceptSourceKey[])
+      .map((key) => t(`${PREFIX}.sources.kind.${key}`))
+      .join(t("bknProject.listSeparator"));
+    if (names) {
+      message.warning(t(`${PREFIX}.run.someFailed`, { names }));
+    } else {
+      message.success(t(`${PREFIX}.run.${keys.length > 1 ? "doneAll" : "doneOne"}`));
     }
   };
 
-  const list = concepts?.concepts;
-  const sources = useMemo(() => {
-    const seen = {
-      document: new Set<string>(),
-      network: new Set<string>(),
-      requirement: new Set<string>(),
-      table: new Set<string>(),
-    };
-    for (const concept of list ?? []) {
-      for (const source of concept.sources) {
-        if (source.id) {
-          seen[source.kind].add(source.id);
-        }
-      }
-    }
-    return seen;
-  }, [list]);
+  // The sources a run takes: those that hold something to extract.
+  const available = (key: ConceptSourceKey) =>
+    key === "table"
+      ? counts.tables !== 0
+      : key === "document"
+        ? counts.documents !== 0
+        : knowledgeBaseShown && Boolean(kbStatus?.debugFiles);
 
-  // The knowledge-base files are a concept source: extracting from them is started here.
-  const documentSource =
-    ConceptSource && kbMode === "enabled" ? (
-      <BknProjectKbSlot>
-        <ConceptSource canEdit={canEdit} onChanged={() => void load()} projectId={project.id} />
-      </BknProjectKbSlot>
-    ) : KnowledgeBaseModel ? (
-      <BknProjectKbSlot>
-        <KnowledgeBaseModel
-          canEdit={canEdit && !drafting && busy === null}
-          draftUpdateTime={draft?.updateTime ?? 0}
-          onChanged={() => void load()}
-          projectId={project.id}
-        />
-      </BknProjectKbSlot>
-    ) : null;
-
-  const shown = useMemo(
-    () => (concepts?.concepts ?? []).filter((c) => filter === "all" || c.state === filter),
-    [concepts, filter],
-  );
-  const listPage = useListPage(shown.length, filter);
+  const askRun = (keys: ConceptSourceKey[], extractedAny = false) => {
+    const one = keys.length === 1;
+    const count = (key: ConceptSourceKey) =>
+      key === "table"
+        ? (counts.tables ?? 0)
+        : key === "document"
+          ? (counts.documents ?? 0)
+          : (kbStatus?.debugFiles ?? 0);
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: (
+        <div className={styles.cell}>
+          {one ? (
+            <span>{t(`${PREFIX}.run.oneContent`)}</span>
+          ) : (
+            <>
+              <span>{t(`${PREFIX}.run.allIntro`)}</span>
+              <ol className={styles.runList}>
+                {keys.map((key) => (
+                  <li key={key}>{t(`${PREFIX}.run.step.${key}`, { count: count(key) })}</li>
+                ))}
+              </ol>
+            </>
+          )}
+          <span className={styles.footNote}>{t(`${PREFIX}.run.keeps`)}</span>
+        </div>
+      ),
+      okText: t(`${PREFIX}.run.start`),
+      onOk: () => {
+        void runSources(keys);
+      },
+      title: one
+        ? t(`${PREFIX}.run.oneTitle`, { name: t(`${PREFIX}.sources.kind.${keys[0]}`) })
+        : t(`${PREFIX}.run.${extractedAny ? "againTitle" : "allTitle"}`),
+    });
+  };
 
   if (loadError && concepts === undefined) {
     return (
@@ -539,14 +554,164 @@ export function ProjectConcepts({
       </div>
     );
   }
-  if (!concepts.concepts.length && !drafting) {
+
+  const ready = concepts.draftUpdateTime > 0;
+  const editable = canEdit && ready && busy === null && !run;
+  const runnable = CONCEPT_SOURCES.filter(available);
+  const extracted = ready || Boolean(conceptsRun?.extracted) || kbStatus?.state === "succeeded";
+  // With nothing to extract from at all: a knowledge base the edition has is a source too.
+  const nothing =
+    !data.length &&
+    !requirementList.length &&
+    counts.tables === 0 &&
+    counts.documents === 0 &&
+    !knowledgeBaseShown;
+  const stalledNotice = stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null;
+
+  const produced = (origin: "table" | "knowledgeBase") =>
+    data.filter((concept) => originOf(concept) === origin && statusOf(concept) !== "candidate")
+      .length;
+  const conceptsRunRecord = requirements?.spec.runs.concepts;
+  const tableFacts: SourceFacts = {
+    count: counts.tables,
+    extracted: ready,
+    extractedAt: ready ? (draft?.createTime ?? null) : null,
+    failed: runFailed.table ?? (draft?.status === "failed" ? t(`${PREFIX}.run.failed.table`) : ""),
+    produced: produced("table"),
+    running: drafting,
+  };
+  const documentFacts: SourceFacts = {
+    count: counts.documents,
+    extracted: Boolean(conceptsRun?.extracted),
+    extractedAt: conceptsRunRecord?.status === "ready" ? conceptsRunRecord.updateTime : null,
+    failed:
+      runFailed.document ??
+      (conceptsRun?.status === "failed" ? t(`${PREFIX}.run.failed.document`) : ""),
+    produced: requirementList.length,
+    running: extractingRequirements,
+  };
+  const knowledgeBaseFacts: SourceFacts | null = knowledgeBaseShown
+    ? {
+        count: kbStatus?.debugFiles ?? null,
+        extracted: kbStatus?.state === "succeeded",
+        extractedAt: kbStatus?.finishTime ?? null,
+        failed:
+          runFailed.knowledgeBase ??
+          (kbStatus?.state === "failed" ? t(`${PREFIX}.run.failed.knowledgeBase`) : ""),
+        produced: produced("knowledgeBase"),
+        running: kbStatus?.state === "running",
+      }
+    : null;
+  const network = data.filter(inNetwork);
+
+  const knowledgeBasePanel =
+    ConceptSource && kbMode === "enabled" ? (
+      <BknProjectKbSlot>
+        <ConceptSource canEdit={canEdit} onChanged={() => void load()} projectId={project.id} />
+      </BknProjectKbSlot>
+    ) : KnowledgeBaseModel ? (
+      <BknProjectKbSlot>
+        <KnowledgeBaseModel
+          canEdit={canEdit && !drafting && busy === null}
+          draftUpdateTime={draft?.updateTime ?? 0}
+          onChanged={() => void load()}
+          onStatus={onKbStatus}
+          projectId={project.id}
+          runRequest={kbRequest}
+          variant="status"
+        />
+      </BknProjectKbSlot>
+    ) : null;
+
+  // One notice at most, for what needs the person: tables still named by their table names, then
+  // requirement concepts nothing in the data is yet.
+  const notice = run ? null : concepts.notUnderstood ? (
+    <Alert
+      message={t(`${PREFIX}.notice.${canEdit ? "notUnderstood" : "notUnderstoodReadOnly"}`, {
+        count: concepts.notUnderstood,
+      })}
+      showIcon
+      type="info"
+    />
+  ) : waiting.length ? (
+    <Alert
+      action={
+        <AppButton
+          onClick={() => {
+            setTab("requirement");
+            setRequirementFilter("unmatched");
+          }}
+          size="small"
+        >
+          {t(`${PREFIX}.notice.settle`)}
+        </AppButton>
+      }
+      message={t(`${PREFIX}.notice.unmatched`, {
+        count: waiting.length,
+        names:
+          waiting
+            .slice(0, NOTICE_NAMES)
+            .map((requirement) => requirement.term)
+            .join(t("bknProject.listSeparator")) +
+          (waiting.length > NOTICE_NAMES
+            ? t(`${PREFIX}.notice.more`, { count: waiting.length - NOTICE_NAMES })
+            : ""),
+      })}
+      showIcon
+      type="warning"
+    />
+  ) : null;
+
+  const viewSource = (key: ConceptSourceKey) => {
+    if (key === "document") {
+      setTab("requirement");
+      setRequirementFilter("all");
+      return;
+    }
+    setTab("data");
+    setFilters({
+      origin: key === "table" ? "table" : "knowledgeBase",
+      query: "",
+      status: "all",
+      verdict: "all",
+    });
+  };
+
+  const tickedNames = data
+    .filter((concept) => selected.includes(concept.key))
+    .map((concept) => concept.name);
+  const refs = [...tickedNames, ...askRefs.filter((name) => !tickedNames.includes(name))];
+  const openAsk = (names: string[] = []) => {
+    setAskRefs(names);
+    setAsking(true);
+  };
+  const askReady = canEdit && ready;
+
+  const askButton = askReady ? (
+    <AppButton
+      aria-pressed={asking}
+      onClick={() => setAsking(!asking)}
+      type={asking ? "default" : "primary"}
+    >
+      {selected.length
+        ? t("bknProject.ask.button.selected", { count: selected.length })
+        : t("bknProject.ask.button.label")}
+    </AppButton>
+  ) : canEdit ? (
+    <Tooltip title={t(`${PREFIX}.askAfterExtracting`)}>
+      <span>
+        <AppButton disabled>{t("bknProject.ask.button.label")}</AppButton>
+      </span>
+    </Tooltip>
+  ) : null;
+
+  if (nothing && !run) {
     return (
       <div className={styles.page}>
         {stalledNotice}
-        {documentSource}
         <EmptyStatePanel
           action={
-            <AppButton onClick={onGoToResources} type="primary">
+            <AppButton onClick={() => onGoToResources()} type="primary">
               {t(`${PREFIX}.empty.action`)}
             </AppButton>
           }
@@ -557,282 +722,37 @@ export function ProjectConcepts({
     );
   }
 
-  const ready = concepts.draftUpdateTime > 0;
-  const editable = canEdit && ready && busy === null;
-  // A requirement concept is judged in the specification, while no run rewrites it.
-  // What the network already has is judged in the knowledge network, not here.
-  // A table's concept before drafting is judged once extracting makes it an item.
-  const judgeable = (concept: Concept) =>
-    concept.item
-      ? editable && !inNetwork(concept)
-      : !tableCandidate(concept) &&
-        canEdit &&
-        busy === null &&
-        concepts.requirementUpdateTime > 0 &&
-        !extractingRequirements;
-  const candidates = !ready && concepts.concepts.some(tableCandidate);
-  const pending = concepts.counts.pending ?? 0;
-  const total = concepts.concepts.length;
-  const standing = concepts.concepts;
-  const inModel = conceptsInModel(concepts.concepts);
-
-  const destination = (concept: Concept) => {
-    if (concept.state === "blocked" && concept.blocked) {
-      return (
-        <span className={styles.cell}>
-          <span>{t(`${PREFIX}.blocked.${concept.blocked}`)}</span>
-          {concept.item ? (
-            <AppButton onClick={() => onOpenItem(concept.item!)} size="small" type="link">
-              {t(`${PREFIX}.blocked.action`)}
-            </AppButton>
-          ) : null}
-        </span>
-      );
-    }
-    if (modelVerdict(concept.verdict)) {
-      if (tableCandidate(concept)) {
-        return <span className={styles.muted}>{t(`${PREFIX}.destination.candidate`)}</span>;
-      }
-      return concept.item ? (
-        <AppButton onClick={() => onOpenItem(concept.item!)} size="small" type="link">
-          {t(`${PREFIX}.destination.model`)}
-        </AppButton>
-      ) : (
-        <span className={styles.muted}>{t(`${PREFIX}.destination.noItem`)}</span>
-      );
-    }
-    if (concept.verdict === "kinetic") {
-      return (
-        <AppButton onClick={onGoToKinetic} size="small" type="link">
-          {t(`${PREFIX}.destination.kinetic`)}
-        </AppButton>
-      );
-    }
-    return <span className={styles.muted}>{t(`${PREFIX}.destination.${concept.verdict}`)}</span>;
-  };
-
-  const columns: ColumnsType<Concept> = [
-    {
-      key: "concept",
-      render: (_value, concept) => (
-        <div className={styles.cell}>
-          <span className={styles.name}>
-            {inNetwork(concept) ? <ExistingMark /> : null}
-            {concept.ai ? (
-              <span
-                aria-label={t(`${PREFIX}.aiMark`)}
-                className={styles.aiMark}
-                role="img"
-                title={t(`${PREFIX}.aiMark`)}
-              />
-            ) : null}
-            {concept.name}
-          </span>
-          {concept.aliases.length ? (
-            <span className={styles.muted}>
-              {t(`${PREFIX}.aliases`, {
-                names: concept.aliases.join(t("bknProject.listSeparator")),
-              })}
-            </span>
-          ) : null}
-          {concept.description ? (
-            <ClampedText className={styles.muted} text={concept.description} />
-          ) : null}
-          {concept.merged.length ? (
-            <span className={styles.muted}>
-              {t(`${PREFIX}.merged`, {
-                names: concept.merged.map((m) => m.name).join(t("bknProject.listSeparator")),
-              })}
-              {editable
-                ? concept.merged.map((m) => (
-                    <AppButton
-                      key={m.key}
-                      onClick={() => void merge(m.key)}
-                      size="small"
-                      type="link"
-                    >
-                      {t(`${PREFIX}.unmerge`, { name: m.name })}
-                    </AppButton>
-                  ))
-                : null}
-            </span>
-          ) : null}
-        </div>
-      ),
-      title: t(`${PREFIX}.columns.concept`),
-    },
-    {
-      key: "sources",
-      render: (_value, concept) => (
-        <div className={styles.cell}>
-          {concept.sources.map((source, index) => (
-            <span key={`${source.kind}-${source.id}-${index}`}>
-              {source.kind === "network" ? <ExistingMark /> : null}
-              {t(`${PREFIX}.source.${source.kind}`, { name: source.name })}
-            </span>
-          ))}
-        </div>
-      ),
-      title: t(`${PREFIX}.columns.sources`),
-    },
-    {
-      key: "verdict",
-      render: (_value, concept) =>
-        judgeable(concept) ? (
-          <Select<ConceptVerdict>
-            aria-label={t(`${PREFIX}.verdictOf`, { name: concept.name })}
-            className={styles.verdict}
-            loading={busy === concept.key}
-            onChange={(verdict) => void judge(concept, verdict)}
-            options={VERDICTS_OF[concept.item?.kind ?? "none"].map((verdict) => ({
-              label: t(`${PREFIX}.verdict.${verdict}`),
-              value: verdict,
-            }))}
-            size="small"
-            value={concept.verdict}
-          />
-        ) : (
-          <LightStatusTag tone="info">{t(`${PREFIX}.verdict.${concept.verdict}`)}</LightStatusTag>
-        ),
-      title: t(`${PREFIX}.columns.verdict`),
-    },
-    {
-      key: "reason",
-      render: (_value, concept) => {
-        // What semantic understanding said of the table is the reason it is what it is.
-        const because =
-          concept.suggestedBecause === "table_understood" && concept.description
-            ? t(`${PREFIX}.understoodWith`, { description: concept.description })
-            : t(`${PREFIX}.because.${becauseKey(concept.suggestedBecause)}`);
-        // Drafting found it but left it out: say so, and what it could be judged instead.
-        const leftOut =
-          concept.state === "pending" &&
-          concept.item &&
-          !concept.item.adopted &&
-          concept.verdict === "none" &&
-          concept.suggested !== "none";
-        return (
-          <ClampedText
-            className={styles.muted}
-            text={
-              concept.reason ||
-              (leftOut
-                ? t(`${PREFIX}.notAdopted`, {
-                    because,
-                    verdict: t(`${PREFIX}.verdict.${concept.suggested}`),
-                  })
-                : because)
-            }
-          />
-        );
-      },
-      title: t(`${PREFIX}.columns.reason`),
-    },
-    {
-      key: "destination",
-      render: (_value, concept) => destination(concept),
-      title: t(`${PREFIX}.columns.destination`),
-    },
-    {
-      key: "state",
-      onHeaderCell: () => ({ className: styles.nowrap }),
-      render: (_value, concept) => (
-        <LightStatusTag tone={STATE_TONE[concept.state]}>
-          {t(`${PREFIX}.state.${concept.state}`)}
-        </LightStatusTag>
-      ),
-      title: t(`${PREFIX}.columns.state`),
-    },
-    ...(editable
-      ? [
-          {
-            key: "actions",
-            render: (_value: unknown, concept: Concept) => (
-              <span className={styles.actions}>
-                {/* The suggestion is right as it is: confirming it judges it so. */}
-                {concept.state === "pending" && !inNetwork(concept) && !tableCandidate(concept) ? (
-                  <AppButton
-                    aria-label={t(`${PREFIX}.confirmOf`, { name: concept.name })}
-                    onClick={() => void judge(concept, concept.verdict)}
-                    size="small"
-                  >
-                    {t(`${PREFIX}.confirm`)}
-                  </AppButton>
-                ) : null}
-                {/* A concept others were merged into stays where it is, as does the network's. */}
-                {concept.merged.length || inNetwork(concept) || tableCandidate(concept) ? null : (
-                  <Select<string>
-                    aria-label={t(`${PREFIX}.mergeIntoOf`, { name: concept.name })}
-                    className={styles.merge}
-                    onChange={(into) => void merge(concept.key, into)}
-                    options={standing
-                      .filter((other) => other.key !== concept.key)
-                      .map((other) => ({ label: other.name, value: other.key }))}
-                    placeholder={t(`${PREFIX}.mergeInto`)}
-                    showSearch
-                    optionFilterProp="label"
-                    size="small"
-                    value={null}
-                  />
-                )}
-              </span>
-            ),
-            title: t(`${PREFIX}.columns.actions`),
-          },
-        ]
-      : []),
-  ];
-
   return (
     <div className={styles.layout}>
       <div className={styles.page}>
-        <div className={styles.head}>
-          <span className={styles.muted}>
-            {kbMode === "hidden"
-              ? t(`${PREFIX}.summaryCore`, {
-                  requirements: sources.requirement.size,
-                  tables: sources.table.size,
-                })
-              : t(`${PREFIX}.summary`, {
-                  documents: sources.document.size,
-                  requirements: sources.requirement.size,
-                  tables: sources.table.size,
-                })}
-          </span>
-          {canEdit ? (
+        <section className={styles.card}>
+          <div className={styles.head}>
+            <p className={styles.intro}>{t(`${PREFIX}.intro`)}</p>
             <span className={styles.actions}>
-              {ready ? (
-                <AppButton aria-pressed={asking} onClick={() => setAsking(!asking)}>
-                  {t(`${PREFIX}.ask`)}
+              {canEdit ? (
+                <AppButton
+                  disabled={!runnable.length || busy !== null || drafting || extractingRequirements}
+                  loading={run !== null}
+                  onClick={() => askRun(runnable, extracted)}
+                  type="primary"
+                >
+                  {t(`${PREFIX}.${run ? "running" : extracted ? "reextract" : "extract"}`)}
                 </AppButton>
-              ) : null}
-              <AppButton
-                disabled={extractingRequirements || (busy !== null && busy !== "requirements")}
-                loading={busy === "requirements"}
-                onClick={() => void extractRequirements()}
-              >
-                {t(`${PREFIX}.requirements.extract`)}
-              </AppButton>
-              <AppButton
-                disabled={drafting || (busy !== null && busy !== "extract")}
-                loading={busy === "extract"}
-                onClick={() => void extract(false)}
-              >
-                {t(`${PREFIX}.${ready ? "reextract" : "extract"}`)}
-              </AppButton>
+              ) : (
+                <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
+              )}
+              <AppButton onClick={onGoToModel}>{t(`${PREFIX}.goToModel`)}</AppButton>
+              {askButton}
             </span>
-          ) : (
-            <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
-          )}
-        </div>
+          </div>
+          {notice}
+        </section>
 
         {refusal ? (
           <Alert
             action={
               refusal.reload ? (
                 <AppButton
-                  // Polling reads the page too: only reading it on request settles the refusal, and
-                  // only once the read succeeds.
                   onClick={() => void load().then((read) => read && setRefusal(null))}
                   size="small"
                 >
@@ -847,131 +767,119 @@ export function ProjectConcepts({
             type="warning"
           />
         ) : null}
-
-        {/* The funnel: where the concepts come from, what they were judged, how many are in. */}
-        <dl className={styles.stats} data-region="funnel">
-          {[
-            ["sources", sources.table.size + sources.document.size + sources.requirement.size],
-            ["concepts", total],
-          ].map(([key, value]) => (
-            <div className={styles.stat} key={key}>
-              <dt>{t(`${PREFIX}.stats.${key}`)}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-          {(["object", "event", "property", "values", "relation", "kinetic", "none"] as const).map(
-            (verdict) => (
-              <div className={styles.stat} key={verdict}>
-                <dt>{t(`${PREFIX}.verdict.${verdict}`)}</dt>
-                <dd>{concepts.counts[`verdict:${verdict}`] ?? 0}</dd>
-              </div>
-            ),
-          )}
-          {/* As the modeling page counts it: what drafting adopted is in until someone takes it out. */}
-          <div className={styles.stat}>
-            <dt>{t(`${PREFIX}.stats.inModel`)}</dt>
-            <dd>{inModel.count}</dd>
-            {inModel.unconfirmed ? (
-              <span className={styles.muted}>
-                {t(`${PREFIX}.stats.inModelPending`, { count: inModel.unconfirmed })}
-              </span>
-            ) : null}
-          </div>
-        </dl>
-
-        {drafting ? <Alert message={t(`${PREFIX}.drafting`)} showIcon type="info" /> : null}
-        {candidates && !drafting ? (
-          <Alert message={t(`${PREFIX}.candidates`)} showIcon type="info" />
-        ) : null}
-        {concepts.notUnderstood ? (
-          <Alert
-            action={
-              <AppButton onClick={onGoToResources} size="small">
-                {t(`${PREFIX}.understandAction`)}
-              </AppButton>
-            }
-            message={t(`${PREFIX}.${canEdit ? "notUnderstood" : "notUnderstoodReadOnly"}`, {
-              count: concepts.notUnderstood,
-            })}
-            showIcon
-            type="info"
-          />
-        ) : null}
         {stalledNotice}
-        {extractingRequirements ? (
-          <Alert message={t(`${PREFIX}.requirements.running`)} showIcon type="info" />
-        ) : conceptsRun?.status === "failed" ? (
-          // What the last run that ended extracted stands: say so, rather than an empty page.
-          <Alert
-            message={t(
-              conceptsRun.extracted
-                ? `${PREFIX}.requirements.failedKept`
-                : `${PREFIX}.requirements.failed`,
-            )}
-            showIcon
-            type="warning"
-          />
-        ) : conceptsRun?.extracted && conceptsRun.stale ? (
-          <Alert message={t(`${PREFIX}.requirements.stale`)} showIcon type="info" />
-        ) : null}
-        {pending && ready ? (
-          <Alert
-            action={
-              <span className={styles.actions}>
-                {canEdit ? (
-                  <AppButton
-                    disabled={busy !== null && busy !== "accept"}
-                    loading={busy === "accept"}
-                    onClick={acceptAll}
-                    size="small"
-                    type="primary"
-                  >
-                    {t(`${PREFIX}.acceptAll`)}
-                  </AppButton>
-                ) : null}
-                <AppButton onClick={onGoToModel} size="small">
-                  {t(`${PREFIX}.goToModel`)}
-                </AppButton>
-              </span>
-            }
-            description={t(`${PREFIX}.pendingAdopted`)}
-            message={t(`${PREFIX}.pending`, { count: pending })}
-            showIcon
-            type="info"
-          />
-        ) : null}
 
-        {documentSource}
+        <ConceptSources
+          canRun={canEdit && busy === null}
+          catalogs={counts.catalogs}
+          documents={documentFacts}
+          knowledgeBase={knowledgeBaseFacts}
+          knowledgeBasePanel={knowledgeBasePanel}
+          knowledgeBaseStatus={kbStatus}
+          network={{
+            structured: network.filter((concept) => kindOf(concept) === "structured").length,
+            total: network.length,
+            unstructured: network.filter((concept) => kindOf(concept) === "unstructured").length,
+          }}
+          notUnderstood={concepts.notUnderstood}
+          onGoToResources={() => onGoToResources()}
+          onRun={(key) => askRun([key])}
+          onView={viewSource}
+          run={run}
+          tables={tableFacts}
+          unmatched={waiting.length}
+        />
 
-        <Segmented<Filter>
-          onChange={setFilter}
-          options={[
-            { label: `${t(`${PREFIX}.filter.all`)} ${total}`, value: "all" },
-            ...CONCEPT_STATES.map((state) => ({
-              label: `${t(`${PREFIX}.state.${state}`)} ${concepts.counts[state] ?? 0}`,
-              value: state,
-            })),
-          ]}
-          value={filter}
-        />
-        <AppTable<Concept>
-          columns={columns}
-          dataSource={shown}
-          pagination={listPage.pagination}
-          rowKey="key"
-          size="small"
-        />
+        <section className={styles.card}>
+          <Tabs
+            activeKey={tab}
+            items={[
+              {
+                children: (
+                  <DataConcepts
+                    busy={busy}
+                    concepts={data}
+                    editable={editable}
+                    filters={filters}
+                    onAskAbout={(relation) =>
+                      openAsk(relation ? [t(`${PREFIX}.cross.askRelation`)] : [])
+                    }
+                    onFilters={setFilters}
+                    onGoToKinetic={onGoToKinetic}
+                    onJudge={(concept, verdict) => void judge(concept, verdict)}
+                    onJudgeMany={(list, mode) => void judgeMany(list, mode)}
+                    onMerge={(key, into) => void merge(key, into)}
+                    onOpenItem={onOpenItem}
+                    onSelected={setSelected}
+                    selected={selected}
+                  />
+                ),
+                key: "data",
+                label: t(`${PREFIX}.tabs.data`, { count: data.length }),
+              },
+              {
+                children: requirementList.length ? (
+                  <RequirementConcepts
+                    busy={busy}
+                    concepts={data}
+                    editable={canEdit && busy === null && !run && !extractingRequirements}
+                    filter={requirementFilter}
+                    knowledgeBase={knowledgeBaseShown}
+                    onAskAgain={askReady ? (requirement) => openAsk([requirement.term]) : undefined}
+                    onFilter={setRequirementFilter}
+                    onGoToCatalogs={() => onGoToResources("catalogs")}
+                    onGoToKnowledgeBase={() => onGoToResources("knowledge-base")}
+                    onMatch={(requirement, match) => void matchRequirement(requirement, match)}
+                    requirements={requirementList}
+                  />
+                ) : (
+                  <p className={styles.empty}>{t(`${PREFIX}.requirement.empty`)}</p>
+                ),
+                key: "requirement",
+                label: (
+                  <span>
+                    {t(`${PREFIX}.tabs.requirement`, { count: requirementList.length })}
+                    {waiting.length ? (
+                      <span className={styles.tabBadge}>
+                        {t(`${PREFIX}.tabs.unmatched`, { count: waiting.length })}
+                      </span>
+                    ) : null}
+                  </span>
+                ),
+              },
+            ]}
+            onChange={(key) => setTab(key as "data" | "requirement")}
+          />
+        </section>
       </div>
-      {asking && canEdit && ready ? (
+      {asking && askReady ? (
         <div className={styles.side}>
           <AskAiSidebar<ConceptRevision>
             adopt={adoptRevision}
-            askWith={(request) => askConcepts({ ...request, projectId: project.id })}
+            askWith={(request) =>
+              askConcepts({
+                ...request,
+                projectId: project.id,
+                question: refs.length
+                  ? t(`${PREFIX}.askAbout`, {
+                      names: refs.join(t("bknProject.listSeparator")),
+                      question: request.question,
+                    })
+                  : request.question,
+              })
+            }
             kind="concepts"
             onClose={() => setAsking(false)}
             preview={revisionPreview}
             projectId={project.id}
-            subtitle={t("bknProject.model.ask.subtitle.concepts", { count: total })}
+            subtitle={t("bknProject.model.ask.subtitle.concepts", { count: data.length })}
+            top={
+              refs.length ? (
+                <p className={styles.refs}>
+                  {t(`${PREFIX}.refs`, { names: refs.join(t("bknProject.listSeparator")) })}
+                </p>
+              ) : undefined
+            }
           />
         </div>
       ) : null}

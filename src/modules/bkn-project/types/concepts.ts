@@ -38,6 +38,47 @@ export type ConceptSource = {
   documentIds: string[];
 };
 
+/**
+ * The data a concept is bound to: a table of the catalogs (structured), or what a knowledge-base
+ * extraction writes (unstructured). Concepts bound to different kinds are never merged.
+ */
+export type ConceptBinding = {
+  kind: "table" | "dataset";
+  id: string;
+  name: string;
+};
+
+/** What a requirement concept is matched to, as a match names it. */
+export type RequirementMatchTarget = { kind: "table" | "object_type"; id: string };
+
+/** Where a requirement concept stands: matched and waiting, confirmed, unmatched, or left out. */
+export type RequirementMatchState = "pending" | "confirmed" | "unmatched" | "excluded";
+
+/**
+ * A requirement concept as the concepts page lists it, with the data concept it is matched to. It
+ * is never an item of its own.
+ */
+export type RequirementConceptMatch = {
+  id: string;
+  term: string;
+  category: string;
+  definition: string;
+  /** The first passage it quotes. */
+  quote: string;
+  match: {
+    key: string;
+    name: string;
+    binding: ConceptBinding | null;
+    /** Names the concept in a match; null for one that is no object. */
+    target: RequirementMatchTarget | null;
+  } | null;
+  /** Why it is matched, or why nothing in the data is it. */
+  basis: string;
+  /** ai, person, or name when only its term names the concept; empty when unknown. */
+  by: string;
+  state: RequirementMatchState;
+};
+
 export type ConceptItem = {
   kind: "object_types" | "relation_types" | "value_types";
   id: string;
@@ -65,6 +106,8 @@ export type Concept = {
   aliases: string[];
   /** Named by semantic understanding, or added or named from Ask AI. */
   ai: boolean;
+  /** The data it is bound to; null for a requirement concept, or one added with no source. */
+  binding: ConceptBinding | null;
 };
 
 export type Concepts = {
@@ -77,6 +120,8 @@ export type Concepts = {
   counts: Record<string, number>;
   /** The tables semantic understanding has not named yet: their concepts keep the table name. */
   notUnderstood: number;
+  /** The requirement concepts, each with the data concept it is matched to. */
+  requirements: RequirementConceptMatch[];
 };
 
 /** One of the concepts a split makes. */

@@ -37,10 +37,13 @@ import type {
 } from "@/modules/bkn-project/types/draft";
 import type {
   Concept,
+  ConceptBinding,
   ConceptBlocker,
   ConceptRevision,
   Concepts,
   ConceptVerdict,
+  RequirementConceptMatch,
+  RequirementMatchTarget,
 } from "@/modules/bkn-project/types/concepts";
 
 const API_PREFIX = "/bkn-project/v1/projects";
@@ -334,7 +337,7 @@ export type BackendDraft = {
   error: string;
   items: {
     adding?: { by: BackendAccount; catalog_ids: string[] | null; since: number } | null;
-    inputs?: { existing_tables?: string[] | null } | null;
+    inputs?: { catalog_ids?: string[] | null; existing_tables?: string[] | null } | null;
     decisions?: {
       action: string;
       after: unknown;
@@ -471,6 +474,7 @@ export function mapDraft(draft: BackendDraft): Draft {
       ...(items.inputs?.existing_tables?.length
         ? { existingTables: items.inputs.existing_tables }
         : {}),
+      ...(items.inputs ? { draftedCatalogIds: items.inputs.catalog_ids ?? [] } : {}),
       decisions: (items.decisions ?? []).map((decision) => ({
         action: decision.action,
         after: decision.after,
@@ -1880,8 +1884,14 @@ export async function draftSourceChanges(projectId: string, signature: string): 
   return mapDraft(response.data);
 }
 
+type BackendBinding = { id?: string; kind: ConceptBinding["kind"]; name?: string };
+
+const mapBinding = (binding: BackendBinding | null | undefined): ConceptBinding | null =>
+  binding ? { id: binding.id ?? "", kind: binding.kind, name: binding.name ?? "" } : null;
+
 type BackendConcept = {
   ai?: boolean;
+  binding?: BackendBinding | null;
   aliases?: string[] | null;
   blocked?: string;
   description?: string;
@@ -1911,6 +1921,24 @@ type BackendConcepts = {
   draft_update_time?: number;
   not_understood?: number;
   requirement_update_time?: number;
+  requirements?:
+    | {
+        basis?: string;
+        by?: string;
+        category: string;
+        definition?: string;
+        id: string;
+        match?: {
+          binding?: BackendBinding | null;
+          key: string;
+          name: string;
+          target?: RequirementMatchTarget | null;
+        } | null;
+        quote?: string;
+        state: RequirementConceptMatch["state"];
+        term: string;
+      }[]
+    | null;
 };
 
 function mapConcepts(data: BackendConcepts): Concepts {
@@ -1918,6 +1946,7 @@ function mapConcepts(data: BackendConcepts): Concepts {
     concepts: (data.concepts ?? []).map((concept) => ({
       ai: concept.ai ?? false,
       aliases: concept.aliases ?? [],
+      binding: mapBinding(concept.binding),
       blocked: (concept.blocked as ConceptBlocker | undefined) || null,
       description: concept.description ?? "",
       item: concept.item ?? null,
@@ -1941,6 +1970,24 @@ function mapConcepts(data: BackendConcepts): Concepts {
     draftUpdateTime: data.draft_update_time ?? 0,
     notUnderstood: data.not_understood ?? 0,
     requirementUpdateTime: data.requirement_update_time ?? 0,
+    requirements: (data.requirements ?? []).map((requirement) => ({
+      basis: requirement.basis ?? "",
+      by: requirement.by ?? "",
+      category: requirement.category,
+      definition: requirement.definition ?? "",
+      id: requirement.id,
+      match: requirement.match
+        ? {
+            binding: mapBinding(requirement.match.binding),
+            key: requirement.match.key,
+            name: requirement.match.name,
+            target: requirement.match.target ?? null,
+          }
+        : null,
+      quote: requirement.quote ?? "",
+      state: requirement.state,
+      term: requirement.term,
+    })),
   };
 }
 
@@ -2057,6 +2104,7 @@ function mockConcepts(projectId: string): Concepts {
           return {
             ai: false,
             aliases: [],
+            binding: { id: entry.resource, kind: "table" as const, name: entry.source },
             blocked: state === "blocked" ? entry.blocker : null,
             description: entry.description,
             item: entry.item,
@@ -2100,6 +2148,7 @@ function mockConcepts(projectId: string): Concepts {
     notUnderstood: 0,
     // The mock lists no requirement concept of its own.
     requirementUpdateTime: 0,
+    requirements: [],
   };
 }
 
