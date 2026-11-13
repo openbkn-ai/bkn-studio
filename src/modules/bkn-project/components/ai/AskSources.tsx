@@ -318,11 +318,12 @@ export function SupplementNote({
       ) : (
         <>
           <div className={styles.noteBox}>
+            {/* Until it is read, nothing is said of it. */}
             {note?.text ? (
               note.text
-            ) : (
+            ) : note ? (
               <span className={styles.notePlaceholder}>{t(`${NOTE}.empty`)}</span>
-            )}
+            ) : null}
           </div>
           <div className={styles.noteFoot}>
             <span className={styles.note}>

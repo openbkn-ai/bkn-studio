@@ -149,6 +149,8 @@ describe("AskSources", () => {
     mocks.getSupplement.mockResolvedValueOnce({ by: null, text: "Kept", time: 1 });
     renderWithoutAntdStyles(<AskSources {...base} />);
 
+    // While it is being read, it is not said to be empty.
+    expect(screen.queryByText(`${N}.empty`)).toBeNull();
     expect(await screen.findByText(`${N}.loadFailed`)).toBeInTheDocument();
     expect(screen.queryByText(`${N}.empty`)).toBeNull();
     expect(screen.queryByRole("button", { name: `${N}.write` })).toBeNull();
