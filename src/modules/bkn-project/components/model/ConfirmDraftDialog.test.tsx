@@ -15,6 +15,8 @@ import type { ProjectNextAction, ProjectStatus } from "@/modules/bkn-project/typ
 const getProjectStatusMock = vi.hoisted(() => vi.fn());
 const getProjectPendingMock = vi.hoisted(() => vi.fn());
 const confirmDraftMock = vi.hoisted(() => vi.fn());
+const getDraftMock = vi.hoisted(() => vi.fn());
+const editDraftItemMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -31,6 +33,12 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
   confirmDraft: confirmDraftMock,
   getProjectPending: getProjectPendingMock,
   getProjectStatus: getProjectStatusMock,
+}));
+
+vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  editDraftItem: editDraftItemMock,
+  getDraft: getDraftMock,
 }));
 
 import { mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
@@ -344,17 +352,77 @@ describe("ConfirmDraft", () => {
     await waitFor(() => expect(onStale).toHaveBeenCalled());
   });
 
-  it("reloads preparation progress after a partially completed storage preparation", async () => {
+  it("says which knowledge-base item is not ready and why, keeping the dialog open", async () => {
     getProjectStatusMock.mockResolvedValue(status({}));
-    confirmDraftMock.mockRejectedValueOnce(refusal("Draft.DocumentDataNotReady"));
+    confirmDraftMock.mockRejectedValueOnce(
+      refusal("Draft.DocumentDataItemFailed", {
+        field: "含税金额",
+        name: "采购合同行",
+        reason: "field",
+      }),
+    );
     renderConfirm();
     fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
     await screen.findByRole("dialog");
     fireEvent.click(okButton());
     await waitFor(() => expect(onStale).toHaveBeenCalled());
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(messageMock.warning).toHaveBeenCalledWith(
-      "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+    expect(
+      await within(screen.getByRole("dialog")).findByText(
+        "“采购合同行”还没准备好存放从文件抽取的内容：字段“含税金额”的格式不被接受。已准备好的部分会保留，处理后再次确认模型会从这一项继续。",
+      ),
+    ).toBeInTheDocument();
+    // The mock draft has no knowledge-base objects: there is nothing to leave out.
+    expect(screen.queryByRole("button", { name: "先确认表的部分" })).toBeNull();
+  });
+
+  it("confirms the tables first, leaving the knowledge-base objects out with the reason noted", async () => {
+    const table = draft.items.objectTypes[0];
+    const withDocument = {
+      ...draft,
+      items: {
+        ...draft.items,
+        objectTypes: [
+          ...draft.items.objectTypes,
+          {
+            ...table,
+            document: { role: "fact" },
+            existing: false,
+            id: "invoice_doc",
+            name: "采购发票",
+          },
+        ],
+      },
+    } as typeof draft;
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock
+      .mockRejectedValueOnce(refusal("Draft.DocumentDataNotReady"))
+      .mockResolvedValueOnce(undefined);
+    getDraftMock.mockResolvedValue({ ...withDocument, updateTime: 50 });
+    editDraftItemMock.mockResolvedValue({ ...withDocument, updateTime: 51 });
+    renderWithoutAntdStyles(
+      <ConfirmDraft
+        draft={withDocument}
+        onConfirmed={onConfirmed}
+        onViewConfirmation={onViewConfirmation}
+        onSendingChange={onSendingChange}
+        onShowPending={onShowPending}
+        onStale={onStale}
+        projectId="p1"
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
+    await screen.findByRole("dialog");
+    fireEvent.click(okButton());
+    fireEvent.click(await screen.findByRole("button", { name: "先确认表的部分" }));
+    await waitFor(() => expect(onConfirmed).toHaveBeenCalled());
+    expect(editDraftItemMock).toHaveBeenCalledOnce();
+    expect(editDraftItemMock).toHaveBeenCalledWith("p1", "object_types", "invoice_doc", 50, {
+      adopted: false,
+      reason: "知识库还没准备好存放抽取内容，先确认表的部分；准备好后再采纳。",
+    });
+    expect(confirmDraftMock).toHaveBeenLastCalledWith("p1", { updateTime: 51 });
+    expect(messageMock.success).toHaveBeenCalledWith(
+      "表的部分已确认。1 个知识库对象暂未纳入，处理好原因后在概念建模重新采纳并确认。",
     );
   });
 

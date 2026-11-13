@@ -663,12 +663,14 @@ export const bknProjectEnUS = {
     },
     model: {
       preparation: {
-        pending: "Data storage preparation has not started.",
-        preparing: "Preparing data storage: {{ready}} / {{total}}.",
-        ready: "Data storage is ready: {{total}} items.",
+        pending: "Knowledge-base objects are not yet being made ready to hold extracted content.",
+        preparing:
+          "Making knowledge-base objects ready to hold extracted content: {{ready}} / {{total}}.",
+        ready: "Knowledge-base objects are ready to hold extracted content: {{total}} items.",
         failed:
-          "Data storage preparation stopped at {{ready}} / {{total}}. Confirm the model again to resume.",
-        stale: "The model or sources changed. Confirm the model again to prepare its data storage.",
+          "Not all knowledge-base objects are ready ({{ready}} / {{total}} done). Confirm the model again to continue where it stopped; it says which item stopped and why.",
+        stale:
+          "The model or sources changed. Confirming the model again makes knowledge-base objects ready again.",
       },
       graph: {
         title: "Concept model",
@@ -1722,6 +1724,21 @@ export const bknProjectEnUS = {
         conflictsAccept_other: "{{count}} requirement conflicts are not resolved. Confirm anyway",
         conflictsAcceptUncounted: "Some requirement conflicts are not resolved. Confirm anyway",
         loadFailed: "The items to decide could not be loaded",
+        documentsNotReadyAction: "Confirm the tables first",
+        documentsNotReadyHelp:
+          'You can confirm the tables first: {{count}} knowledge-base objects are left out this time, noted as "adopt once the knowledge base is ready". After fixing the cause, adopt them again in Concept modeling and confirm the model.',
+        documentsNotReadyHelp_one:
+          'You can confirm the tables first: {{count}} knowledge-base object is left out this time, noted as "adopt once the knowledge base is ready". After fixing the cause, adopt it again in Concept modeling and confirm the model.',
+        documentsNotReadyHelp_other:
+          'You can confirm the tables first: {{count}} knowledge-base objects are left out this time, noted as "adopt once the knowledge base is ready". After fixing the cause, adopt them again in Concept modeling and confirm the model.',
+        documentsDeferReason:
+          "The knowledge base is not ready to hold extracted content yet; the tables are confirmed first. Adopt again once it is ready.",
+        documentsDeferred:
+          "The tables are confirmed. {{count}} knowledge-base objects are left out for now; adopt them again in Concept modeling and confirm once the cause is fixed.",
+        documentsDeferred_one:
+          "The tables are confirmed. {{count}} knowledge-base object is left out for now; adopt it again in Concept modeling and confirm once the cause is fixed.",
+        documentsDeferred_other:
+          "The tables are confirmed. {{count}} knowledge-base objects are left out for now; adopt them again in Concept modeling and confirm once the cause is fixed.",
         ok: "Confirm",
       },
       kind: {
@@ -3454,7 +3471,17 @@ export const bknProjectEnUS = {
       generic: "That did not go through. Try again later.",
       Draft: {
         DocumentDataNotReady:
-          "Document data preparation is incomplete. Reload the draft and confirm again to resume; reviewed candidates are kept.",
+          "Knowledge-base objects are not ready to hold what is extracted from files. Confirm the model again to continue where it stopped; reviewed candidates are kept.",
+        DocumentDataItemFailed:
+          '"{{name}}" is not ready to hold what is extracted from files: {{reason}} What is ready is kept; confirm the model again after fixing this and it continues from this item.',
+        DocumentDataReason: {
+          field: 'the format of field "{{field}}" was not accepted.',
+          format: "its field settings were not accepted.",
+          permission: "there is no permission to store this content; contact your administrator.",
+          mismatch:
+            "what was prepared for it earlier does not match the current model; contact your administrator.",
+          unavailable: "the service is temporarily unavailable; try again later.",
+        },
         DualSourceNotConfirmed:
           "Confirm the dual-source field list and adopt its selected file and fact models first.",
         BusinessIdentityNotVerified:

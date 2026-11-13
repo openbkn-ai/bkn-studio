@@ -619,11 +619,12 @@ export const bknProjectZhCN = {
     },
     model: {
       preparation: {
-        pending: "存储准备尚未开始。",
-        preparing: "正在准备数据存储：{{ready}} / {{total}}。",
-        ready: "数据存储已准备好：{{total}} 项。",
-        failed: "数据存储准备中断，已完成 {{ready}} / {{total}}。再次确认模型可继续。",
-        stale: "模型或来源已变更，下次确认模型时会重新准备数据存储。",
+        pending: "知识库对象还没开始准备存放抽取内容。",
+        preparing: "正在准备知识库对象存放抽取内容：{{ready}} / {{total}}。",
+        ready: "知识库对象已准备好存放抽取内容：{{total}} 项。",
+        failed:
+          "知识库对象还没全部准备好（已完成 {{ready}} / {{total}}）。再次确认模型会从中断处继续，并说明停在哪一项、为什么。",
+        stale: "模型或来源已变更，下次确认模型时会重新准备知识库对象。",
       },
       graph: {
         title: "概念模型",
@@ -1601,6 +1602,20 @@ export const bknProjectZhCN = {
         conflictsAccept_other: "还有 {{count}} 个需求冲突没有裁决，仍然确认",
         conflictsAcceptUncounted: "还有需求冲突没有裁决，仍然确认",
         loadFailed: "待决定的内容暂时读取不到",
+        documentsNotReadyAction: "先确认表的部分",
+        documentsNotReadyHelp:
+          "也可以先确认表的部分：{{count}} 个知识库对象这次不纳入，记下原因“等知识库准备好后再采纳”；处理好后在概念建模重新采纳，再确认模型。",
+        documentsNotReadyHelp_one:
+          "也可以先确认表的部分：{{count}} 个知识库对象这次不纳入，记下原因“等知识库准备好后再采纳”；处理好后在概念建模重新采纳，再确认模型。",
+        documentsNotReadyHelp_other:
+          "也可以先确认表的部分：{{count}} 个知识库对象这次不纳入，记下原因“等知识库准备好后再采纳”；处理好后在概念建模重新采纳，再确认模型。",
+        documentsDeferReason: "知识库还没准备好存放抽取内容，先确认表的部分；准备好后再采纳。",
+        documentsDeferred:
+          "表的部分已确认。{{count}} 个知识库对象暂未纳入，处理好原因后在概念建模重新采纳并确认。",
+        documentsDeferred_one:
+          "表的部分已确认。{{count}} 个知识库对象暂未纳入，处理好原因后在概念建模重新采纳并确认。",
+        documentsDeferred_other:
+          "表的部分已确认。{{count}} 个知识库对象暂未纳入，处理好原因后在概念建模重新采纳并确认。",
         ok: "确认",
       },
       kind: {
@@ -3211,7 +3226,16 @@ export const bknProjectZhCN = {
       generic: "操作没有完成，请稍后重试",
       Draft: {
         DocumentDataNotReady:
-          "文档数据准备尚未完成，请重新加载草稿后再次确认以继续；已审核的候选会保留。",
+          "知识库对象还没准备好存放从文件抽取的内容，再次确认模型会从中断处继续；已审核的候选会保留。",
+        DocumentDataItemFailed:
+          "“{{name}}”还没准备好存放从文件抽取的内容：{{reason}}已准备好的部分会保留，处理后再次确认模型会从这一项继续。",
+        DocumentDataReason: {
+          field: "字段“{{field}}”的格式不被接受。",
+          format: "字段设置不被接受。",
+          permission: "当前没有存放这些内容的权限，请联系管理员。",
+          mismatch: "之前为它准备的内容和当前模型对不上，请联系管理员。",
+          unavailable: "服务暂时不可用，请稍后再试。",
+        },
         DualSourceNotConfirmed: "请先确认双来源字段清单，并采纳其中指定的文件、事实模型。",
         BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认模型。",
         BusinessIdentityNotUnique: "业务编号存在重复或空值，请处理后重新核验。",
