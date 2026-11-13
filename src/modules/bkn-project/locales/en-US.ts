@@ -184,36 +184,174 @@ export const bknProjectEnUS = {
       comingSoonDescription: "A later version brings the full feature here.",
     },
     concepts: {
-      summary:
-        "Concepts drawn from {{tables}} tables, {{documents}} knowledge-base files and {{requirements}} requirement concepts.",
-      summaryCore:
-        "Concepts drawn from {{tables}} tables and {{requirements}} requirement concepts.",
-      reextract: "Extract again",
+      intro:
+        "Extract the business concepts from the project's sources: concepts from data tables and the knowledge base decide which objects the model has; concepts from requirement documents check whether those objects are enough and what to call them. Once confirmed, draft them in concept modeling.",
       extract: "Extract concepts",
-      candidates:
-        "These candidate concepts come from the tables of the data catalogs, under the business names semantic understanding gave them. Extract concepts to judge or merge them one by one.",
-      requirements: {
-        extract: "Extract requirement concepts",
-        started: "Extracting concepts from the requirement documents",
-        running:
-          "Extracting concepts from the requirement documents; the ones you edited are kept…",
-        failed:
-          "No concepts could be extracted from the requirement documents this time. Try again later.",
-        failedKept:
-          "Extracting again did not finish; these are still the concepts extracted from the requirement documents last time.",
-        stale:
-          "The requirement documents changed. You can extract their concepts again; the ones you edited are kept.",
-        noDocuments:
-          "There are no requirement documents yet. Upload them under Requirements and sources first.",
-        busy: "The requirements are being processed. Try again shortly.",
+      reextract: "Extract concepts again",
+      running: "Extracting…",
+      goToModel: "Go to concept modeling",
+      readOnly: "Only the project owner can extract and judge concepts",
+      askAfterExtracting: "Ask AI is available once concepts are extracted",
+      askAbout: "About: {{names}}. {{question}}",
+      refs: "Referring to: {{names}}",
+      tabs: {
+        data: "Data concepts {{count}}",
+        requirement: "Requirement concepts {{count}}",
+        unmatched: "{{count}} not matched",
+        unmatched_one: "{{count}} not matched",
+        unmatched_other: "{{count}} not matched",
+      },
+      notice: {
+        notUnderstood:
+          "{{count}} tables are still named by their table names. Extract concepts runs semantic understanding in the project's content language first, then makes the candidates.",
+        notUnderstood_one:
+          "{{count}} table is still named by its table name. Extract concepts runs semantic understanding in the project's content language first, then makes the candidates.",
+        notUnderstood_other:
+          "{{count}} tables are still named by their table names. Extract concepts runs semantic understanding in the project's content language first, then makes the candidates.",
+        notUnderstoodReadOnly:
+          "{{count}} tables are still named by their table names; their concepts use those names for now.",
+        notUnderstoodReadOnly_one:
+          "{{count}} table is still named by its table name; its concepts use that name for now.",
+        notUnderstoodReadOnly_other:
+          "{{count}} tables are still named by their table names; their concepts use those names for now.",
+        unmatched:
+          "{{count}} requirement concepts are not in the data yet: {{names}}. Add them to a data catalog or the knowledge base and extract again, or exclude them.",
+        unmatched_one:
+          "{{count}} requirement concept is not in the data yet: {{names}}. Add it to a data catalog or the knowledge base and extract again, or exclude it.",
+        unmatched_other:
+          "{{count}} requirement concepts are not in the data yet: {{names}}. Add them to a data catalog or the knowledge base and extract again, or exclude them.",
+        more: " and {{count}} more",
+        more_one: " and {{count}} more",
+        more_other: " and {{count}} more",
+        settle: "Review",
+      },
+      run: {
+        allTitle: "Extract concepts",
+        allIntro: "The project's sources are processed in order:",
+        oneTitle: "Extract only {{name}}",
+        oneContent: "Only this source is processed; the results of the others stay as they are.",
+        step: {
+          table:
+            "{{count}} data tables: tables not yet understood are understood in the project's content language, then candidate concepts are made;",
+          table_one:
+            "{{count}} data table: tables not yet understood are understood in the project's content language, then candidate concepts are made;",
+          table_other:
+            "{{count}} data tables: tables not yet understood are understood in the project's content language, then candidate concepts are made;",
+          document:
+            "{{count}} requirement documents: their concepts are extracted, each matched to the data that holds it;",
+          document_one:
+            "{{count}} requirement document: its concepts are extracted, each matched to the data that holds it;",
+          document_other:
+            "{{count}} requirement documents: their concepts are extracted, each matched to the data that holds it;",
+          knowledgeBase:
+            "{{count}} knowledge-base debug files: their concepts are extracted into the knowledge-base extraction data.",
+          knowledgeBase_one:
+            "{{count}} knowledge-base debug file: its concepts are extracted into the knowledge-base extraction data.",
+          knowledgeBase_other:
+            "{{count}} knowledge-base debug files: their concepts are extracted into the knowledge-base extraction data.",
+        },
+        keeps:
+          "Concepts already confirmed or excluded stay as they are; data tables are updated only where they changed.",
+        start: "Start",
+        doneAll: "Extraction finished: every source was processed",
+        doneOne: "This source was extracted again",
+        someFailed:
+          "Extraction finished, but {{names}} did not complete. Extract only that source again later.",
+        failed: {
+          table: "The last extraction did not complete. Try again later.",
+          document:
+            "No concepts could be extracted from the requirement documents. Try again later.",
+          busy: "The requirements are being processed. Extract again later.",
+          knowledgeBase:
+            "The last extraction from the debug files did not complete. Try again later.",
+        },
+      },
+      sources: {
+        title: "Sources",
+        description:
+          "Concepts are extracted from these sources, the same sources AI refers to in kinetic modeling and business scenarios",
+        manage: "Manage sources in requirements and sources",
+        kind: {
+          table: "Data tables",
+          document: "Requirement documents",
+          knowledgeBase: "Knowledge-base debug files",
+        },
+        name: {
+          table: "{{count}} data tables",
+          table_one: "{{count}} data table",
+          table_other: "{{count}} data tables",
+          document: "{{count}} requirement documents",
+          document_one: "{{count}} requirement document",
+          document_other: "{{count}} requirement documents",
+          knowledgeBase: "{{count}} knowledge-base debug files",
+          knowledgeBase_one: "{{count}} knowledge-base debug file",
+          knowledgeBase_other: "{{count}} knowledge-base debug files",
+        },
+        countUnknown: " (count unavailable)",
+        professional: "Professional",
+        detail: {
+          table: "From {{count}} data catalogs",
+          table_one: "From {{count}} data catalog",
+          table_other: "From {{count}} data catalogs",
+          document: "Documents uploaded in requirements and sources",
+          knowledgeBase: "Files locked for debugging in the knowledge base",
+        },
+        notExtracted: "Not extracted",
+        notUnderstood:
+          "{{count}} tables are still named by their table names; they are understood first when extracting",
+        notUnderstood_one:
+          "{{count}} table is still named by its table name; it is understood first when extracting",
+        notUnderstood_other:
+          "{{count}} tables are still named by their table names; they are understood first when extracting",
+        extracted: "Extracted",
+        extractedAt: "Extracted · {{time}}",
+        produced: {
+          table: " · {{count}} concepts",
+          table_one: " · {{count}} concept",
+          table_other: " · {{count}} concepts",
+          document: " · {{count}} requirement concepts",
+          document_one: " · {{count}} requirement concept",
+          document_other: " · {{count}} requirement concepts",
+          knowledgeBase: " · {{count}} concepts",
+          knowledgeBase_one: " · {{count}} concept",
+          knowledgeBase_other: " · {{count}} concepts",
+        },
+        unmatched: ", {{count}} not matched",
+        unmatched_one: ", {{count}} not matched",
+        unmatched_other: ", {{count}} not matched",
+        waiting: "Waiting",
+        running: "Processing…",
+        steps: {
+          table: { understand: "Semantic understanding", candidates: "Candidates" },
+          document: { extract: "Requirement concepts", match: "Match to data" },
+          knowledgeBase: {
+            reading: "Read files",
+            analyzing: "Extract concepts",
+            writing: "Write data",
+          },
+        },
+        view: "View concepts",
+        runOne: {
+          first: "Extract only this",
+          again: "Extract only this again",
+          firstOf: "Extract only {{name}}",
+          againOf: "Extract only {{name}} again",
+        },
+        network:
+          "The network already has {{count}} concepts ({{structured}} bound to data tables, {{unstructured}} to knowledge-base extraction data); they need no extraction and are listed below.",
+        network_one:
+          "The network already has {{count}} concept ({{structured}} bound to data tables, {{unstructured}} to knowledge-base extraction data); it needs no extraction and is listed below.",
+        network_other:
+          "The network already has {{count}} concepts ({{structured}} bound to data tables, {{unstructured}} to knowledge-base extraction data); they need no extraction and are listed below.",
       },
       stats: {
-        sources: "Sources",
-        concepts: "Candidate concepts",
-        inModel: "In the model",
-        inModelPending: "{{count}} adopted by drafting, not yet confirmed",
-        inModelPending_one: "{{count}} adopted by drafting, not yet confirmed",
-        inModelPending_other: "{{count}} adopted by drafting, not yet confirmed",
+        total: "Concepts",
+        pending: "To confirm",
+        confirmed: "Confirmed",
+        excluded: "Excluded",
+        network: "Includes {{count}} the network has",
+        network_one: "Includes {{count}} the network has",
+        network_other: "Includes {{count}} the network has",
       },
       verdict: {
         object: "Object",
@@ -222,61 +360,193 @@ export const bknProjectEnUS = {
         values: "Value list",
         relation: "Relation",
         kinetic: "Kinetic",
-        none: "Not included",
+        none: "Excluded",
       },
-      state: {
+      status: {
         pending: "To confirm",
-        blocked: "Needs action",
-        judged: "Confirmed",
-        in_model: "In the model",
+        confirmed: "Confirmed",
+        network: "In the network",
+        excluded: "Excluded",
+        candidate: "Not extracted",
+      },
+      origin: {
+        network: "In the network",
+        table: "Data table",
+        knowledgeBase: "Knowledge base",
+      },
+      kind: {
+        structured: "Structured",
+        unstructured: "Unstructured",
+      },
+      group: {
+        structured: "Bound to data tables · {{count}}",
+        structured_one: "Bound to data tables · {{count}}",
+        structured_other: "Bound to data tables · {{count}}",
+        unstructured: "Bound to knowledge-base extraction data · {{count}}",
+        unstructured_one: "Bound to knowledge-base extraction data · {{count}}",
+        unstructured_other: "Bound to knowledge-base extraction data · {{count}}",
+      },
+      binding: {
+        datasetUnnamed: "Knowledge-base extraction data",
+      },
+      as: {
+        network: "{{verdict}} · in the network",
+        blocked: "{{verdict}} · {{blocked}}",
       },
       filter: {
         all: "All",
+        origin: "Source",
+        status: "Status",
+        verdict: "Type",
+        allVerdicts: "All types",
+        search: "Search concepts",
       },
-      pending:
-        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
-      pending_one:
-        "{{count}} concept to confirm. Judge it or accept the suggestion; you can change a judgment later.",
-      pending_other:
-        "{{count}} concepts to confirm. Judge them one by one or accept all suggestions; you can change a judgment later.",
-      pendingAdopted:
-        "Those already adopted but not confirmed are written as they are when the model is confirmed; judge any you do not want as not included.",
-      acceptAll: "Accept all suggestions",
-      acceptTitle: "Accept all suggestions?",
-      acceptContent:
-        "Every concept to confirm is judged as suggested when extracting: those suggested in are adopted, the others left out. Those without an identity or with an end not adopted are skipped for you. You can still change each judgment later.",
-      accepted: "Accepted {{count}} suggestions",
-      acceptedSkipped: "Accepted {{accepted}} suggestions; {{count}} need you",
-      goToModel: "Go to concept modeling",
+      columns: {
+        concept: "Concept",
+        source: "Source / binding",
+        as: "Taken as",
+        asHint: "Hover over a row's value to see why",
+        status: "Status",
+        actions: "Actions",
+      },
+      selection: {
+        count: "{{count}} selected (kept across pages)",
+        count_one: "{{count}} selected (kept across pages)",
+        count_other: "{{count}} selected (kept across pages)",
+        clear: "Clear selection",
+        confirmed: "Confirmed {{count}} concepts",
+        confirmed_one: "Confirmed {{count}} concept",
+        confirmed_other: "Confirmed {{count}} concepts",
+        excluded: "Excluded {{count}} concepts",
+        excluded_one: "Excluded {{count}} concept",
+        excluded_other: "Excluded {{count}} concepts",
+      },
+      tick: "Select {{name}}",
+      confirm: "Confirm",
+      confirmOf: "Confirm {{name}}",
+      change: "Change to…",
+      changeOf: "Change {{name}} to…",
+      changeTitle: "Change {{name}} to…",
+      changeNow: "Now: {{as}}",
+      exclude: "Exclude",
+      excludeOf: "Exclude {{name}}",
+      view: "View",
+      mergeInto: "Merge into…",
+      mergeIntoOf: "Merge {{name}} into…",
+      mergeTitle: "Merge {{name}} into…",
+      mergeScope: {
+        structured:
+          "{{name}} is bound to a data table, so it can only be merged into an object bound to a data table.",
+        unstructured:
+          "{{name}} is bound to knowledge-base extraction data, so it can only be merged into an object bound to that data.",
+      },
+      mergeNone: "No object of the same kind to merge into.",
+      mergeOther: {
+        structured:
+          "Concepts from the knowledge base are not listed: structured and unstructured concepts are not merged. If they really are one business object, a custom view mapping the properties of both is needed, which this release does not offer. Where they are linked, add a relation.",
+        unstructured:
+          "Objects from data tables are not listed: structured and unstructured concepts are not merged. If they really are one business object, a custom view mapping the properties of both is needed, which this release does not offer. Where they are linked, add a relation.",
+      },
+      mergeTicked: {
+        action: "Merge selected",
+        objectsOnly: "Only objects can be merged; change properties and relations with Change to…",
+      },
+      cross: {
+        title: "These cannot be merged directly",
+        both: "The selection holds objects bound to data tables and concepts extracted from the knowledge base:",
+        why: "Their properties come from different data. Merging them needs a custom view that maps the properties of both, which the concepts page cannot make and this release does not offer. Merge within one kind first; where the two kinds are linked, add a relation, such as Supplier holds Supplier certificate.",
+        close: "Got it",
+        relate: "Ask AI to suggest a relation",
+        askRelation: "what relation fits the selected concepts",
+        refused:
+          "A concept bound to a data table and one extracted from the knowledge base cannot be merged. Add a relation instead.",
+      },
+      unmerge: "Unmerge {{name}}",
+      merged: "Merged: {{names}}",
+      aliases: "Aliases: {{names}}",
+      ask: "Ask AI",
+      emptyData:
+        "Nothing extracted yet. Extract concepts to get candidates from the data tables and the knowledge base.",
+      emptyFiltered: "No concept matches the filters",
+      requirement: {
+        intro:
+          "Requirement concepts come from the requirement documents. They never become objects of their own; they say what data the business needs. A confirmed match names and describes the object it is matched to; for one not in the data, add a data catalog or the knowledge base, or exclude it.",
+        empty:
+          "No requirement concepts yet. Extract concepts to read the requirement documents and match each concept to the data.",
+        emptyFiltered: "No requirement concept matches the filter",
+        filter: {
+          all: "All {{count}}",
+          pending: "To confirm {{count}}",
+          structured: "Matched to tables {{count}}",
+          structured_one: "Matched to tables {{count}}",
+          structured_other: "Matched to tables {{count}}",
+          unstructured: "Matched to knowledge base {{count}}",
+          unmatched: "Not matched {{count}}",
+          excluded: "Excluded {{count}}",
+        },
+        columns: {
+          term: "Requirement concept (as written)",
+          match: "Matched to",
+          state: "Status",
+          actions: "Actions",
+        },
+        state: {
+          pending: "To confirm",
+          confirmed: "Confirmed",
+          unmatched: "Needs data",
+          excluded: "Excluded",
+        },
+        kind: {
+          structured: "Table object",
+          unstructured: "Knowledge-base concept",
+        },
+        quote: '"{{quote}}"',
+        excluded: "Excluded",
+        unmatched: "Not matched",
+        unmatchedHint:
+          "Named in the requirements but not in the data; add a data catalog or the knowledge base later",
+        notInData: "Named in the requirements but not in the data yet.",
+        why: "Why",
+        addCatalog: "Add a data catalog",
+        addKnowledgeBase: "Add to the knowledge base",
+        by: {
+          ai: "Suggested by AI",
+          person: "Set by hand",
+          name: "Same name",
+        },
+        basisHint: " · basis (hover)",
+        confirm: "Confirm",
+        confirmOf: "Confirm {{name}} matched to {{target}}",
+        change: "Change to…",
+        changeOf: "Match {{name}} to…",
+        exclude: "Exclude",
+        excludeOf: "Exclude {{name}}",
+        restore: "Restore",
+        askAgain: "Ask AI to match again",
+        chooseTitle: "Match {{name}} to…",
+        group: {
+          structured: "Table objects · bound to data tables",
+          unstructured: "Knowledge-base concepts · bound to knowledge-base extraction data",
+          none: "None of these",
+        },
+        noNewObject:
+          "A requirement concept can only be matched to an existing table object or knowledge-base concept; it never becomes an object of its own.",
+        matchFailed: "The match could not be saved. Try again later.",
+      },
       empty: {
         title: "No concepts yet",
         description:
-          "Concepts are drawn from the requirements and sources. Set up the sources first, then extract the concepts.",
+          "Concepts are extracted from data tables, requirement documents and the knowledge base. Set up the sources in requirements and sources first, then extract concepts.",
         action: "Go to requirements and sources",
       },
-      drafting: "Extracting concepts…",
-      loadFailed: "The concepts cannot be read right now",
-      judgeFailed: "The judgment was not saved. Try again later.",
+      loadFailed: "Concepts are unavailable right now",
+      judgeFailed: "The judgment could not be saved. Try again later.",
+      mergeFailed: "The merge could not be saved. Try again later.",
       stale:
-        "The model changed after this page was opened, so the judgment was not saved. Reload, then judge again.",
+        "This changed after the page was opened, so the change was not saved. Reload and try again.",
       sourceChanged:
-        "This concept comes from a knowledge-base selection that is no longer in use, so the judgment was not saved. Choose the knowledge bases again and extract concepts, then judge it.",
+        "This concept comes from a knowledge-base selection no longer in use, so the judgment was not saved. Choose the knowledge base and extract concepts again before judging it.",
       reload: "Reload",
-      columns: {
-        concept: "Concept",
-        sources: "Sources",
-        verdict: "Judgment",
-        reason: "Why",
-        destination: "Goes to",
-        state: "Status",
-        actions: "Actions",
-      },
-      source: {
-        table: "Table: {{name}}",
-        document: "Knowledge-base file",
-        requirement: "Requirement: {{name}}",
-        network: "Already in the network",
-      },
       because: {
         table_entity: "From a business table",
         table_understood: "From semantic understanding",
@@ -292,30 +562,12 @@ export const bknProjectEnUS = {
         network: "The knowledge network already has it",
         other: "Suggested when extracting",
       },
-      destination: {
-        model: "Into the concept model",
-        property: "As a property of an object",
-        kinetic: "Into the kinetic model",
-        none: "Not into the model",
-        noItem: "No data source yet",
-        candidate: "Goes into the concept model once extracted",
-      },
       blocked: {
         needs_identity: "Choose its identity first",
         end_not_adopted: "Adopt the objects at both ends first",
         repair: "Fix this relation first",
-        action: "Fix it",
       },
-      merged: "Merged: {{names}}",
       notAdopted: "{{because}}; not adopted when drafting. You can still judge it “{{verdict}}”",
-      confirm: "Confirm",
-      confirmOf: "Confirm the judgment of “{{name}}”",
-      mergeInto: "Merge into…",
-      unmerge: "Take out “{{name}}”",
-      verdictOf: "Judgment of “{{name}}”",
-      mergeIntoOf: "Merge “{{name}}” into",
-      mergeFailed: "The merge was not saved. Try again later.",
-      readOnly: "Only the project owner can judge concepts",
       history: {
         judge: "Judged the concept “{{name}}” as {{verdict}}",
         merge: "Merged the concept “{{name}}” into “{{into}}”",
@@ -324,22 +576,6 @@ export const bknProjectEnUS = {
         add: "Added the concept “{{name}}”",
       },
       understoodWith: "Semantic understanding: {{description}}",
-      aliases: "Aliases: {{names}}",
-      aiMark: "Named or added by AI",
-      notUnderstood:
-        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
-      notUnderstood_one:
-        "{{count}} table has no semantic understanding yet, so its concept uses the table name. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
-      notUnderstood_other:
-        "{{count}} tables have no semantic understanding yet, so their concepts use the table names. Extracting again runs semantic understanding on them first; the business names replace the table names once it finishes.",
-      notUnderstoodReadOnly:
-        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
-      notUnderstoodReadOnly_one:
-        "{{count}} table has no semantic understanding yet, so its concept uses the table name.",
-      notUnderstoodReadOnly_other:
-        "{{count}} tables have no semantic understanding yet, so their concepts use the table names.",
-      understandAction: "Run semantic understanding",
-      ask: "Ask AI",
       revise: {
         define: "“{{name}}”",
         verdict: "Verdict of “{{name}}”",
