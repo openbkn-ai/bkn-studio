@@ -46,7 +46,8 @@ export function ProjectDeleteModal({
   };
 
   const confirm = async () => {
-    if (!project || !matches) {
+    // Enter in the name field must not send a second request while one is under way.
+    if (!project || !matches || deleting) {
       return;
     }
     setDeleting(true);

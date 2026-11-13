@@ -73,6 +73,21 @@ describe("ProjectDeleteModal", () => {
     await waitFor(() => expect(onDeleted).toHaveBeenCalledWith(project));
   });
 
+  it("sends one request when Enter is pressed again while deleting", async () => {
+    let finish: () => void = () => undefined;
+    deleteProjectMock.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+    const onDeleted = renderModal();
+
+    typeName("Orders");
+    const field = screen.getByLabelText("bknProject.manage.delete.typeNameLabel");
+    fireEvent.keyDown(field, { code: "Enter", key: "Enter", keyCode: 13 });
+    fireEvent.keyDown(field, { code: "Enter", key: "Enter", keyCode: 13 });
+    finish();
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(deleteProjectMock).toHaveBeenCalledTimes(1);
+  });
+
   it("explains a refusal while a release is being published, and stays open", async () => {
     deleteProjectMock.mockRejectedValue(
       new AxiosError("busy", "ERR_BAD_REQUEST", undefined, undefined, {
