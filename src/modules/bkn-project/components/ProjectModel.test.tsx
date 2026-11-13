@@ -254,6 +254,31 @@ describe("ProjectModel", () => {
     },
   );
 
+  it("says what each source drafted, and keeps the source-locating items folded", async () => {
+    getDraftMock.mockResolvedValue(
+      edited((draft) => {
+        const [first] = draft.items.objectTypes;
+        draft.items.objectTypes.push(
+          { ...first, document: { role: "entity" } as never, id: "invoice", name: "Invoice" },
+          {
+            ...first,
+            document: { role: "evidence_block" } as never,
+            id: "block",
+            name: "Source block",
+          },
+        );
+      }),
+    );
+    renderModel();
+
+    expect(await screen.findByText(/bknProject.model.objectsBySource/)).toBeInTheDocument();
+    const inTable = () =>
+      screen.queryAllByText("Source block").filter((node) => node.closest("tbody")).length;
+    expect(inTable()).toBe(0);
+    fireEvent.click(screen.getByText(/bknProject.model.showSystem/));
+    await waitFor(() => expect(inTable()).toBe(1));
+  });
+
   it("offers to draft before the first draft, unless the project has no catalogs", async () => {
     getDraftMock.mockResolvedValue(null);
     const view = renderModel();

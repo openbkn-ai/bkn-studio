@@ -6,7 +6,7 @@
  */
 
 import { PlusOutlined } from "@ant-design/icons";
-import { Alert, Segmented, Space, Spin } from "antd";
+import { Alert, Checkbox, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -95,6 +95,11 @@ function failureKey(error: string) {
   return "bknProject.model.failed.source";
 }
 
+/** What a knowledge-base extraction keeps for locating the source text, not a business item. */
+function systemItem(item: { document?: { role: string } }) {
+  return Boolean(item.document?.role.startsWith("evidence_"));
+}
+
 /**
  * The ontology modeling page: the project's draft, read-only. Every rule lives in
  * bkn-project; the page shows what it answers and the evidence behind each item.
@@ -138,6 +143,8 @@ export function ProjectModel({
   const [confirming, setConfirming] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "objects");
+  // What a knowledge-base extraction keeps for locating the source text: shown on request.
+  const [showSystem, setShowSystem] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   // The object type open in the editing panel over the page.
   const [panelId, setPanelId] = useState<string | null>(initialObject ?? null);
@@ -601,6 +608,19 @@ export function ProjectModel({
   const existingObjects = items.objectTypes.filter((item) => item.existing).length;
   const existingRelations = items.relationTypes.filter((item) => item.existing).length;
   const holdsExisting = existingObjects + existingRelations > 0;
+  const systemObjects = items.objectTypes.filter(systemItem).length;
+  const systemRelations = items.relationTypes.filter(systemItem).length;
+  // What the draft drafted, by source: the tables, and a knowledge-base extraction.
+  const documentObjects = items.objectTypes.filter(
+    (item) => !item.existing && item.document,
+  ).length;
+  const draftedObjects = (count: number) =>
+    documentObjects
+      ? t("bknProject.model.objectsBySource", {
+          documents: documentObjects,
+          tables: count - documentObjects,
+        })
+      : t("bknProject.model.countObjects", { count });
   const existingObjectIds = new Set(
     items.objectTypes.filter((item) => item.existing).map((item) => item.id),
   );
@@ -695,9 +715,7 @@ export function ProjectModel({
           {draft.status === "ready"
             ? holdsExisting
               ? t("bknProject.model.summaryWithExisting", {
-                  newObjects: t("bknProject.model.countObjects", {
-                    count: items.objectTypes.length - existingObjects,
-                  }),
+                  newObjects: draftedObjects(items.objectTypes.length - existingObjects),
                   newRelations: t("bknProject.model.countRelations", {
                     count: items.relationTypes.length - existingRelations,
                   }),
@@ -705,8 +723,10 @@ export function ProjectModel({
                   relations: t("bknProject.model.countRelations", { count: existingRelations }),
                 })
               : t("bknProject.model.summary", {
-                  objects: items.objectTypes.length,
-                  relations: items.relationTypes.length,
+                  objects: draftedObjects(items.objectTypes.length),
+                  relations: t("bknProject.model.countRelations", {
+                    count: items.relationTypes.length,
+                  }),
                 })
             : null}
           {draft.status === "ready" && pending ? (
@@ -790,11 +810,26 @@ export function ProjectModel({
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
+          {(activeTab === "objects" ? systemObjects : systemRelations) &&
+          (activeTab === "objects" || activeTab === "relations") ? (
+            <Checkbox
+              checked={showSystem}
+              onChange={(event) => setShowSystem(event.target.checked)}
+            >
+              {t("bknProject.model.showSystem", {
+                count: activeTab === "objects" ? systemObjects : systemRelations,
+              })}
+            </Checkbox>
+          ) : null}
           {activeTab === "objects" ? (
             <DraftObjectsTable
               actions={actions}
               catalogNames={catalogNames}
-              items={items.objectTypes}
+              items={
+                showSystem
+                  ? items.objectTypes
+                  : items.objectTypes.filter((item) => !systemItem(item))
+              }
               onOpen={editable ? openEditor : setOpenId}
             />
           ) : activeTab === "relations" ? (
@@ -822,7 +857,11 @@ export function ProjectModel({
               ) : null}
               <DraftRelationsTable
                 actions={actions}
-                items={items.relationTypes}
+                items={
+                  showSystem
+                    ? items.relationTypes
+                    : items.relationTypes.filter((item) => !systemItem(item))
+                }
                 objectNames={objectNames}
                 onOpen={editable ? openRelation : undefined}
                 projectId={project.id}
