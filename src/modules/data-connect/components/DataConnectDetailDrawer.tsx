@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
+
 import { Alert, Descriptions, Drawer, Empty, Space, Spin, Tag } from "antd";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +17,10 @@ import { extractRequestErrorMessage, isRequestConflict } from "@/framework/reque
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
-import { humanizeConnectorFieldLabel } from "@/modules/data-connect/lib/connector-template";
+import {
+  getConnectorTemplateMeta,
+  humanizeConnectorFieldLabel,
+} from "@/modules/data-connect/lib/connector-template";
 import {
   getDataConnectHealthCheckSchedule,
   getDataConnectRecord,
@@ -212,7 +217,12 @@ export function DataConnectDetailDrawer({
                 {
                   key: "category",
                   label: t("common.category"),
-                  children: t(`dataConnect.categories.${record.category}`),
+                  children: getConnectorTemplateMeta({
+                    category: record.category,
+                    description: "",
+                    name: connectorTypeName,
+                    type: record.connectorType,
+                  }).label,
                 },
                 {
                   key: "connectorType",
@@ -518,7 +528,7 @@ function buildConfigEntries(
   t: TFunction,
   connectorType?: DataConnectConnectorType,
 ) {
-  const config = record.connectorConfig ?? {};
+  const config = protectCatalogConfigVariables(record.connectorConfig ?? {}, "display");
   const fieldConfig = connectorType?.fieldConfig ?? {};
   const templateKeys = Object.keys(fieldConfig);
   const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort(

@@ -68,6 +68,7 @@ export type CatalogDeletionImpact = {
 };
 
 export type CatalogRecord = {
+  /** Read-only category supplied by Vega; not part of Catalog mutation inputs. */
   category: string;
   connectorConfig: Record<string, unknown>;
   connectorType: string;

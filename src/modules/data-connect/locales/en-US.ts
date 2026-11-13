@@ -424,25 +424,35 @@ export const dataConnectEnUS = {
         anyshare: {
           description: "Connect fileset and document resources.",
         },
+        doris: {
+          label: "Analytical database (OLAP)",
+          description: "Connect Apache Doris analytical databases (OLAP).",
+        },
         mariadb: {
+          label: "Relational database",
           description: "Connect MariaDB relational databases.",
         },
         mysql: {
+          label: "Relational database",
           description: "Connect MySQL relational databases.",
         },
         opensearch: {
           description: "Connect OpenSearch indexes.",
         },
         oracle: {
+          label: "Relational database",
           description: "Connect Oracle relational databases.",
         },
         hana: {
+          label: "Relational database",
           description: "Connect SAP HANA relational databases.",
         },
         postgresql: {
+          label: "Relational database",
           description: "Connect PostgreSQL relational databases.",
         },
         sqlserver: {
+          label: "Relational database",
           description: "Connect Microsoft SQL Server relational databases.",
         },
       },

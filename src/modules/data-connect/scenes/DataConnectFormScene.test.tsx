@@ -575,6 +575,40 @@ describe("DataConnectFormScene · connection preflight", () => {
     );
   });
 
+  it("omits declared sensitive variables when hydrating an existing connector form", async () => {
+    mockSQLServerEditCatalog(
+      {},
+      {
+        variables: { api_key: "private-key", arbitrary: "private-option", public_value: "public" },
+        sensitive_variables: ["api_key", "arbitrary"],
+      },
+      "custom",
+    );
+    getDataConnectConnectorTypeMock.mockResolvedValue({
+      available: true,
+      category: "api",
+      description: "",
+      enabled: true,
+      fieldConfig: {
+        variables: connectorField("Variables", "object", false),
+        sensitive_variables: connectorField("Sensitive variables", "array", false),
+      },
+      mode: "local",
+      name: "Custom",
+      type: "custom",
+    });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    await screen.findByDisplayValue(/public/);
+    const values = Array.from(
+      document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input,textarea"),
+      (element) => element.value,
+    ).join(" ");
+    expect(values).not.toContain("private-option");
+    expect(values).not.toContain("private-key");
+    expect(values).toContain("public");
+  });
+
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
     permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({ "connection timeout": 15, encrypt: true });

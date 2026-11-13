@@ -304,7 +304,7 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       name: input.name,
       description: input.description ?? "",
       connectorType: "",
-      category: "table",
+      category: "",
       mode: "local",
       enabled: true,
       status: "enabled",

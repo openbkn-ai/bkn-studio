@@ -38,6 +38,77 @@ describe("catalog.service · listCatalogs", () => {
     vi.unstubAllEnvs();
   });
 
+  it("submits an independent login request and sensitive variables without changing their structure", async () => {
+    const { createPhysicalCatalog } = await import("@/shared/catalog/catalog.service");
+    const config = {
+      base_url: "https://api.example.com",
+      options: { timeout_seconds: 30, max_response_mib: 10 },
+      variables: {
+        token: "protected-token",
+        api_key: "protected-key",
+        arbitrary: "protected-input",
+        app_id: "app",
+      },
+      sensitive_variables: ["token", "api_key", "arbitrary"],
+      login_request: {
+        request: {
+          method: "POST",
+          path: "/login",
+          headers: { Authorization: "Bearer {{ token }}" },
+          body: {
+            type: "object",
+            properties: { key: { type: "string", value: "{{ api_key }}" } },
+          },
+        },
+        response: {
+          "200": {
+            description: "Login response",
+            content: { "application/json": { schema: { type: "object" } } },
+          },
+        },
+        success_rule: { http_status: [200] },
+      },
+    };
+    postMock.mockResolvedValue({ data: { id: "api" } });
+    await createPhysicalCatalog({
+      connectorConfig: config,
+      connectorType: "http",
+      description: "",
+      enabled: true,
+      name: "API",
+      tags: [],
+    });
+    const body = postMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.connector_config).toEqual(config);
+  });
+
+  it("preserves the server category on reads without writing it back on edits", async () => {
+    const response = {
+      category: "api",
+      connector_type: "custom-api",
+      connector_config: {},
+      description: "",
+      enabled: true,
+      id: "catalog-api",
+      name: "API",
+      tags: [],
+      type: "physical",
+      update_time: 123,
+    };
+    getMock.mockResolvedValue({ data: { entries: [response], total_count: 1 } });
+    const { getCatalog, listCatalogs, updateCatalog } =
+      await import("@/shared/catalog/catalog.service");
+    const detail = await getCatalog("catalog-api");
+    if (!detail) throw new Error("Expected Catalog detail");
+    expect(detail.category).toBe("api");
+    const summary = await listCatalogs({ keyword: "", page: 1, pageSize: 10 });
+    expect(summary.items[0].category).toBe("api");
+    await updateCatalog(detail.id, { ...detail, name: "Renamed" });
+    const body = putMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.name).toBe("Renamed");
+    expect(body).not.toHaveProperty("category");
+  });
+
   it("passes the physical type to Vega before pagination", async () => {
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");
 
@@ -464,6 +535,17 @@ describe("catalog.service · mock health check schedule", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("uses an empty category for existing and newly created logical mock catalogs", async () => {
+    const { createLogicalCatalog, listCatalogs } = await import("@/shared/catalog/catalog.service");
+    await createLogicalCatalog({ name: "new-logical" });
+    const logical = await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "logical" });
+    expect(logical.items.some((catalog) => catalog.name === "new-logical")).toBe(true);
+    expect(logical.items.every((catalog) => catalog.category === "")).toBe(true);
+    const physical = await listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "physical" });
+    expect(physical.items.find((catalog) => catalog.id === "cat-001")?.category).toBe("table");
+    expect(physical.items.find((catalog) => catalog.id === "cat-002")?.category).toBe("index");
   });
 
   it("exposes canonical Vega operations on mock catalogs", async () => {

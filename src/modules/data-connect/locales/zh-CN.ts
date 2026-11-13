@@ -397,25 +397,35 @@ export const dataConnectZhCN = {
         anyshare: {
           description: "面向文件集 / 文档资源接入。",
         },
+        doris: {
+          label: "分析型数据库（OLAP）",
+          description: "连接 Apache Doris 分析型数据库（OLAP）。",
+        },
         mariadb: {
+          label: "关系型数据库",
           description: "连接 MariaDB 关系型数据库。",
         },
         mysql: {
+          label: "关系型数据库",
           description: "连接 MySQL 关系型数据库。",
         },
         opensearch: {
           description: "连接 OpenSearch 检索索引。",
         },
         oracle: {
+          label: "关系型数据库",
           description: "连接 Oracle 关系型数据库。",
         },
         hana: {
+          label: "关系型数据库",
           description: "连接 SAP HANA 关系型数据库。",
         },
         postgresql: {
+          label: "关系型数据库",
           description: "连接 PostgreSQL 关系型数据库。",
         },
         sqlserver: {
+          label: "关系型数据库",
           description: "连接 Microsoft SQL Server 关系型数据库。",
         },
       },
