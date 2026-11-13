@@ -166,8 +166,10 @@ export function ProjectConcepts({
   // The specification, for the run extracting the documents' concepts; null when unread.
   const [requirements, setRequirements] = useState<Requirements | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Reads failed in a row: following a run stops at the limit and the page offers to refresh.
+  // Reads failed in a row, of the page and of the specification's run: following a run stops
+  // at the limit and the page offers to refresh.
   const [failures, setFailures] = useState(0);
+  const [runFailures, setRunFailures] = useState(0);
   const [reads, setReads] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -196,7 +198,8 @@ export function ProjectConcepts({
       if (nextRequirements !== undefined) {
         setRequirements(nextRequirements);
       }
-      setFailures((count) => (nextRequirements === undefined ? count + 1 : 0));
+      setFailures(0);
+      setRunFailures((count) => (nextRequirements === undefined ? count + 1 : 0));
       setLoadError(null);
       return true;
     } catch (error) {
@@ -217,7 +220,10 @@ export function ProjectConcepts({
   const conceptsRun = requirements?.spec.conceptsRun;
   const extractingRequirements = conceptsRun?.status === "running";
   const following = drafting || extractingRequirements;
-  const stalled = following && failures >= POLL_FAILURE_LIMIT;
+  // Only the extraction is read from the specification: its failed reads leave drafting alone.
+  const stalled =
+    (following && failures >= POLL_FAILURE_LIMIT) ||
+    (extractingRequirements && runFailures >= POLL_FAILURE_LIMIT);
   useEffect(() => {
     if (!following || stalled) {
       return undefined;

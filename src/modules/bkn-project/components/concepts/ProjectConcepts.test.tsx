@@ -363,6 +363,27 @@ describe("ProjectConcepts", () => {
     }
   });
 
+  it("keeps following a drafting while only the specification cannot be read", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const drafting = { items: { decisions: [] }, status: "drafting", updateTime: 5 };
+      requirements.getRequirements.mockRejectedValue(new Error("signed out"));
+      service.getDraft.mockResolvedValue(drafting);
+      renderConcepts();
+      await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(1));
+
+      for (let read = 2; read <= 2 + POLL_FAILURE_LIMIT; read += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+        });
+        await waitFor(() => expect(service.getDraft).toHaveBeenCalledTimes(read));
+      }
+      expect(screen.queryByText("bknProject.readStalled")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the last extracted concepts when extracting again failed, and says so", async () => {
     withRun({ extracted: true, status: "failed" });
     renderConcepts();
