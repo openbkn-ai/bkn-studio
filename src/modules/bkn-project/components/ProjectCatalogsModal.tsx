@@ -9,8 +9,9 @@ import { Alert, Form, Modal, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { draftErrorCode } from "@/modules/bkn-project/components/draft/edit";
+import { ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
+import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { addDraftCatalogs } from "@/modules/bkn-project/services/draft.service";
 import { getProject, setProjectCatalogs } from "@/modules/bkn-project/services/project.service";
 import type { Draft } from "@/modules/bkn-project/types/draft";
@@ -19,9 +20,10 @@ import type { Project } from "@/modules/bkn-project/types/project";
 import styles from "./ProjectModel.module.css";
 
 /**
- * Replaces the data catalogs a project drafts from, or adds some to them. Replacing starts from
- * the project's catalogs the caller can still see and names the ones that are gone, since saving
- * removes them; adding offers the catalogs the project does not have yet.
+ * Replaces the data catalogs a project drafts from, or adds some to them. The catalogs its existing
+ * network reads are the network's: shown with the blue dot, never removed here. Replacing starts
+ * from the catalogs the owner added that the caller can still see and counts the ones that are
+ * gone, since saving removes them; adding offers the catalogs the project does not have yet.
  */
 export function ProjectCatalogsModal({
   catalogs,
@@ -43,18 +45,19 @@ export function ProjectCatalogsModal({
 }) {
   const { t } = useTranslation();
   const adding = mode === "add";
+  const network = project.networkCatalogIds ?? [];
+  const added = project.catalogIds.filter((id) => !network.includes(id));
   const [selected, setSelected] = useState(() =>
-    adding ? [] : project.catalogIds.filter((id) => catalogs.has(id)),
+    adding ? [] : added.filter((id) => catalogs.has(id)),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const gone = adding ? [] : project.catalogIds.filter((id) => !catalogs.has(id));
+  const gone = adding ? 0 : added.filter((id) => !catalogs.has(id)).length;
   const unchanged = adding
     ? selected.length === 0
-    : selected.length === project.catalogIds.length &&
-      selected.every((id) => project.catalogIds.includes(id));
+    : selected.length === added.length && selected.every((id) => added.includes(id));
   const options = [...catalogs]
-    .filter(([id]) => !adding || !project.catalogIds.includes(id))
+    .filter(([id]) => !network.includes(id) && (!adding || !project.catalogIds.includes(id)))
     .map(([id, name]) => ({ label: name, value: id }));
 
   const save = async () => {
@@ -96,10 +99,30 @@ export function ProjectCatalogsModal({
       title={t(adding ? "bknProject.model.catalogs.addTitle" : "bknProject.model.catalogs.title")}
     >
       <Form layout="vertical">
+        {!adding && network.length ? (
+          <Form.Item
+            extra={t("bknProject.model.catalogs.networkHint")}
+            label={t("bknProject.model.catalogs.networkLabel")}
+          >
+            <ul className={styles.networkCatalogs}>
+              {network.map((id) => (
+                <li key={id}>
+                  <ExistingLine>
+                    {catalogs.get(id) ?? t("bknProject.model.catalogs.networkUnnamed")}
+                  </ExistingLine>
+                </li>
+              ))}
+            </ul>
+          </Form.Item>
+        ) : null}
         <Form.Item
           extra={t(adding ? "bknProject.model.catalogs.addHint" : "bknProject.model.catalogs.hint")}
           htmlFor="project-catalogs"
-          label={t("bknProject.model.catalogs.label")}
+          label={t(
+            !adding && network.length
+              ? "bknProject.model.catalogs.addedLabel"
+              : "bknProject.model.catalogs.label",
+          )}
         >
           <Select
             id="project-catalogs"
@@ -112,10 +135,8 @@ export function ProjectCatalogsModal({
           />
         </Form.Item>
       </Form>
-      {gone.length ? (
-        <p className={styles.muted}>
-          {t("bknProject.model.catalogs.removed", { names: gone.join(", ") })}
-        </p>
+      {gone ? (
+        <p className={styles.muted}>{t("bknProject.model.catalogs.removed", { count: gone })}</p>
       ) : null}
       {error ? <Alert description={error} showIcon type="error" /> : null}
     </Modal>

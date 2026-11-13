@@ -24,6 +24,11 @@ export type Project = {
   id: string;
   knId: string;
   name: string;
+  /**
+   * The catalogs among `catalogIds` that the network's object types read: the project takes them
+   * from its existing network, which owns them. Empty on a network the project created.
+   */
+  networkCatalogIds?: string[];
   /** Other unarchived projects of the same network. */
   otherProjects: number;
   owner: ProjectAccount;
