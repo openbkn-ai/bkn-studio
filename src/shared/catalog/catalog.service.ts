@@ -304,7 +304,7 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       name: input.name,
       description: input.description ?? "",
       connectorType: "",
-      category: "table",
+      category: "",
       mode: "local",
       enabled: true,
       status: "enabled",
@@ -349,7 +349,7 @@ export function updateMockCatalogRecord(
 export async function updateCatalog(
   id: string,
   input: {
-    connectorConfig: Record<string, unknown>;
+    connectorConfig?: Record<string, unknown>;
     connectorType: string;
     description: string;
     enabled: boolean;
@@ -392,7 +392,7 @@ export async function updateCatalog(
       name: input.name,
       description: input.description,
       tags: input.tags,
-      connectorConfig: input.connectorConfig,
+      connectorConfig: input.connectorConfig ?? record.connectorConfig,
       expectedUpdateTime: now,
       updateTime: now,
     }));
@@ -403,7 +403,7 @@ export async function updateCatalog(
   await http.put(
     `/vega-backend/v1/catalogs/${id}`,
     {
-      connector_config: input.connectorConfig,
+      ...(input.connectorConfig === undefined ? {} : { connector_config: input.connectorConfig }),
       connector_type: input.connectorType,
       description: input.description,
       enabled: input.enabled,

@@ -75,6 +75,12 @@ describe("ConnectorTypePicker edition guidance", () => {
     await i18n.changeLanguage("zh-CN");
   });
 
+  it("labels Doris as analytical while keeping its table category", () => {
+    const { button } = renderPicker("professional", { type: "doris", available: true });
+    expect(button).toHaveTextContent("分析型数据库（OLAP）");
+    expect(button).not.toHaveTextContent("关系型数据库");
+  });
+
   it.each([
     ["sqlserver", "专业版"],
     ["oracle", "专业版"],

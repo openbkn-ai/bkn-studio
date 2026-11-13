@@ -88,6 +88,30 @@ describe("connector-template · SQL Server", () => {
     await i18n.changeLanguage("zh-CN");
   });
 
+  it.each(["zh-CN", "en-US"])("labels databases by connector type in %s", async (locale) => {
+    await i18n.changeLanguage(locale);
+    const relational = locale === "zh-CN" ? "关系型数据库" : "Relational database";
+    const analytical = locale === "zh-CN" ? "分析型数据库（OLAP）" : "Analytical database (OLAP)";
+    for (const type of ["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "hana", "doris"]) {
+      const connector = { ...sqlServerConnector, name: type, type };
+      expect(getConnectorTemplateMeta(connector).label).toBe(
+        type === "doris" ? analytical : relational,
+      );
+      expect(connector.category).toBe("table");
+    }
+    expect(getConnectorTemplateMeta({ ...sqlServerConnector, type: "doris" }).description).toBe(
+      locale === "zh-CN"
+        ? "连接 Apache Doris 分析型数据库（OLAP）。"
+        : "Connect Apache Doris analytical databases (OLAP).",
+    );
+    expect(
+      getConnectorTypeTags(
+        [sqlServerConnector, { ...sqlServerConnector, type: "doris", name: "Doris" }],
+        "structured",
+      ),
+    ).toEqual(expect.arrayContaining([relational, analytical]));
+  });
+
   it("provides SQL Server defaults and field guidance", () => {
     expect(getConnectorConfigDefaults(sqlServerConnector)).toEqual({ port: 1433 });
     expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe("例如 1433");

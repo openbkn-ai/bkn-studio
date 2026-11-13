@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
+
 import { Alert, Form, Result, Spin, Steps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -167,6 +169,7 @@ export function DataConnectFormScene({
           });
         }
         setHasUnsavedChanges(false);
+        setHasConnectorConfigChanges(false);
       } catch (error) {
         if (active) {
           setLoadError(extractRequestErrorMessage(error));
@@ -215,6 +218,7 @@ export function DataConnectFormScene({
           tags: latestRecord.tags,
         });
         setHasUnsavedChanges(false);
+        setHasConnectorConfigChanges(false);
       }
     } catch (refreshError) {
       if (recordIdentityRef.current === submittedRecordIdentity) {
@@ -314,14 +318,36 @@ export function DataConnectFormScene({
   };
 
   const buildMutationPayload = async () => {
-    const values = await form.validateFields();
+    const includeConnection = mode === "create" || hasConnectorConfigChanges;
+    const values = await form.validateFields(
+      includeConnection ? undefined : ["name", "description", "tags"],
+    );
+    const connectorConfig = includeConnection
+      ? normalizeConnectorConfig(
+          values.connectorConfig ?? {},
+          selectedConnector?.fieldConfig,
+          selectedConnector?.type,
+        )
+      : {};
+    if (includeConnection && Array.isArray(connectorConfig.sensitive_variables)) {
+      const variables = connectorConfig.variables;
+      const missing = connectorConfig.sensitive_variables.filter(
+        (name: unknown) =>
+          typeof name === "string" &&
+          (!variables ||
+            typeof variables !== "object" ||
+            Array.isArray(variables) ||
+            typeof (variables as Record<string, unknown>)[name] !== "string"),
+      );
+      if (missing.length > 0) {
+        throw new Error(
+          t("dataConnect.sensitiveVariablesRequired", { fields: missing.join(", ") }),
+        );
+      }
+    }
 
     return {
-      connectorConfig: normalizeConnectorConfig(
-        values.connectorConfig ?? {},
-        selectedConnector?.fieldConfig,
-        selectedConnector?.type,
-      ),
+      connectorConfig,
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
       enabled: record?.enabled ?? values.enabled ?? true,
@@ -378,6 +404,7 @@ export function DataConnectFormScene({
           recordId,
           {
             ...payload,
+            connectorConfig: hasConnectorConfigChanges ? payload.connectorConfig : undefined,
             expectedUpdateTime: record.expectedUpdateTime,
           },
           {
@@ -428,6 +455,9 @@ export function DataConnectFormScene({
                   recordId,
                   {
                     ...retryPayload,
+                    connectorConfig: hasConnectorConfigChanges
+                      ? retryPayload.connectorConfig
+                      : undefined,
                     expectedUpdateTime: record.expectedUpdateTime,
                   },
                   {
@@ -627,7 +657,7 @@ function sanitizeConnectorConfig(
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
 ) {
   return Object.fromEntries(
-    Object.entries(config)
+    Object.entries(protectCatalogConfigVariables(config, "edit"))
       .filter(([key, value]) => !shouldOmitConnectorConfigValue(fieldConfig[key], value))
       .map(([key, value]) => {
         if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {

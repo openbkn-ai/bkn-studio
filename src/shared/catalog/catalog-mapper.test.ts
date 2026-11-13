@@ -10,6 +10,21 @@ import { describe, expect, it } from "vitest";
 import { mapBackendCatalog, mapBackendCatalogSummary } from "@/shared/catalog/catalog-mapper";
 
 describe("catalog-mapper · health status", () => {
+  it.each(["api", "table", "index", "", "future-category"])(
+    "preserves backend category %j in summaries and details",
+    (category) => {
+      const response = {
+        category,
+        connector_type: "custom",
+        enabled: true,
+        id: "catalog",
+        name: "catalog",
+      };
+      expect(mapBackendCatalogSummary(response).category).toBe(category);
+      expect(mapBackendCatalog(response).category).toBe(category);
+    },
+  );
+
   it("maps schemas from the catalog summary without exposing metadata", () => {
     const catalog = mapBackendCatalogSummary({
       connector_type: "postgresql",

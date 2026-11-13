@@ -95,6 +95,10 @@ export const dataConnectEnUS = {
     configStepTitle: "Configure data connection",
     configStepDescription: "Fill in access parameters for the selected connector.",
     encryptedFieldEditHint: "Sensitive fields are not echoed. Re-enter them.",
+    sensitiveVariablesEditHint:
+      "Re-enter sensitive variables when changing connection settings. Renaming or editing descriptions and tags does not require credentials.",
+    sensitiveVariablesRequired:
+      "Complete the sensitive variables before replacing connection settings: {{fields}}.",
     encryptedFieldPlaceholder: "Enter {{field}}",
     createFlowHint: "Saving validates parameters and tests the connection.",
     editFlowHint: "Connector type cannot change. Enable or disable from the list.",
@@ -424,25 +428,35 @@ export const dataConnectEnUS = {
         anyshare: {
           description: "Connect fileset and document resources.",
         },
+        doris: {
+          label: "Analytical database (OLAP)",
+          description: "Connect Apache Doris analytical databases (OLAP).",
+        },
         mariadb: {
+          label: "Relational database",
           description: "Connect MariaDB relational databases.",
         },
         mysql: {
+          label: "Relational database",
           description: "Connect MySQL relational databases.",
         },
         opensearch: {
           description: "Connect OpenSearch indexes.",
         },
         oracle: {
+          label: "Relational database",
           description: "Connect Oracle relational databases.",
         },
         hana: {
+          label: "Relational database",
           description: "Connect SAP HANA relational databases.",
         },
         postgresql: {
+          label: "Relational database",
           description: "Connect PostgreSQL relational databases.",
         },
         sqlserver: {
+          label: "Relational database",
           description: "Connect Microsoft SQL Server relational databases.",
         },
       },

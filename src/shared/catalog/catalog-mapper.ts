@@ -14,6 +14,8 @@ type BackendAccountInfo = {
 
 export type BackendCatalogSummary = {
   connector_type: string;
+  /** Server-managed connector category; logical catalogs return an empty string. */
+  category?: string;
   create_time?: number;
   creator?: BackendAccountInfo;
   description?: string;
@@ -85,7 +87,7 @@ function mapCatalogRecord(
     name: item.name,
     description: item.description ?? "",
     connectorType: item.connector_type,
-    category: inferConnectorCategory(item.connector_type),
+    category: item.category ?? inferConnectorCategory(item.connector_type),
     mode: "local",
     enabled: item.enabled,
     status: item.enabled ? "enabled" : "disabled",

@@ -58,6 +58,7 @@ export type DataConnectMutationPayload = {
   tags: string[];
 };
 
-export type DataConnectUpdatePayload = DataConnectMutationPayload & {
+export type DataConnectUpdatePayload = Omit<DataConnectMutationPayload, "connectorConfig"> & {
+  connectorConfig?: Record<string, unknown>;
   expectedUpdateTime: number;
 };
