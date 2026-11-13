@@ -16,6 +16,7 @@ const oauth = vi.hoisted(() => {
     beginAutoLogin: vi.fn(() => Promise.resolve(true)),
     beginLogin: vi.fn(() => Promise.resolve()),
     canAutoStartLogin: vi.fn(() => true),
+    hasSessionExpiredNotice: vi.fn(() => false),
     msUntilAutoStartAllowed: vi.fn<() => number | null>(() => null),
     reloadForSharedAuthState: vi.fn(),
     /** Stand-in for the cross-tab `storage` event; `emit` fires the release. */
@@ -61,6 +62,20 @@ describe("SignInScreen auto-redirect gating", () => {
     oauth.msUntilAutoStartAllowed.mockReset();
     oauth.msUntilAutoStartAllowed.mockReturnValue(null);
     setVisibility("visible");
+  });
+
+  it("tells the user the session expired while sending them to sign in", () => {
+    oauth.hasSessionExpiredNotice.mockReturnValueOnce(true);
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("auth.sessionExpired");
+    expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no expiry notice on an ordinary sign-in", () => {
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("redirects to hydra on its own when nothing else owns the flow", () => {

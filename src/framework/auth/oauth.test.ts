@@ -19,7 +19,10 @@ import {
   completeLogin,
   computeCodeChallenge,
   consumeCsrfRetry,
+  hasSessionExpiredNotice,
   isCsrfConflictCallback,
+  markSessionExpired,
+  refreshOAuthTokens,
   releaseFlowLock,
   logout,
   msUntilAutoStartAllowed,
@@ -27,6 +30,7 @@ import {
   stashCallbackError,
   subscribeFlowLockRelease,
   takeStashedCallbackError,
+  TOKEN_REQUEST_TIMEOUT_MS,
 } from "@/framework/auth/oauth";
 
 describe("oauth", () => {
@@ -200,6 +204,58 @@ describe("oauth", () => {
     );
   });
 
+  it("gives up on a token refresh that never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      document.cookie = "bkn_refresh_token=refresh-stalled; path=/";
+      let signal: AbortSignal | undefined;
+      vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+        signal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        });
+      });
+
+      const refresh = refreshOAuthTokens();
+      await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+
+      await expect(refresh).resolves.toBeNull();
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // hydra rotates refresh tokens: a second refresh with the same token would be
+  // rejected, so concurrent callers must share one request.
+  it("shares one token request between concurrent refreshes", async () => {
+    document.cookie = "bkn_refresh_token=refresh-shared; path=/";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-new", refresh_token: "refresh-new" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await expect(Promise.all([refreshOAuthTokens(), refreshOAuthTokens()])).resolves.toEqual([
+      "access-new",
+      "access-new",
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the session-expired notice once the login redirect starts", async () => {
+    markSessionExpired();
+    expect(hasSessionExpiredNotice()).toBe(true);
+
+    await beginLogin("/studio/projects");
+
+    expect(hasSessionExpiredNotice()).toBe(false);
+    expect(window.sessionStorage.getItem("bkn_oauth_return_to")).toBe("/studio/projects");
+  });
+
   it("does not block logout when the access audit request never resolves", async () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     document.cookie = "bkn_access_token=access-for-pending-audit; path=/";
@@ -310,6 +366,22 @@ describe("login CSRF flow lock", () => {
 
     await vi.runAllTimersAsync();
 
+    await expect(attempt).resolves.toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("keeps the session-expired notice on screen before redirecting", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    window.sessionStorage.setItem("bkn_session_expired", "1");
+    const controller = new AbortController();
+    const attempt = beginAutoLogin("/studio", undefined, controller.signal);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    controller.abort();
+    await vi.runAllTimersAsync();
+
+    // Still inside the hold, so the abort stops the redirect.
     await expect(attempt).resolves.toBe(false);
     vi.useRealTimers();
   });

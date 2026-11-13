@@ -74,6 +74,17 @@ const FLOW_OWNER_KEY = "bkn_oauth_flow_owner";
 const FLOW_LOCK_TTL_MS = 3 * 60 * 1000;
 const AUTO_START_LOGIN_JITTER_MS = 500;
 
+// Set when Studio ends a session it could not renew, so the sign-in screen can
+// say why the user is being sent back to the login page.
+const SESSION_EXPIRED_KEY = "bkn_session_expired";
+// How long the sign-in screen keeps the expiry notice on screen before it
+// redirects on its own; without it the notice flashes past unread.
+const SESSION_EXPIRED_NOTICE_MS = 1500;
+
+// The token endpoint sits behind the gateway; when it stalls, the page waiting
+// on a refresh would spin forever. Give up and treat it as a failed refresh.
+export const TOKEN_REQUEST_TIMEOUT_MS = 10_000;
+
 type TokenResponse = {
   access_token: string;
   expires_in?: number;
@@ -339,7 +350,18 @@ export function buildAuthorizationRequestURL(
   return `${gatewayOrigin()}${AUTHORIZE_PATH}?${params.toString()}`;
 }
 
+/** Remember that the session ended because it could not be renewed. */
+export function markSessionExpired() {
+  window.sessionStorage.setItem(SESSION_EXPIRED_KEY, "1");
+}
+
+export function hasSessionExpiredNotice() {
+  return window.sessionStorage.getItem(SESSION_EXPIRED_KEY) === "1";
+}
+
 async function startLogin(requestedLocale?: string | null) {
+  // The notice has done its job once the user is on the way to the login page.
+  window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
   const verifier = randomUrlSafeString();
   const state = randomUrlSafeString();
 
@@ -385,8 +407,12 @@ export async function beginAutoLogin(
   requestedLocale?: string | null,
   signal?: AbortSignal,
 ) {
+  const noticeHold = hasSessionExpiredNotice() ? SESSION_EXPIRED_NOTICE_MS : 0;
   await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, Math.floor(Math.random() * (AUTO_START_LOGIN_JITTER_MS + 1)));
+    window.setTimeout(
+      resolve,
+      noticeHold + Math.floor(Math.random() * (AUTO_START_LOGIN_JITTER_MS + 1)),
+    );
   });
 
   if (signal?.aborted || document.visibilityState !== "visible" || !canAutoStartLogin()) {
@@ -403,13 +429,24 @@ export async function retryLogin(requestedLocale?: string | null) {
 }
 
 async function requestToken(body: URLSearchParams): Promise<TokenResponse> {
-  const response = await fetch(TOKEN_PATH, {
-    body,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    method: "POST",
-  });
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => {
+    controller.abort();
+  }, TOKEN_REQUEST_TIMEOUT_MS);
 
-  const payload: unknown = await response.json().catch(() => null);
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await fetch(TOKEN_PATH, {
+      body,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      method: "POST",
+      signal: controller.signal,
+    });
+    payload = await response.json().catch(() => null);
+  } finally {
+    window.clearTimeout(timer);
+  }
 
   if (!response.ok) {
     const error =
@@ -482,7 +519,21 @@ export async function completeLogin(search = window.location.search) {
   return returnTo;
 }
 
-export async function refreshOAuthTokens(): Promise<string | null> {
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * hydra rotates refresh tokens, so two refreshes racing with the same token
+ * would see the second rejected. Callers that refresh at the same time share
+ * one request.
+ */
+export function refreshOAuthTokens(): Promise<string | null> {
+  refreshInFlight ??= refreshOAuthTokensOnce().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function refreshOAuthTokensOnce(): Promise<string | null> {
   const refreshToken = getDevRefreshToken();
   if (!refreshToken) {
     return null;
