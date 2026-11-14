@@ -1341,7 +1341,14 @@ export const bknProjectEnUS = {
         affected: {
           object: 'Object type "{{name}}" (table {{table}}) returns no data',
           relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+          tableWithSource: "{{table}} ({{source}})",
         },
+        reconnected:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
+        reconnected_one:
+          "Reconnected {{count}} table by name: the data catalog was recreated and a table of the same name was found. Your decisions are kept.",
+        reconnected_other:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
         unreachable: "Can't check the {{what}} right now; will check again",
         archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
         chooseCatalogs: "Choose catalogs again",
@@ -1890,7 +1897,18 @@ export const bknProjectEnUS = {
         kineticNeeds_other: "{{count}} kinetic needs",
         networkItems: "Already in the network: {{items}}",
         background: "Network description and SKILL.md",
-        backgroundNew: "Kinetic analysis reads it from now on",
+        backgroundNew: "Kinetic analysis reads it too",
+        knowledge: "Knowledge base ({{files}}): {{concepts}}, {{rules}}",
+        knowledgeFiles: "{{count}} files",
+        knowledgeFiles_one: "{{count}} file",
+        knowledgeFiles_other: "{{count}} files",
+        knowledgeConcepts: "{{count}} concepts",
+        knowledgeConcepts_one: "{{count}} concept",
+        knowledgeConcepts_other: "{{count}} concepts",
+        knowledgeRules: "{{count}} rules",
+        knowledgeRules_one: "{{count}} rule",
+        knowledgeRules_other: "{{count}} rules",
+        knowledgeRuleNames: "Rules: {{names}}",
       },
       supplement: {
         title: "Supplement note",
@@ -2435,6 +2453,7 @@ export const bknProjectEnUS = {
       viewSource: "View source",
       supplement: "No direct basis in the documents. Added because: {{reason}}",
       edited: "Edited",
+      added: "New",
       fromAsk: "Basis: Ask AI",
       rejected: "Drafting left out {{count}} items",
       rejected_one: "Drafting left out {{count}} item",

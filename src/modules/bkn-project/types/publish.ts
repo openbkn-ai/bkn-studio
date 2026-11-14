@@ -54,11 +54,15 @@ export type AffectedItem = {
   name: string;
   /** The source table's name. */
   table: string;
+  /** The physical table's name, when the draft recorded it. */
+  sourceTable?: string;
 };
 
 export type DataSources = {
   catalogs: DataSourceCount;
   network: DataSourceCount;
+  /** Tables found again by catalog and table name since the last confirmation, after being recreated. */
+  reconnected?: number;
   tables: DataSourceCount & { affected: AffectedItem[] };
 };
 

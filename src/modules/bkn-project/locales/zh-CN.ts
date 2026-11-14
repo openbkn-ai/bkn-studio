@@ -1255,7 +1255,14 @@ export const bknProjectZhCN = {
         affected: {
           object: "对象类「{{name}}」（数据表 {{table}}）已查不到数据",
           relation: "关系类「{{name}}」（连接表 {{table}}）已查不到数据",
+          tableWithSource: "{{table}}（{{source}}）",
         },
+        reconnected:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
+        reconnected_one:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
+        reconnected_other:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
         unreachable: "暂时无法确认{{what}}是否还在，稍后会自动重试",
         archived: "项目已归档，恢复后才能重新选择数据目录或重新起草。",
         chooseCatalogs: "重新选择数据目录",
@@ -1761,7 +1768,18 @@ export const bknProjectZhCN = {
         kineticNeeds_other: "动力需求 {{count}} 个",
         networkItems: "网络已有：{{items}}",
         background: "网络说明和 SKILL.md",
-        backgroundNew: "这次起分析动力需求也会参考",
+        backgroundNew: "分析动力需求时也会参考",
+        knowledge: "知识库（{{files}}）：{{concepts}}、{{rules}}",
+        knowledgeFiles: "{{count}} 份文件",
+        knowledgeFiles_one: "{{count}} 份文件",
+        knowledgeFiles_other: "{{count}} 份文件",
+        knowledgeConcepts: "概念 {{count}} 个",
+        knowledgeConcepts_one: "概念 {{count}} 个",
+        knowledgeConcepts_other: "概念 {{count}} 个",
+        knowledgeRules: "规则 {{count}} 条",
+        knowledgeRules_one: "规则 {{count}} 条",
+        knowledgeRules_other: "规则 {{count}} 条",
+        knowledgeRuleNames: "规则：{{names}}",
       },
       supplement: {
         title: "补充说明",
@@ -2267,6 +2285,7 @@ export const bknProjectZhCN = {
       viewSource: "查看原文",
       supplement: "资料里没有直接依据，补充原因：{{reason}}",
       edited: "已修改",
+      added: "新增",
       fromAsk: "依据：问 AI",
       rejected: "起草时去掉了 {{count}} 条内容",
       rejected_one: "起草时去掉了 {{count}} 条内容",

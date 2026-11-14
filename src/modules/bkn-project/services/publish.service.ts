@@ -76,7 +76,11 @@ type BackendStatus = {
   data_sources?: {
     catalogs: BackendDataSourceCount;
     network: BackendDataSourceCount;
-    tables: BackendDataSourceCount & { affected?: AffectedItem[] | null };
+    /** Tables bound again by name since the last confirmation; absent when none were. */
+    reconnected?: number;
+    tables: BackendDataSourceCount & {
+      affected?: (Omit<AffectedItem, "sourceTable"> & { source_table?: string })[] | null;
+    };
   };
   draft?: { decisions: number; placeholders: number; status: string; update_time: number };
   hints?: { code: string; count?: number; total?: number }[] | null;
@@ -234,12 +238,14 @@ function mapStatus(status: BackendStatus): ProjectStatus {
       ? {
           catalogs: dataSourceCount(status.data_sources.catalogs),
           network: dataSourceCount(status.data_sources.network),
+          reconnected: status.data_sources.reconnected ?? 0,
           tables: {
             ...dataSourceCount(status.data_sources.tables),
             affected: (status.data_sources.tables.affected ?? []).map((item) => ({
               id: item.id,
               kind: item.kind,
               name: item.name,
+              sourceTable: item.source_table || undefined,
               table: item.table,
             })),
           },
