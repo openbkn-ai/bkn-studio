@@ -92,6 +92,9 @@ const INVALID_RELATION_REASONS = new Set([
   "no_mapping",
   "duplicate",
   "not_manual",
+  // The professional edition's, for a relation of a knowledge-base object.
+  "document_end",
+  "not_identity",
 ]);
 
 /** What the panel edits, from the draft it was opened or last saved on; no relation for a new one. */

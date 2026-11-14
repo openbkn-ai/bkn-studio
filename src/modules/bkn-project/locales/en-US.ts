@@ -1544,6 +1544,10 @@ export const bknProjectEnUS = {
           "Properties \u201c{{source}}\u201d and \u201c{{target}}\u201d have types that cannot be joined.",
         unknown_field: "The link table has no field \u201c{{field}}\u201d.",
         no_mapping: "Map at least one pair.",
+        document_end:
+          "A relation of a knowledge-base object starts from it: make it the source, the other object the target, and map one pair of fields.",
+        not_identity:
+          "\u201c{{target}}\u201d is not the unique identifier of \u201c{{objectType}}\u201d. A knowledge-base object matches the other end by its unique identifier; choose that instead.",
         duplicate: "Relation \u201c{{relation}}\u201d already joins the same ends the same way.",
         not_manual: "A relation drafting found cannot be deleted; leave it out instead.",
         link_unreadable: "The link table cannot be read right now; try again later.",
@@ -2994,6 +2998,15 @@ export const bknProjectEnUS = {
           kind: { function: "function toolbox", skill: "Skill" },
           capabilityGone:
             'The release review cannot be read: the {{kind}} "{{name}}" the network uses no longer exists, perhaps deleted when the network was rebuilt. Remove it from the knowledge network or link it again, then open the review again. Nothing can be written into the network until the review is read.',
+          capabilityGoneUses:
+            'The release review cannot be read: the {{kind}} "{{name}}" the network uses no longer exists, perhaps deleted when the network was rebuilt. The network uses it in: {{uses}}. In the knowledge network, choose an available {{kind}} for them or delete the definitions no longer needed, then open the review again. Nothing can be written into the network until the review is read.',
+          use: {
+            action_type: 'action type "{{name}}"',
+            logic_property: 'logic property "{{property}}" of object type "{{name}}"',
+            capability: "the network's capabilities",
+          },
+          useSeparator: ", ",
+          relink: "Fix in the knowledge network",
           capability:
             'The release review cannot be read: the {{kind}} "{{name}}" the network uses could not be read. Try again later, and ask an administrator if it keeps failing. Nothing can be written into the network until the review is read.',
           other:

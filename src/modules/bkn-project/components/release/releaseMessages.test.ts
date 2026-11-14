@@ -11,6 +11,7 @@ import i18n from "@/app/locales/i18n";
 import {
   checkReasonText,
   releaseNotes,
+  reviewRelinkPath,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 
 describe("release notes", () => {
@@ -54,5 +55,34 @@ describe("knowledge-base review items in the release review", () => {
         "知识库还有未处理的待核实条目。可以在构建页逐条处理，或确认后带着它们发布。",
       );
     }
+  });
+});
+
+describe("relinking what the release review cannot read", () => {
+  const code = "Lineage.CapabilityRequestFailed";
+  it("leads to the first definition using a gone toolbox, else to the network's functions or Skills", () => {
+    const network = "/knowledge-network/workspace/kn%2F1";
+    expect(
+      reviewRelinkPath(code, 404, {
+        kind: "function",
+        network_id: "kn/1",
+        used_by: [{ kind: "capability" }, { kind: "logic_property", id: "part", name: "物料" }],
+      }),
+    ).toBe(`${network}/object-types/part/edit`);
+    expect(
+      reviewRelinkPath(code, 404, {
+        kind: "skill",
+        network_id: "kn/1",
+        used_by: [{ kind: "capability" }],
+      }),
+    ).toBe(`${network}/skills`);
+    expect(reviewRelinkPath(code, 404, { kind: "function", network_id: "kn/1" })).toBe(
+      `${network}/functions`,
+    );
+  });
+  it("offers nothing for a read that only failed, or without its network", () => {
+    expect(reviewRelinkPath(code, 502, { kind: "function", network_id: "kn" })).toBeNull();
+    expect(reviewRelinkPath(code, 404, { kind: "function" })).toBeNull();
+    expect(reviewRelinkPath("Release.Other", 404, { network_id: "kn" })).toBeNull();
   });
 });
