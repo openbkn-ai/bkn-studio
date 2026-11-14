@@ -30,9 +30,23 @@ export const http = axios.create({
 export const AUTH_REFRESH_TIMEOUT_MS = 10_000;
 
 let refreshPromise: Promise<string | null> | null = null;
-// The token manager whose session was already ended. Concurrent 401s then end
-// it once instead of each one reloading the page again.
-let endedSessionFor: TokenManager | null = null;
+// The session already ended: its token manager and the access token it held.
+// Concurrent 401s then end it once instead of each one reloading the page.
+let endedSession: { accessToken: string | null; tokenManager: TokenManager } | null = null;
+
+/**
+ * Whether the session behind this token manager was already ended. A host can
+ * renew the session without a reload; a new access token means a new session,
+ * so its expiry is handled again. An emptied token (Studio clears it on the way
+ * to sign-in) is not a renewal.
+ */
+function isSessionEnded(tokenManager: TokenManager) {
+  if (endedSession?.tokenManager !== tokenManager) {
+    return false;
+  }
+  const accessToken = tokenManager.getAccessToken();
+  return !accessToken || accessToken === endedSession.accessToken;
+}
 let requestErrorHandler: RequestErrorHandler = null;
 
 function notifyRequestError(error: unknown, config?: RetryableRequestConfig) {
@@ -92,10 +106,10 @@ async function refreshAccessToken(tokenManager: TokenManager) {
 }
 
 function endSession(tokenManager: TokenManager) {
-  if (endedSessionFor === tokenManager) {
+  if (isSessionEnded(tokenManager)) {
     return;
   }
-  endedSessionFor = tokenManager;
+  endedSession = { accessToken: tokenManager.getAccessToken(), tokenManager };
   tokenManager.onAuthFailure?.();
 }
 
@@ -140,7 +154,7 @@ http.interceptors.response.use(
   (response) => {
     // A request that gets through again means the session is live (a host may
     // renew it without a reload), so a later expiry must end it again.
-    endedSessionFor = null;
+    endedSession = null;
     return response;
   },
   async (error) => {
@@ -151,7 +165,7 @@ http.interceptors.response.use(
 
     // Once the session has been ended, further 401s neither refresh nor end it
     // again; the redirect to sign-in is already under way.
-    if (status === 401 && !config?.skipAuthRefresh && endedSessionFor !== tokenManager) {
+    if (status === 401 && !config?.skipAuthRefresh && !isSessionEnded(tokenManager)) {
       if (config && !config._retry) {
         config._retry = true;
 

@@ -246,6 +246,30 @@ describe("oauth", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("drops a leftover session-expired notice on a deliberate sign-out", async () => {
+    markSessionExpired();
+
+    await logout("standalone");
+
+    expect(hasSessionExpiredNotice()).toBe(false);
+  });
+
+  it("drops the session-expired notice after a completed login", async () => {
+    markSessionExpired();
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await completeLogin("?code=abc&state=state-1");
+
+    expect(hasSessionExpiredNotice()).toBe(false);
+  });
+
   it("clears the session-expired notice once the login redirect starts", async () => {
     markSessionExpired();
     expect(hasSessionExpiredNotice()).toBe(true);

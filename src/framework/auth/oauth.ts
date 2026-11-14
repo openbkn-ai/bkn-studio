@@ -359,9 +359,14 @@ export function hasSessionExpiredNotice() {
   return window.sessionStorage.getItem(SESSION_EXPIRED_KEY) === "1";
 }
 
+/** Drop the notice once the user is signed in again by any route. */
+export function clearSessionExpiredNotice() {
+  window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+}
+
 async function startLogin(requestedLocale?: string | null) {
   // The notice has done its job once the user is on the way to the login page.
-  window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+  clearSessionExpiredNotice();
   const verifier = randomUrlSafeString();
   const state = randomUrlSafeString();
 
@@ -511,6 +516,7 @@ export async function completeLogin(search = window.location.search) {
   window.sessionStorage.removeItem(LOCAL_LOGIN_KEY);
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
+  clearSessionExpiredNotice();
   releaseFlowLock();
 
   const returnTo =
@@ -580,6 +586,8 @@ export function logout(mode: "hosted" | "standalone") {
   }
 
   clearStoredTokens();
+  // A deliberate sign-out is not an expiry.
+  clearSessionExpiredNotice();
   window.sessionStorage.removeItem(CSRF_RETRY_KEY);
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
   // Signing out is a deliberate global reset, so drop the lock whoever holds it.

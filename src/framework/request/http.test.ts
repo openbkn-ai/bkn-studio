@@ -275,6 +275,34 @@ describe("http request headers", () => {
     expect(onAuthFailure).toHaveBeenCalledTimes(1);
   });
 
+  it("handles the expiry again once a host renews the session without a reload", async () => {
+    const onAuthFailure = vi.fn();
+    let accessToken = "first-session";
+    const refreshAccessToken = vi.fn(() => Promise.resolve(null));
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: {
+          tokenManager: { getAccessToken: () => accessToken, refreshAccessToken, onAuthFailure },
+        },
+      }),
+    );
+    const rejected: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("HTTP 401"), {
+          isAxiosError: true,
+          config,
+          response: { status: 401 },
+        }),
+      );
+
+    await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+    accessToken = "renewed-session";
+    await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+    expect(onAuthFailure).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the session on an ordinary permission denial", async () => {
     const onAuthFailure = vi.fn();
     const refreshAccessToken = vi.fn();
