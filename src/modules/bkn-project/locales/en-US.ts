@@ -669,7 +669,7 @@ export const bknProjectEnUS = {
         failed:
           "Not all knowledge-base objects are ready ({{ready}} / {{total}} done). Confirm the model again to continue where it stopped; it says which item stopped and why.",
         stale:
-          "The model or sources changed. Confirming the model again makes knowledge-base objects ready again.",
+          'The model or the knowledge-base files changed. Click "Confirm again" to make the knowledge-base objects ready again.',
       },
       graph: {
         title: "Concept model",
