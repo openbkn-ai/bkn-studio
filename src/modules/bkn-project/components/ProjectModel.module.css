@@ -170,3 +170,10 @@
   padding: 0;
   list-style: none;
 }
+
+.confirmBlocked {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

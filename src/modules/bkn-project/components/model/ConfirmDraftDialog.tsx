@@ -201,14 +201,17 @@ export function ConfirmDraft({
       : "bknProject.confirm.button",
   );
   if (!action.allowed) {
+    // Why confirming waits is said beside the button, not only when hovering it.
+    const why = blockedText(t, action.reason, status.blockers);
     return (
-      <Tooltip title={blockedText(t, action.reason, status.blockers)}>
-        <span>
-          <AppButton disabled type="primary">
-            {label}
-          </AppButton>
+      <span className={styles.confirmBlocked}>
+        <AppButton aria-describedby="confirm-blocked-reason" disabled type="primary">
+          {label}
+        </AppButton>
+        <span className={styles.confirmWaiting} id="confirm-blocked-reason" role="status">
+          {why}
         </span>
-      </Tooltip>
+      </span>
     );
   }
 

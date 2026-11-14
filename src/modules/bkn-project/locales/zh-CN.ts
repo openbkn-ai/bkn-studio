@@ -518,7 +518,8 @@ export const bknProjectZhCN = {
       mergeFailed: "没能合并，请稍后重试",
       stale: "打开页面后，内容已有变化，这次修改没有保存。请重新加载后再试。",
       sourceChanged:
-        "这个概念来自已不再使用的知识库选择，判定没有保存。请重新选择知识库并抽取概念后再判定。",
+        "这个知识库概念来自之前的样本选择，只能判为不纳入或取消采纳；要修改或纳入它，请重新抽取知识库概念。",
+      extractAgain: "重新抽取知识库概念",
       reload: "重新加载",
       because: {
         table_entity: "来自一张业务表",

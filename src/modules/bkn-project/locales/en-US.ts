@@ -558,7 +558,8 @@ export const bknProjectEnUS = {
       stale:
         "This changed after the page was opened, so the change was not saved. Reload and try again.",
       sourceChanged:
-        "This concept comes from a knowledge-base selection no longer in use, so the judgment was not saved. Choose the knowledge base and extract concepts again before judging it.",
+        "This knowledge-base concept comes from an earlier sample selection: it can only be left out or un-adopted. To change or adopt it, extract knowledge-base concepts again.",
+      extractAgain: "Extract knowledge-base concepts again",
       reload: "Reload",
       because: {
         table_entity: "From a business table",

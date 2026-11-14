@@ -79,7 +79,8 @@ import {
 const PREFIX = "bknProject.concepts";
 
 /** Why a judgment or merge was refused, and whether reading the page again can help. */
-type Refusal = { reload: boolean; text: string };
+/** A refused change: why, and what puts it right (reading again, or extracting a source again). */
+type Refusal = { reload: boolean; text: string; extract?: "knowledgeBase" };
 
 /** What the page reads besides the concepts: how much each source holds. */
 type SourceCounts = { catalogs: number; documents: number | null; tables: number | null };
@@ -269,7 +270,9 @@ export function ProjectConcepts({
     ) {
       setRefusal({ reload: true, text: t(`${PREFIX}.stale`) });
     } else if (draftErrorCode(error) === "DocumentSourceChanged") {
-      setRefusal({ reload: false, text: t(`${PREFIX}.sourceChanged`) });
+      // Said where it was clicked too: the notice above may be out of view.
+      message.warning(t(`${PREFIX}.sourceChanged`));
+      setRefusal({ extract: "knowledgeBase", reload: false, text: t(`${PREFIX}.sourceChanged`) });
     } else if (draftErrorCode(error) === "MergeKindMismatch") {
       setRefusal({ reload: false, text: t(`${PREFIX}.mergeKindRefused`) });
     } else if (draftErrorCode(error) === "CrossBindingMerge") {
@@ -778,6 +781,24 @@ export function ProjectConcepts({
                   size="small"
                 >
                   {t(`${PREFIX}.reload`)}
+                </AppButton>
+              ) : refusal.extract &&
+                canEdit &&
+                busy === null &&
+                !run &&
+                !knowledgeBaseFacts?.running &&
+                available(refusal.extract) ? (
+                <AppButton
+                  onClick={() => {
+                    const source = refusal.extract;
+                    setRefusal(null);
+                    if (source) {
+                      askRun([source]);
+                    }
+                  }}
+                  size="small"
+                >
+                  {t(`${PREFIX}.extractAgain`)}
                 </AppButton>
               ) : undefined
             }

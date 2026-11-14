@@ -264,8 +264,9 @@ describe("ConfirmDraft", () => {
 
     const button = await screen.findByRole("button", { name: "确认模型" });
     expect(button).toBeDisabled();
-    fireEvent.mouseEnter(button.parentElement!);
-    expect(await screen.findByText("2 个已采纳的对象类还需要选定唯一标识")).toBeInTheDocument();
+    // Said on the page, without hovering the button.
+    expect(screen.getByRole("status")).toHaveTextContent("2 个已采纳的对象类还需要选定唯一标识");
+    expect(button).toHaveAttribute("aria-describedby", "confirm-blocked-reason");
   });
 
   it("offers to confirm again after a change, and says when the draft is confirmed", async () => {
