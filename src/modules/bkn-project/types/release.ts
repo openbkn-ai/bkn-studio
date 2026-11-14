@@ -39,6 +39,18 @@ export type ReleaseCapability = {
   reasons: string[];
 };
 
+/**
+ * A function or Skill the definitions named that no longer exists, which the release links to
+ * `id` instead: the one the network uses now (`by` network) or the one of the same name (`by` name).
+ */
+export type ReleaseRelink = {
+  by: string;
+  id: string;
+  kind: string;
+  name: string;
+  previousId: string;
+};
+
 /** What publishing the project's branch as `version` would bring, and whether it may. */
 export type ReleaseReview = {
   /** What the owner must accept for the release to go, of the checks that did not pass. */
@@ -56,6 +68,7 @@ export type ReleaseReview = {
     /** Questions that name nothing they need. */
     unjudged: number;
   };
+  relinked: ReleaseRelink[];
   /** Error codes the release itself would be refused with, such as a version already published. */
   refusals: string[];
   /**

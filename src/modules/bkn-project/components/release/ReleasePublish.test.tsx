@@ -119,6 +119,7 @@ function review(extra: Partial<ReleaseReview> = {}): ReleaseReview {
       unjudged: 0,
     },
     refusals: [],
+    relinked: [],
     release: {
       baseVersion: "1.0.2",
       networkId: "n_v1_0_3",
@@ -791,6 +792,35 @@ describe("ReleasePublish", () => {
     ).toBeInTheDocument();
     fireEvent.click(view.getByRole("button", { name: "去动力建模" }));
     expect(onGoToKinetic).toHaveBeenCalledTimes(1);
+  });
+
+  it("says which gone functions and Skills the release links to what replaces them now", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        relinked: [
+          { by: "network", id: "b2", kind: "function", name: "供应链计算", previousId: "b1" },
+          { by: "name", id: "s2", kind: "skill", name: "采购跟进", previousId: "s1" },
+        ],
+      }),
+    );
+    renderWithoutAntdStyles(
+      <ReleasePublish
+        canPublish
+        onChanged={onChanged}
+        onOpenRegression={onOpenRegression}
+        projectId="p1"
+        status={status()}
+        versions={versions()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "网络原先用到的函数工具箱“供应链计算”、Skill“采购跟进”已不存在，已改为关联现在取代它的项（共 2 项），发布时按新的关联写入。",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("lets others read the review, never publish", async () => {
