@@ -10,6 +10,7 @@ import { Alert, Checkbox, Input, Modal, Spin } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -23,6 +24,7 @@ import {
   publishErrorText,
   refusalText,
   reviewLoadFailedText,
+  reviewRelinkPath,
   versionName,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
@@ -81,6 +83,8 @@ export function ReleaseReviewDialog({
   const [reviewed, setReviewed] = useState(suggestedVersion);
   const [review, setReview] = useState<ReleaseReview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Where in the knowledge network what the review could not read is relinked or removed.
+  const [relinkPath, setRelinkPath] = useState<string | null>(null);
   const [accepted, setAccepted] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   // Why the last preparing failed, kept in the dialog so the owner can read it and try again.
@@ -94,6 +98,7 @@ export function ReleaseReviewDialog({
     async (of: string) => {
       const read = ++latest.current;
       setLoadError(null);
+      setRelinkPath(null);
       setReview(null);
       try {
         const next = await getReleaseReview(projectId, of);
@@ -106,16 +111,13 @@ export function ReleaseReviewDialog({
       } catch (error) {
         if (read === latest.current) {
           const code = projectErrorCode(error);
+          const status = axios.isAxiosError(error) ? error.response?.status : undefined;
           setLoadError(
             code === "Release.InvalidVersion"
               ? t(`${PREFIX}.versionInvalid`)
-              : reviewLoadFailedText(
-                  t,
-                  code,
-                  axios.isAxiosError(error) ? error.response?.status : undefined,
-                  projectErrorDetails(error),
-                ),
+              : reviewLoadFailedText(t, code, status, projectErrorDetails(error)),
           );
+          setRelinkPath(reviewRelinkPath(code, status, projectErrorDetails(error)));
         }
       }
     },
@@ -241,9 +243,14 @@ export function ReleaseReviewDialog({
         {loadError ? (
           <Alert
             action={
-              <AppButton onClick={() => void load(reviewed)} size="small">
-                {t("common.retry")}
-              </AppButton>
+              <span className={styles.row}>
+                {relinkPath ? (
+                  <Link to={relinkPath}>{t(`${PREFIX}.reviewFailed.relink`)}</Link>
+                ) : null}
+                <AppButton onClick={() => void load(reviewed)} size="small">
+                  {t("common.retry")}
+                </AppButton>
+              </span>
             }
             message={loadError}
             showIcon

@@ -387,6 +387,24 @@ describe("RelationTypePanel", () => {
       await screen.findByText(/^bknProject\.relationEditor\.invalid\.unknown_property:/),
     ).toHaveTextContent('"objectType":"customers"');
 
+    // A knowledge-base object's relation says how it joins: from it, by the other's identifier.
+    mocks.save.mockRejectedValueOnce(
+      refusal(400, "InvalidRelation", {
+        object_type: "customers",
+        reason: "not_identity",
+        target: "name",
+      }),
+    );
+    save();
+    expect(
+      await screen.findByText(/^bknProject\.relationEditor\.invalid\.not_identity:/),
+    ).toHaveTextContent('"objectType":"customers"');
+    mocks.save.mockRejectedValueOnce(refusal(400, "InvalidRelation", { reason: "document_end" }));
+    save();
+    expect(
+      await screen.findByText(/^bknProject\.relationEditor\.invalid\.document_end:/),
+    ).toBeInTheDocument();
+
     // A reason the page does not know is never shown as it is.
     mocks.save.mockRejectedValueOnce(refusal(400, "InvalidRelation", { reason: "invalid_type" }));
     save();

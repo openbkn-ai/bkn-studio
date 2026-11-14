@@ -7,6 +7,7 @@
 
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
+import { MemoryRouter } from "react-router-dom";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -218,15 +219,17 @@ function renderPublish(
   projectVersions: ProjectVersions | null = versions(),
 ) {
   return renderWithoutAntdStyles(
-    <ReleasePublish
-      canPublish={canPublish}
-      onChanged={onChanged}
-      onGoToBuild={onGoToBuild}
-      onOpenRegression={onOpenRegression}
-      projectId="p1"
-      status={projectStatus}
-      versions={projectVersions}
-    />,
+    <MemoryRouter>
+      <ReleasePublish
+        canPublish={canPublish}
+        onChanged={onChanged}
+        onGoToBuild={onGoToBuild}
+        onOpenRegression={onOpenRegression}
+        projectId="p1"
+        status={projectStatus}
+        versions={projectVersions}
+      />
+    </MemoryRouter>,
   );
 }
 
@@ -298,6 +301,41 @@ describe("ReleasePublish", () => {
       .getAllByRole("button")
       .find((node) => node.closest(".ant-modal-footer") && !/取\s*消/.test(node.textContent ?? ""));
     expect(write).toBeDisabled();
+  });
+
+  it("names what uses a toolbox that is gone, and leads to where it is relinked", async () => {
+    getReleaseReviewMock.mockRejectedValue(
+      new AxiosError("gone", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: {
+          description: "gone",
+          error_code: "BknProject.Lineage.CapabilityRequestFailed",
+          error_details: {
+            id: "box_1",
+            kind: "function",
+            name: "供应链计算",
+            network_id: "kn_1",
+            used_by: [
+              { kind: "action_type", id: "replenish", name: "补货" },
+              { kind: "logic_property", id: "part", name: "物料", property: "齐套率" },
+              { kind: "capability" },
+            ],
+          },
+        },
+        status: 404,
+      } as AxiosResponse),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        /用到它的有：行动类“补货”、对象类“物料”的逻辑属性“齐套率”、网络的能力清单。/,
+      ),
+    ).toBeInTheDocument();
+    expect(view.getByRole("link", { name: "到知识网络中处理" })).toHaveAttribute(
+      "href",
+      "/knowledge-network/workspace/kn_1/action-types/replenish/edit",
+    );
   });
 
   it("shows the confirmed number of document originals included in search", async () => {

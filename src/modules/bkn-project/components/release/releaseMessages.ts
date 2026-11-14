@@ -268,20 +268,91 @@ export function reviewLoadFailedText(
   details: unknown,
 ) {
   if (code === "Lineage.CapabilityRequestFailed") {
-    const item = (details ?? {}) as { id?: unknown; kind?: unknown; name?: unknown };
+    const item = capabilityFailure(details);
     const kind = item.kind === "skill" ? "skill" : "function";
-    const name =
-      typeof item.name === "string" && item.name
-        ? item.name
-        : typeof item.id === "string"
-          ? item.id
-          : "";
+    const name = item.name || item.id;
+    const uses = status === 404 ? item.uses : [];
+    if (uses.length) {
+      return t(`${PREFIX}.reviewFailed.capabilityGoneUses`, {
+        kind: t(`${PREFIX}.reviewFailed.kind.${kind}`),
+        name,
+        uses: uses
+          .map((use) =>
+            t(`${PREFIX}.reviewFailed.use.${use.kind}`, {
+              name: use.name || use.id,
+              property: use.property,
+            }),
+          )
+          .join(t(`${PREFIX}.reviewFailed.useSeparator`)),
+      });
+    }
     return t(`${PREFIX}.reviewFailed.${status === 404 ? "capabilityGone" : "capability"}`, {
       kind: t(`${PREFIX}.reviewFailed.kind.${kind}`),
       name,
     });
   }
   return t(`${PREFIX}.reviewFailed.other`);
+}
+
+/** A definition of the network that uses a function toolbox or Skill, as bkn-project names it. */
+type CapabilityUse = {
+  id: string;
+  kind: "action_type" | "logic_property" | "capability";
+  name: string;
+  property: string;
+};
+
+const USE_KINDS = new Set(["action_type", "logic_property", "capability"]);
+const text = (value: unknown) => (typeof value === "string" ? value : "");
+
+/** What a refused read of a function toolbox or Skill names: the item, its network, what uses it. */
+function capabilityFailure(details: unknown) {
+  const item = (details ?? {}) as Record<string, unknown>;
+  const uses = (Array.isArray(item.used_by) ? item.used_by : [])
+    .map((use) => (use ?? {}) as Record<string, unknown>)
+    .filter((use) => USE_KINDS.has(text(use.kind)))
+    .map((use): CapabilityUse => ({
+      id: text(use.id),
+      kind: use.kind as CapabilityUse["kind"],
+      name: text(use.name),
+      property: text(use.property),
+    }));
+  return {
+    id: text(item.id),
+    kind: text(item.kind),
+    name: text(item.name),
+    networkId: text(item.network_id),
+    uses,
+  };
+}
+
+/**
+ * Where in the knowledge network a function toolbox or Skill that no longer exists is relinked or
+ * removed: the first definition that uses it, else the network's functions or Skills; none when
+ * the item is not gone or its network is not known.
+ */
+export function reviewRelinkPath(
+  code: string | undefined,
+  status: number | undefined,
+  details: unknown,
+): string | null {
+  if (code !== "Lineage.CapabilityRequestFailed" || status !== 404) {
+    return null;
+  }
+  const item = capabilityFailure(details);
+  if (!item.networkId) {
+    return null;
+  }
+  const network = `/knowledge-network/workspace/${encodeURIComponent(item.networkId)}`;
+  const use = item.uses.find((candidate) => candidate.kind !== "capability" && candidate.id);
+  switch (use?.kind) {
+    case "action_type":
+      return `${network}/action-types/${encodeURIComponent(use.id)}/edit`;
+    case "logic_property":
+      return `${network}/object-types/${encodeURIComponent(use.id)}/edit`;
+    default:
+      return `${network}/${item.kind === "skill" ? "skills" : "functions"}`;
+  }
 }
 
 export const capabilityReasonText = (t: TFunction, reason: string) =>

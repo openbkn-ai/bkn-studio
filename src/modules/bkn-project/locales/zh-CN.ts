@@ -1448,6 +1448,10 @@ export const bknProjectZhCN = {
         type_mismatch: "属性「{{source}}」和「{{target}}」的类型不相容，不能用来关联。",
         unknown_field: "关联表里没有字段「{{field}}」。",
         no_mapping: "至少要有一对映射。",
+        document_end:
+          "知识库对象的关系要以知识库对象为起点：把它设为起点，另一端设为终点，只映射一对字段。",
+        not_identity:
+          "「{{target}}」不是「{{objectType}}」的唯一标识。知识库对象按另一端的唯一标识来对应，请改选它的唯一标识。",
         duplicate: "已经有相同两端和映射的关系「{{relation}}」。",
         not_manual: "起草出来的关系不能删除，可以把它改为不采纳。",
         link_unreadable: "暂时读不到关联表，请稍后再试。",
@@ -2794,6 +2798,15 @@ export const bknProjectZhCN = {
           kind: { function: "函数工具箱", skill: "Skill" },
           capabilityGone:
             "发布审核读取不到：网络使用的{{kind}}“{{name}}”已不存在，可能随网络重建被删除。请到知识网络中移除或重新关联它，再重新打开发布审核。读不到审核结果前不能写入网络。",
+          capabilityGoneUses:
+            "发布审核读取不到：网络使用的{{kind}}“{{name}}”已不存在，可能随网络重建被删除。网络里用到它的有：{{uses}}。请到知识网络中给它们改选可用的{{kind}}，或删除不再需要的定义，再重新打开发布审核。读不到审核结果前不能写入网络。",
+          use: {
+            action_type: "行动类“{{name}}”",
+            logic_property: "对象类“{{name}}”的逻辑属性“{{property}}”",
+            capability: "网络的能力清单",
+          },
+          useSeparator: "、",
+          relink: "到知识网络中处理",
           capability:
             "发布审核读取不到：网络使用的{{kind}}“{{name}}”暂时读取失败。请稍后重试；仍然失败请联系管理员。读不到审核结果前不能写入网络。",
           other: "发布审核暂时读取不到，请稍后重试。读不到审核结果前不能写入网络。",
