@@ -102,9 +102,16 @@ describe("publish.service", () => {
         data_sources: {
           catalogs: { missing: 1, state: "missing", total: 1 },
           network: { missing: 0, state: "ok", total: 1 },
+          reconnected: 3,
           tables: {
             affected: [
-              { id: "ot1", kind: "object_types", name: "客户", table: "customers" },
+              {
+                id: "ot1",
+                kind: "object_types",
+                name: "客户",
+                source_table: "customer_entity",
+                table: "customers",
+              },
               { id: "rt1", kind: "relation_types", name: "下单", table: "order_links" },
             ],
             missing: 2,
@@ -128,9 +135,16 @@ describe("publish.service", () => {
     expect(status.dataSources).toEqual({
       catalogs: { missing: 1, state: "missing", total: 1 },
       network: { missing: 0, state: "ok", total: 1 },
+      reconnected: 3,
       tables: {
         affected: [
-          { id: "ot1", kind: "object_types", name: "客户", table: "customers" },
+          {
+            id: "ot1",
+            kind: "object_types",
+            name: "客户",
+            sourceTable: "customer_entity",
+            table: "customers",
+          },
           { id: "rt1", kind: "relation_types", name: "下单", table: "order_links" },
         ],
         missing: 2,
