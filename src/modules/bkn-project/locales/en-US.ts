@@ -3564,6 +3564,8 @@ export const bknProjectEnUS = {
       Draft: {
         DocumentDataNotReady:
           "Knowledge-base objects are not ready to hold what is extracted from files. Confirm the model again to continue where it stopped; reviewed candidates are kept.",
+        DocumentSamplesChanged:
+          "The debug samples changed after the knowledge-base concepts were extracted, and the knowledge-base objects come from the earlier debug samples, so the model cannot be confirmed yet. On the Knowledge base tab of Requirements and sources, set the debug samples back to the files used for extraction, then confirm again.",
         DocumentDataItemFailed:
           '"{{name}}" is not ready to hold what is extracted from files: {{reason}} What is ready is kept; confirm the model again after fixing this and it continues from this item.',
         DocumentDataReason: {

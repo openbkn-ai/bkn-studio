@@ -3316,6 +3316,8 @@ export const bknProjectZhCN = {
       Draft: {
         DocumentDataNotReady:
           "知识库对象还没准备好存放从文件抽取的内容，再次确认模型会从中断处继续；已审核的候选会保留。",
+        DocumentSamplesChanged:
+          "抽取知识库概念之后，调试样本有了变化，现在的知识库对象是从原来的调试样本中得出的，暂时无法确认模型。请在需求与来源的知识库页签把调试样本改回抽取时的那些文件，再重新确认。",
         DocumentDataItemFailed:
           "“{{name}}”还没准备好存放从文件抽取的内容：{{reason}}已准备好的部分会保留，处理后再次确认模型会从这一项继续。",
         DocumentDataReason: {
