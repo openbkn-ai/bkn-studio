@@ -415,6 +415,16 @@ describe("ProjectConcepts", () => {
     );
   });
 
+  it("says a knowledge-base concept of earlier samples cannot change, and offers to extract again", async () => {
+    service.judgeConcept.mockRejectedValue(refused("DocumentSourceChanged"));
+    renderConcepts();
+
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /confirmOf.*Customer/ }));
+    expect(await screen.findByText("bknProject.concepts.sourceChanged")).toBeInTheDocument();
+    expect(messageMock.warning).toHaveBeenCalledWith("bknProject.concepts.sourceChanged");
+    expect(screen.getByRole("button", { name: "bknProject.concepts.extractAgain" })).toBeEnabled();
+  });
+
   it("merges only into objects bound to the same kind of data", async () => {
     service.mergeConcept.mockResolvedValue(concepts());
     renderConcepts();
