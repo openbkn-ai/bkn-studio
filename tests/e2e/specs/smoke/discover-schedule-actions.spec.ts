@@ -16,15 +16,14 @@ for (const locale of ["en-US", "zh-CN"]) {
     const row = page.locator("tbody tr[data-row-key]").first();
     const actions = row.locator("td.ant-table-cell-fix-right");
     const table = page.locator(".ant-table-content");
-    for (const index of [4, 5, 6]) {
-      const lines = await row
-        .locator("td")
-        .nth(index)
-        .evaluate((element) => {
-          const range = document.createRange();
-          range.selectNodeContents(element);
-          return range.getClientRects().length;
-        });
+    const timeCells = row.locator('td[class*="timeText"]');
+    await expect(timeCells).toHaveCount(3);
+    for (const cell of await timeCells.all()) {
+      const lines = await cell.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return range.getClientRects().length;
+      });
       expect(lines).toBe(1);
     }
     const fixedHeader = table.locator("th.ant-table-cell-fix-right");

@@ -61,7 +61,7 @@ export type CatalogDeletionTaskImpact = {
 export type CatalogDeletionImpact = {
   blockers: CatalogDeletionBlocker[];
   buildTasks: CatalogDeletionTaskImpact;
-  buildSchedules: number;
+  buildSchedules?: number;
   canDelete: boolean;
   catalogHealthCheckSchedules: number;
   catalogId: string;

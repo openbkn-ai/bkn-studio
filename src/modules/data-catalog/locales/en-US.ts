@@ -37,6 +37,7 @@ export const dataCatalogEnUS = {
       saved: "Build schedule saved",
       tasks: "View tasks",
       search: "Search schedule name",
+      taskScope: "Showing tasks for schedule: {{id}}",
       taskSource: "Trigger source",
       manual: "Manual",
       scheduled: "Scheduled",

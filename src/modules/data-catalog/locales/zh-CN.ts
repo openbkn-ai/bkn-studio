@@ -34,6 +34,7 @@ export const dataCatalogZhCN = {
       saved: "构建计划已保存",
       tasks: "查看任务",
       search: "搜索计划名称",
+      taskScope: "当前显示计划 {{id}} 的任务",
       taskSource: "触发来源",
       manual: "手动触发",
       scheduled: "计划触发",

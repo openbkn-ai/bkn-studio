@@ -355,6 +355,26 @@ describe("catalog.service · deletion preflight", () => {
     vi.unstubAllEnvs();
   });
 
+  it.each([undefined, 0])("preserves a missing or zero build schedule count: %s", async (count) => {
+    deleteMock.mockResolvedValue({
+      data: {
+        blockers: [],
+        build_tasks: { blocking: 0, will_delete: 0 },
+        build_schedules: count,
+        can_delete: true,
+        catalog_health_check_schedules: 0,
+        catalog_id: "catalog-1",
+        discover_schedules: 0,
+        discover_tasks: { blocking: 0, will_delete: 0 },
+        protected_resources: 0,
+        resources: 0,
+        semantic_understanding_tasks: { blocking: 0, will_delete: 0 },
+      },
+    });
+    const { previewCatalogDeletion } = await import("@/shared/catalog/catalog.service");
+    expect((await previewCatalogDeletion("catalog-1")).buildSchedules).toBe(count);
+  });
+
   it("requests a dry run and maps the complete deletion impact", async () => {
     deleteMock.mockResolvedValue({
       data: {

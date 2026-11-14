@@ -133,6 +133,7 @@ export const dataConnectEnUS = {
       resources: "Resources: {{count}} ({{protected}} protected)",
       resources_one: "Resource: {{count}} ({{protected}} protected)",
       resources_other: "Resources: {{count}} ({{protected}} protected)",
+      schedulesWithoutBuild: "Schedules: {{discover}} discovery, {{health}} health check",
       schedules: "Schedules: {{discover}} discovery, {{health}} health check, {{build}} build",
       buildTasks: "Build tasks: delete {{count}} task records, {{blocking}} blocking",
       buildTasks_one: "Build tasks: delete {{count}} task record, {{blocking}} blocking",

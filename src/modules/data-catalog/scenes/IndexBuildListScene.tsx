@@ -480,6 +480,13 @@ export function IndexBuildListScene() {
 
   return (
     <section className={sceneStyles.contentSurface}>
+      {listFilters.scheduleId ? (
+        <Alert
+          message={t("dataCatalog.buildSchedule.taskScope", { id: listFilters.scheduleId })}
+          showIcon
+          type="info"
+        />
+      ) : null}
       <div className={sceneStyles.operationBar}>
         <Space className={sceneStyles.toolbarActions}>
           <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>

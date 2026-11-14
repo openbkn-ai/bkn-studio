@@ -13,7 +13,9 @@ const { listBuildTaskPageMock } = vi.hoisted(() => ({ listBuildTaskPageMock: vi.
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, values?: { id?: string }) => (values?.id ? `${key}: ${values.id}` : key),
+  }),
 }));
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
@@ -114,6 +116,24 @@ describe("IndexBuildListScene", () => {
     expect(source).toBeGreaterThan(-1);
     expect(status).toBeLessThan(source);
     expect(progress).toBeLessThan(source);
+  });
+
+  it("shows the linked schedule scope even when no tasks have been created", async () => {
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
+    render(
+      <MemoryRouter initialEntries={["/?tab=index-build&schedule_id=deleted-schedule"]}>
+        <IndexBuildListScene />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByText("dataCatalog.buildSchedule.taskScope: deleted-schedule"),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ scheduleId: "deleted-schedule" }),
+        expect.anything(),
+      ),
+    );
   });
 
   it("restores task origin filters from the URL and preserves a deleted schedule ID", async () => {

@@ -272,7 +272,7 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
   return {
     blockers: impact.blockers,
     buildTasks: mapTaskImpact(impact.build_tasks),
-    buildSchedules: impact.build_schedules ?? 0,
+    buildSchedules: impact.build_schedules,
     canDelete: impact.can_delete,
     catalogHealthCheckSchedules: impact.catalog_health_check_schedules,
     catalogId: impact.catalog_id,
