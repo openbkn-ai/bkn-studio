@@ -245,7 +245,7 @@ export const bknProjectZhCN = {
           "已抽出部分需求概念，还有 {{count}} 段文档没有抽完；再次抽取需求文档时只补抽这几段，已抽出的会保留。",
         failed: {
           table: "上次抽取没有完成，可以稍后重抽",
-          document: "上次没能从需求文档抽取到概念。",
+          document: "没能从需求文档抽取到概念。",
           busy: "需求正在处理中，稍后再抽取",
           knowledgeBase: "上次从调试文件抽取没有完成，可以稍后重抽",
         },
@@ -2172,6 +2172,7 @@ export const bknProjectZhCN = {
         failed: "没能起草",
       },
       draft: "生成业务场景",
+      redraftFailed: "这次重新生成没有完成，下面仍是上一版，可以继续编辑和采纳。",
       redraft: "重新生成",
       notDrafted:
         "还没有业务场景。确认概念模型后，AI 会基于概念模型和动力模型生成场景和问题，再由你审核。",
@@ -2485,6 +2486,8 @@ export const bknProjectZhCN = {
         agent_failed: "起草没有完成，请重新起草。",
         agent_timeout: "起草超时了，请重新起草。",
         output_invalid: "起草结果不完整，请重新起草。",
+        output_too_long:
+          "要生成的内容超出了 AI 一次能写的长度，重试后仍没写完。可以精简需求文档后重新生成。",
         interrupted: "起草被中断了，请重新起草。",
         other: "没能起草，请重新起草。",
       },
@@ -2501,6 +2504,7 @@ export const bknProjectZhCN = {
         TooManyDocuments: "一个项目最多 20 份文档。",
         DocumentTooLarge: "文件太大，单个文件不能超过 1 MB。",
         ModelNotConfirmed: "概念模型还没确认，确认后再试。",
+        NotFound: "还没有可以写入的需求规格，先生成业务场景，或刷新页面后再试。",
         ConceptsNotExtracted: "需求文档的概念还没抽取，先在概念抽取中抽取。",
         ImplementationUnavailable: "知识网络暂时连不上，请稍后重试。",
         InvalidItem: "填写的内容不能用，请检查后再保存。",
