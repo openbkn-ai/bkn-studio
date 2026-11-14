@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 import i18n from "@/app/locales/i18n";
 import {
   conceptsRunErrorText,
+  draftErrorText,
+  requirementErrorText,
   runningWork,
   testCheckReasonText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
@@ -43,6 +45,13 @@ describe("conceptsRunErrorText", () => {
   it("words a part still to extract, singular and plural", () => {
     expect(zh("bknProject.concepts.run.partial", { count: 2 })).toContain("2 段");
     expect(en("bknProject.concepts.run.partial", { count: 1 })).toContain("1 part ");
+  });
+});
+
+describe("requirementErrorText", () => {
+  it("says what to do when there are no requirements to write into", () => {
+    expect(requirementErrorText(zh, "Requirement.NotFound")).toContain("先生成业务场景");
+    expect(draftErrorText(en, "output_too_long")).toContain("Trim the requirement documents");
   });
 });
 

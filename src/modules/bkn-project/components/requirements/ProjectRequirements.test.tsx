@@ -570,6 +570,32 @@ describe("ProjectRequirements", () => {
     expect(messageMock.error).not.toHaveBeenCalled();
   });
 
+  it("says generating again failed and keeps the previous version editable", async () => {
+    getRequirementsMock.mockResolvedValue(requirements({ error: "output_too_long" }));
+    renderPage();
+
+    expect(
+      await screen.findByText("这次重新生成没有完成，下面仍是上一版，可以继续编辑和采纳。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "要生成的内容超出了 AI 一次能写的长度，重试后仍没写完。可以精简需求文档后重新生成。",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says why the first generation failed while there are no scenarios yet", async () => {
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        error: "agent_timeout",
+        spec: { ...requirements().spec, questions: [], scenarios: [] },
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText("起草超时了，请重新起草。")).toBeInTheDocument();
+  });
+
   it("leads to concept modeling when the model is not confirmed yet", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
     draftRequirementsMock.mockRejectedValueOnce(
