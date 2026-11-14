@@ -10,6 +10,7 @@ import type { InternalAxiosRequestConfig } from "axios";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import type { TokenManager } from "@/framework/runtime/types";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _errorNotified?: boolean;
@@ -24,7 +25,28 @@ export const http = axios.create({
   timeout: 30000,
 });
 
+// A stalled token endpoint must not leave every request waiting on it: past
+// this bound the refresh counts as failed and the session check takes over.
+export const AUTH_REFRESH_TIMEOUT_MS = 10_000;
+
 let refreshPromise: Promise<string | null> | null = null;
+// The session already ended: its token manager and the access token it held.
+// Concurrent 401s then end it once instead of each one reloading the page.
+let endedSession: { accessToken: string | null; tokenManager: TokenManager } | null = null;
+
+/**
+ * Whether the session behind this token manager was already ended. A host can
+ * renew the session without a reload; a new access token means a new session,
+ * so its expiry is handled again. An emptied token (Studio clears it on the way
+ * to sign-in) is not a renewal.
+ */
+function isSessionEnded(tokenManager: TokenManager) {
+  if (endedSession?.tokenManager !== tokenManager) {
+    return false;
+  }
+  const accessToken = tokenManager.getAccessToken();
+  return !accessToken || accessToken === endedSession.accessToken;
+}
 let requestErrorHandler: RequestErrorHandler = null;
 
 function notifyRequestError(error: unknown, config?: RetryableRequestConfig) {
@@ -66,16 +88,29 @@ async function decodeBlobErrorBody(error: unknown) {
   }
 }
 
-async function refreshAccessToken() {
-  const runtimeConfig = getRuntimeConfig();
-
+async function refreshAccessToken(tokenManager: TokenManager) {
   if (!refreshPromise) {
-    refreshPromise = runtimeConfig.auth.tokenManager.refreshAccessToken().finally(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error("Token refresh timed out."));
+      }, AUTH_REFRESH_TIMEOUT_MS);
+    });
+    refreshPromise = Promise.race([tokenManager.refreshAccessToken(), timeout]).finally(() => {
+      clearTimeout(timer);
       refreshPromise = null;
     });
   }
 
   return refreshPromise;
+}
+
+function endSession(tokenManager: TokenManager) {
+  if (isSessionEnded(tokenManager)) {
+    return;
+  }
+  endedSession = { accessToken: tokenManager.getAccessToken(), tokenManager };
+  tokenManager.onAuthFailure?.();
 }
 
 async function isSessionRejected(config: RetryableRequestConfig): Promise<boolean> {
@@ -116,19 +151,26 @@ http.interceptors.request.use((config) => {
 });
 
 http.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A request that gets through again means the session is live (a host may
+    // renew it without a reload), so a later expiry must end it again.
+    endedSession = null;
+    return response;
+  },
   async (error) => {
-    const runtimeConfig = getRuntimeConfig();
+    const { tokenManager } = getRuntimeConfig().auth;
     const axiosError = axios.isAxiosError(error) ? error : null;
     const config = axiosError?.config as RetryableRequestConfig | undefined;
     const status = axiosError?.response?.status;
 
-    if (status === 401 && !config?.skipAuthRefresh) {
+    // Once the session has been ended, further 401s neither refresh nor end it
+    // again; the redirect to sign-in is already under way.
+    if (status === 401 && !config?.skipAuthRefresh && !isSessionEnded(tokenManager)) {
       if (config && !config._retry) {
         config._retry = true;
 
         try {
-          const refreshedToken = await refreshAccessToken();
+          const refreshedToken = await refreshAccessToken(tokenManager);
 
           if (refreshedToken) {
             config.headers.set("Authorization", `Bearer ${refreshedToken}`);
@@ -138,10 +180,10 @@ http.interceptors.response.use(
           // A refresh failure alone does not establish that the session has expired.
         }
         if (await isSessionRejected(config)) {
-          runtimeConfig.auth.tokenManager.onAuthFailure?.();
+          endSession(tokenManager);
         }
       } else if (config && (await isSessionRejected(config))) {
-        runtimeConfig.auth.tokenManager.onAuthFailure?.();
+        endSession(tokenManager);
       }
     }
 

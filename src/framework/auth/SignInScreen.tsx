@@ -14,6 +14,7 @@ import {
   beginAutoLogin,
   beginLogin,
   canAutoStartLogin,
+  hasSessionExpiredNotice,
   msUntilAutoStartAllowed,
   reloadForSharedAuthState,
   subscribeFlowLockRelease,
@@ -36,6 +37,8 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   const [deferredToOtherTab, setDeferredToOtherTab] = useState(false);
   const [showDevTokenForm, setShowDevTokenForm] = useState(false);
   const [retryGeneration, setRetryGeneration] = useState(0);
+  // Read once: the flag is cleared when the redirect to the login page starts.
+  const [sessionExpired] = useState(hasSessionExpiredNotice);
 
   useEffect(() => {
     if (showDevTokenForm) {
@@ -142,6 +145,14 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     <div className={styles.page}>
       <div className={styles.card}>
         <h1 className={styles.title}>{t("app.title")}</h1>
+        {sessionExpired && !redirectError ? (
+          <Alert
+            message={t("auth.sessionExpired")}
+            showIcon
+            style={{ marginBottom: 20, textAlign: "left" }}
+            type="warning"
+          />
+        ) : null}
         {redirectError ? (
           <>
             <Alert

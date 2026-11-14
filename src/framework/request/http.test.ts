@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AxiosAdapter } from "axios";
 
-import { http, setRequestErrorHandler } from "@/framework/request/http";
+import { AUTH_REFRESH_TIMEOUT_MS, http, setRequestErrorHandler } from "@/framework/request/http";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
@@ -187,6 +187,121 @@ describe("http request headers", () => {
       expect(rejected).toHaveBeenCalledTimes(failure === "rejected-after-refresh" ? 2 : 1);
     },
   );
+
+  it("ends the session when the token refresh never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      const onAuthFailure = vi.fn();
+      const refreshAccessToken = vi.fn(() => new Promise<string | null>(() => {}));
+      setRuntimeConfig(
+        createRuntimeConfig({
+          auth: {
+            tokenManager: {
+              getAccessToken: () => "expired-token",
+              refreshAccessToken,
+              onAuthFailure,
+            },
+          },
+        }),
+      );
+      const rejected: AxiosAdapter = (config) =>
+        Promise.reject(
+          Object.assign(new Error("HTTP 401"), {
+            isAxiosError: true,
+            config,
+            response: { status: 401 },
+          }),
+        );
+
+      const request = http.get("/safe/v1/me", { adapter: rejected });
+      const settled = expect(request).rejects.toThrow("HTTP 401");
+      await vi.advanceTimersByTimeAsync(AUTH_REFRESH_TIMEOUT_MS);
+      await settled;
+
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+      expect(onAuthFailure).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shares one refresh and ends the session once for concurrent 401s", async () => {
+    const onAuthFailure = vi.fn();
+    let finishRefresh: (token: string | null) => void = () => {};
+    const refreshAccessToken = vi.fn(
+      () =>
+        new Promise<string | null>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: {
+          tokenManager: {
+            getAccessToken: () => "expired-token",
+            refreshAccessToken,
+            onAuthFailure,
+          },
+        },
+      }),
+    );
+    const rejected = vi.fn<AxiosAdapter>((config) =>
+      Promise.reject(
+        Object.assign(new Error("HTTP 401"), {
+          isAxiosError: true,
+          config,
+          response: { status: 401 },
+        }),
+      ),
+    );
+
+    const requests = [
+      http.get("/safe/v1/me", { adapter: rejected }),
+      http.get("/safe/v1/me/permissions", { adapter: rejected }),
+    ];
+    await vi.waitFor(() => {
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    });
+    finishRefresh(null);
+    const results = await Promise.allSettled(requests);
+
+    expect(results.map((result) => result.status)).toEqual(["rejected", "rejected"]);
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(onAuthFailure).toHaveBeenCalledTimes(1);
+
+    // Later 401s on the ended session neither refresh nor end it again.
+    await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(onAuthFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles the expiry again once a host renews the session without a reload", async () => {
+    const onAuthFailure = vi.fn();
+    let accessToken = "first-session";
+    const refreshAccessToken = vi.fn(() => Promise.resolve(null));
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: {
+          tokenManager: { getAccessToken: () => accessToken, refreshAccessToken, onAuthFailure },
+        },
+      }),
+    );
+    const rejected: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("HTTP 401"), {
+          isAxiosError: true,
+          config,
+          response: { status: 401 },
+        }),
+      );
+
+    await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+    accessToken = "renewed-session";
+    await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+    expect(onAuthFailure).toHaveBeenCalledTimes(2);
+  });
 
   it("keeps the session on an ordinary permission denial", async () => {
     const onAuthFailure = vi.fn();
