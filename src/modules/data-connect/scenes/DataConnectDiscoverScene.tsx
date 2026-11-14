@@ -70,6 +70,8 @@ import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 
+import { ScheduleRunResultView } from "@/shared/schedule";
+
 import styles from "./DataConnectDiscoverScene.module.css";
 
 type ScheduleModalState =
@@ -544,6 +546,14 @@ export function DataConnectDiscoverScene({
       className: styles.timeText,
       width: 180,
       title: t("dataConnect.discoverLastRun"),
+    },
+    {
+      key: "lastResult",
+      width: 260,
+      title: t("common.schedule.lastResult"),
+      render: (_, record) => (
+        <ScheduleRunResultView status={record.lastStatus} message={record.lastMessage} />
+      ),
     },
     {
       dataIndex: "nextRun",

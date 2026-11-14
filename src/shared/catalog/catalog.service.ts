@@ -11,7 +11,9 @@ import {
   throwMockRequestError,
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
-import { calculateNextHourlyCronRun, isHourlyCron } from "@/shared/hourly-cron";
+import { calculateNextHourlyCronRun } from "@/shared/hourly-cron";
+import { isHourlyCron, normalizeScheduleLastStatus } from "@/shared/schedule";
+import { mockBuildSchedules } from "@/shared/schedule/build-schedule-mock";
 import {
   findMockCatalog,
   getMockCatalogs,
@@ -58,6 +60,8 @@ type BackendCatalogHealthCheckSchedule = {
   catalog_id: string;
   cron_expr?: string;
   last_run: number;
+  last_status?: string;
+  last_message?: string;
   mode: CatalogHealthCheckSchedule["mode"];
   next_run: number;
   update_time: number;
@@ -71,6 +75,7 @@ type BackendCatalogDeletionTaskImpact = {
 type BackendCatalogDeletionImpact = {
   blockers: CatalogDeletionBlocker[];
   build_tasks: BackendCatalogDeletionTaskImpact;
+  build_schedules?: number;
   can_delete: boolean;
   catalog_health_check_schedules: number;
   catalog_id: string;
@@ -222,6 +227,9 @@ export async function deleteCatalog(id: string) {
   if (useMock) {
     removeMockCatalog(id);
     mockHealthCheckSchedules.delete(id);
+    for (let index = mockBuildSchedules.length - 1; index >= 0; index -= 1) {
+      if (mockBuildSchedules[index].catalogId === id) mockBuildSchedules.splice(index, 1);
+    }
     await wait(undefined);
     return;
   }
@@ -234,6 +242,7 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
     return wait({
       blockers: [],
       buildTasks: { blocking: 0, willDelete: 0 },
+      buildSchedules: mockBuildSchedules.filter((schedule) => schedule.catalogId === id).length,
       canDelete: true,
       catalogHealthCheckSchedules: 0,
       catalogId: id,
@@ -263,6 +272,7 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
   return {
     blockers: impact.blockers,
     buildTasks: mapTaskImpact(impact.build_tasks),
+    buildSchedules: impact.build_schedules ?? 0,
     canDelete: impact.can_delete,
     catalogHealthCheckSchedules: impact.catalog_health_check_schedules,
     catalogId: impact.catalog_id,
@@ -643,6 +653,8 @@ function buildMockHealthCheckSchedule(
           ? (previous?.cronExpr ?? "")
           : "",
     lastRun: previous?.lastRun ?? null,
+    lastStatus: previous?.lastStatus ?? "never",
+    lastMessage: previous?.lastMessage ?? "",
     mode: input.mode,
     expectedUpdateTime: now,
     nextRun: input.mode === "disabled" ? null : (nextRunValue ?? null),
@@ -657,6 +669,8 @@ function mapHealthCheckSchedule(
     catalogId: schedule.catalog_id,
     cronExpr: schedule.cron_expr ?? "",
     lastRun: schedule.last_run || null,
+    lastStatus: normalizeScheduleLastStatus(schedule.last_status, schedule.last_run),
+    lastMessage: schedule.last_message ?? "",
     mode: schedule.mode,
     nextRun: schedule.next_run || null,
     expectedUpdateTime: schedule.update_time ?? 0,

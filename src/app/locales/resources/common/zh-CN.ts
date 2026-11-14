@@ -7,6 +7,19 @@
 
 export const commonZhCN = {
   common: {
+    schedule: {
+      lastResult: "最近触发结果",
+      taskCreated: "任务已创建",
+      healthCheckSucceeded: "检查成功",
+      status: {
+        never: "尚未触发",
+        unknown: "未知",
+        triggering: "触发中",
+        skipped: "已跳过",
+        failed: "失败",
+      },
+    },
+
     search: "搜索",
     reset: "重置",
     refresh: "刷新",

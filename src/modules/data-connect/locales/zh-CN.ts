@@ -118,7 +118,7 @@ export const dataConnectZhCN = {
       resources: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       resources_one: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
       resources_other: "资源：{{count}} 个（其中受保护资源 {{protected}} 个）",
-      schedules: "计划：探查 {{discover}} 个，健康检查 {{health}} 个",
+      schedules: "计划：探查 {{discover}} 个，健康检查 {{health}} 个，构建 {{build}} 个",
       buildTasks: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
       buildTasks_one: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",
       buildTasks_other: "构建任务：将删除任务记录 {{count}} 个，阻断 {{blocking}} 个",

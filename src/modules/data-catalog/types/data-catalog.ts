@@ -188,6 +188,8 @@ export type ResourcePreviewResult = {
 export type BuildMode = "batch" | "streaming";
 export type BuildTaskExecuteType = "full" | "incremental";
 
+export type BuildTaskTriggerType = "manual" | "scheduled";
+
 export type BuildTaskStatus =
   "cancelled" | "completed" | "failed" | "pending" | "running" | "stopping" | "stopped";
 
@@ -207,6 +209,9 @@ export type EmbeddingFieldConfig = {
 };
 
 export type BuildTask = {
+  /** Server-maintained origin; manual creation cannot set these fields. */
+  readonly scheduleId?: string;
+  readonly triggerType?: BuildTaskTriggerType;
   incrementalFields: string[];
   /** Catalog containing the backend task record. Legacy mock data may omit it and derive it from the resource. */
   catalogId?: string;
@@ -250,6 +255,8 @@ export type BuildTask = {
 export type BuildTaskSort = "create_time" | "start_time" | "finish_time" | "last_progress_time";
 
 export type BuildTaskPageQuery = {
+  scheduleId?: string;
+  triggerType?: BuildTaskTriggerType;
   catalogId?: string;
   executeType?: BuildTaskExecuteType;
   mode?: BuildMode;

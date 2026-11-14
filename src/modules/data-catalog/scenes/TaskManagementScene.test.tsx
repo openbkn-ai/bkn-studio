@@ -41,6 +41,10 @@ vi.mock("@/modules/data-catalog/scenes/IndexBuildListScene", () => ({
   IndexBuildListScene: () => <div>index build panel</div>,
 }));
 
+vi.mock("@/modules/data-catalog/components/BuildSchedulePanel", () => ({
+  BuildSchedulePanel: () => <div>build schedule panel</div>,
+}));
+
 vi.mock("./TaskManagementTaskPanels", () => ({
   DiscoverTaskListPanel: () => <div>discover panel</div>,
   SemanticUnderstandingTaskListPanel: () => <div>semantic panel</div>,
@@ -54,6 +58,22 @@ function LocationState() {
 }
 
 describe("TaskManagementScene", () => {
+  it("does not expose build schedules and normalizes the removed tab", () => {
+    render(
+      <MemoryRouter initialEntries={["/task-management?tab=build-schedules&keep=1"]}>
+        <TaskManagementScene />
+        <LocationState />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("active-tab")).toHaveTextContent("discover");
+    expect(screen.getByText("discover panel")).toBeInTheDocument();
+    expect(screen.queryByText("build schedule panel")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.buildSchedule.title" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(screen.getByTestId("location")).toHaveTextContent("tab=discover&keep=1");
+  });
   it("restores the active tab from the URL and updates it when switching tabs", () => {
     render(
       <MemoryRouter initialEntries={["/task-management?tab=semantic-understanding"]}>

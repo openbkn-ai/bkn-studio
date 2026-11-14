@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { ScheduleLastStatus } from "@/shared/schedule";
+
 export type CatalogRecordStatus = "disabled" | "enabled";
 
 export type CatalogHealthStatus = "degraded" | "healthy" | "offline" | "unchecked" | "unhealthy";
@@ -31,6 +33,8 @@ export type CatalogHealthCheckSchedule = {
   cronExpr: string;
   expectedUpdateTime: number;
   lastRun: CatalogTimestamp;
+  lastStatus?: ScheduleLastStatus;
+  lastMessage?: string;
   mode: CatalogHealthCheckScheduleMode;
   nextRun: CatalogTimestamp;
   updateTime: CatalogTimestamp;
@@ -57,6 +61,7 @@ export type CatalogDeletionTaskImpact = {
 export type CatalogDeletionImpact = {
   blockers: CatalogDeletionBlocker[];
   buildTasks: CatalogDeletionTaskImpact;
+  buildSchedules: number;
   canDelete: boolean;
   catalogHealthCheckSchedules: number;
   catalogId: string;

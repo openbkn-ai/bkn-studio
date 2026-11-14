@@ -12,6 +12,7 @@ import {
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
 import i18n from "@/app/locales/i18n";
+import { normalizeScheduleLastStatus } from "@/shared/schedule";
 import { postCatalogDiscover } from "@/shared/catalog";
 import type {
   DataConnectDiscoverSchedule,
@@ -48,6 +49,8 @@ type BackendDiscoverSchedule = {
   end_time?: number;
   id: string;
   last_run?: number;
+  last_status?: string;
+  last_message?: string;
   name: string;
   next_run?: number;
   start_time?: number;
@@ -119,6 +122,8 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     enabled: true,
     strategy: "full_sync",
     lastRun: "2026-06-03 02:00:11",
+    lastStatus: "unknown",
+    lastMessage: "",
     nextRun: "2026-06-04 02:00:00",
     creatorName: "Platform Admin",
     updaterName: "Platform Admin",
@@ -136,6 +141,8 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     enabled: true,
     strategy: "create_only",
     lastRun: "2026-06-03 11:30:08",
+    lastStatus: "unknown",
+    lastMessage: "",
     nextRun: "2026-06-03 12:30:00",
     creatorName: "Search Team",
     updaterName: "Search Team",
@@ -153,6 +160,8 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     enabled: false,
     strategy: "cleanup_only",
     lastRun: "2026-06-02 03:00:00",
+    lastStatus: "unknown",
+    lastMessage: "",
     nextRun: "2026-06-09 03:00:00",
     creatorName: "Data Ops",
     updaterName: "Data Ops",
@@ -299,6 +308,8 @@ function mapSchedule(item: BackendDiscoverSchedule): DataConnectDiscoverSchedule
     strategy: normalizeStrategy(item.strategy),
     lastRun: formatTimestamp(item.last_run),
     lastRunValue: item.last_run,
+    lastStatus: normalizeScheduleLastStatus(item.last_status, item.last_run),
+    lastMessage: item.last_message ?? "",
     nextRun: formatTimestamp(item.next_run),
     nextRunValue: item.next_run,
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
@@ -506,6 +517,8 @@ export async function createDataConnectDiscoverSchedule(input: DataConnectDiscov
         enabled: input.enabled,
         strategy: input.strategy,
         lastRun: "-",
+        lastStatus: "never",
+        lastMessage: "",
         nextRun: formatTimestamp(nextRunValue),
         nextRunValue,
         creatorName: "Local Admin",

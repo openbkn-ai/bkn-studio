@@ -28,6 +28,7 @@ import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
+import { BuildSchedulePanel } from "@/modules/data-catalog/components/BuildSchedulePanel";
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
@@ -194,6 +195,7 @@ export function ResourceIndexPanel({
   const autoPickedRef = useRef(false);
   const historyRequestIdRef = useRef(0);
   const supportsTaskView = resource.category !== "dataset";
+  const supportsSchedules = resource.category === "table";
   const canViewTasks = canViewResourceIndexTasks(resource, catalog);
   const resourceChanged = filtersResourceId !== resource.id;
 
@@ -333,10 +335,13 @@ export function ResourceIndexPanel({
   }, [active, indexView, indexViewExplicit, onIndexViewChange]);
 
   useEffect(() => {
-    if (!supportsTaskView && indexView === "tasks") {
+    if (
+      (!supportsTaskView && indexView === "tasks") ||
+      (!supportsSchedules && indexView === "schedules")
+    ) {
       onIndexViewChange("config");
     }
-  }, [indexView, onIndexViewChange, supportsTaskView]);
+  }, [indexView, onIndexViewChange, supportsTaskView, supportsSchedules]);
 
   useEffect(() => {
     if (!resourceChanged) return;
@@ -824,10 +829,28 @@ export function ResourceIndexPanel({
                 </span>
               </Tooltip>
             )}
+            {supportsSchedules ? (
+              <button
+                className={
+                  indexView === "schedules" ? panelStyles.viewTabActive : panelStyles.viewTab
+                }
+                onClick={() => onIndexViewChange("schedules")}
+                role="tab"
+                type="button"
+              >
+                {t("dataCatalog.buildSchedule.title")}
+              </button>
+            ) : null}
           </div>
         </div>
 
-        {!supportsTaskView || indexView === "config" ? (
+        {indexView === "schedules" && supportsSchedules ? (
+          canViewTasks ? (
+            <BuildSchedulePanel active={active} catalog={catalog} resource={resource} />
+          ) : (
+            <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
+          )
+        ) : !supportsTaskView || indexView === "config" ? (
           renderConfigTab()
         ) : canViewTasks ? (
           renderTasksTab()

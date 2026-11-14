@@ -7,6 +7,19 @@
 
 export const commonEnUS = {
   common: {
+    schedule: {
+      lastResult: "Last trigger result",
+      taskCreated: "Task created",
+      healthCheckSucceeded: "Check succeeded",
+      status: {
+        never: "Not triggered",
+        unknown: "Unknown",
+        triggering: "Triggering",
+        skipped: "Skipped",
+        failed: "Failed",
+      },
+    },
+
     search: "Search",
     reset: "Reset",
     refresh: "Refresh",

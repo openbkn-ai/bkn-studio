@@ -47,6 +47,7 @@ import type {
   BuildTaskPageQuery,
   BuildTaskSort,
   BuildTaskStatus,
+  BuildTaskTriggerType,
 } from "@/modules/data-catalog/types/data-catalog";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 
@@ -103,12 +104,16 @@ export function IndexBuildListScene() {
       direction,
       executeType: listFilters.executeType,
       mode: listFilters.mode,
+      scheduleId: listFilters.scheduleId,
+      triggerType: listFilters.triggerType,
       statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
     [
       direction,
       listFilters.executeType,
       listFilters.mode,
+      listFilters.scheduleId,
+      listFilters.triggerType,
       listFilters.statuses,
       page,
       pageSize,
@@ -121,6 +126,8 @@ export function IndexBuildListScene() {
       const next = applyIndexBuildListFilters(searchParams, {
         executeType: "executeType" in patch ? patch.executeType : listFilters.executeType,
         mode: "mode" in patch ? patch.mode : listFilters.mode,
+        scheduleId: "scheduleId" in patch ? patch.scheduleId : listFilters.scheduleId,
+        triggerType: "triggerType" in patch ? patch.triggerType : listFilters.triggerType,
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
       setSearchParams(next, { replace: true });
@@ -285,6 +292,24 @@ export function IndexBuildListScene() {
       },
     },
     {
+      dataIndex: "status",
+      title: t("dataCatalog.task.detailSections.status"),
+      width: 120,
+      filters: STATUS_OPTIONS.map((value) => ({
+        text: t(`dataCatalog.task.statuses.${value}`),
+        value,
+      })),
+      filteredValue: listFilters.statuses.length ? listFilters.statuses : null,
+      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
+    },
+    {
+      key: "progress",
+      title: t("dataCatalog.task.progress"),
+      width: 200,
+      onCell: () => ({ className: sceneStyles.progressCell }),
+      render: (_, record) => <BuildProgress compact task={record} />,
+    },
+    {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
       width: 140,
@@ -327,22 +352,25 @@ export function IndexBuildListScene() {
       ),
     },
     {
-      dataIndex: "status",
-      title: t("dataCatalog.task.detailSections.status"),
-      width: 120,
-      filters: STATUS_OPTIONS.map((value) => ({
-        text: t(`dataCatalog.task.statuses.${value}`),
+      dataIndex: "triggerType",
+      title: t("dataCatalog.buildSchedule.taskSource"),
+      width: 140,
+      filters: (["manual", "scheduled"] as const).map((value) => ({
+        text: t(`dataCatalog.buildSchedule.${value}`),
         value,
       })),
-      filteredValue: listFilters.statuses.length ? listFilters.statuses : null,
-      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
+      filterMultiple: false,
+      filteredValue: listFilters.triggerType ? [listFilters.triggerType] : null,
+      onHeaderCell: () => ({ className: taskPanelStyles.taskFilterHeader }),
+      render: (value: BuildTask["triggerType"]) => (
+        <EllipsisText text={t(`dataCatalog.buildSchedule.${value ?? "manual"}`)} />
+      ),
     },
     {
-      key: "progress",
-      title: t("dataCatalog.task.progress"),
-      width: 200,
-      onCell: () => ({ className: sceneStyles.progressCell }),
-      render: (_, record) => <BuildProgress compact task={record} />,
+      dataIndex: "scheduleId",
+      title: t("dataCatalog.buildSchedule.scheduleId"),
+      width: 180,
+      render: (value: BuildTask["scheduleId"]) => <EllipsisText text={value || "-"} />,
     },
     {
       dataIndex: "lastProgressTime",
@@ -452,8 +480,8 @@ export function IndexBuildListScene() {
 
   return (
     <section className={sceneStyles.contentSurface}>
-      <div className={taskPanelStyles.operationBar}>
-        <Space className={taskPanelStyles.toolbarActions}>
+      <div className={sceneStyles.operationBar}>
+        <Space className={sceneStyles.toolbarActions}>
           <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
             {t("common.refresh")}
           </AppButton>
@@ -499,6 +527,7 @@ export function IndexBuildListScene() {
                 updateListFilters({
                   executeType: filters.executeType?.[0] as BuildTaskExecuteType | undefined,
                   mode: filters.mode?.[0] as BuildMode | undefined,
+                  triggerType: filters.triggerType?.[0] as BuildTaskTriggerType | undefined,
                   statuses: (filters.status ?? []).map(String) as BuildTaskStatus[],
                 });
                 return;
@@ -516,7 +545,7 @@ export function IndexBuildListScene() {
                   }
                 : undefined
             }
-            scroll={{ x: 1800 }}
+            scroll={{ x: 2120 }}
             tableLayout="fixed"
           />
         )}

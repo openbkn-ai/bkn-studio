@@ -34,6 +34,8 @@ import type {
 import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import { hasCatalogOperation } from "@/shared/catalog";
 
+import { ScheduleRunResultView } from "@/shared/schedule";
+
 import styles from "./DataConnectDetailDrawer.module.css";
 
 type DataConnectDetailDrawerProps = {
@@ -363,6 +365,17 @@ export function DataConnectDetailDrawer({
                     key: "lastRun",
                     label: t("dataConnect.healthCheckSchedule.lastRun"),
                     children: formatCatalogTime(schedule.lastRun),
+                  },
+                  {
+                    key: "lastResult",
+                    label: t("common.schedule.lastResult"),
+                    children: (
+                      <ScheduleRunResultView
+                        kind="health-check"
+                        status={schedule.lastStatus}
+                        message={schedule.lastMessage}
+                      />
+                    ),
                   },
                   {
                     key: "nextRun",

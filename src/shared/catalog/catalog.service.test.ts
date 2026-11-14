@@ -360,6 +360,7 @@ describe("catalog.service · deletion preflight", () => {
       data: {
         blockers: ["discover_tasks_running"],
         build_tasks: { blocking: 0, will_delete: 1 },
+        build_schedules: 3,
         can_delete: false,
         catalog_health_check_schedules: 1,
         catalog_id: "catalog-1",
@@ -375,6 +376,7 @@ describe("catalog.service · deletion preflight", () => {
     await expect(previewCatalogDeletion("catalog-1")).resolves.toEqual({
       blockers: ["discover_tasks_running"],
       buildTasks: { blocking: 0, willDelete: 1 },
+      buildSchedules: 3,
       canDelete: false,
       catalogHealthCheckSchedules: 1,
       catalogId: "catalog-1",
@@ -503,6 +505,31 @@ describe("catalog.service · health check schedule", () => {
     );
   });
 
+  it.each([
+    { status: "failed", lastRun: 100, expected: "failed" },
+    { status: undefined, lastRun: 100, expected: "unknown" },
+    { status: undefined, lastRun: 0, expected: "never" },
+    { status: "future-state", lastRun: 0, expected: "unknown" },
+  ])("maps health trigger results safely: $expected", async ({ status, lastRun, expected }) => {
+    const message = "Backend explanation\n原始说明";
+    getMock.mockResolvedValue({
+      data: {
+        catalog_id: "catalog-1",
+        mode: "inherit",
+        last_run: lastRun,
+        last_status: status,
+        last_message: message,
+        next_run: 0,
+        update_time: 1,
+      },
+    });
+    const { getCatalogHealthCheckSchedule } = await import("@/shared/catalog/catalog.service");
+    await expect(getCatalogHealthCheckSchedule("catalog-1")).resolves.toMatchObject({
+      lastStatus: expected,
+      lastMessage: message,
+    });
+  });
+
   it("maps a catalog health check schedule", async () => {
     getMock.mockResolvedValue({
       data: {
@@ -580,6 +607,25 @@ describe("catalog.service · mock health check schedule", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("counts and deletes only the catalog's build schedules", async () => {
+    const { mockBuildSchedules } = await import("@/shared/schedule/build-schedule-mock");
+    const { deleteCatalog, previewCatalogDeletion } =
+      await import("@/shared/catalog/catalog.service");
+    const fixture = mockBuildSchedules[0];
+    if (!fixture) throw new Error("A build schedule fixture is required");
+    mockBuildSchedules.push({ ...fixture, id: "other-catalog-schedule", catalogId: "cat-002" });
+    const affected = mockBuildSchedules.filter((schedule) => schedule.catalogId === "cat-001");
+    const retained = mockBuildSchedules.filter((schedule) => schedule.catalogId !== "cat-001");
+    expect(affected.length).toBeGreaterThan(0);
+    expect(retained.length).toBeGreaterThan(0);
+    await expect(previewCatalogDeletion("cat-001")).resolves.toMatchObject({
+      buildSchedules: affected.length,
+    });
+    await deleteCatalog("cat-001");
+    expect(mockBuildSchedules).toEqual(retained);
+    await expect(previewCatalogDeletion("cat-001")).resolves.toMatchObject({ buildSchedules: 0 });
   });
 
   it("uses an empty category for existing and newly created logical mock catalogs", async () => {

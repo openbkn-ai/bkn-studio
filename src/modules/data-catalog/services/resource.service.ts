@@ -32,6 +32,7 @@ import {
   emitMockChange,
   formatMockTimestamp,
   mockBuildTasks,
+  mockBuildSchedules,
   mockResources,
   mockDiscoverRecords,
   mockDiscoveringCatalogs,
@@ -951,7 +952,7 @@ export async function deleteCatalogResource(
       );
     }
     const index = mockResources.findIndex((item) => item.id === id);
-    if (options.onlyIfStale && index < 0) {
+    if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
     }
     if (
@@ -968,9 +969,9 @@ export async function deleteCatalogResource(
     if (index >= 0) {
       mockResources.splice(index, 1);
     }
-    for (let cursor = mockBuildTasks.length - 1; cursor >= 0; cursor -= 1) {
-      if (mockBuildTasks[cursor].resourceId === id) {
-        mockBuildTasks.splice(cursor, 1);
+    for (let cursor = mockBuildSchedules.length - 1; cursor >= 0; cursor -= 1) {
+      if (mockBuildSchedules[cursor].resourceId === id) {
+        mockBuildSchedules.splice(cursor, 1);
       }
     }
     emitMockChange();
