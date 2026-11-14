@@ -1220,7 +1220,9 @@ describe("ProjectRequirements", () => {
       const spec = requirements();
       spec.spec.scenarios = [];
       spec.spec.questions = [];
-      spec.spec.rejected = [{ kind: "question", reason: "quote_not_found", text: "哪些订单晚了？" }];
+      spec.spec.rejected = [
+        { kind: "question", reason: "quote_not_found", text: "哪些订单晚了？" },
+      ];
       getRequirementsMock.mockResolvedValue(spec);
       renderPage();
       expect(await screen.findByText("起草时去掉了 1 条内容")).toBeInTheDocument();
