@@ -27,8 +27,18 @@ import { ProjectReleasePage } from "@/modules/bkn-project/components/ProjectRele
 import { ProjectResources } from "@/modules/bkn-project/components/resources/ProjectResources";
 import { ProjectWorkspaceNav } from "@/modules/bkn-project/components/ProjectWorkspaceNav";
 import { UnsavedLeaveGuard } from "@/modules/bkn-project/components/unsaved/UnsavedLeaveGuard";
-import { kineticItemCount } from "@/modules/bkn-project/components/kinetic/needs";
-import { getDraft } from "@/modules/bkn-project/services/draft.service";
+import {
+  kineticCount as kineticItemCount,
+  modelObjectCount,
+  questionCount,
+  tableCount,
+} from "@/modules/bkn-project/components/stepCounts";
+import {
+  getConcepts,
+  getDraft,
+  getExistingDefinitions,
+} from "@/modules/bkn-project/services/draft.service";
+import { getUnderstanding } from "@/modules/bkn-project/services/publish.service";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
 import {
@@ -99,14 +109,16 @@ export function ProjectWorkspaceScene({
     void load();
   }, [load]);
 
-  // What the navigation counts: catalogs, object types, kinetic items (what the network already
-  // has and the project's new needs) and scenario questions, read again on each
-  // page so a change made on one shows when moving on. A failed read leaves the count off.
+  // What the navigation counts: the items each step holds, counted as the overview's step cards
+  // and the pages count them (the tables, the concepts, the object types of the model, the kinetic
+  // items and the scenario questions), read again on each page so a change made on one shows when
+  // moving on. A failed read leaves the count off.
   const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
   // Kinetic modeling counts what it reads itself; elsewhere the count is read here.
   const [kineticCount, setKineticCount] = useState<number | undefined>(undefined);
   // Read once the project is, after the page's own reads: the counts only add to it.
   const loadedId = loaded?.project.id;
+  const catalogKey = loaded?.project.catalogIds.join(",");
   useEffect(() => {
     if (!loadedId) {
       return undefined;
@@ -114,25 +126,34 @@ export function ProjectWorkspaceScene({
     let active = true;
     void Promise.all([
       getRequirements(projectId).catch(() => null),
-      getDraft(projectId).catch(() => null),
+      getDraft(projectId).catch(() => undefined),
       section === "kinetic" ? undefined : getLogicNeeds(projectId).catch(() => null),
-    ]).then(([requirements, draft, logic]) => {
+      getUnderstanding(projectId).catch(() => null),
+      getConcepts(projectId).catch(() => null),
+      getExistingDefinitions(projectId).catch(() => null),
+    ]).then(([requirements, draft, logic, understanding, concepts, existing]) => {
       if (active) {
         if (logic !== undefined) {
           setKineticCount(logic ? kineticItemCount(logic) : undefined);
         }
+        const scenarios = questionCount(requirements);
+        // The draft read failed: the model's count is not known.
+        const model =
+          draft === undefined || !existing
+            ? undefined
+            : modelObjectCount(draft, new Set(existing.objectTypes.map((item) => item.id)));
         setCounts({
-          ...(requirements?.status === "ready" && requirements.spec
-            ? { scenarios: requirements.spec.questions.length }
-            : {}),
-          ...(draft?.status === "ready" ? { model: draft.items.objectTypes.length } : {}),
+          ...(understanding ? { resources: tableCount(understanding) } : {}),
+          ...(concepts ? { concepts: concepts.concepts.length } : {}),
+          ...(model === undefined ? {} : { model }),
+          ...(scenarios === undefined ? {} : { scenarios }),
         });
       }
     });
     return () => {
       active = false;
     };
-  }, [loadedId, projectId, section]);
+  }, [catalogKey, loadedId, projectId, section]);
 
   const backToList = () => void navigate("/bkn-project");
 
@@ -199,7 +220,6 @@ export function ProjectWorkspaceScene({
             counts={{
               ...counts,
               ...(kineticCount === undefined ? {} : { kinetic: kineticCount }),
-              resources: project.catalogIds.length,
             }}
             projectId={project.id}
           />

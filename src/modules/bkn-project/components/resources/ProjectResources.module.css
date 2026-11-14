@@ -90,3 +90,10 @@
   padding: 0;
   list-style: none;
 }
+
+/* The object types reading a table: the network's after its blue dot, then the project's. */
+.usedBy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

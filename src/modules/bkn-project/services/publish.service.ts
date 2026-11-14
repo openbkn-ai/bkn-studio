@@ -194,8 +194,10 @@ type BackendUnderstanding = {
         tables?:
           | {
               applied?: boolean;
+              described?: boolean;
               finish_time?: number;
               name: string;
+              network_object_types?: string[] | null;
               resource_id: string;
               status: UnderstandingStatus;
             }[]
@@ -390,8 +392,10 @@ function mapUnderstanding(understanding: BackendUnderstanding): UnderstandingCat
     missing: catalog.missing ?? false,
     tables: (catalog.tables ?? []).map((table) => ({
       applied: table.applied ?? false,
+      described: table.described ?? false,
       finishTime: table.finish_time || null,
       name: table.name,
+      networkObjectTypes: table.network_object_types ?? [],
       resourceId: table.resource_id,
       status: table.status,
     })),
@@ -795,8 +799,10 @@ async function mockUnderstandingOf(projectId: string): Promise<UnderstandingCata
     return {
       applied: status === "completed",
       catalogId: table.catalogId,
+      described: false,
       finishTime: run && status === "completed" ? run.start + (at + 1) * MOCK_UNDERSTAND_MS : null,
       name: table.name,
+      networkObjectTypes: [] as string[],
       resourceId: table.resourceId,
       status,
     };
@@ -804,10 +810,12 @@ async function mockUnderstandingOf(projectId: string): Promise<UnderstandingCata
   return project.catalogIds.map((catalogId) => {
     const own = understood
       .filter((table) => table.catalogId === catalogId)
-      .map(({ applied, finishTime, name, resourceId, status }) => ({
+      .map(({ applied, described, finishTime, name, networkObjectTypes, resourceId, status }) => ({
         applied,
+        described,
         finishTime,
         name,
+        networkObjectTypes,
         resourceId,
         status,
       }));

@@ -156,7 +156,7 @@ describe("publish messages", () => {
       "状态未知",
     );
     expect(missingFieldsText(zh, ["primary_key_fields", "incremental_fields"])).toBe(
-      "缺少：唯一标识字段、更新字段",
+      "缺少：唯一标识字段、更新时间字段",
     );
     expect(missingFieldsText(zh, ["something_new"])).toBe("这张表缺少构建所需的设置。");
   });
@@ -174,7 +174,7 @@ describe("publish messages", () => {
         time,
       }),
     ).toBe(
-      "The identity field's type cannot be used for an index (it must be a number or text). The update field's type cannot drive refreshes; it needs to be a date or time.",
+      "The identity field's type cannot be used for an index (it must be a number or text). The update-time field needs to be a date or time to refresh only the data that changed.",
     );
     expect(buildOutcomeText(en, { outcome: "failed", reason: "vega said 500", time })).toBe(
       "The build could not start. You can build again later.",

@@ -262,6 +262,44 @@ describe("ReleasePublish", () => {
     getRegressionMock.mockResolvedValue(null);
   });
 
+  it("warns before writing that the regression asks nothing without scenario questions", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        questions: { affected: [], answerableNew: [], total: 0, unanswerable: [], unjudged: 0 },
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(
+      await view.findByText(
+        "项目还没有场景问题，这次回归不会检查任何问题。建议先到业务场景生成问题，再写入网络。",
+      ),
+    ).toBeInTheDocument();
+    expect(view.queryByText(/写入网络后会自动用场景问题做一次回归/)).toBeNull();
+  });
+
+  it("says which function toolbox the review cannot read, and writes nothing meanwhile", async () => {
+    getReleaseReviewMock.mockRejectedValue(
+      new AxiosError("gone", "ERR_BAD_REQUEST", undefined, undefined, {
+        data: {
+          description: "gone",
+          error_code: "BknProject.Lineage.CapabilityRequestFailed",
+          error_details: { id: "box_1", kind: "function", name: "供应链计算" },
+        },
+        status: 404,
+      } as AxiosResponse),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    expect(await view.findByText(/网络使用的函数工具箱“供应链计算”已不存在/)).toBeInTheDocument();
+    const write = view
+      .getAllByRole("button")
+      .find((node) => node.closest(".ant-modal-footer") && !/取\s*消/.test(node.textContent ?? ""));
+    expect(write).toBeDisabled();
+  });
+
   it("shows the confirmed number of document originals included in search", async () => {
     getReleaseReviewMock.mockResolvedValue(
       review({
@@ -514,7 +552,7 @@ describe("ReleasePublish", () => {
   });
 
   it.each([
-    ["KnowledgeBaseNotReady", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["KnowledgeBaseNotReady", "请先按当前模型处理完知识库的全部文件，并核对结果。"],
     ["OriginalsChanged", "确认模型后，文件是否保留原文的设置已改，请重新确认模型。"],
     ["SourcePermission", "请确认来源知识库的查询权限和目标知识网络的配置权限。"],
     ["KnowledgeBaseUnavailable", "暂时无法核对知识库发布条件，请稍后重试。"],
@@ -552,7 +590,7 @@ describe("ReleasePublish", () => {
 
     shown = await target({ runningLabel: "", runningVersion: 1 });
     expect(
-      shown.view.getByText("将创建新版本「供应链 · 1.0.3」，基于线上运行的版本（第 1 版）。"),
+      shown.view.getByText("将创建新版本「供应链 · 1.0.3」，基于线上运行的版本（v1）。"),
     ).toBeInTheDocument();
     shown.unmount();
 
@@ -729,7 +767,7 @@ describe("ReleasePublish", () => {
   });
 
   it.each([
-    ["knowledge_base_not_ready", "请先完成当前模型的知识库全量构建和结果核对。"],
+    ["knowledge_base_not_ready", "请先按当前模型处理完知识库的全部文件，并核对结果。"],
     [
       "knowledge_base_originals_changed",
       "确认模型后，文件是否保留原文的设置已改，请重新确认模型。",

@@ -238,9 +238,13 @@ export type UnderstandingStatus =
 export type UnderstandingTable = {
   /** Whether the result was written to the table. */
   applied: boolean;
+  /** The catalog describes the table: it has a business name without understanding. */
+  described: boolean;
   /** Null until the table is understood. */
   finishTime: number | null;
   name: string;
+  /** The object types of the project's network that read the table now: it names the table. */
+  networkObjectTypes: string[];
   resourceId: string;
   status: UnderstandingStatus;
 };

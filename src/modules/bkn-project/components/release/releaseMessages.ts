@@ -257,6 +257,33 @@ export function publishErrorText(t: TFunction, code: string | undefined) {
   return t(`${PREFIX}.error.${PUBLISH_ERRORS.has(name) ? name : "other"}`);
 }
 
+/**
+ * Why the release review could not be read, and what to do: a function toolbox or Skill the
+ * network uses that cannot be read is named, with whether it is gone; anything else is retried.
+ */
+export function reviewLoadFailedText(
+  t: TFunction,
+  code: string | undefined,
+  status: number | undefined,
+  details: unknown,
+) {
+  if (code === "Lineage.CapabilityRequestFailed") {
+    const item = (details ?? {}) as { id?: unknown; kind?: unknown; name?: unknown };
+    const kind = item.kind === "skill" ? "skill" : "function";
+    const name =
+      typeof item.name === "string" && item.name
+        ? item.name
+        : typeof item.id === "string"
+          ? item.id
+          : "";
+    return t(`${PREFIX}.reviewFailed.${status === 404 ? "capabilityGone" : "capability"}`, {
+      kind: t(`${PREFIX}.reviewFailed.kind.${kind}`),
+      name,
+    });
+  }
+  return t(`${PREFIX}.reviewFailed.other`);
+}
+
 export const capabilityReasonText = (t: TFunction, reason: string) =>
   t(`${PREFIX}.capabilityReason.${CAPABILITY_REASONS.has(reason) ? reason : "other"}`);
 

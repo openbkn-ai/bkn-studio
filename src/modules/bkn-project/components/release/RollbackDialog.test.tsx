@@ -139,7 +139,7 @@ describe("RollbackDialog", () => {
     rollBackMock.mockRejectedValueOnce(refusal(409, "Rollback.PlanOutdated"));
     renderDialog(true, 4);
 
-    expect(await screen.findByText("切换为运行版本：第 4 版")).toBeInTheDocument();
+    expect(await screen.findByText("切换为运行版本：v4")).toBeInTheDocument();
     expect(getRollbackPlanMock).toHaveBeenCalledWith("p1", 4);
     fireEvent.click(confirmButton());
     await waitFor(() =>

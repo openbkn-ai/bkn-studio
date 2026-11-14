@@ -33,7 +33,7 @@ const withProperties = (overrides: Partial<DraftObjectType> = {}): DraftObjectTy
 const onSave = vi.fn(() => Promise.resolve());
 
 const updateFieldSelect = () =>
-  within(screen.getByRole("dialog")).getByRole("combobox", { name: "更新字段" });
+  within(screen.getByRole("dialog")).getByRole("combobox", { name: "更新时间字段" });
 
 describe("DraftItemDialog", () => {
   beforeAll(() => {
@@ -110,7 +110,7 @@ describe("DraftItemDialog", () => {
 
     fireEvent.click(within(listed[1] as HTMLElement).getByText("版本"));
     expect(
-      await screen.findByText("更新字段应随记录更新而增大，例如更新时间。"),
+      await screen.findByText("更新时间字段应随记录更新而增大，例如更新时间。"),
     ).toBeInTheDocument();
   });
 
@@ -141,7 +141,7 @@ describe("DraftItemDialog", () => {
     );
     expect(
       screen.getByText(
-        "这个对象类没有能作为更新字段的属性：更新字段需要是日期、时间、整数，或长度有限的文本。",
+        "这个对象类没有能作为更新时间字段的属性：更新时间字段需要是日期、时间、整数，或长度有限的文本。",
       ),
     ).toBeInTheDocument();
     expect(updateFieldSelect()).toBeDisabled();
@@ -161,6 +161,6 @@ describe("DraftItemDialog", () => {
     renderWithoutAntdStyles(
       <DraftItemDialog item={draft.items.relationTypes[0]} onCancel={vi.fn()} onSave={onSave} />,
     );
-    expect(screen.queryByText("更新字段")).toBeNull();
+    expect(screen.queryByText("更新时间字段")).toBeNull();
   });
 });

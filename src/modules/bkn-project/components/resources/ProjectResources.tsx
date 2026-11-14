@@ -23,8 +23,9 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { ExistingDot, ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
+import { UnderstandingTag } from "@/modules/bkn-project/components/model/UnderstandingTag";
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
-import { UNDERSTANDING_STATUS_TONE } from "@/modules/bkn-project/components/publish/messages";
+import { tableCount } from "@/modules/bkn-project/components/stepCounts";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { RequirementDocuments } from "@/modules/bkn-project/components/requirements/RequirementDocuments";
@@ -48,7 +49,10 @@ import styles from "./ProjectResources.module.css";
 const PREFIX = "bknProject.resources";
 const PAGE_SIZE = 20;
 
-/** A table of the project's catalogs, as this page lists it. */
+/**
+ * A table of the project's catalogs, as this page lists it: `usedBy` names the project's own
+ * object types that read it, beside those of the network the table names.
+ */
 type TableRow = UnderstandingTable & { catalogId: string; usedBy: string[] };
 
 /**
@@ -181,10 +185,13 @@ export function ProjectResources({
   const catalogName = (id: string) => catalogs?.get(id) ?? t(`${PREFIX}.catalogs.nameUnread`);
   // The catalogs the existing network's object types read: the network's, marked with its dot.
   const networkCatalogs = project.networkCatalogIds ?? [];
-  // The object types of the draft by the table they read, adopted or not.
+  // The project's own object types of the draft by the table they read, adopted or not; those of
+  // the network come with each table.
   const usedBy = useMemo(() => {
     const byTable = new Map<string, string[]>();
-    for (const item of draft?.status === "ready" ? draft.items.objectTypes : []) {
+    for (const item of draft?.status === "ready"
+      ? draft.items.objectTypes.filter((objectType) => !objectType.existing)
+      : []) {
       byTable.set(item.table.resourceId, [
         ...(byTable.get(item.table.resourceId) ?? []),
         item.name,
@@ -228,21 +235,28 @@ export function ProjectResources({
     },
     {
       key: "understanding",
-      render: (_value, record) => (
-        <LightStatusTag tone={UNDERSTANDING_STATUS_TONE[record.status] ?? "neutral"}>
-          {record.status === "completed" && !record.applied
-            ? t("bknProject.understand.progress.notApplied")
-            : t(`bknProject.understand.status.${record.status}`)}
-        </LightStatusTag>
-      ),
+      render: (_value, record) => <UnderstandingTag table={record} />,
       title: t(`${PREFIX}.tables.understanding`),
       width: 140,
     },
     {
       key: "usedBy",
       render: (_value, record) =>
-        record.usedBy.length ? (
-          record.usedBy.join(t(`${PREFIX}.tables.separator`))
+        record.networkObjectTypes.length || record.usedBy.length ? (
+          <span className={styles.usedBy}>
+            {record.networkObjectTypes.length ? (
+              <span title={t(`${PREFIX}.tables.networkUses`)}>
+                <ExistingLine>
+                  {t(`${PREFIX}.tables.networkUsesNames`, {
+                    names: record.networkObjectTypes.join(t(`${PREFIX}.tables.separator`)),
+                  })}
+                </ExistingLine>
+              </span>
+            ) : null}
+            {record.usedBy.length ? (
+              <span>{record.usedBy.join(t(`${PREFIX}.tables.separator`))}</span>
+            ) : null}
+          </span>
         ) : (
           <span className={styles.muted}>{t(`${PREFIX}.tables.unused`)}</span>
         ),
@@ -309,9 +323,10 @@ export function ProjectResources({
           items={[
             {
               key: "catalogs",
+              // Each tab counts what it holds: here the tables, as the concept page's sources do.
               label: tabLabel(
                 t(`${PREFIX}.catalogs.title`),
-                project.catalogIds.length,
+                understanding ? tableCount(understanding) : null,
                 catalogsWait,
               ),
               children: (
@@ -410,14 +425,21 @@ export function ProjectResources({
                           type="warning"
                         />
                       ) : (
-                        <AppTable<TableRow>
-                          columns={columns}
-                          dataSource={rows}
-                          loading={understanding === undefined}
-                          pagination={rows.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
-                          rowKey="resourceId"
-                          size="middle"
-                        />
+                        <>
+                          {understanding ? (
+                            <p className={styles.muted}>
+                              {t(`${PREFIX}.tables.count`, { count: tableCount(understanding) })}
+                            </p>
+                          ) : null}
+                          <AppTable<TableRow>
+                            columns={columns}
+                            dataSource={rows}
+                            loading={understanding === undefined}
+                            pagination={rows.length > PAGE_SIZE ? { pageSize: PAGE_SIZE } : false}
+                            rowKey="resourceId"
+                            size="middle"
+                          />
+                        </>
                       )}
                     </>
                   ) : (

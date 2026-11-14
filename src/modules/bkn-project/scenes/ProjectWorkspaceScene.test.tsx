@@ -135,11 +135,15 @@ vi.mock("@/modules/bkn-project/services/release.service", () => ({
 }));
 
 const getOntologyIndexMock = vi.hoisted(() => vi.fn());
+const getUnderstandingMock = vi.hoisted(() => vi.fn());
+const listDocumentsMock = vi.hoisted(() => vi.fn());
+const getConceptsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/publish.service")>()),
   getExistingIndex: getExistingIndexMock,
   getOntologyIndex: getOntologyIndexMock,
+  getUnderstanding: getUnderstandingMock,
 }));
 
 vi.mock("@/modules/knowledge-network/services/network.service", async (importOriginal) => ({
@@ -198,6 +202,7 @@ vi.mock("@/modules/bkn-project/components/draft/DraftConceptGraph", () => ({
 
 vi.mock("@/modules/bkn-project/services/draft.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/draft.service")>()),
+  getConcepts: getConceptsMock,
   getDraft: getDraftMock,
   getExistingDefinitions: getExistingDefinitionsMock,
 }));
@@ -213,6 +218,7 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/requirements.service")>()),
   getNetworkBackground: getNetworkBackgroundMock,
   getRequirements: getRequirementsMock,
+  listDocuments: listDocumentsMock,
 }));
 
 vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
@@ -309,6 +315,37 @@ describe("ProjectWorkspaceScene", () => {
     });
     getDraftMock.mockResolvedValue(null);
     getOntologyIndexMock.mockResolvedValue(null);
+    // Two tables in the project's catalog; one requirement document.
+    getUnderstandingMock.mockResolvedValue([
+      {
+        catalogId: "c1",
+        counts: {},
+        missing: false,
+        tables: [
+          {
+            applied: false,
+            described: false,
+            finishTime: null,
+            name: "orders",
+            networkObjectTypes: [],
+            resourceId: "r1",
+            status: "not_started",
+          },
+          {
+            applied: false,
+            described: false,
+            finishTime: null,
+            name: "lines",
+            networkObjectTypes: [],
+            resourceId: "r2",
+            status: "not_started",
+          },
+        ],
+        visible: true,
+      },
+    ]);
+    listDocumentsMock.mockResolvedValue([{ id: "d1" }]);
+    getConceptsMock.mockRejectedValue(new Error("down"));
     getProjectVersionsMock.mockResolvedValue(versionsRunning(1, "v1.0.0"));
     // A new network by default: it has nothing of its own.
     getExistingDefinitionsMock.mockResolvedValue({ objectTypes: [], relationTypes: [] });
@@ -331,6 +368,25 @@ describe("ProjectWorkspaceScene", () => {
     });
     getNetworkBackgroundMock.mockResolvedValue({ id: "network" });
     getStatisticsMock.mockResolvedValue({ actionTypesTotal: 7, functionsTotal: 4, skillsTotal: 2 });
+    getUnderstandingMock.mockResolvedValue([
+      {
+        catalogId: "c1",
+        counts: {},
+        missing: false,
+        tables: [
+          {
+            applied: false,
+            described: false,
+            finishTime: null,
+            name: "regions",
+            networkObjectTypes: ["Region"],
+            resourceId: "r1",
+            status: "not_started",
+          },
+        ],
+        visible: true,
+      },
+    ]);
     renderScene();
 
     // Two of the network's and the draft's two adopted object types, one relation of each.
@@ -355,11 +411,34 @@ describe("ProjectWorkspaceScene", () => {
     expect(
       screen.getByText('bknProject.networkExisting.tiles.build:{"ready":1,"total":2}'),
     ).toBeInTheDocument();
-    expect(screen.getByText("bknProject.networkExisting.tiles.sources")).toBeInTheDocument();
+    // The background is the network's on the sources card and among the project's sources.
+    expect(screen.getAllByText("bknProject.networkExisting.tiles.sources")).toHaveLength(2);
+    expect(
+      screen.getByText('bknProject.overview.sources.tablesNetwork:{"count":1}'),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('bknProject.networkExisting.tiles.release:{"version":"v1.0.0"}'),
     ).toBeInTheDocument();
-    expect(screen.getAllByTestId("network-existing-dot")).toHaveLength(5);
+    expect(screen.getAllByTestId("network-existing-dot")).toHaveLength(7);
+  });
+
+  it("shows an existing network's model before any draft, counted as the navigation counts it", async () => {
+    getExistingDefinitionsMock.mockResolvedValue({
+      objectTypes: [{ id: "regions" }, { id: "plants" }],
+      relationTypes: [{ id: "plant_region", source: "plants", target: "regions" }],
+    });
+    renderScene();
+
+    expect(await screen.findByText("concept graph")).toBeInTheDocument();
+    expect(screen.queryByText("bknProject.overview.model.empty")).toBeNull();
+    expect(
+      await screen.findByText('bknProject.overview.tiles.ontologyValue:{"count":2}'),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "bknProject.workspace.sections.model" }),
+      ).toHaveTextContent("2"),
+    );
   });
 
   it("shows a project on a new network exactly as before: nothing marked as the network's", async () => {
@@ -440,7 +519,7 @@ describe("ProjectWorkspaceScene", () => {
     const regions = [...container.querySelectorAll("[data-region]")].map((node) =>
       node.getAttribute("data-region"),
     );
-    expect(regions).toEqual(["info", "stats", "model", "columns"]);
+    expect(regions).toEqual(["info", "stats", "sources", "model", "columns"]);
     // One card per step of the flow, in its order, each leading to its page.
     expect(
       [...container.querySelectorAll('[data-region="stats"] dd > p:first-child')].map(
@@ -821,7 +900,7 @@ describe("ProjectWorkspaceScene", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/bkn-project/p1/resources");
   });
 
-  it("shows the requirements and resources, counting the catalogs in the navigation", async () => {
+  it("shows the requirements and resources, counting the tables in the navigation", async () => {
     renderScene("resources");
 
     expect(await screen.findByText(/resources page owner/)).toBeInTheDocument();

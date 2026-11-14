@@ -142,8 +142,10 @@ const understanding = (tables: [string, string][]): UnderstandingCatalog[] => [
     missing: false,
     tables: tables.map(([name, status]) => ({
       applied: true,
+      described: false,
       finishTime: null,
       name,
+      networkObjectTypes: [],
       resourceId: `res-${name}`,
       status: status as UnderstandingCatalog["tables"][number]["status"],
     })),
@@ -236,6 +238,38 @@ beforeEach(() => {
 });
 
 describe("ProjectResources", () => {
+  it("counts the tables, and says which the network uses and which have a business name", async () => {
+    const [catalog] = understanding([
+      ["orders", "not_started"],
+      ["parts", "not_started"],
+      ["shift_log", "not_started"],
+    ]);
+    catalog.tables[0] = { ...catalog.tables[0], networkObjectTypes: ["Order", "Order view"] };
+    catalog.tables[1] = { ...catalog.tables[1], described: true };
+    mocks.getUnderstanding.mockResolvedValue([catalog]);
+    mocks.getDraft.mockResolvedValue(null);
+    renderPage();
+
+    // The tab and the list count the tables, as the concept page's sources do.
+    expect(await screen.findByText('bknProject.resources.tables.count:{"count":3}')).toBeVisible();
+    expect(await tab(/bknProject\.resources\.catalogs\.title\s*3/)).toBeInTheDocument();
+    const orders = screen.getByText("orders").closest("tr")!;
+    expect(within(orders).getByText("bknProject.understand.status.network")).toBeVisible();
+    expect(within(orders).getByTestId("network-existing-dot")).toBeInTheDocument();
+    expect(
+      within(orders).getByText(
+        'bknProject.resources.tables.networkUsesNames:{"names":"Order' +
+          "bknProject.resources.tables.separator" +
+          'Order view"}',
+      ),
+    ).toBeVisible();
+    const parts = screen.getByText("parts").closest("tr")!;
+    expect(within(parts).getByText("bknProject.understand.status.described")).toBeVisible();
+    expect(within(parts).getByText("bknProject.resources.tables.unused")).toBeVisible();
+    const log = screen.getByText("shift_log").closest("tr")!;
+    expect(within(log).getByText("bknProject.understand.status.not_started")).toBeVisible();
+  });
+
   it("lists each table with its semantic understanding and the object types that use it", async () => {
     mocks.getUnderstanding.mockResolvedValue(
       understanding([

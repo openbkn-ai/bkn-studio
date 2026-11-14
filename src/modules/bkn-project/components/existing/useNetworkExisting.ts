@@ -10,12 +10,15 @@ import { useEffect, useState } from "react";
 import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import { getExistingIndex } from "@/modules/bkn-project/services/publish.service";
 import { getNetworkBackground } from "@/modules/bkn-project/services/requirements.service";
+import type { ExistingDefinitions } from "@/modules/bkn-project/types/draft";
 import type { ProjectIndex } from "@/modules/bkn-project/types/publish";
 import { getKnowledgeNetworkStatistics } from "@/modules/knowledge-network/services/network.service";
 import type { KnowledgeNetworkStatistics } from "@/modules/knowledge-network/types/network";
 
 /** What the project's network already had, beside what the project adds. */
 export type NetworkExisting = {
+  /** The network's object and relation types, as the project's branch has them. */
+  definitions: ExistingDefinitions;
   objectTypeIds: Set<string>;
   relationTypeIds: Set<string>;
   /** The network's counts, for its kinetic items; null when they cannot be read. */
@@ -48,6 +51,7 @@ export function useNetworkExisting(projectId: string, networkId: string): Networ
       if (active) {
         setExisting({
           background: Boolean(background),
+          definitions,
           index,
           objectTypeIds: new Set(definitions.objectTypes.map((item) => item.id)),
           relationTypeIds: new Set(definitions.relationTypes.map((item) => item.id)),

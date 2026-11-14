@@ -271,3 +271,33 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   column-gap: 12px;
 }
+
+/* The project's sources, one kind to a row: what it holds, what the network has, and a link. */
+.projectSources {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 12px 24px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.projectSources dt {
+  color: var(--color-text-secondary);
+}
+
+.projectSources dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* The edition's knowledge-base block brings its own card: in this row the row frames it. */
+.projectSources dd > section {
+  flex: 1 1 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+}

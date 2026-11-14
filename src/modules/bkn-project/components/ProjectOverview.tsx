@@ -29,6 +29,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { BknProjectKbBadge } from "@/framework/entitlement/BknProjectKbSlot";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { extensionProjectOverviewKnowledgeBase } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -48,17 +49,26 @@ import { DraftConceptGraph } from "@/modules/bkn-project/components/draft/DraftC
 import { draftGraph } from "@/modules/bkn-project/components/draft/graph";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
 import { conceptsInModel } from "@/modules/bkn-project/components/concepts/inModel";
+import {
+  kineticCount,
+  modelObjectCount,
+  questionCount,
+  tableCount,
+} from "@/modules/bkn-project/components/stepCounts";
 import { DRAFT_POLL_MS, getConcepts, getDraft } from "@/modules/bkn-project/services/draft.service";
-import { getOntologyIndex } from "@/modules/bkn-project/services/publish.service";
+import { getOntologyIndex, getUnderstanding } from "@/modules/bkn-project/services/publish.service";
 import { versionNameIn } from "@/modules/bkn-project/components/release/releaseMessages";
 import { getProjectVersions } from "@/modules/bkn-project/services/release.service";
 import { needState } from "@/modules/bkn-project/components/kinetic/needs";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
-import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
+import {
+  getRequirements,
+  listDocuments,
+} from "@/modules/bkn-project/services/requirements.service";
 import type { Concepts } from "@/modules/bkn-project/types/concepts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
-import type { ProjectIndex } from "@/modules/bkn-project/types/publish";
+import type { ProjectIndex, UnderstandingCatalog } from "@/modules/bkn-project/types/publish";
 import type { ProjectVersions } from "@/modules/bkn-project/types/release";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 import {
@@ -206,8 +216,35 @@ export function ProjectOverview({
     };
   }, [project.id]);
 
-  // How far the kinetic needs are implemented in the live network; applications link to nothing.
-  const [kinetic, setKinetic] = useState<{ linked: number; total: number } | undefined>(undefined);
+  // The project's sources: the tables of its catalogs and its requirement documents; undefined
+  // while read or when they could not be.
+  const [understanding, setUnderstanding] = useState<UnderstandingCatalog[] | undefined>(undefined);
+  const [documents, setDocuments] = useState<number | undefined>(undefined);
+  const catalogKey = project.catalogIds.join(",");
+  useEffect(() => {
+    let active = true;
+    getUnderstanding(project.id)
+      .then((next) => active && setUnderstanding(next))
+      .catch(() => undefined);
+    listDocuments(project.id)
+      .then((next) => active && setDocuments(next.length))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [catalogKey, project.id]);
+  const tables = understanding ? tableCount(understanding) : undefined;
+  const networkTables = understanding
+    ? understanding
+        .flatMap((catalog) => catalog.tables)
+        .filter((table) => table.networkObjectTypes.length).length
+    : 0;
+
+  // The kinetic items, counted as the navigation counts them, and how far the needs are
+  // implemented in the live network; applications link to nothing.
+  const [kinetic, setKinetic] = useState<
+    { items: number; linked: number; total: number } | undefined
+  >(undefined);
   useEffect(() => {
     let active = true;
     getLogicNeeds(project.id)
@@ -215,6 +252,7 @@ export function ProjectOverview({
         if (active) {
           const states = next.needs.map(needState).filter((state) => state !== "recordOnly");
           setKinetic({
+            items: kineticCount(next),
             linked: states.filter((state) => state === "implemented").length,
             total: states.length,
           });
@@ -258,6 +296,8 @@ export function ProjectOverview({
         : null,
     [existing, graph],
   );
+  // The object types of the model, as the navigation counts them; the network's before a draft.
+  const modelObjects = modelObjectCount(draft, existing?.objectTypeIds);
   const existingConcepts =
     existing && concepts
       ? concepts.concepts.filter(
@@ -311,8 +351,16 @@ export function ProjectOverview({
       ...(existing?.background ? { existing: t("bknProject.networkExisting.tiles.sources") } : {}),
       key: "sources",
       label: t("bknProject.workspace.sections.resources"),
+      ...(documents === undefined
+        ? {}
+        : { note: t("bknProject.overview.tiles.sourcesDocuments", { count: documents }) }),
       sub: t("bknProject.overview.tiles.sourcesSub"),
-      value: t("bknProject.overview.tiles.sourcesValue", { count: project.catalogIds.length }),
+      value:
+        tables === undefined
+          ? PLACEHOLDER
+          : project.catalogIds.length
+            ? t("bknProject.overview.tiles.sourcesValue", { count: tables })
+            : t("bknProject.overview.tiles.notStarted"),
     },
     {
       action: {
@@ -377,15 +425,14 @@ export function ProjectOverview({
               note: t("bknProject.overview.tiles.ontologyRelations", { count: graph.edges.length }),
             }
           : {}),
-      value: existing
-        ? t("bknProject.overview.tiles.ontologyValue", {
-            count: existing.objectTypeIds.size + (added?.objects ?? 0),
-          })
-        : graph
-          ? t("bknProject.overview.tiles.ontologyValue", { count: graph.nodes.length })
+      value:
+        modelObjects !== undefined
+          ? t("bknProject.overview.tiles.ontologyValue", { count: modelObjects })
           : draft && draft.status !== "ready"
             ? t(`bknProject.model.status.${draft.status}`)
-            : PLACEHOLDER,
+            : draft === null
+              ? t("bknProject.overview.tiles.notStarted")
+              : PLACEHOLDER,
     },
     {
       action: { label: t("bknProject.overview.tiles.kineticAction"), onClick: () => go("kinetic") },
@@ -407,14 +454,15 @@ export function ProjectOverview({
           }
         : {}),
       sub: t("bknProject.overview.tiles.kineticSub"),
-      value: kinetic?.total
-        ? t("bknProject.overview.tiles.kineticValue", {
-            linked: kinetic.linked,
-            total: kinetic.total,
-          })
-        : existingKinetic
-          ? t("bknProject.networkExisting.tiles.kineticValue", { count: existingKinetic.actions })
-          : PLACEHOLDER,
+      // The kinetic items, as the navigation counts them: the network's and the open needs.
+      value:
+        kinetic === undefined
+          ? existingKinetic
+            ? t("bknProject.networkExisting.tiles.kineticValue", { count: existingKinetic.actions })
+            : PLACEHOLDER
+          : kinetic.items
+            ? t("bknProject.overview.tiles.kineticValue", { count: kinetic.items })
+            : t("bknProject.overview.tiles.notStarted"),
     },
     {
       action: {
@@ -431,15 +479,15 @@ export function ProjectOverview({
           ? t("bknProject.overview.tiles.questionsReadySub", { version: requirements.version })
           : t("bknProject.overview.tiles.questionsSub"),
       value:
-        requirements?.status === "ready"
-          ? t("bknProject.overview.tiles.questionsValue", {
-              count: requirements.spec?.questions.length ?? 0,
-            })
+        questionCount(requirements) !== undefined
+          ? t("bknProject.overview.tiles.questionsValue", { count: questionCount(requirements) })
           : requirements
             ? t(
                 `bknProject.overview.tiles.questionsStatus.${requirements.status === "drafting" ? "drafting" : "failed"}`,
               )
-            : PLACEHOLDER,
+            : requirements === null
+              ? t("bknProject.overview.tiles.notStarted")
+              : PLACEHOLDER,
     },
     {
       action: { label: t("bknProject.overview.tiles.buildAction"), onClick: () => go("build") },
@@ -465,7 +513,9 @@ export function ProjectOverview({
             ready: indexed.filter((item) => item.state === "ready").length,
             total: indexed.length,
           })
-        : PLACEHOLDER,
+        : index === undefined
+          ? PLACEHOLDER
+          : t("bknProject.overview.tiles.notStarted"),
     },
     {
       action: { label: t("bknProject.overview.tiles.releaseAction"), onClick: () => go("release") },
@@ -648,14 +698,84 @@ export function ProjectOverview({
         ))}
       </div>
 
-      {OverviewKnowledgeBase && kbMode === "enabled" ? (
-        <div className={styles.block} data-region="knowledge-base">
-          <OverviewKnowledgeBase projectId={project.id} />
+      {/* The three kinds of sources a project is built from, each with what it holds. */}
+      <section className={styles.panel} data-region="sources">
+        <div className={styles.cardHead}>
+          <span className={styles.cardTitle}>{t("bknProject.overview.sources.title")}</span>
+          <button className={styles.link} onClick={() => go("resources")} type="button">
+            {t("bknProject.overview.sources.open")}
+          </button>
         </div>
-      ) : null}
+        <dl className={styles.projectSources}>
+          <dt>{t("bknProject.overview.sources.tables")}</dt>
+          <dd>
+            <span>
+              {tables === undefined
+                ? PLACEHOLDER
+                : project.catalogIds.length
+                  ? t("bknProject.overview.sources.tablesValue", {
+                      catalogs: project.catalogIds.length,
+                      count: tables,
+                    })
+                  : t("bknProject.overview.sources.tablesNone")}
+            </span>
+            {networkTables ? (
+              <ExistingLine>
+                {t("bknProject.overview.sources.tablesNetwork", { count: networkTables })}
+              </ExistingLine>
+            ) : null}
+            <button
+              className={styles.link}
+              onClick={() => go("resources", "catalogs")}
+              type="button"
+            >
+              {t("bknProject.overview.sources.view")}
+            </button>
+          </dd>
+          <dt>{t("bknProject.overview.sources.documents")}</dt>
+          <dd>
+            <span>
+              {documents === undefined
+                ? PLACEHOLDER
+                : documents
+                  ? t("bknProject.overview.sources.documentsValue", { count: documents })
+                  : t("bknProject.overview.sources.documentsNone")}
+            </span>
+            {existing?.background ? (
+              <ExistingLine>{t("bknProject.networkExisting.tiles.sources")}</ExistingLine>
+            ) : null}
+            <button
+              className={styles.link}
+              onClick={() => go("resources", "documents")}
+              type="button"
+            >
+              {t("bknProject.overview.sources.view")}
+            </button>
+          </dd>
+          {kbMode === "hidden" ? null : (
+            <>
+              <dt>
+                <BknProjectKbBadge>
+                  {t("bknProject.overview.sources.knowledgeBase")}
+                </BknProjectKbBadge>
+              </dt>
+              <dd data-region="knowledge-base">
+                {OverviewKnowledgeBase && kbMode === "enabled" ? (
+                  <OverviewKnowledgeBase projectId={project.id} />
+                ) : (
+                  <span className={styles.muted}>
+                    {t("bknProject.overview.sources.knowledgeBasePreview")}
+                  </span>
+                )}
+              </dd>
+            </>
+          )}
+        </dl>
+      </section>
 
-      {ready ? (
-        // The graph comes in the knowledge network's card, with the link in its header.
+      {ready || (draft !== undefined && existing?.definitions.objectTypes.length) ? (
+        // The graph comes in the knowledge network's card, with the link in its header. Before a
+        // draft, an existing network's model is its own.
         <div className={styles.block} data-region="model">
           <DraftConceptGraph
             action={
@@ -663,11 +783,13 @@ export function ProjectOverview({
                 {t("bknProject.overview.model.open")}
               </button>
             }
-            draft={ready}
+            draft={ready ?? existing?.definitions ?? { objectTypes: [], relationTypes: [] }}
             networkId={project.knId}
             // A type's details are on the modeling page.
             onOpen={() => go("model")}
-            title={t("bknProject.overview.model.title")}
+            title={t(
+              ready ? "bknProject.overview.model.title" : "bknProject.overview.model.networkTitle",
+            )}
           />
         </div>
       ) : (
