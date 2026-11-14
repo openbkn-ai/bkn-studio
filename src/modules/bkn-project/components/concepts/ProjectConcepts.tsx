@@ -782,7 +782,12 @@ export function ProjectConcepts({
                 >
                   {t(`${PREFIX}.reload`)}
                 </AppButton>
-              ) : refusal.extract && canEdit && busy === null ? (
+              ) : refusal.extract &&
+                canEdit &&
+                busy === null &&
+                !run &&
+                !knowledgeBaseFacts?.running &&
+                available(refusal.extract) ? (
                 <AppButton
                   onClick={() => {
                     const source = refusal.extract;

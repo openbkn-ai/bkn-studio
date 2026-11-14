@@ -415,14 +415,15 @@ describe("ProjectConcepts", () => {
     );
   });
 
-  it("says a knowledge-base concept of earlier samples cannot change, and offers to extract again", async () => {
+  it("says a knowledge-base concept of earlier samples cannot change", async () => {
     service.judgeConcept.mockRejectedValue(refused("DocumentSourceChanged"));
     renderConcepts();
 
     fireEvent.click((await row("Customer")).getByRole("button", { name: /confirmOf.*Customer/ }));
     expect(await screen.findByText("bknProject.concepts.sourceChanged")).toBeInTheDocument();
     expect(messageMock.warning).toHaveBeenCalledWith("bknProject.concepts.sourceChanged");
-    expect(screen.getByRole("button", { name: "bknProject.concepts.extractAgain" })).toBeEnabled();
+    // Without a knowledge-base source to run here, no action is offered that could not run.
+    expect(screen.queryByRole("button", { name: "bknProject.concepts.extractAgain" })).toBeNull();
   });
 
   it("merges only into objects bound to the same kind of data", async () => {
@@ -762,6 +763,35 @@ describe("ProjectConcepts", () => {
       expect(messageMock.success).toHaveBeenCalledWith("bknProject.concepts.run.doneAll"),
     );
     expect(seen).toContain(1);
+  });
+
+  it("offers to extract the knowledge base again when one of its concepts came from earlier samples", async () => {
+    kb.mode = "enabled";
+    const seen: number[] = [];
+    slots.kbModel = function Panel({ onStatus, runRequest = 0 }: ProjectKnowledgeBaseModelProps) {
+      useEffect(() => {
+        seen.push(runRequest);
+        onStatus?.({
+          added: 0,
+          debugFiles: 6,
+          finishTime: runRequest ? 3 : null,
+          handledRequest: runRequest,
+          phase: null,
+          state: runRequest ? "succeeded" : "idle",
+        });
+      }, [onStatus, runRequest]);
+      return <span>panel</span>;
+    };
+    service.judgeConcept.mockRejectedValue(refused("DocumentSourceChanged"));
+    renderConcepts();
+
+    fireEvent.click((await row("Customer")).getByRole("button", { name: /confirmOf.*Customer/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknProject.concepts.extractAgain" }),
+    );
+    await confirmRun();
+    await waitFor(() => expect(seen).toContain(1));
+    expect(service.generateDraft).not.toHaveBeenCalled();
   });
 
   it("asks AI about the ticked concepts once the assistant is opened, collapsed at first", async () => {
