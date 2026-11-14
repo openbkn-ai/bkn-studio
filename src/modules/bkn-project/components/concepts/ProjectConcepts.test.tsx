@@ -754,11 +754,14 @@ describe("ProjectConcepts", () => {
     expect(seen).toContain(1);
   });
 
-  it("asks AI about the ticked concepts, beside the list from the start", async () => {
+  it("asks AI about the ticked concepts once the assistant is opened, collapsed at first", async () => {
     assistant.askConcepts.mockResolvedValue({ answer: "ok", dropped: [], revisions: [] });
     renderConcepts();
 
     fireEvent.click((await row("Customer")).getByRole("checkbox", { name: /tick.*Customer/ }));
+    // Docked open, the assistant would squeeze the list: it waits to be opened.
+    expect(screen.queryByText('bknProject.concepts.refs:{"names":"Customer"}')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.ask\.button\.selected/ }));
     expect(await screen.findByText('bknProject.concepts.refs:{"names":"Customer"}')).toBeTruthy();
   });
 
