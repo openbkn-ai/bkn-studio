@@ -584,6 +584,18 @@ describe("ProjectRequirements", () => {
     ).toBeInTheDocument();
   });
 
+  it("says why the first generation failed while there are no scenarios yet", async () => {
+    getRequirementsMock.mockResolvedValue(
+      requirements({
+        error: "agent_timeout",
+        spec: { ...requirements().spec, questions: [], scenarios: [] },
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText("起草超时了，请重新起草。")).toBeInTheDocument();
+  });
+
   it("leads to concept modeling when the model is not confirmed yet", async () => {
     getRequirementsMock.mockResolvedValueOnce(null);
     draftRequirementsMock.mockRejectedValueOnce(

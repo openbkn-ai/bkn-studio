@@ -568,6 +568,10 @@ export function ProjectRequirements({
                   type="warning"
                 />
               ) : null}
+              {ready && !started && requirements?.error ? (
+                // The first generation over concepts or kinetic needs alone failed: say why.
+                <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
+              ) : null}
               {!requirements || (ready && !started) ? (
                 <Alert
                   action={
