@@ -5,9 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export {
-  calculateNextHourlyCronRun,
-  isHourlyCron,
-  parseHourlyCronFields,
-} from "@/shared/hourly-cron";
+export { calculateNextHourlyCronRun, parseHourlyCronFields } from "@/shared/hourly-cron";
 export type { HourlyCronFields } from "@/shared/hourly-cron";
+
+export { isHourlyCron } from "@/shared/schedule";

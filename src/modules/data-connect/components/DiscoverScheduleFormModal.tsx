@@ -20,6 +20,8 @@ import type {
 import { isValidDiscoverScheduleTimeRange } from "@/modules/data-connect/utils/discover-schedule-time";
 import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 
+import { ScheduleRunResultView } from "@/shared/schedule";
+
 import styles from "./DiscoverScheduleFormModal.module.css";
 
 type DiscoverScheduleFormModalProps = {
@@ -95,7 +97,7 @@ export function DiscoverScheduleFormModal({
     form.setFieldsValue({
       catalogId: initialValue?.catalogId ?? defaultCatalogId,
       cronExpr: initialValue?.cronExpr ?? "0 2 * * *",
-      enabled: initialValue?.enabled ?? true,
+      enabled: initialValue?.enabled ?? false,
       endTime: toDateTimeValue(initialValue?.endTimeValue),
       name: initialValue?.name ?? "",
       startTime: toDateTimeValue(initialValue?.startTimeValue),
@@ -116,7 +118,7 @@ export function DiscoverScheduleFormModal({
           .validateFields()
           .then(async (values) => {
             const enabled =
-              mode === "edit" ? (initialValue?.enabled ?? true) : (values.enabled ?? true);
+              mode === "edit" ? (initialValue?.enabled ?? false) : (values.enabled ?? false);
             await onSubmit({
               catalogId: values.catalogId,
               cronExpr: values.cronExpr.trim(),
@@ -139,6 +141,15 @@ export function DiscoverScheduleFormModal({
       width={640}
     >
       <Form className={styles.form} colon={false} form={form} requiredMark={false}>
+        {mode === "edit" && initialValue ? (
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>{t("common.schedule.lastResult")}</div>
+            <ScheduleRunResultView
+              status={initialValue.lastStatus}
+              message={initialValue.lastMessage}
+            />
+          </div>
+        ) : null}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>{t("common.basicInfo")}</div>
           <div className={styles.grid}>

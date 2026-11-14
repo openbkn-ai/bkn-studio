@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { ScheduleLastStatus } from "@/shared/schedule";
+
 export type DataConnectDiscoverStrategy =
   "cleanup_only" | "create_only" | "full_sync" | "count_only";
 
@@ -26,6 +28,8 @@ export type DataConnectDiscoverSchedule = {
   endTimeValue?: number;
   id: string;
   lastRun: string;
+  lastStatus?: ScheduleLastStatus;
+  lastMessage?: string;
   lastRunValue?: number;
   name: string;
   nextRun: string;

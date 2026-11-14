@@ -294,6 +294,12 @@ export function BuildTaskDetailDrawer({
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
             <Descriptions.Item label="ID">{task.id || EMPTY_VALUE}</Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.buildSchedule.taskSource")}>
+              {t(`dataCatalog.buildSchedule.${task.triggerType ?? "manual"}`)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.buildSchedule.scheduleId")}>
+              {task.scheduleId || EMPTY_VALUE}
+            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
               {task.catalogName || task.catalogId || EMPTY_VALUE}
             </Descriptions.Item>

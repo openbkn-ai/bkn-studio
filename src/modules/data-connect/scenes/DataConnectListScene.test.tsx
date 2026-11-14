@@ -483,6 +483,7 @@ describe("DataConnectListScene deletion preflight", () => {
       resources: 0,
       protectedResources: 0,
       discoverSchedules: 0,
+      buildSchedules: 0,
       catalogHealthCheckSchedules: 0,
       buildTasks: { willDelete: 0, blocking: 0 },
       discoverTasks: { willDelete: 0, blocking: 0 },
@@ -537,6 +538,35 @@ describe("DataConnectListScene deletion preflight", () => {
       expect(warningMock).not.toHaveBeenCalled();
     },
   );
+
+  it("includes build schedules in the cascade warning and name confirmation", async () => {
+    const report = impact();
+    report.buildSchedules = 2;
+    await requestDeletion(report);
+    await waitFor(() => expect(dangerOpenMock).toHaveBeenCalled());
+    const options = dangerOpenMock.mock.calls[0][0] as {
+      requireTypeName: boolean;
+      impact: ReactNode;
+    };
+    expect(options.requireTypeName).toBe(true);
+    render(<>{options.impact}</>);
+    expect(screen.getByText("Schedules: 0 discovery, 0 health check, 2 build")).toBeInTheDocument();
+  });
+
+  it("omits a missing build schedule count without claiming the catalog is empty", async () => {
+    const report = { ...impact(), buildSchedules: undefined };
+    await requestDeletion(report);
+    await waitFor(() => expect(dangerOpenMock).toHaveBeenCalled());
+    const options = dangerOpenMock.mock.calls[0][0] as {
+      requireTypeName: boolean;
+      impact: ReactNode;
+    };
+    expect(options.requireTypeName).toBe(true);
+    render(<>{options.impact}</>);
+    expect(screen.getByText("Schedules: 0 discovery, 0 health check")).toBeInTheDocument();
+    expect(screen.queryByText(/0 build/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/has no cascading objects/)).not.toBeInTheDocument();
+  });
 
   it("uses the empty catalog confirmation when all counts are zero", async () => {
     await requestDeletion(impact());

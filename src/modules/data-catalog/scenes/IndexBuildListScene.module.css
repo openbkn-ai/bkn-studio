@@ -37,6 +37,8 @@
 
 .toolbarActions {
   composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .toolbarFilters {
@@ -44,17 +46,17 @@
 
   align-items: center;
 
-  flex: 1 1 520px;
+  flex: 1 1 auto;
 
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 
   gap: 10px 14px;
 
-  justify-content: flex-end;
+  justify-content: flex-start;
 
   min-width: 0;
 
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .taskFilters {
@@ -320,7 +322,9 @@
 
 @media (max-width: 960px) {
   .toolbarFilters {
-    flex-basis: 100%;
+    flex-basis: auto;
+
+    width: 100%;
 
     justify-content: flex-start;
   }

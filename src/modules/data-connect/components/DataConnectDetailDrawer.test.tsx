@@ -123,6 +123,20 @@ describe("DataConnectDetailDrawer", () => {
       .mockResolvedValue(schedule(300));
   });
 
+  it("shows health check results and the untranslated backend explanation", async () => {
+    getScheduleMock.mockReset();
+    getScheduleMock.mockResolvedValue({
+      ...schedule(100),
+      lastStatus: "failed",
+      lastMessage: "Check configuration 原始说明",
+    });
+    render(
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
+    );
+    expect(await screen.findByText("common.schedule.status.failed")).toBeInTheDocument();
+    expect(screen.getByText("Check configuration 原始说明")).toBeInTheDocument();
+  });
+
   it("uses the Doris label in details without connector metadata", async () => {
     getRecordMock.mockResolvedValue({ ...record, category: "table", connectorType: "doris" });
     render(

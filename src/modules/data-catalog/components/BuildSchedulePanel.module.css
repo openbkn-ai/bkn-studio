@@ -1,0 +1,17 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.actionMore {
+  min-width: 24px;
+  padding-inline: 0;
+}

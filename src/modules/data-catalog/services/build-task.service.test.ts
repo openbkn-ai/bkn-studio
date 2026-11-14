@@ -98,6 +98,28 @@ describe("snapshotFieldsOf", () => {
 });
 
 describe("mapBuildTask", () => {
+  it("keeps scheduled provenance independent from Task execution failure", () => {
+    expect(
+      mapBuildTask({
+        id: "task-1",
+        resource_id: "resource-1",
+        schedule_id: "deleted-plan",
+        trigger_type: "scheduled",
+        status: "failed",
+        error_msg: "Build failed",
+      }),
+    ).toMatchObject({
+      scheduleId: "deleted-plan",
+      triggerType: "scheduled",
+      status: "failed",
+      error: "Build failed",
+    });
+    expect(mapBuildTask({ id: "legacy-task" })).toMatchObject({
+      scheduleId: "",
+      triggerType: "manual",
+    });
+  });
+
   it("keeps backend task times as millisecond timestamps", () => {
     const task = mapBuildTask({
       create_time: 100,
@@ -198,6 +220,31 @@ describe("createBuildTask", () => {
     afterEach(() => {
       vi.unstubAllEnvs();
       vi.resetModules();
+    });
+
+    it("filters by source and does not allow manual creation to forge it", async () => {
+      getMock.mockResolvedValueOnce({
+        data: {
+          entries: [{ id: "scheduled-task", schedule_id: "plan-1", trigger_type: "scheduled" }],
+          total_count: 1,
+        },
+      });
+      const { listBuildTaskPage, createBuildTask } = await import("./build-task.service");
+      const result = await listBuildTaskPage({ scheduleId: "plan-1", triggerType: "scheduled" });
+      expect(getMock.mock.calls[0]?.[1]).toMatchObject({
+        params: { schedule_id: "plan-1", trigger_type: "scheduled" },
+      });
+      expect(result.items[0]).toMatchObject({ scheduleId: "plan-1", triggerType: "scheduled" });
+      postMock.mockResolvedValue({ data: { id: "manual-task" } });
+      getMock.mockResolvedValueOnce({
+        data: { id: "manual-task", trigger_type: "manual", schedule_id: "" },
+      });
+      await createBuildTask({
+        mode: "batch",
+        resourceId: "resource-1",
+        ...{ scheduleId: "forged-plan", triggerType: "scheduled" },
+      });
+      expect(postMock.mock.calls[0]?.[1]).toEqual({ mode: "batch", resource_id: "resource-1" });
     });
 
     it("rejects when the created task cannot be retrieved", async () => {

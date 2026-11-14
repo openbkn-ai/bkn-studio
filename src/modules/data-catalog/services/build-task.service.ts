@@ -62,6 +62,8 @@ type BackendBuildTask = {
   model_dimensions?: number;
   resource_id?: string;
   resource_name?: string;
+  schedule_id?: string;
+  trigger_type?: "manual" | "scheduled";
   start_time?: number;
   status?: string;
   synced_count?: number;
@@ -228,6 +230,8 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
 
   return {
     id: item.id,
+    scheduleId: item.schedule_id ?? "",
+    triggerType: item.trigger_type === "scheduled" ? "scheduled" : "manual",
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
     creator: item.creator?.id
@@ -321,15 +325,21 @@ export async function listBuildTaskPage(
   if (useMock) {
     let items = [...mockBuildTasks];
     if (query.catalogId) {
-      const resourceIds = new Set(
-        mockResources
-          .filter((resource) => resource.catalogId === query.catalogId)
-          .map((resource) => resource.id),
+      items = items.filter(
+        (task) =>
+          (task.catalogId ??
+            mockResources.find((resource) => resource.id === task.resourceId)?.catalogId) ===
+          query.catalogId,
       );
-      items = items.filter((task) => resourceIds.has(task.resourceId));
     }
     if (query.resourceId) {
       items = items.filter((task) => task.resourceId === query.resourceId);
+    }
+    if (query.scheduleId) {
+      items = items.filter((task) => task.scheduleId === query.scheduleId);
+    }
+    if (query.triggerType) {
+      items = items.filter((task) => (task.triggerType ?? "manual") === query.triggerType);
     }
     if (query.mode) {
       items = items.filter((task) => task.mode === query.mode);
@@ -352,6 +362,8 @@ export async function listBuildTaskPage(
     offset,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
+    schedule_id: query.scheduleId || undefined,
+    trigger_type: query.triggerType || undefined,
     execute_type: query.executeType || undefined,
     mode: query.mode || undefined,
     sort: query.sort ?? "create_time",
@@ -424,6 +436,8 @@ export async function createBuildTask(input: BuildTaskCreateInput): Promise<Buil
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
+      scheduleId: "",
+      triggerType: "manual",
       catalogId: resource?.catalogId,
       catalogName: mockCatalogName(resource?.catalogId),
       resourceId: input.resourceId,

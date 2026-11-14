@@ -78,8 +78,48 @@ describe("DiscoverScheduleFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ catalogId: "catalog-1", strategy: "count_only" }),
+        expect.objectContaining({ catalogId: "catalog-1", strategy: "count_only", enabled: false }),
       ),
+    );
+  });
+
+  it("shows the previous trigger result and preserves enabled when editing", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DiscoverScheduleFormModal
+        catalogs={[]}
+        initialValue={{
+          catalogId: "catalog-1",
+          createTime: "-",
+          creatorName: "-",
+          cronExpr: "0 * * * *",
+          enabled: false,
+          endTime: "-",
+          expectedUpdateTime: 1,
+          id: "schedule-1",
+          lastRun: "-",
+          lastStatus: "failed",
+          lastMessage: "Permission unavailable 原始说明",
+          name: "Existing schedule",
+          nextRun: "-",
+          startTime: "-",
+          strategy: "full_sync",
+          updateTime: "-",
+          updaterName: "-",
+        }}
+        mode="edit"
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        submitting={false}
+      />,
+    );
+    expect(await screen.findByText("common.schedule.status.failed")).toBeInTheDocument();
+    expect(screen.getByText("Permission unavailable 原始说明")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ enabled: false })),
     );
   });
 

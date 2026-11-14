@@ -59,6 +59,8 @@ function hasCascadeImpact(impact: CatalogDeletionImpact) {
     impact.resources > 0 ||
     impact.catalogHealthCheckSchedules > 0 ||
     impact.discoverSchedules > 0 ||
+    impact.buildSchedules === undefined ||
+    impact.buildSchedules > 0 ||
     impact.buildTasks.willDelete > 0 ||
     impact.discoverTasks.willDelete > 0 ||
     impact.semanticUnderstandingTasks.willDelete > 0
@@ -85,10 +87,16 @@ function CatalogDeletionImpactDetails({
           })}
         </li>
         <li>
-          {t("dataConnect.dangerDelete.schedules", {
-            discover: impact.discoverSchedules,
-            health: impact.catalogHealthCheckSchedules,
-          })}
+          {t(
+            impact.buildSchedules === undefined
+              ? "dataConnect.dangerDelete.schedulesWithoutBuild"
+              : "dataConnect.dangerDelete.schedules",
+            {
+              discover: impact.discoverSchedules,
+              health: impact.catalogHealthCheckSchedules,
+              build: impact.buildSchedules,
+            },
+          )}
         </li>
         <li>
           {t("dataConnect.dangerDelete.buildTasks", {

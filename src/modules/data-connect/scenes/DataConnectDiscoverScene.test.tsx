@@ -172,6 +172,7 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
     rowSelection,
   }: {
     columns: Array<{
+      key?: string;
       dataIndex?: string;
       filters?: unknown[];
       render?: (
@@ -203,24 +204,31 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
       ) : null}
       {dataSource.map((record, index) => (
         <div key={record.id}>
-          {record.status !== undefined
-            ? columns
-                .filter(
-                  (column) =>
-                    column.dataIndex === "id" ||
-                    column.dataIndex === "status" ||
-                    column.dataIndex === "progress",
-                )
-                .map((column) => (
-                  <div key={column.dataIndex}>
-                    {column.render?.(
-                      record[column.dataIndex as "id" | "progress" | "status"],
-                      record,
-                      index,
-                    )}
-                  </div>
-                ))
-            : columns.at(-1)?.render?.(undefined, record, index)}
+          {record.status !== undefined ? (
+            columns
+              .filter(
+                (column) =>
+                  column.dataIndex === "id" ||
+                  column.dataIndex === "status" ||
+                  column.dataIndex === "progress",
+              )
+              .map((column) => (
+                <div key={column.dataIndex}>
+                  {column.render?.(
+                    record[column.dataIndex as "id" | "progress" | "status"],
+                    record,
+                    index,
+                  )}
+                </div>
+              ))
+          ) : (
+            <>
+              {columns
+                .find((column) => column.key === "lastResult")
+                ?.render?.(undefined, record, index)}
+              {columns.at(-1)?.render?.(undefined, record, index)}
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -425,6 +433,24 @@ describe("DataConnectDiscoverScene", () => {
       isAxiosError: true,
       response: { status: 409 },
     });
+  });
+
+  it("shows the last trigger result separately from discovery task status", async () => {
+    listSchedulesMock.mockResolvedValue({
+      items: [
+        {
+          ...schedule(100),
+          lastStatus: "failed",
+          lastMessage: "Check catalog permission 原始说明",
+        },
+      ],
+      total: 1,
+    });
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    expect(await screen.findByText("common.schedule.status.failed")).toBeInTheDocument();
+    expect(screen.getByText("Check catalog permission 原始说明")).toBeInTheDocument();
   });
 
   it("opens schedule actions in a menu and preserves View Tasks navigation", async () => {

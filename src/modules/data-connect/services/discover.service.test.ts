@@ -243,6 +243,36 @@ describe("discover.service · update schedule", () => {
     }
   });
 
+  it.each([
+    { status: "failed", lastRun: 100, expected: "failed" },
+    { status: undefined, lastRun: 100, expected: "unknown" },
+    { status: undefined, lastRun: 0, expected: "never" },
+    { status: "future-state", lastRun: 0, expected: "unknown" },
+  ])("maps discover trigger results safely: $expected", async ({ status, lastRun, expected }) => {
+    const message = "Backend explanation\n原始说明";
+    const schedule = {
+      id: "schedule-1",
+      name: "nightly",
+      catalog_id: "catalog-1",
+      enabled: false,
+      cron_expr: "0 * * * *",
+      last_run: lastRun,
+      last_status: status,
+      last_message: message,
+    };
+    getMock.mockResolvedValue({ data: { entries: [schedule], total_count: 1 } });
+    const { listDataConnectDiscoverSchedules, getDataConnectDiscoverSchedule } =
+      await import("@/modules/data-connect/services/discover.service");
+    await expect(
+      listDataConnectDiscoverSchedules({ keyword: "", page: 1, pageSize: 20 }),
+    ).resolves.toMatchObject({ items: [{ lastStatus: expected, lastMessage: message }] });
+    getMock.mockResolvedValue({ data: schedule });
+    await expect(getDataConnectDiscoverSchedule("schedule-1")).resolves.toMatchObject({
+      lastStatus: expected,
+      lastMessage: message,
+    });
+  });
+
   it("sends the version read by the editor", async () => {
     const { updateDataConnectDiscoverSchedule } =
       await import("@/modules/data-connect/services/discover.service");

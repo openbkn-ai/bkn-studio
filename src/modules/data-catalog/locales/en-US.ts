@@ -7,6 +7,42 @@
 
 export const dataCatalogEnUS = {
   dataCatalog: {
+    buildSchedule: {
+      enabledFilter: "Schedule state",
+      title: "Build schedules",
+      create: "Create build schedule",
+      edit: "Edit build schedule",
+      name: "Schedule name",
+      executeType: "Execution type",
+      cron: "Cron expression",
+      cronHint:
+        "Runs at least one hour apart, using the backend time zone unless the expression specifies one.",
+      invalidCron: "Enter a valid cron expression with intervals of at least one hour.",
+      startTime: "Effective from",
+      endTime: "Effective until",
+      invalidTimeRange: "The end time must not be earlier than the start time.",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      toggle: "Enable schedule {{name}}",
+      enableSeparately: "Use the enable or disable action to change the schedule state.",
+      createDisabledHint:
+        "New schedules are disabled by default. You can enable them after reviewing the configuration.",
+      hint: "Each trigger uses the resource’s current configuration to create a batch task. A successful trigger means the task was created; it does not mean the build completed. Failed or skipped triggers wait for the next scheduled time.",
+      lastResult: "Latest trigger result",
+      lastRun: "Last trigger attempt",
+      nextRun: "Next trigger",
+      deleteTitle: "Delete schedule {{name}}?",
+      deleteHint:
+        "Deleting this schedule preserves all tasks it has already created. An already claimed trigger may still finish.",
+      saved: "Build schedule saved",
+      tasks: "View tasks",
+      search: "Search schedule name",
+      taskScope: "Showing tasks for schedule: {{id}}",
+      taskSource: "Trigger source",
+      manual: "Manual",
+      scheduled: "Scheduled",
+      scheduleId: "Schedule ID",
+    },
     title: "Data Catalog",
     description:
       "Browse and govern data resources. Filter by connection to inspect tables, views, and index status.",
@@ -628,7 +664,7 @@ export const dataCatalogEnUS = {
       deleted: "Resource deleted: {{name}}",
       deleteTitle: "Delete resource?",
       deleteImpact:
-        "This removes the resource record and related information in OpenBKN and may affect indexes, tasks, and grants. It does not delete or modify source database tables or data.",
+        "This removes the resource record and related information in OpenBKN, deletes all bound build schedules, and retains existing build task history. It may affect indexes and grants. It does not delete or modify source database tables or data.",
       deleteUnknownReferences:
         "References from other business objects cannot be checked here. Confirm that you have reviewed them. Deletion may be irreversible.",
       deleteStateChanged: "The resource state or delete permission changed. Refresh and try again.",

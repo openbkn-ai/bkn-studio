@@ -41,6 +41,8 @@ export function writeIndexBuildStatusParam(statuses: BuildTaskStatus[]): string 
 export type IndexBuildListFilters = {
   executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
+  scheduleId?: string;
+  triggerType?: "manual" | "scheduled";
   statuses: BuildTaskStatus[];
 };
 
@@ -51,7 +53,11 @@ export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildLi
   const executeType =
     rawExecuteType === "full" || rawExecuteType === "incremental" ? rawExecuteType : undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
-  return { executeType, mode, statuses };
+  const rawTriggerType = params.get("trigger_type");
+  const triggerType =
+    rawTriggerType === "manual" || rawTriggerType === "scheduled" ? rawTriggerType : undefined;
+  const scheduleId = params.get("schedule_id")?.trim() || undefined;
+  return { executeType, mode, scheduleId, triggerType, statuses };
 }
 
 export function applyIndexBuildListFilters(
@@ -71,6 +77,10 @@ export function applyIndexBuildListFilters(
     next.delete("execute_type");
   }
   next.delete("resourceId");
+  if (filters.scheduleId) next.set("schedule_id", filters.scheduleId);
+  else next.delete("schedule_id");
+  if (filters.triggerType) next.set("trigger_type", filters.triggerType);
+  else next.delete("trigger_type");
   const statusValue = writeIndexBuildStatusParam(filters.statuses);
   if (statusValue) {
     next.set("status", statusValue);
@@ -80,11 +90,17 @@ export function applyIndexBuildListFilters(
   return next;
 }
 
-export type ResourceIndexView = "config" | "tasks";
+export type ResourceIndexView = "config" | "tasks" | "schedules";
 
 /** True when the URL explicitly names a data-index sub-tab. */
 export function isExplicitResourceIndexView(view: string | null): boolean {
-  return view === "config" || view === "tasks" || view === "configure" || view === "overview";
+  return (
+    view === "config" ||
+    view === "tasks" ||
+    view === "schedules" ||
+    view === "configure" ||
+    view === "overview"
+  );
 }
 
 export function readResourceIndexView(tab: string | null, view: string | null): ResourceIndexView {
@@ -97,6 +113,7 @@ export function readResourceIndexView(tab: string | null, view: string | null): 
   if (view === "tasks" || view === "overview") {
     return "tasks";
   }
+  if (view === "schedules") return "schedules";
   // No view param: always open configuration first.
   return "config";
 }

@@ -1344,6 +1344,8 @@ export const mockResources: CatalogResource[] = [
   }),
 ];
 
+export { mockBuildSchedules } from "@/shared/schedule/build-schedule-mock";
+
 const mockCatalogNames: Record<string, string> = {
   "cat-001": "customer_master",
   "cat-002": "knowledge_index",
@@ -1371,6 +1373,7 @@ function makeTask(
   return {
     ...input,
     catalogId,
+    triggerType: input.triggerType ?? "manual",
     catalogName: input.catalogName ?? mockCatalogName(catalogId),
     resourceName: input.resourceName ?? resource?.name,
     executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
@@ -1436,8 +1439,11 @@ export const mockBuildTasks: BuildTask[] = [
   }),
   makeTask({
     id: "bt-orders-01",
+    scheduleId: "bs-orders-incremental",
+    triggerType: "scheduled",
     resourceId: "res-orders",
     mode: "batch",
+    executeType: "incremental",
     status: "running",
     embeddingFields: ["item_summary"],
     primaryKeyFields: ["order_id"],

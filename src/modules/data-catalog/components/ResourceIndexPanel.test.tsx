@@ -15,7 +15,13 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./shared.module.css";
 
-const { indexConfigFormPanelMock, listBuildTaskPageMock, pauseOrResumeMock } = vi.hoisted(() => ({
+const {
+  buildSchedulePanelMock,
+  indexConfigFormPanelMock,
+  listBuildTaskPageMock,
+  pauseOrResumeMock,
+} = vi.hoisted(() => ({
+  buildSchedulePanelMock: vi.fn(),
   indexConfigFormPanelMock: vi.fn(),
   listBuildTaskPageMock: vi.fn(),
   pauseOrResumeMock: vi.fn(),
@@ -122,6 +128,16 @@ vi.mock("@/modules/data-catalog/components/BuildProgress", () => ({ BuildProgres
 vi.mock("@/modules/data-catalog/components/BuildTaskDetailDrawer", () => ({
   BuildTaskDetailDrawer: () => null,
 }));
+vi.mock("@/modules/data-catalog/components/BuildSchedulePanel", () => ({
+  BuildSchedulePanel: (props: {
+    active?: boolean;
+    catalog?: CatalogRecord;
+    resource?: CatalogResource;
+  }) => {
+    buildSchedulePanelMock(props);
+    return <output data-testid="schedule-panel-active">{String(props.active)}</output>;
+  },
+}));
 vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({
   BuildTaskLaunchPanel: ({
     disabled,
@@ -206,6 +222,98 @@ describe("ResourceIndexPanel", () => {
     vi.clearAllMocks();
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
   });
+
+  it("opens schedules from the table resource data-index tabs without mounting a background panel", () => {
+    const onIndexViewChange = vi.fn();
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="config"
+          indexViewExplicit
+          onIndexViewChange={onIndexViewChange}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "dataCatalog.buildSchedule.title" }));
+    expect(onIndexViewChange).toHaveBeenCalledWith("schedules");
+    expect(buildSchedulePanelMock).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "scopes schedules to the table resource and forwards active=%s",
+    (active) => {
+      render(
+        <MemoryRouter>
+          <ResourceIndexPanel
+            active={active}
+            catalog={manageableCatalog}
+            indexView="schedules"
+            indexViewExplicit
+            onIndexViewChange={vi.fn()}
+            onRefresh={vi.fn()}
+            resource={resource}
+            tasks={[]}
+          />
+        </MemoryRouter>,
+      );
+      expect(buildSchedulePanelMock).toHaveBeenCalledWith(
+        expect.objectContaining({ active, catalog: manageableCatalog, resource }),
+      );
+      expect(screen.getByTestId("schedule-panel-active")).toHaveTextContent(String(active));
+      expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not mount or load schedules without task_manage permission", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={{ ...modifiableCatalog, operations: ["resource_manage", "view_detail"] }}
+          indexView="schedules"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("tab", { name: "dataCatalog.buildSchedule.title" })).toBeEnabled();
+    expect(screen.getByText("dataCatalog.permissionRequired")).toBeInTheDocument();
+    expect(buildSchedulePanelMock).not.toHaveBeenCalled();
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["dataset", "logical_view"] as const)(
+    "hides schedules for %s and redirects its schedule deep link to config",
+    async (category) => {
+      const onIndexViewChange = vi.fn();
+      render(
+        <MemoryRouter>
+          <ResourceIndexPanel
+            active
+            catalog={modifiableCatalog}
+            indexView="schedules"
+            indexViewExplicit
+            onIndexViewChange={onIndexViewChange}
+            onRefresh={vi.fn()}
+            resource={{ ...resource, category }}
+            tasks={[]}
+          />
+        </MemoryRouter>,
+      );
+      await waitFor(() => expect(onIndexViewChange).toHaveBeenCalledWith("config"));
+      expect(screen.queryByRole("tab", { name: "dataCatalog.buildSchedule.title" })).toBeNull();
+      expect(buildSchedulePanelMock).not.toHaveBeenCalled();
+      expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("renders index configuration read-only without catalog resource management", () => {
     render(
