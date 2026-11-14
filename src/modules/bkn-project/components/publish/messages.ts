@@ -50,6 +50,7 @@ export const KNOWN_REFUSALS = [
   "Draft.Stale",
   "Draft.NotReady",
   "Draft.DocumentDataNotReady",
+  "Draft.DocumentSamplesChanged",
   "Draft.DocumentDataItemFailed",
   "Draft.DualSourceNotConfirmed",
   "Draft.BusinessIdentityNotVerified",
