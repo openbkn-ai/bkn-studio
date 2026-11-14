@@ -10,6 +10,7 @@ import type { PropsWithChildren } from "react";
 import { useEffect, useState } from "react";
 
 import { anonymousRuntimeUser, fetchCurrentUser } from "@/framework/auth/current-user";
+import { clearSessionExpiredNotice } from "@/framework/auth/oauth";
 import type { RuntimeUser } from "@/framework/runtime/types";
 
 type CurrentUserLoaderProps = PropsWithChildren<{
@@ -26,6 +27,9 @@ export function CurrentUserLoader({ children, onLoaded }: CurrentUserLoaderProps
 
   useEffect(() => {
     let cancelled = false;
+    // Signed in again, whether by login, another tab's shared cookie or a dev
+    // token, so a leftover expiry notice must not show on a later sign-in.
+    clearSessionExpiredNotice();
 
     void fetchCurrentUser()
       .then((user) => {

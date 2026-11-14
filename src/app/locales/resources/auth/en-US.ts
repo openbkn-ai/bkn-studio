@@ -18,6 +18,7 @@ export const authEnUS = {
     },
     signInSubtitle: "Sign in to access the business knowledge network console",
     signInButton: "Sign in",
+    sessionExpired: "Your session has expired. Please sign in again.",
     devTokenToggle: "Sign in with a token (dev mode)",
     signInOtherTabTitle: "Another tab is signing in",
     signInOtherTabHint:
