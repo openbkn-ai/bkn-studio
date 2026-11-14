@@ -23,6 +23,8 @@ import type {
   Proposal,
   ProposalItem,
   ProposalOp,
+  Knowledge,
+  KnowledgeItem,
   Supplement,
 } from "@/modules/bkn-project/types/conversations";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
@@ -190,6 +192,37 @@ export async function getSupplement(projectId: string): Promise<Supplement> {
     skipErrorToast: true,
   });
   return mapSupplement(response.data);
+}
+
+type BackendKnowledgeItem = {
+  adopted?: boolean;
+  description?: string;
+  kind?: string;
+  name?: string;
+};
+
+const mapKnowledgeItem = (item: BackendKnowledgeItem): KnowledgeItem => ({
+  adopted: Boolean(item.adopted),
+  description: item.description ?? "",
+  kind: item.kind ?? "",
+  name: item.name ?? "",
+});
+
+/** Reads what the knowledge base holds for both pages; none in the open edition. */
+export async function getKnowledge(projectId: string): Promise<Knowledge> {
+  if (useMock) {
+    return wait({ concepts: [], files: 0, rules: [] });
+  }
+  const response = await http.get<{
+    concepts?: BackendKnowledgeItem[] | null;
+    files?: number;
+    rules?: BackendKnowledgeItem[] | null;
+  }>(`${requirementsPath(projectId)}/knowledge`, { skipErrorToast: true });
+  return {
+    concepts: (response.data.concepts ?? []).map(mapKnowledgeItem),
+    files: response.data.files ?? 0,
+    rules: (response.data.rules ?? []).map(mapKnowledgeItem),
+  };
 }
 
 /** Writes the supplement note; empty text clears it. */

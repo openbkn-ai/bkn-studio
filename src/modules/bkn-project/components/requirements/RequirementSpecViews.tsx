@@ -168,9 +168,23 @@ function ReviewAction({
   );
 }
 
-function EditedTag({ edited }: { edited: boolean }) {
+/**
+ * A changed item says so; one a person or Ask AI added, which no document or drafting gave and so
+ * has neither a quote nor a reason, says it is new.
+ */
+function EditedTag({
+  item,
+}: {
+  item: { citations: unknown[]; edited: boolean; supplementReason?: string };
+}) {
   const { t } = useTranslation();
-  return edited ? <LightStatusTag tone="info">{t(`${PREFIX}.edited`)}</LightStatusTag> : null;
+  if (!item.edited) {
+    return null;
+  }
+  const added = !item.citations.length && !item.supplementReason;
+  return (
+    <LightStatusTag tone="info">{t(`${PREFIX}.${added ? "added" : "edited"}`)}</LightStatusTag>
+  );
 }
 
 /** An item adopted from an Ask AI conversation says so, as its basis. */
@@ -323,7 +337,7 @@ export function QuestionsView({
           {warnings.length ? (
             <LightStatusTag tone="warning">{t(`${PREFIX}.questions.hasWarnings`)}</LightStatusTag>
           ) : null}
-          <EditedTag edited={question.edited} />
+          <EditedTag item={question} />
           <AskTag source={question.source} />
           <ReviewTags accepted={question.accepted} stale={question.ontologyChanged} />
         </span>
@@ -405,7 +419,7 @@ export function ScenariosView({
             <div className={styles.row}>
               <AskCheck itemId={scenario.id} kind="scenarios" label={scenario.name} />
               <h4 className={styles.cardTitle}>{scenario.name}</h4>
-              <EditedTag edited={scenario.edited} />
+              <EditedTag item={scenario} />
               <AskTag source={scenario.source} />
               <ReviewTags accepted={scenario.accepted} stale={scenario.ontologyChanged} />
               <ItemActions itemId={scenario.id} kind="scenarios" label={scenario.name} />
@@ -465,7 +479,7 @@ export function RulesView({ spec }: { spec: RequirementSpec }) {
             <div className={styles.row}>
               <span>{rule.statement}</span>
               <LightStatusTag tone="neutral">{compilesToText(t, rule.compilesTo)}</LightStatusTag>
-              <EditedTag edited={rule.edited} />
+              <EditedTag item={rule} />
               <AskTag source={rule.source} />
               <ItemActions itemId={rule.id} kind="rules" label={rule.statement} />
             </div>
@@ -582,10 +596,14 @@ function ChoiceCard({ choice }: { choice: RequirementChoice }) {
   );
 }
 
-/** What drafting dropped and why, so nothing is dropped unseen. */
+/**
+ * What scenario drafting dropped and why, so nothing is dropped unseen; said only once there are
+ * scenarios or questions, as what other runs dropped is no part of them.
+ */
 export function RejectedNote({ spec }: { spec: RequirementSpec }) {
   const { t } = useTranslation();
-  if (!spec.rejected.length) {
+  const rejected = spec.rejected.filter((item) => !item.run);
+  if (!rejected.length || (!spec.scenarios.length && !spec.questions.length)) {
     return null;
   }
   return (
@@ -595,7 +613,7 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
         {
           children: (
             <ul className={styles.list}>
-              {spec.rejected.map((item, index) => (
+              {rejected.map((item, index) => (
                 <li className={styles.row} key={`${item.kind}-${index}`}>
                   <LightStatusTag tone="neutral">{rejectedKindText(t, item.kind)}</LightStatusTag>
                   <span>{item.text}</span>
@@ -605,7 +623,7 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
             </ul>
           ),
           key: "rejected",
-          label: t(`${PREFIX}.rejected`, { count: spec.rejected.length }),
+          label: t(`${PREFIX}.rejected`, { count: rejected.length }),
         },
       ]}
       size="small"

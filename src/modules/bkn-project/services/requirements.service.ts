@@ -177,7 +177,7 @@ type BackendSpec = {
         })[]
     | null;
   logic_needs?: BackendLogicNeed[] | null;
-  rejected?: { kind: string; reason: string; text: string }[] | null;
+  rejected?: { kind: string; reason: string; run?: string; text: string }[] | null;
   rules?:
     | (BackendCited & { compiles_to: string; id: string; source?: string; statement: string })[]
     | null;

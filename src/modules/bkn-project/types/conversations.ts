@@ -21,6 +21,22 @@ export type Supplement = {
   time: number;
 };
 
+/** A concept or rule of the knowledge base, as kinetic analysis, scenarios and Ask AI read it. */
+export type KnowledgeItem = {
+  /** It is in the confirmed model. */
+  adopted: boolean;
+  description: string;
+  /** Its verdict on the concepts page: object, event, relation, property or values. */
+  kind: string;
+  name: string;
+};
+
+/**
+ * What the project's knowledge base holds for both pages: none without the professional edition,
+ * nor before its files are extracted.
+ */
+export type Knowledge = { concepts: KnowledgeItem[]; files: number; rules: KnowledgeItem[] };
+
 /** A list item a question refers to, as it was ticked on the page. */
 export type AskRef = { id: string; kind: AskItemKind; name: string };
 

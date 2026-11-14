@@ -146,7 +146,9 @@ export function ProjectConcepts({
   const [selected, setSelected] = useState<string[]>([]);
   // What Ask AI is asked about besides the ticked concepts, such as a requirement concept.
   const [askRefs, setAskRefs] = useState<string[]>([]);
-  const [asking, setAsking] = useState(true);
+  // The AI assistant opens when asked for, as on kinetic modeling and business scenarios: docked
+  // open, it would squeeze the list.
+  const [asking, setAsking] = useState(false);
   // What failed in the last run, by source, as words.
   const [runFailed, setRunFailed] = useState<Partial<Record<ConceptSourceKey, string>>>({});
   const [kbStatus, setKbStatus] = useState<ProjectKnowledgeBaseModelStatus | null>(null);

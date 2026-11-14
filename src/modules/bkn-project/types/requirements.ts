@@ -230,8 +230,11 @@ export type RequirementSpec = {
   conflicts: RequirementConflict[];
   logicNeeds: RequirementLogicNeed[];
   questions: RequirementQuestion[];
-  /** Drafted items the checks dropped, with why. */
-  rejected: { kind: string; reason: string; text: string }[];
+  /**
+   * Items the checks dropped, with why; run is the run that dropped them, concepts or kinetic,
+   * and absent for scenario drafting.
+   */
+  rejected: { kind: string; reason: string; run?: string; text: string }[];
   rules: RequirementRule[];
   /** The runs that write it besides drafting; null for one never run. */
   runs: { concepts: RequirementRun | null; kinetic: RequirementRun | null };
