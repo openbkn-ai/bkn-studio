@@ -14,6 +14,8 @@ import {
   projectErrorDetails,
   UNDERSTAND_SECONDS_PER_TABLE,
 } from "@/modules/bkn-project/services/publish.service";
+import { propertyTypeKey } from "@/modules/bkn-project/components/draft/evidence";
+import type { Draft } from "@/modules/bkn-project/types/draft";
 import type {
   CheckStatus,
   IndexBuild,
@@ -57,6 +59,7 @@ export const KNOWN_REFUSALS = [
   "Draft.BusinessIdentityNotVerified",
   "Draft.BusinessIdentityNotUnique",
   "Draft.BusinessIdentityUnavailable",
+  "Draft.LinkTypesMismatch",
   "Draft.NothingAdopted",
   "Draft.ProjectArchived",
   "Draft.NotOwner",
@@ -127,7 +130,58 @@ export function refusalText(
   if (code === "Draft.DocumentDataItemFailed") {
     return documentDataItemText(t, projectErrorDetails(error));
   }
+  if (code === "Draft.LinkTypesMismatch") {
+    const { relation, mention_type, identity_type } = (projectErrorDetails(error) ?? {}) as Record<
+      string,
+      unknown
+    >;
+    return typeof relation === "string" &&
+      typeof mention_type === "string" &&
+      typeof identity_type === "string"
+      ? t("bknProject.errors.Draft.LinkTypesMismatch", {
+          identityType: t(propertyTypeKey(identity_type)),
+          mentionType: t(propertyTypeKey(mention_type)),
+          relation,
+        })
+      : t("bknProject.errors.Draft.LinkTypesMismatchUnnamed");
+  }
   return t(`bknProject.errors.${code}`);
+}
+
+/**
+ * Why an adopted relation cannot link records: the field it reads from the knowledge base and the
+ * field it matches in the other object hold types of value that never match. Named from the draft
+ * as people know them, with what to change; `others` counts more relations like it. Null when the
+ * draft no longer has the relation or its fields, or names both types with the same word.
+ */
+export function linkTypesText(t: TFunction, draft: Draft, relationId: string, others = 0) {
+  const relation = draft.items.relationTypes.find((item) => item.id === relationId);
+  const mapping = relation?.documentMapping;
+  const source = draft.items.objectTypes.find((item) => item.id === relation?.source);
+  const target = draft.items.objectTypes.find((item) => item.id === relation?.target);
+  const mention = source?.properties.find((p) => p.name === mapping?.mentionProperty);
+  const identity = target?.properties.find((p) => p.name === mapping?.identityProperty);
+  if (!relation || !target || !mention || !identity) {
+    return null;
+  }
+  // The draft may already hold the field changed, before the status is read again; types said with
+  // the same word would read as a contradiction, so then the count is said instead.
+  const mentionType = t(propertyTypeKey(mention.type));
+  const identityType = t(propertyTypeKey(identity.type));
+  if (mentionType === identityType) {
+    return null;
+  }
+  const text = t("bknProject.confirm.linkTypes.text", {
+    identity: identity.displayName || identity.name,
+    identityType,
+    mention: mention.displayName || mention.name,
+    mentionType,
+    relation: relation.name,
+    target: target.name,
+  });
+  return others > 0
+    ? `${text}${t("bknProject.confirm.linkTypes.others", { count: others })}`
+    : text;
 }
 
 const DOCUMENT_DATA_REASONS = new Set(["field", "format", "permission", "mismatch", "unavailable"]);
@@ -148,7 +202,7 @@ function documentDataItemText(t: TFunction, details: unknown) {
 }
 
 /** Reasons said with the count of what waits; without a count they fall back to the general text. */
-const COUNTED_REASONS = new Set(["needs_identity", "unadopted_ends"]);
+const COUNTED_REASONS = new Set(["link_types_mismatch", "needs_identity", "unadopted_ends"]);
 
 const BLOCKED_REASONS = new Set([
   "archived",
@@ -156,6 +210,7 @@ const BLOCKED_REASONS = new Set([
   "catalog_missing",
   "definitions_exist",
   "lineage_not_v3",
+  "link_types_mismatch",
   "needs_identity",
   "network_missing",
   "no_catalogs",

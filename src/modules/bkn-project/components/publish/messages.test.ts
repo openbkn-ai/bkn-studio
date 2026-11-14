@@ -17,6 +17,7 @@ import {
   definitionIds,
   indexStateText,
   KNOWN_REFUSALS,
+  linkTypesText,
   listText,
   missingFieldsText,
   pendingBecauseText,
@@ -86,6 +87,59 @@ describe("publish messages", () => {
     expect(refusalText(en, refusal("BknProject.Lineage.DefinitionsExist"))).toBe(
       "The project already has definitions with the same names",
     );
+  });
+
+  it("says the count instead of the fields once both types read the same word", () => {
+    const draftWith = (mentionType: string) =>
+      ({
+        items: {
+          objectTypes: [
+            {
+              id: "line",
+              name: "合同明细行",
+              properties: [{ name: "po_line", displayName: "订单行号", type: mentionType }],
+            },
+            {
+              id: "order",
+              name: "采购订单",
+              properties: [{ name: "entry_id", displayName: "订单行", type: "integer" }],
+            },
+          ],
+          relationTypes: [
+            {
+              id: "line_order",
+              name: "合同明细行对应订单",
+              source: "line",
+              target: "order",
+              documentMapping: { mentionProperty: "po_line", identityProperty: "entry_id" },
+            },
+          ],
+        },
+      }) as never;
+    expect(linkTypesText(zh, draftWith("text"), "line_order")).toContain("合同明细行对应订单");
+    // Changed already, before the status is read again: no "integer, change it to integer".
+    expect(linkTypesText(zh, draftWith("integer"), "line_order")).toBeNull();
+  });
+
+  it("names the relation whose linking fields cannot match, with their types in words", () => {
+    const error = refusal("BknProject.Draft.LinkTypesMismatch", {
+      relation: "合同明细行对应订单",
+      relation_type: "line_order",
+      mention_type: "text",
+      identity_type: "integer",
+    });
+    expect(refusalText(zh, error)).toContain("关系类“合同明细行对应订单”连不上记录");
+    expect(refusalText(zh, error)).toContain("数据类型改为整数");
+    expect(refusalText(en, error)).toContain("“Whole number”");
+    // Without the names it still says what is wrong, without a code.
+    expect(refusalText(zh, refusal("BknProject.Draft.LinkTypesMismatch"))).toContain(
+      "两个字段类型对不上",
+    );
+    expect(
+      blockedText(zh, "link_types_mismatch", [
+        { code: "link_types_mismatch", count: 1, waitingFor: "editor" },
+      ]),
+    ).toBe("1 个已采纳的关系类，用来对应的两个字段类型对不上");
   });
 
   it("says why confirming is not allowed, with the blocker's count", () => {

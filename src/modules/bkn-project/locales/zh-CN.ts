@@ -1621,12 +1621,21 @@ export const bknProjectZhCN = {
         unadopted_ends: "{{count}} 个已采纳的关系类，两端的对象类还没有都采纳",
         unadopted_ends_one: "{{count}} 个已采纳的关系类，两端的对象类还没有都采纳",
         unadopted_ends_other: "{{count}} 个已采纳的关系类，两端的对象类还没有都采纳",
+        link_types_mismatch: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
+        link_types_mismatch_one: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
+        link_types_mismatch_other: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
         nothing_adopted: "还没有采纳任何对象类",
         no_catalogs: "项目还没有选择数据目录",
         branch_not_v3: "这个项目还是旧版格式，需要先同步网络的最新内容才能确认",
         lineage_not_v3: "目标网络还是旧版格式，需要先更新网络的定义，再同步项目",
         definitions_exist: "项目中已有同名的定义，确认会与之冲突",
         other: "现在还不能确认",
+      },
+      linkTypes: {
+        text: "关系类“{{relation}}”连不上记录：知识库对象的字段“{{mention}}”是{{mentionType}}，而“{{target}}”用来对应的“{{identity}}”是{{identityType}}，两边的值对不上。请把“{{mention}}”的数据类型改为{{identityType}}，或换一个能对应的字段；也可以先不采纳这条关系。",
+        others: "另有 {{count}} 个关系类也是这样。",
+        others_one: "另有 {{count}} 个关系类也是这样。",
+        others_other: "另有 {{count}} 个关系类也是这样。",
       },
       dialog: {
         title: "确认模型",
@@ -3333,6 +3342,10 @@ export const bknProjectZhCN = {
         BusinessIdentityNotVerified: "请先在关系设置中核验业务编号并保存，再确认模型。",
         BusinessIdentityNotUnique: "业务编号存在重复或空值，请处理后重新核验。",
         BusinessIdentityUnavailable: "暂时无法完成业务编号核验，请检查来源访问权限后重试。",
+        LinkTypesMismatch:
+          "关系类“{{relation}}”连不上记录：知识库对象中用来对应的字段是{{mentionType}}，对方的字段是{{identityType}}，两边的值对不上。请把知识库对象中这个字段的数据类型改为{{identityType}}，或换一个能对应的字段；也可以先不采纳这条关系。",
+        LinkTypesMismatchUnnamed:
+          "有关系类连不上记录：用来对应的两个字段类型对不上。请把知识库对象中这个字段的数据类型改成与对方一致，或换一个能对应的字段。",
 
         UndecidedNotAccepted: "有新的未决项，请查看后再确认",
         PartialNotAccepted: "有起草时读取不到的表，请查看后再确认",

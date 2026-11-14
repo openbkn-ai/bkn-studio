@@ -82,10 +82,10 @@ const onShowPending = vi.fn();
 const onStale = vi.fn();
 const onSendingChange = vi.fn();
 
-function renderConfirm() {
+function renderConfirm(shown = draft) {
   return renderWithoutAntdStyles(
     <ConfirmDraft
-      draft={draft}
+      draft={shown}
       onConfirmed={onConfirmed}
       onViewConfirmation={onViewConfirmation}
       onSendingChange={onSendingChange}
@@ -267,6 +267,95 @@ describe("ConfirmDraft", () => {
     // Said on the page, without hovering the button.
     expect(screen.getByRole("status")).toHaveTextContent("2 个已采纳的对象类还需要选定唯一标识");
     expect(button).toHaveAttribute("aria-describedby", "confirm-blocked-reason");
+  });
+
+  /** A draft whose first relation links a long-text field to an integer identity. */
+  function mismatchedDraft() {
+    const linked = mapDraft(mockDraft("p1"));
+    const relation = linked.items.relationTypes[0];
+    const source = linked.items.objectTypes.find((item) => item.id === relation.source)!;
+    const target = linked.items.objectTypes.find((item) => item.id === relation.target)!;
+    source.properties[0] = { ...source.properties[0], displayName: "关联行号", type: "text" };
+    target.properties[0] = { ...target.properties[0], displayName: "行号", type: "integer" };
+    relation.documentMapping = {
+      mode: "linking",
+      mentionProperty: source.properties[0].name,
+      identityProperty: target.properties[0].name,
+    };
+    return { linked, relation, target };
+  }
+
+  it("names the relation whose linking fields cannot match, and what to change", async () => {
+    const { linked, relation, target } = mismatchedDraft();
+    getProjectStatusMock.mockResolvedValue(
+      status(
+        { allowed: false, reason: "link_types_mismatch" },
+        { blockers: [{ code: "link_types_mismatch", count: 1, waitingFor: "editor" }] },
+      ),
+    );
+    getProjectPendingMock.mockResolvedValue({
+      draftUpdateTime: linked.updateTime,
+      items: [
+        {
+          blocking: true,
+          itemId: relation.id,
+          kind: "relation_types",
+          name: relation.name,
+          neededBy: [],
+          reason: "link_types_mismatch",
+        },
+      ],
+    });
+    renderConfirm(linked);
+
+    expect(await screen.findByRole("button", { name: "确认模型" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        `关系类“${relation.name}”连不上记录：知识库对象的字段“关联行号”是文本，而“${target.name}”用来对应的“行号”是整数`,
+      ),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("请把“关联行号”的数据类型改为整数");
+  });
+
+  it("counts the relations whose linking fields cannot match when it cannot name them", async () => {
+    getProjectStatusMock.mockResolvedValue(
+      status(
+        { allowed: false, reason: "link_types_mismatch" },
+        { blockers: [{ code: "link_types_mismatch", count: 2, waitingFor: "editor" }] },
+      ),
+    );
+    getProjectPendingMock.mockRejectedValue(new Error("offline"));
+    renderConfirm();
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "2 个已采纳的关系类，用来对应的两个字段类型对不上",
+    );
+  });
+
+  it("says which relation a confirmation was refused for when its fields cannot match", async () => {
+    const { linked, relation } = mismatchedDraft();
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock.mockRejectedValueOnce(
+      refusal("Draft.LinkTypesMismatch", {
+        relation_type: relation.id,
+        relation: relation.name,
+        mention_type: "text",
+        identity_type: "integer",
+      }),
+    );
+    renderConfirm(linked);
+
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
+    await screen.findByRole("dialog");
+    await waitFor(() => expect(okButton()).toBeEnabled());
+    fireEvent.click(okButton());
+
+    await waitFor(() =>
+      expect(messageMock.error).toHaveBeenCalledWith(
+        expect.stringContaining("请把“关联行号”的数据类型改为整数"),
+      ),
+    );
+    expect(String(messageMock.error.mock.calls[0][0])).not.toContain("LinkTypesMismatch");
   });
 
   it("offers to confirm again after a change, and says when the draft is confirmed", async () => {
