@@ -92,6 +92,7 @@ vi.mock("@/framework/extension/registry", async (importOriginal) => ({
   extensionProjectKnowledgeBaseModel: () => slots.kbModel ?? undefined,
 }));
 
+import { DRAFT_POLL_MS } from "@/modules/bkn-project/services/draft.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ProjectConcepts } from "./ProjectConcepts";
@@ -296,6 +297,41 @@ describe("ProjectConcepts", () => {
     publish.getUnderstanding.mockResolvedValue([
       { catalogId: "c1", tables: [{ resourceId: "r_customers" }, { resourceId: "r_orders" }] },
     ]);
+  });
+
+  it("shows on the tables row how far understanding goes, and reads it again until it ends", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const table = (status: string) => ({
+        described: false,
+        networkObjectTypes: [],
+        resourceId: `r_${status}`,
+        status,
+      });
+      publish.getUnderstanding
+        .mockResolvedValueOnce([
+          { catalogId: "c1", tables: [table("completed"), table("running")], visible: true },
+        ])
+        .mockResolvedValue([
+          { catalogId: "c1", tables: [table("completed"), table("completed")], visible: true },
+        ]);
+      renderConcepts();
+      const sources = await screen.findByRole("region", {
+        name: "bknProject.concepts.sources.title",
+      });
+      const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+      expect(
+        await tables.findByText('bknProject.understand.progress.summary:{"done":1,"total":2}'),
+      ).toBeTruthy();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
+      });
+      await waitFor(() =>
+        expect(tables.queryByText(/bknProject.understand.progress.summary/)).toBeNull(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("lists the sources with what they hold and made, and the network's concepts", async () => {
@@ -505,7 +541,12 @@ describe("ProjectConcepts", () => {
   it("confirms, changes and leaves out a requirement concept's match", async () => {
     requirements.matchRequirementConcept.mockResolvedValue({ updateTime: 10 });
     renderConcepts();
-    fireEvent.click(await screen.findByText('bknProject.concepts.tabs.requirement:{"count":2}'));
+    // The count and how many wait for data, in one title that never runs the numbers together.
+    fireEvent.click(
+      await screen.findByText(
+        'bknProject.concepts.tabs.requirementUnmatched:{"count":2,"unmatched":1}',
+      ),
+    );
 
     const client = await row("Client");
     expect(client.getByText("Customer")).toBeTruthy();
@@ -763,6 +804,17 @@ describe("ProjectConcepts", () => {
     expect(screen.queryByText('bknProject.concepts.refs:{"names":"Customer"}')).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /bknProject\.ask\.button\.selected/ }));
     expect(await screen.findByText('bknProject.concepts.refs:{"names":"Customer"}')).toBeTruthy();
+  });
+
+  it("sends a question on Enter, as the other pages' assistants do", async () => {
+    assistant.askConcepts.mockResolvedValue({ answer: "ok", dropped: [], revisions: [] });
+    renderConcepts();
+    await row("Customer");
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.ask\.button\.label/ }));
+    const input = await screen.findByRole("textbox", { name: "bknProject.model.ask.question" });
+    fireEvent.change(input, { target: { value: "which data?" } });
+    fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13 });
+    await waitFor(() => expect(assistant.askConcepts).toHaveBeenCalled());
   });
 
   it("is read only for others", async () => {

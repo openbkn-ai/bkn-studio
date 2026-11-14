@@ -16,7 +16,7 @@ import {
   refusalText,
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
-import { namedWithoutUnderstanding } from "@/modules/bkn-project/components/model/understanding";
+import { tally } from "@/modules/bkn-project/components/model/understanding";
 import { UnderstandingTag } from "@/modules/bkn-project/components/model/UnderstandingTag";
 import { catalogNamesOf } from "@/modules/bkn-project/components/draft/evidence";
 import { namingLanguageLabelKey } from "@/modules/bkn-project/components/manage/projectLanguage";
@@ -36,29 +36,6 @@ import type {
 import type { ProjectNamingLanguage } from "@/modules/bkn-project/types/project";
 
 import styles from "../ProjectModel.module.css";
-
-/** Tables of the catalogs whose progress the caller can see. */
-function tally(catalogs: UnderstandingCatalog[]) {
-  const tables = catalogs.filter((catalog) => catalog.visible).flatMap((catalog) => catalog.tables);
-  const count = (...statuses: string[]) =>
-    tables.filter((table) => statuses.includes(table.status)).length;
-  // Named by the network or described by the catalog: nothing to understand, as the hint counts.
-  const named = tables.filter(namedWithoutUnderstanding).length;
-  const understood = count("completed");
-  const remaining = count("pending", "running");
-  return {
-    done: understood + named,
-    /** Every table has a business name, and none was understood here. */
-    named: named > 0 && named + understood === tables.length && !understood,
-    /** No table was ever understood, nor tried, nor has a business name. */
-    neverRun: count("not_started") === tables.length && !named,
-    remaining,
-    total: tables.length,
-    understood,
-    // Failed, cancelled, and never understood, such as the tables of a catalog added since.
-    unfinished: tables.length - understood - named - remaining,
-  };
-}
 
 /**
  * Semantic understanding of the project's catalogs: bkn-project asks vega to name and describe

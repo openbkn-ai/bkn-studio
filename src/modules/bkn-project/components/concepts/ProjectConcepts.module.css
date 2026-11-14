@@ -334,12 +334,6 @@ button.stat {
   text-align: center;
 }
 
-.tabBadge {
-  margin-left: 6px;
-  color: var(--color-error-text);
-  font-size: 12px;
-}
-
 .refs {
   margin: 0;
   color: var(--color-text-secondary);

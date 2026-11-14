@@ -197,9 +197,7 @@ export const bknProjectEnUS = {
       tabs: {
         data: "Data concepts {{count}}",
         requirement: "Requirement concepts {{count}}",
-        unmatched: "{{count}} not matched",
-        unmatched_one: "{{count}} not matched",
-        unmatched_other: "{{count}} not matched",
+        requirementUnmatched: "Requirement concepts {{count}}, {{unmatched}} not matched",
       },
       notice: {
         notUnderstood:
@@ -1319,8 +1317,8 @@ export const bknProjectEnUS = {
         tables: {
           label: "Tables",
           noun: "tables",
-          ok: "{{total}}, all return data",
-          missing: "{{missing}} of {{total}} return no data",
+          ok: "{{total}} used by the model, all return data",
+          missing: "{{missing}} of the {{total}} the model uses return no data",
           unreachable: "Can't confirm right now",
           not_bound: "Nothing adopted yet",
         },

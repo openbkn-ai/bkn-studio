@@ -62,6 +62,7 @@ export function ConceptSources({
   onView,
   run,
   tables,
+  understanding,
   unmatched,
 }: {
   /** Whether a source may be extracted from now. */
@@ -80,6 +81,8 @@ export function ConceptSources({
   onView: (key: ConceptSourceKey) => void;
   run: ConceptRun | null;
   tables: SourceFacts;
+  /** How far the tables are understood, as the modeling page says it; null while unknown. */
+  understanding?: { done: number; remaining: number; total: number } | null;
   /** The requirement concepts nothing in the data is yet. */
   unmatched: number;
 }) {
@@ -209,7 +212,20 @@ export function ConceptSources({
           {t(`${PREFIX}.manage`)}
         </AppButton>
       </div>
-      {row("table", tables, t(`${PREFIX}.detail.table`, { count: catalogs }))}
+      {row(
+        "table",
+        tables,
+        t(`${PREFIX}.detail.table`, { count: catalogs }),
+        // Understanding runs table by table, here or from another page: how far it is.
+        understanding?.remaining ? (
+          <span className={styles.muted}>
+            {t("bknProject.understand.progress.summary", {
+              done: understanding.done,
+              total: understanding.total,
+            })}
+          </span>
+        ) : null,
+      )}
       {row("document", documents, t(`${PREFIX}.detail.document`))}
       {knowledgeBase
         ? row(
