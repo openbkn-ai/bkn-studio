@@ -88,6 +88,27 @@ describe("publish messages", () => {
     );
   });
 
+  it("names the relation whose linking fields cannot match, with their types in words", () => {
+    const error = refusal("BknProject.Draft.LinkTypesMismatch", {
+      relation: "合同明细行对应订单",
+      relation_type: "line_order",
+      mention_type: "text",
+      identity_type: "integer",
+    });
+    expect(refusalText(zh, error)).toContain("关系类“合同明细行对应订单”连不上记录");
+    expect(refusalText(zh, error)).toContain("数据类型改为整数");
+    expect(refusalText(en, error)).toContain("“Whole number”");
+    // Without the names it still says what is wrong, without a code.
+    expect(refusalText(zh, refusal("BknProject.Draft.LinkTypesMismatch"))).toContain(
+      "两个字段类型对不上",
+    );
+    expect(
+      blockedText(zh, "link_types_mismatch", [
+        { code: "link_types_mismatch", count: 1, waitingFor: "editor" },
+      ]),
+    ).toBe("1 个已采纳的关系类，用来对应的两个字段类型对不上");
+  });
+
   it("says why confirming is not allowed, with the blocker's count", () => {
     const blockers = [{ code: "needs_identity", count: 2, waitingFor: "editor" as const }];
     expect(blockedText(zh, "needs_identity", blockers)).toBe(

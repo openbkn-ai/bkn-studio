@@ -1736,6 +1736,11 @@ export const bknProjectEnUS = {
           "{{count}} adopted relation type connects object types not both adopted",
         unadopted_ends_other:
           "{{count}} adopted relation types connect object types not both adopted",
+        link_types_mismatch: "{{count}} adopted relation types match fields whose types differ",
+        link_types_mismatch_one:
+          "{{count}} adopted relation type matches fields whose types differ",
+        link_types_mismatch_other:
+          "{{count}} adopted relation types match fields whose types differ",
         nothing_adopted: "No object type is adopted yet",
         no_catalogs: "The project has no data catalogs yet",
         branch_not_v3:
@@ -1744,6 +1749,12 @@ export const bknProjectEnUS = {
           "The target network still uses the old format. Update the network's definitions, then bring them into the project.",
         definitions_exist: "The project already has definitions with the same names",
         other: "The draft cannot be confirmed yet",
+      },
+      linkTypes: {
+        text: "Relationship “{{relation}}” cannot link records: the knowledge-base field “{{mention}}” is “{{mentionType}}”, but “{{identity}}” of “{{target}}”, which it is matched against, is “{{identityType}}”, so their values never match. Change the data type of “{{mention}}” to “{{identityType}}”, or choose another field that matches; you can also leave this relationship out for now.",
+        others: " {{count}} more relationships are the same.",
+        others_one: " {{count}} more relationship is the same.",
+        others_other: " {{count}} more relationships are the same.",
       },
       dialog: {
         title: "Confirm the model",
@@ -3586,6 +3597,10 @@ export const bknProjectEnUS = {
           "The business identifier has duplicate or empty values. Resolve them and verify again.",
         BusinessIdentityUnavailable:
           "The business identifier check could not finish. Check source access and try again.",
+        LinkTypesMismatch:
+          "Relationship “{{relation}}” cannot link records: the knowledge-base field it matches by is “{{mentionType}}”, but the field it is matched against is “{{identityType}}”, so their values never match. Change the data type of that knowledge-base field to “{{identityType}}”, or choose another field that matches; you can also leave this relationship out for now.",
+        LinkTypesMismatchUnnamed:
+          "A relationship cannot link records: the two fields it matches by have types whose values never match. Change the knowledge-base field's data type to match, or choose another field.",
 
         UndecidedNotAccepted: "New items are undecided. Review them, then confirm.",
         PartialNotAccepted: "Some tables could not be read in drafting. Review them, then confirm.",

@@ -14,6 +14,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   blockedText,
+  linkTypesText,
   pendingBecauseText,
   refusalText,
 } from "@/modules/bkn-project/components/publish/messages";
@@ -159,6 +160,35 @@ export function ConfirmDraft({
     }
   }, [open, needsUndecided, loadPending]);
 
+  // Relations whose linking fields never match block confirming: the page names them, which the
+  // pending list gives, so the person knows which field to retype.
+  const linkMismatch = action?.reason === "link_types_mismatch";
+  const [mismatched, setMismatched] = useState<string[]>([]);
+  useEffect(() => {
+    if (!linkMismatch) {
+      setMismatched([]);
+      return;
+    }
+    let current = true;
+    getProjectPending(projectId)
+      .then((pending) => {
+        if (current) {
+          setMismatched(
+            pending.items
+              .filter((item) => item.reason === "link_types_mismatch")
+              .map((item) => item.itemId),
+          );
+        }
+      })
+      .catch(() => {
+        // Without the list the count still says why.
+        if (current) setMismatched([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [linkMismatch, projectId, draft.updateTime]);
+
   const names = useMemo(
     () =>
       Object.fromEntries(
@@ -204,7 +234,10 @@ export function ConfirmDraft({
   );
   if (!action.allowed) {
     // Why confirming waits is said beside the button, not only when hovering it.
-    const why = blockedText(t, action.reason, status.blockers);
+    const why =
+      (linkMismatch && mismatched.length
+        ? linkTypesText(t, draft, mismatched[0], mismatched.length - 1)
+        : null) ?? blockedText(t, action.reason, status.blockers);
     return (
       <span className={styles.confirmBlocked}>
         <AppButton aria-describedby="confirm-blocked-reason" disabled type="primary">
@@ -299,6 +332,15 @@ export function ConfirmDraft({
         // The dialog stays: it says which item stopped and why, and offers the tables first.
         setDocumentsProblem(refusalText(t, error));
         onStale();
+      } else if (code === "Draft.LinkTypesMismatch") {
+        // Which relation and fields, as the person knows them; the status says it again.
+        const { relation_type } = (projectErrorDetails(error) ?? {}) as Record<string, unknown>;
+        setOpen(false);
+        message.error(
+          (typeof relation_type === "string" ? linkTypesText(t, draft, relation_type) : null) ??
+            refusalText(t, error),
+        );
+        await loadStatus();
       } else if (code === "Draft.Stale") {
         setOpen(false);
         message.warning(refusalText(t, error));
