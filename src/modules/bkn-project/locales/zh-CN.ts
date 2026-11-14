@@ -1634,6 +1634,8 @@ export const bknProjectZhCN = {
       linkTypes: {
         text: "关系类“{{relation}}”连不上记录：知识库对象的字段“{{mention}}”是{{mentionType}}，而“{{target}}”用来对应的“{{identity}}”是{{identityType}}，两边的值对不上。请把“{{mention}}”的数据类型改为{{identityType}}，或换一个能对应的字段；也可以先不采纳这条关系。",
         others: "另有 {{count}} 个关系类也是这样。",
+        others_one: "另有 {{count}} 个关系类也是这样。",
+        others_other: "另有 {{count}} 个关系类也是这样。",
       },
       dialog: {
         title: "确认模型",
