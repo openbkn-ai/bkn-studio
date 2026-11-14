@@ -292,6 +292,25 @@ describe("ConfirmDraft", () => {
     expect(onConfirmed).not.toHaveBeenCalled();
   });
 
+  it("offers to confirm again when the knowledge base waits for its objects", async () => {
+    getProjectStatusMock.mockResolvedValueOnce(
+      status(
+        {},
+        {
+          confirmation: { current: true, time: 1 },
+          stage: "confirmed",
+          stale: ["knowledge_base_outdated"],
+        },
+      ),
+    );
+    renderConfirm();
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新确认" }));
+    expect(
+      await screen.findByText("会替换上次确认写入的内容，项目中的其他定义不受影响。"),
+    ).toBeInTheDocument();
+  });
+
   it("says when it cannot tell whether the draft may be confirmed, and reads again", async () => {
     getProjectStatusMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue(status({}));
     renderConfirm();

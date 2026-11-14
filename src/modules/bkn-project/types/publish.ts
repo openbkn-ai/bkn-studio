@@ -89,7 +89,7 @@ export type ProjectStatus = {
     version: string;
   } | null;
   stage: ProjectStage;
-  /** `confirmation_outdated`, `check_outdated`. */
+  /** `confirmation_outdated`, `check_outdated`, `knowledge_base_outdated`, `source_changed`. */
   stale: string[];
   undecided: number;
   /** Candidates nobody confirmed one by one yet; confirming the draft does not wait for them. */
