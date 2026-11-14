@@ -1227,5 +1227,59 @@ describe("ProjectRequirements", () => {
       expect(screen.getByText("问题模板里没有用到这个输入")).toBeInTheDocument();
       expect(screen.getByText("按时间统计，但没有给出参照时间")).toBeInTheDocument();
     });
+
+    it("says nothing of what was dropped before any scenario, nor of what other runs dropped", async () => {
+      const spec = requirements();
+      spec.spec.scenarios = [];
+      spec.spec.questions = [];
+      spec.spec.rejected = [
+        { kind: "rule", reason: "quote_not_found", run: "concepts", text: "两天内发货。" },
+        { kind: "logic_need", reason: "quote_not_found", run: "kinetic", text: "延误率" },
+      ];
+      getRequirementsMock.mockResolvedValue(spec);
+      renderPage();
+      await screen.findByText("AI 参考的资料");
+      expect(screen.queryByText(/起草时去掉了/)).toBeNull();
+    });
+
+    it("says why when drafting dropped everything it drafted", async () => {
+      const spec = requirements();
+      spec.spec.scenarios = [];
+      spec.spec.questions = [];
+      spec.spec.rejected = [
+        { kind: "question", reason: "quote_not_found", text: "哪些订单晚了？" },
+      ];
+      getRequirementsMock.mockResolvedValue(spec);
+      renderPage();
+      expect(await screen.findByText("起草时去掉了 1 条内容")).toBeInTheDocument();
+    });
+
+    it("counts only what scenario drafting dropped", async () => {
+      const spec = requirements();
+      spec.spec.rejected = [
+        { kind: "rule", reason: "quote_not_found", run: "concepts", text: "两天内发货。" },
+        { kind: "rule", reason: "quote_not_found", text: "晚于承诺日期即延误。" },
+      ];
+      getRequirementsMock.mockResolvedValue(spec);
+      renderPage();
+      expect(await screen.findByText("起草时去掉了 1 条内容")).toBeInTheDocument();
+    });
+
+    it("marks an added question as new, and a drafted one changed since as changed", async () => {
+      const added = requirements();
+      added.spec.questions[0] = { ...added.spec.questions[0], citations: [], edited: true };
+      getRequirementsMock.mockResolvedValue(added);
+      const { unmount } = renderPage();
+      expect(await screen.findByText("新增")).toBeInTheDocument();
+      expect(screen.queryByText("已修改")).toBeNull();
+      unmount();
+
+      const changed = requirements();
+      changed.spec.questions[0] = { ...changed.spec.questions[0], edited: true };
+      getRequirementsMock.mockResolvedValue(changed);
+      renderPage();
+      expect(await screen.findByText("已修改")).toBeInTheDocument();
+      expect(screen.queryByText("新增")).toBeNull();
+    });
   });
 });

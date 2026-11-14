@@ -20,6 +20,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 const mocks = vi.hoisted(() => ({
+  getKnowledge: vi.fn(),
   getSupplement: vi.fn(),
   message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
   saveSupplement: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("@/modules/bkn-project/services/conversations.service", async (importOri
   ...(await importOriginal<
     typeof import("@/modules/bkn-project/services/conversations.service")
   >()),
+  getKnowledge: mocks.getKnowledge,
   getSupplement: mocks.getSupplement,
   saveSupplement: mocks.saveSupplement,
 }));
@@ -61,6 +63,45 @@ describe("AskSources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getSupplement.mockResolvedValue({ by: null, text: "", time: 0 });
+    mocks.getKnowledge.mockResolvedValue({ concepts: [], files: 0, rules: [] });
+  });
+
+  it("lists what the knowledge base holds, with its rules by name, on both pages", async () => {
+    mocks.getKnowledge.mockResolvedValue({
+      concepts: [{ adopted: true, description: "", kind: "object", name: "Purchase invoice" }],
+      files: 6,
+      rules: [
+        { adopted: false, description: "", kind: "kinetic", name: "Invoicing terms" },
+        { adopted: false, description: "", kind: "kinetic", name: "Price change check" },
+      ],
+    });
+    for (const page of ["kinetic", "scenarios"] as const) {
+      const { unmount } = renderWithoutAntdStyles(<AskSources {...base} page={page} />);
+      expect(
+        await screen.findByText(
+          `${S}.knowledge:${JSON.stringify({
+            concepts: `${S}.knowledgeConcepts:${JSON.stringify({ count: 1 })}`,
+            files: `${S}.knowledgeFiles:${JSON.stringify({ count: 6 })}`,
+            rules: `${S}.knowledgeRules:${JSON.stringify({ count: 2 })}`,
+          })}`,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${S}.knowledgeRuleNames:${JSON.stringify({
+            names: "Invoicing termsbknProject.listSeparatorPrice change check",
+          })}`,
+        ),
+      ).toBeInTheDocument();
+      unmount();
+    }
+    expect(mocks.getKnowledge).toHaveBeenCalledWith("p1");
+  });
+
+  it("lists no knowledge base without one, as in the open edition", async () => {
+    renderWithoutAntdStyles(<AskSources {...base} />);
+    await screen.findByText(`${N}.empty`);
+    expect(screen.queryByText(new RegExp(`^${S}\\.knowledge:`))).toBeNull();
   });
 
   it("says what is missing without documents and offers to upload them", async () => {

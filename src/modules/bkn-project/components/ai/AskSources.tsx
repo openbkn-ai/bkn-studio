@@ -21,13 +21,14 @@ import { networkItemCounts } from "@/modules/bkn-project/components/kinetic/kine
 import { InNetworkDot } from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
 import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import {
+  getKnowledge,
   getSupplement,
   saveSupplement,
   SUPPLEMENT_MAX,
 } from "@/modules/bkn-project/services/conversations.service";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import type { AskModel } from "@/modules/bkn-project/components/ai/askModel";
-import type { AskPage, Supplement } from "@/modules/bkn-project/types/conversations";
+import type { AskPage, Knowledge, Supplement } from "@/modules/bkn-project/types/conversations";
 import type { LogicNetworkItem } from "@/modules/bkn-project/types/kinetic";
 import type { RequirementDocument } from "@/modules/bkn-project/types/requirements";
 
@@ -131,6 +132,19 @@ export function AskSources({
   const { t } = useTranslation();
   const separator = t("bknProject.listSeparator");
   const items = networkItemCounts(t, networkItems);
+  // What the knowledge base holds; none in the open edition, and one that cannot be read is not
+  // listed.
+  const [knowledge, setKnowledge] = useState<Knowledge | null>(null);
+  useEffect(() => {
+    let active = true;
+    getKnowledge(projectId)
+      .then((next) => active && setKnowledge(next))
+      .catch(() => active && setKnowledge(null));
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+  const knowledgeCount = knowledge ? knowledge.concepts.length + knowledge.rules.length : 0;
   return (
     <section className={styles.sources}>
       <div>
@@ -203,6 +217,26 @@ export function AskSources({
               </Source>
             </>
           )}
+          {knowledge && knowledgeCount ? (
+            <Source
+              hint={
+                knowledge.rules.length ? (
+                  <span className={styles.sourceHint}>
+                    {t(`${PREFIX}.knowledgeRuleNames`, {
+                      names: knowledge.rules.map((rule) => rule.name).join(separator),
+                    })}
+                  </span>
+                ) : undefined
+              }
+              tone="ok"
+            >
+              {t(`${PREFIX}.knowledge`, {
+                concepts: t(`${PREFIX}.knowledgeConcepts`, { count: knowledge.concepts.length }),
+                files: t(`${PREFIX}.knowledgeFiles`, { count: knowledge.files }),
+                rules: t(`${PREFIX}.knowledgeRules`, { count: knowledge.rules.length }),
+              })}
+            </Source>
+          ) : null}
           {items ? (
             <Source inNetwork tone="ok">
               {t(`${PREFIX}.networkItems`, { items })}

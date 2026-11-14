@@ -327,4 +327,50 @@ describe("DataSourceHealth", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/^The table behind 1 item was deleted/)).toBeInTheDocument();
   });
+
+  it("names a gone table by its business and physical names, and says what was reconnected", async () => {
+    getProjectStatusMock.mockResolvedValue(
+      status({
+        ...ok,
+        reconnected: 3,
+        tables: {
+          affected: [
+            {
+              id: "customer",
+              kind: "object_types",
+              name: "客户",
+              sourceTable: "customer_entity",
+              table: "客户",
+            },
+            {
+              id: "order",
+              kind: "object_types",
+              name: "订单",
+              sourceTable: "orders",
+              table: "orders",
+            },
+          ],
+          missing: 2,
+          state: "missing",
+          total: 10,
+        },
+      }),
+    );
+    renderHealth();
+    expect(
+      await screen.findByText("对象类「客户」（数据表 客户（customer_entity））已查不到数据"),
+    ).toBeInTheDocument();
+    // The same name is said once.
+    expect(screen.getByText("对象类「订单」（数据表 orders）已查不到数据")).toBeInTheDocument();
+    expect(
+      screen.getByText("已按表名重新连接 3 张表：数据目录重建后找到了同名的表，已做的决定都保留。"),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing was reconnected when nothing was", async () => {
+    getProjectStatusMock.mockResolvedValue(status({ ...ok, reconnected: 0 }));
+    renderHealth();
+    expect(await screen.findByText("11 张，都能查到数据")).toBeInTheDocument();
+    expect(screen.queryByText(/已按表名重新连接/)).toBeNull();
+  });
 });
