@@ -28,6 +28,7 @@ export const draftErrorText = word("draftError", [
   "agent_failed",
   "agent_timeout",
   "output_invalid",
+  "output_too_long",
   "interrupted",
 ]);
 
@@ -170,6 +171,7 @@ export function requirementErrorText(t: TFunction, code: string | undefined) {
     "TooManyDocuments",
     "DocumentTooLarge",
     "ModelNotConfirmed",
+    "NotFound",
     "ConceptsNotExtracted",
     "ImplementationUnavailable",
     "InvalidItem",

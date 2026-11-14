@@ -586,6 +586,14 @@ export function ProjectRequirements({
                 <Alert message={draftingText} showIcon type="info" />
               ) : requirements?.status === "failed" ? (
                 <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
+              ) : ready && requirements?.error ? (
+                // Generating again failed: the version below is the one before it, still editable.
+                <Alert
+                  description={draftErrorText(t, requirements.error)}
+                  message={t(`${PREFIX}.redraftFailed`)}
+                  showIcon
+                  type="warning"
+                />
               ) : null}
               {requirements?.stale ? (
                 <Alert message={t(`${PREFIX}.stale`)} showIcon type="warning" />

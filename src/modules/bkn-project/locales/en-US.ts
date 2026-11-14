@@ -2313,6 +2313,8 @@ export const bknProjectEnUS = {
         failed: "Not drafted",
       },
       draft: "Generate business scenarios",
+      redraftFailed:
+        "Generating again did not finish. Below is still the previous version; you can keep editing and adopting into it.",
       redraft: "Generate again",
       notDrafted:
         "No business scenarios yet. Once the concept model is confirmed, AI generates scenarios and questions from the concept model and the kinetic model, then you review them.",
@@ -2652,6 +2654,8 @@ export const bknProjectEnUS = {
         agent_failed: "Drafting did not finish; draft again.",
         agent_timeout: "Drafting took too long; draft again.",
         output_invalid: "The drafted result was incomplete; draft again.",
+        output_too_long:
+          "What was to be generated is longer than the AI writes at once, even asked again. Trim the requirement documents and generate again.",
         interrupted: "Drafting was interrupted; draft again.",
         other: "Could not draft; draft again.",
       },
@@ -2670,6 +2674,8 @@ export const bknProjectEnUS = {
         TooManyDocuments: "A project holds at most 20 documents.",
         DocumentTooLarge: "The file is too large; each file can be at most 1 MB.",
         ModelNotConfirmed: "The concept model is not confirmed; confirm it and try again.",
+        NotFound:
+          "There are no requirements to write into yet. Generate the business scenarios first, or reload the page and try again.",
         ConceptsNotExtracted:
           "The concepts of the requirement documents are not extracted yet; extract them first.",
         ImplementationUnavailable:
