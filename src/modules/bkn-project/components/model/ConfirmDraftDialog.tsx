@@ -195,8 +195,10 @@ export function ConfirmDraft({
     ) : null;
   }
 
+  // Confirmed before: the draft changed since, or the knowledge base waits for its objects again.
   const label = t(
-    status.stale.includes("confirmation_outdated")
+    status.stale.includes("confirmation_outdated") ||
+      status.stale.includes("knowledge_base_outdated")
       ? "bknProject.confirm.buttonAgain"
       : "bknProject.confirm.button",
   );
