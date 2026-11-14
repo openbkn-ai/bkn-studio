@@ -152,7 +152,7 @@ export function refusalText(
  * Why an adopted relation cannot link records: the field it reads from the knowledge base and the
  * field it matches in the other object hold types of value that never match. Named from the draft
  * as people know them, with what to change; `others` counts more relations like it. Null when the
- * draft no longer has the relation or its fields.
+ * draft no longer has the relation or its fields, or names both types with the same word.
  */
 export function linkTypesText(t: TFunction, draft: Draft, relationId: string, others = 0) {
   const relation = draft.items.relationTypes.find((item) => item.id === relationId);
@@ -164,11 +164,18 @@ export function linkTypesText(t: TFunction, draft: Draft, relationId: string, ot
   if (!relation || !target || !mention || !identity) {
     return null;
   }
+  // The draft may already hold the field changed, before the status is read again; types said with
+  // the same word would read as a contradiction, so then the count is said instead.
+  const mentionType = t(propertyTypeKey(mention.type));
+  const identityType = t(propertyTypeKey(identity.type));
+  if (mentionType === identityType) {
+    return null;
+  }
   const text = t("bknProject.confirm.linkTypes.text", {
     identity: identity.displayName || identity.name,
-    identityType: t(propertyTypeKey(identity.type)),
+    identityType,
     mention: mention.displayName || mention.name,
-    mentionType: t(propertyTypeKey(mention.type)),
+    mentionType,
     relation: relation.name,
     target: target.name,
   });
