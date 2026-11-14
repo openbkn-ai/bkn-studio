@@ -218,7 +218,17 @@ export function DataSourceHealth({
                       <li key={`${item.kind}:${item.id}`}>
                         {t(
                           `${PREFIX}.affected.${item.kind === "relation_types" ? "relation" : "object"}`,
-                          { name: item.name, table: item.table },
+                          {
+                            name: item.name,
+                            // The business name with the physical table's, when they differ.
+                            table:
+                              item.sourceTable && item.sourceTable !== item.table
+                                ? t(`${PREFIX}.affected.tableWithSource`, {
+                                    source: item.sourceTable,
+                                    table: item.table,
+                                  })
+                                : item.table,
+                          },
                         )}
                       </li>
                     ))}
@@ -235,6 +245,14 @@ export function DataSourceHealth({
             }
             showIcon
             type="error"
+          />
+        ) : null}
+        {/* Tables recreated under their names are bound again on their own: said once, as done. */}
+        {sources.reconnected ? (
+          <Alert
+            message={t(`${PREFIX}.reconnected`, { count: sources.reconnected })}
+            showIcon
+            type="info"
           />
         ) : null}
         {unreachable.length ? (

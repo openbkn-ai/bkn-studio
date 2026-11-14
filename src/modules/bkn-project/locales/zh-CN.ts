@@ -1253,7 +1253,14 @@ export const bknProjectZhCN = {
         affected: {
           object: "对象类「{{name}}」（数据表 {{table}}）已查不到数据",
           relation: "关系类「{{name}}」（连接表 {{table}}）已查不到数据",
+          tableWithSource: "{{table}}（{{source}}）",
         },
+        reconnected:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
+        reconnected_one:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
+        reconnected_other:
+          "已按表名重新连接 {{count}} 张表：数据目录重建后找到了同名的表，已做的决定都保留。",
         unreachable: "暂时无法确认{{what}}是否还在，稍后会自动重试",
         archived: "项目已归档，恢复后才能重新选择数据目录或重新起草。",
         chooseCatalogs: "重新选择数据目录",

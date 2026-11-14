@@ -1341,7 +1341,14 @@ export const bknProjectEnUS = {
         affected: {
           object: 'Object type "{{name}}" (table {{table}}) returns no data',
           relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+          tableWithSource: "{{table}} ({{source}})",
         },
+        reconnected:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
+        reconnected_one:
+          "Reconnected {{count}} table by name: the data catalog was recreated and a table of the same name was found. Your decisions are kept.",
+        reconnected_other:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
         unreachable: "Can't check the {{what}} right now; will check again",
         archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
         chooseCatalogs: "Choose catalogs again",
