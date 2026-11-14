@@ -597,13 +597,13 @@ function ChoiceCard({ choice }: { choice: RequirementChoice }) {
 }
 
 /**
- * What scenario drafting dropped and why, so nothing is dropped unseen; said only once there are
- * scenarios or questions, as what other runs dropped is no part of them.
+ * What scenario drafting dropped and why, so nothing is dropped unseen; what the concepts and
+ * kinetic runs dropped is no part of the scenarios, and is not counted here.
  */
 export function RejectedNote({ spec }: { spec: RequirementSpec }) {
   const { t } = useTranslation();
   const rejected = spec.rejected.filter((item) => !item.run);
-  if (!rejected.length || (!spec.scenarios.length && !spec.questions.length)) {
+  if (!rejected.length) {
     return null;
   }
   return (
