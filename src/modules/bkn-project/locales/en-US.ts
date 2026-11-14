@@ -1333,15 +1333,22 @@ export const bknProjectEnUS = {
         catalogsMissing_other:
           "{{count}} of the project's data catalogs no longer exist, so the items using them return no data. Change the data catalogs, then draft again.",
         tablesMissing:
-          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+          "The tables behind {{count}} items were deleted or recreated, and the project's catalogs have no table of the same name, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
         tablesMissing_one:
-          "The table behind {{count}} item was deleted or recreated, so it returns no data. Draft again to bind it to the current tables (your decisions will be discarded).",
+          "The table behind {{count}} item was deleted or recreated, and the project's catalogs have no table of the same name, so it returns no data. Draft again to bind it to the current tables (your decisions will be discarded).",
         tablesMissing_other:
-          "The tables behind {{count}} items were deleted or recreated, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
+          "The tables behind {{count}} items were deleted or recreated, and the project's catalogs have no table of the same name, so they return no data. Draft again to bind them to the current tables (your decisions will be discarded).",
         affected: {
           object: 'Object type "{{name}}" (table {{table}}) returns no data',
           relation: 'Relation type "{{name}}" (link table {{table}}) returns no data',
+          tableWithSource: "{{table}} ({{source}})",
         },
+        reconnected:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
+        reconnected_one:
+          "Reconnected {{count}} table by name: the data catalog was recreated and a table of the same name was found. Your decisions are kept.",
+        reconnected_other:
+          "Reconnected {{count}} tables by name: the data catalog was recreated and tables of the same names were found. Your decisions are kept.",
         unreachable: "Can't check the {{what}} right now; will check again",
         archived: "The project is archived. Unarchive it to choose catalogs or draft again.",
         chooseCatalogs: "Choose catalogs again",
