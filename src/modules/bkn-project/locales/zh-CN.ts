@@ -881,6 +881,12 @@ export const bknProjectZhCN = {
           "草稿里有些表来自已不存在或你无权查看的数据目录，重新起草后会改读项目当前的数据目录。",
         draftReadsMissingUnnamed_other:
           "草稿里有些表来自已不存在或你无权查看的数据目录，重新起草后会改读项目当前的数据目录。",
+        networkReadsMissing:
+          "知识网络已有的 {{count}} 个对象类（{{names}}）用的表所在的数据目录已不存在或你无权查看。重新起草不会改动这些对象类，请到知识网络中为它们重新选择数据来源。",
+        networkReadsMissing_one:
+          "知识网络已有的 {{count}} 个对象类（{{names}}）用的表所在的数据目录已不存在或你无权查看。重新起草不会改动这些对象类，请到知识网络中为它们重新选择数据来源。",
+        networkReadsMissing_other:
+          "知识网络已有的 {{count}} 个对象类（{{names}}）用的表所在的数据目录已不存在或你无权查看。重新起草不会改动这些对象类，请到知识网络中为它们重新选择数据来源。",
         askOwner: "请联系项目负责人更换数据目录。",
         missingCatalogs:
           "数据目录 {{names}} 已不存在或你无权查看。在更换项目的数据目录之前，选唯一标识、恢复字段和重新起草都会失败。",
@@ -1514,6 +1520,7 @@ export const bknProjectZhCN = {
       collapse: "收起",
     },
     listSeparator: "、",
+    listMore: "{{names}} 等",
     leaveUnsaved: {
       title: "有修改还没保存",
       content: "离开这一页前要保存吗？不保存的话，刚才的修改会丢失。",
