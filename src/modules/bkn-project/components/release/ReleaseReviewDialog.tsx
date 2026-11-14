@@ -403,6 +403,23 @@ function ReviewBody({
             ) : null}
           </p>
         ) : null}
+        {review.relinked.length ? (
+          <p className={styles.muted}>
+            {t(`${PREFIX}.relinked`, {
+              count: review.relinked.length,
+              items: review.relinked
+                .map((relink) =>
+                  t(`${PREFIX}.relinkedItem`, {
+                    kind: t(
+                      `${PREFIX}.reviewFailed.kind.${relink.kind === "skill" ? "skill" : "function"}`,
+                    ),
+                    name: relink.name || relink.id,
+                  }),
+                )
+                .join(t(`${PREFIX}.reviewFailed.useSeparator`)),
+            })}
+          </p>
+        ) : null}
         {review.capabilities.length ? (
           <ul className={styles.list}>
             {review.capabilities.map((capability) => (

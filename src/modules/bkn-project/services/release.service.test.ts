@@ -65,6 +65,7 @@ const backendReview = {
     unjudged: 0,
   },
   refusals: null,
+  relinked: [{ by: "name", id: "b2", kind: "function", name: "Late orders", previous_id: "b1" }],
   release: {
     base_version: "1.0.2",
     branch_commit: "b",
@@ -144,6 +145,7 @@ describe("release.service", () => {
         unjudged: 0,
       },
       refusals: [],
+      relinked: [{ by: "name", id: "b2", kind: "function", name: "Late orders", previousId: "b1" }],
       release: {
         baseVersion: "1.0.2",
         networkId: "n_v1_0_3",

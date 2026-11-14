@@ -58,6 +58,7 @@ type BackendReview = {
     removed: BackendItem[] | null;
   };
   checks: { accept?: string; code: string; details?: unknown; passed: boolean; reason?: string }[];
+  relinked?: { by: string; id: string; kind: string; name: string; previous_id: string }[] | null;
   questions?: {
     affected: BackendQuestion[] | null;
     answerable_new: BackendQuestion[] | null;
@@ -193,6 +194,13 @@ export function mapReview(review: BackendReview): ReleaseReview {
     })),
     questions: mapQuestions(review.questions),
     refusals: (review.refusals ?? []).map(({ code }) => code),
+    relinked: (review.relinked ?? []).map((relink) => ({
+      by: relink.by,
+      id: relink.id,
+      kind: relink.kind,
+      name: relink.name,
+      previousId: relink.previous_id,
+    })),
     release: {
       baseVersion: review.release.base_version,
       networkId: review.release.network_id,
@@ -648,6 +656,7 @@ async function mockReview(projectId: string, version: string): Promise<ReleaseRe
       unjudged: 0,
     },
     refusals: exists ? ["Release.VersionExists"] : [],
+    relinked: [],
     release: {
       baseVersion: mockReleases[mockReleases.length - 1].version,
       networkId: "supply_chain",

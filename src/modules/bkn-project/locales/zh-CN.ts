@@ -2969,6 +2969,13 @@ export const bknProjectZhCN = {
         orphans_other: "关系类「{{name}}」有 {{count}} 条记录找不到对应的记录。",
         copied: "复制为新版本",
         reused: "直接沿用",
+        relinked:
+          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+        relinked_one:
+          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+        relinked_other:
+          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+        relinkedItem: "{{kind}}“{{name}}”",
         capabilityReason: {
           changed: "内容和上个版本不同",
           network_id: "引用了旧版本的业务知识网络",

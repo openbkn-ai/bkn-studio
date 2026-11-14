@@ -3182,6 +3182,13 @@ export const bknProjectEnUS = {
         orphans_other: "{{count}} records of relation type {{name}} do not find their record.",
         copied: "Copied to the new version",
         reused: "Reused as it is",
+        relinked:
+          "The network used {{items}}, which no longer exist; the release links the current ones of the same names instead ({{count}} items).",
+        relinked_one:
+          "The network used {{items}}, which no longer exists; the release links the current one of the same name instead.",
+        relinked_other:
+          "The network used {{items}}, which no longer exist; the release links the current ones of the same names instead ({{count}} items).",
+        relinkedItem: '{{kind}} "{{name}}"',
         capabilityReason: {
           changed: "It differs from the previous version",
           network_id: "It names the previous version's business knowledge network",
