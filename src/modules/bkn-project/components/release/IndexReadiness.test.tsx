@@ -124,11 +124,13 @@ describe("IndexReadiness", () => {
     renderIndex();
 
     // Information, not a problem: it is said in the state cell, never as a warning or an error.
-    expect(await screen.findAllByText("没有更新字段，只能全量重建")).toHaveLength(2);
+    expect(
+      await screen.findAllByText("没有记录更新时间的字段，每次都要整表重新建索引"),
+    ).toHaveLength(2);
     expect(screen.getByText("这个对象类没有可用的时间字段")).toBeInTheDocument();
     expect(screen.queryByText(/缺少：/)).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "选择更新字段" }));
+    fireEvent.click(screen.getByRole("button", { name: "选择更新时间字段" }));
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/bkn-project/p1/model?tab=changes&focus=update-field%3Aorders",
     );

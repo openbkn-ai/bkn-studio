@@ -11,13 +11,13 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import {
   listText,
   refusalText,
-  UNDERSTANDING_STATUS_TONE,
   understandingMinutesLeft,
 } from "@/modules/bkn-project/components/publish/messages";
+import { namedWithoutUnderstanding } from "@/modules/bkn-project/components/model/understanding";
+import { UnderstandingTag } from "@/modules/bkn-project/components/model/UnderstandingTag";
 import { catalogNamesOf } from "@/modules/bkn-project/components/draft/evidence";
 import { namingLanguageLabelKey } from "@/modules/bkn-project/components/manage/projectLanguage";
 import { getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
@@ -42,16 +42,21 @@ function tally(catalogs: UnderstandingCatalog[]) {
   const tables = catalogs.filter((catalog) => catalog.visible).flatMap((catalog) => catalog.tables);
   const count = (...statuses: string[]) =>
     tables.filter((table) => statuses.includes(table.status)).length;
-  const done = count("completed");
+  // Named by the network or described by the catalog: nothing to understand, as the hint counts.
+  const named = tables.filter(namedWithoutUnderstanding).length;
+  const understood = count("completed");
   const remaining = count("pending", "running");
   return {
-    done,
-    /** No table was ever understood, nor tried. */
-    neverRun: count("not_started") === tables.length,
+    done: understood + named,
+    /** Every table has a business name, and none was understood here. */
+    named: named > 0 && named + understood === tables.length && !understood,
+    /** No table was ever understood, nor tried, nor has a business name. */
+    neverRun: count("not_started") === tables.length && !named,
     remaining,
     total: tables.length,
+    understood,
     // Failed, cancelled, and never understood, such as the tables of a catalog added since.
-    unfinished: tables.length - done - remaining,
+    unfinished: tables.length - understood - named - remaining,
   };
 }
 
@@ -127,10 +132,10 @@ export function UnderstandingBar({
       const next = await getUnderstanding(projectId);
       setCatalogs(next);
       setLoadFailed(false);
-      const { done, remaining } = tally(next);
+      const { remaining, understood } = tally(next);
       if (remaining) {
         sawRunning.current = true;
-      } else if (sawRunning.current && done) {
+      } else if (sawRunning.current && understood) {
         setRenamed(true);
       }
     } catch {
@@ -221,7 +226,9 @@ export function UnderstandingBar({
       ? t("bknProject.understand.progress.notStarted")
       : counts.unfinished
         ? t("bknProject.understand.progress.unfinished", { count: counts.unfinished })
-        : t("bknProject.understand.progress.done");
+        : counts.named
+          ? t("bknProject.understand.progress.named")
+          : t("bknProject.understand.progress.done");
   // A catalog that is gone has no progress to show, and the page already says it is gone.
   const invisible = catalogs.filter((catalog) => !catalog.visible && !catalog.missing);
   const canRun = ownerIsCaller && !archived;
@@ -294,11 +301,7 @@ export function UnderstandingBar({
             .map((table) => (
               <div className={styles.understandingTable} key={table.resourceId}>
                 <span>{table.name}</span>
-                <LightStatusTag tone={UNDERSTANDING_STATUS_TONE[table.status] ?? "neutral"}>
-                  {table.status === "completed" && !table.applied
-                    ? t("bknProject.understand.progress.notApplied")
-                    : t(`bknProject.understand.status.${table.status}`)}
-                </LightStatusTag>
+                <UnderstandingTag table={table} />
               </div>
             ))}
         </div>

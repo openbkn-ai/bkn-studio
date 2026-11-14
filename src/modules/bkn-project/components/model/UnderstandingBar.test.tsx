@@ -59,7 +59,9 @@ function catalog(statuses: UnderstandingStatus[], catalogId = "cat-1"): Understa
     missing: false,
     tables: statuses.map((status, at) => ({
       applied: status === "completed",
+      described: false,
       finishTime: status === "completed" ? 1 : null,
+      networkObjectTypes: [],
       name: `table_${at}`,
       resourceId: `r${at}`,
       status,
@@ -186,6 +188,30 @@ describe("UnderstandingBar", () => {
       "你在数据目录 财务 没有运行任务的权限，已跳过。请联系目录管理员开通后再试。",
     );
     expect(getUnderstandingMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads tables the network names or the catalog describes as named, not as not started", async () => {
+    const named = catalog(["not_started", "not_started", "not_started"]);
+    named.tables[0] = { ...named.tables[0], networkObjectTypes: ["订单"] };
+    named.tables[1] = { ...named.tables[1], described: true };
+    getUnderstandingMock.mockResolvedValue([named]);
+    renderBar();
+
+    // One table still needs understanding; the other two have business names already.
+    expect(await screen.findByText("1 张表没有完成理解")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看各表" }));
+    expect(screen.getByText("网络已命名")).toBeInTheDocument();
+    expect(screen.getByText("目录已有说明")).toBeInTheDocument();
+    expect(screen.getByText("未开始")).toBeInTheDocument();
+  });
+
+  it("says every table is named when none needs understanding", async () => {
+    const named = catalog(["not_started"]);
+    named.tables[0] = { ...named.tables[0], networkObjectTypes: ["订单"] };
+    getUnderstandingMock.mockResolvedValue([named]);
+    renderBar();
+
+    expect(await screen.findByText("各表都已有业务名称，不需要语义理解")).toBeInTheDocument();
   });
 
   it("says when nothing needed understanding", async () => {

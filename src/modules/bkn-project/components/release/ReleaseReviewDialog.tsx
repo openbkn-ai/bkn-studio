@@ -7,6 +7,7 @@
 
 import { CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled } from "@ant-design/icons";
 import { Alert, Checkbox, Input, Modal, Spin } from "antd";
+import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,10 +22,14 @@ import {
   checkTitle,
   publishErrorText,
   refusalText,
+  reviewLoadFailedText,
   versionName,
 } from "@/modules/bkn-project/components/release/releaseMessages";
 import { useCollapsedList } from "@/modules/bkn-project/components/useCollapsedList";
-import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
+import {
+  projectErrorCode,
+  projectErrorDetails,
+} from "@/modules/bkn-project/services/publish.service";
 import { DraftChangesDialog } from "@/modules/bkn-project/components/release/DraftChangesDialog";
 import {
   commitDrift,
@@ -100,10 +105,16 @@ export function ReleaseReviewDialog({
         }
       } catch (error) {
         if (read === latest.current) {
+          const code = projectErrorCode(error);
           setLoadError(
-            projectErrorCode(error) === "Release.InvalidVersion"
+            code === "Release.InvalidVersion"
               ? t(`${PREFIX}.versionInvalid`)
-              : t(`${PREFIX}.loadFailed`),
+              : reviewLoadFailedText(
+                  t,
+                  code,
+                  axios.isAxiosError(error) ? error.response?.status : undefined,
+                  projectErrorDetails(error),
+                ),
           );
         }
       }
@@ -422,7 +433,12 @@ function ReviewBody({
         </section>
       ) : null}
 
-      <p className={styles.muted}>{t(`${PREFIX}.regressionHint`)}</p>
+      {/* Without questions the regression asks nothing: said before writing, not after. */}
+      {questions.total ? (
+        <p className={styles.muted}>{t(`${PREFIX}.regressionHint`)}</p>
+      ) : (
+        <Alert message={t(`${PREFIX}.regressionEmpty`)} showIcon type="warning" />
+      )}
     </>
   );
 }

@@ -655,9 +655,9 @@ export const bknProjectEnUS = {
       },
       unstructured: {
         description:
-          "Extracts instances of document objects from knowledge-base files. Accept a sample first; the full run opens once it passes.",
+          "Extracts instances of document objects from knowledge-base files. Check the result on the acceptance files first; all files can be processed once it passes.",
         preview:
-          "The professional edition extracts instances of document objects from knowledge-base files, accepts a sample before the full run, and records every update.",
+          "The professional edition extracts instances of document objects from knowledge-base files, checks the result on the acceptance files before processing all of them, and records every update.",
         comingSoon: "This version cannot build unstructured instances yet.",
       },
     },
@@ -838,10 +838,10 @@ export const bknProjectEnUS = {
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
         updateField: {
-          title: "Choose an update field",
+          title: "Choose an update-time field",
           description:
-            '"{{name}}" has no update field yet. With one set, its local index refreshes only the records that changed.',
-          set: "Use as update field",
+            '"{{name}}" has no field that records when its data changes. With one set, the index refreshes only the data that changed.',
+          set: "Use as update-time field",
           none: "No time field available",
         },
         noneTitle: "No changes yet",
@@ -906,15 +906,15 @@ export const bknProjectEnUS = {
         name: "Name",
         nameRequired: "Enter a name",
         description: "Description",
-        updateField: "Update field",
+        updateField: "Update-time field",
         updateFieldHelp:
           "A field whose value grows whenever a record changes, such as an update time. The table's local index is refreshed by it.",
         updateFieldUnavailable:
-          "This object type has no property that can be an update field: it must be a date, a time, an integer, or text of limited length.",
+          "This object type has no property that can be an update-time field: it must be a date, a time, an integer, or text of limited length.",
         updateFieldNone: "None",
         updateFieldRecommended: "Recommended",
         updateFieldNotGrowing:
-          "An update field should grow whenever a record changes, such as an update time.",
+          "An update-time field should grow whenever a record changes, such as an update time.",
         stale:
           "Someone changed this draft, so it was reloaded. Make your change again if it is still needed.",
         cascade: "Also stopped adopting {{count}} relation types that connect it",
@@ -1385,9 +1385,13 @@ export const bknProjectEnUS = {
         ontologyPendingSub: "Adopted so far · {{count}} items wait for you",
         ontologyPendingSub_one: "Adopted so far · {{count}} item waits for you",
         ontologyPendingSub_other: "Adopted so far · {{count}} items wait for you",
-        sourcesValue: "{{count}} catalogs",
-        sourcesValue_one: "{{count}} catalog",
-        sourcesValue_other: "{{count}} catalogs",
+        sourcesValue: "{{count}} tables",
+        sourcesValue_one: "{{count}} table",
+        sourcesValue_other: "{{count}} tables",
+        sourcesDocuments: "{{count}} requirement documents",
+        sourcesDocuments_one: "{{count}} requirement document",
+        sourcesDocuments_other: "{{count}} requirement documents",
+        notStarted: "Not started",
         sourcesSub: "Referenced, never copied",
         sourcesAction: "Manage catalogs and documents",
         sourcesChoose: "Choose data catalogs",
@@ -1401,7 +1405,9 @@ export const bknProjectEnUS = {
         conceptsInModel_one: "{{count}} in the model",
         conceptsInModel_other: "{{count}} in the model",
         kineticSub: "How far metrics, functions, skills and the like are implemented",
-        kineticValue: "{{linked}} / {{total}}",
+        kineticValue: "{{count}} items",
+        kineticValue_one: "{{count}} item",
+        kineticValue_other: "{{count}} items",
         kineticOpen: "{{count}} to implement",
         kineticDone: "All implemented",
         kineticAction: "View the kinetic model",
@@ -1416,6 +1422,7 @@ export const bknProjectEnUS = {
         title: "Concept model",
         open: "Open in concept modeling",
         empty: "No ontology draft yet",
+        networkTitle: "Concept model (the network's current one)",
         emptyDescription:
           "Once the ontology is drafted from tables, its object and relation types show here.",
         draftingDescription:
@@ -1423,6 +1430,27 @@ export const bknProjectEnUS = {
         failedDescription:
           "This draft did not finish. Open concept modeling to see why and draft again.",
         loadFailed: "The ontology draft cannot be read right now",
+      },
+      sources: {
+        title: "Project sources",
+        open: "Manage sources",
+        view: "View",
+        tables: "Data tables",
+        tablesValue: "{{count}} tables in the chosen data catalogs",
+        tablesValue_one: "{{count}} table in the chosen data catalogs",
+        tablesValue_other: "{{count}} tables in the chosen data catalogs",
+        tablesNone: "No data catalog chosen yet",
+        tablesNetwork: "{{count}} used by the network",
+        tablesNetwork_one: "{{count}} used by the network",
+        tablesNetwork_other: "{{count}} used by the network",
+        documents: "Requirement documents",
+        documentsValue: "{{count}} documents",
+        documentsValue_one: "{{count}} document",
+        documentsValue_other: "{{count}} documents",
+        documentsNone: "No requirement documents yet",
+        knowledgeBase: "Knowledge base",
+        knowledgeBasePreview:
+          "The professional edition extracts concepts from knowledge-base files, then builds instances.",
       },
       changes: {
         title: "Recent changes",
@@ -1579,7 +1607,7 @@ export const bknProjectEnUS = {
         InvalidIdentity: "The identifier needs properties that tell every record apart.",
         NeedsIdentity: "Choose an identifier for the object type.",
         FieldNotFound: "The object type\u2019s table cannot be read right now; try again later.",
-        InvalidIncrementalKey: "The update field needs to be a date or time property.",
+        InvalidIncrementalKey: "The update-time field needs to be a date or time property.",
       },
     },
     collapsedList: {
@@ -1664,12 +1692,15 @@ export const bknProjectEnUS = {
         invisibleUnnamed:
           "The progress of one of the project's data catalogs cannot be shown: you cannot run tasks in it.",
         notApplied: "Done, result not written",
+        named: "Every table has a business name already; no understanding is needed",
         loadFailed: "The progress of semantic understanding could not be loaded",
         redraft:
           "Semantic understanding updated table and field names. Draft again for the draft to use them.",
       },
       status: {
         not_started: "Not started",
+        network: "Named by the network",
+        described: "Described in the catalog",
         pending: "Queued",
         running: "Understanding",
         completed: "Done",
@@ -1786,6 +1817,11 @@ export const bknProjectEnUS = {
         understanding: "Semantic understanding",
         usedBy: "Used by",
         unused: "No object type uses it yet",
+        networkUses: "Used by the network",
+        networkUsesNames: "Used by the network: {{names}}",
+        count: "{{count}} tables",
+        count_one: "{{count}} table",
+        count_other: "{{count}} tables",
         separator: ", ",
         loadFailed: "The tables' semantic understanding cannot be read right now.",
       },
@@ -2955,6 +2991,15 @@ export const bknProjectEnUS = {
         versionInvalid: "The version is not major.minor.patch, such as 1.0.3",
         reviewAgain: "Check again with this version",
         loadFailed: "The release review cannot be read right now",
+        reviewFailed: {
+          kind: { function: "function toolbox", skill: "Skill" },
+          capabilityGone:
+            'The release review cannot be read: the {{kind}} "{{name}}" the network uses no longer exists, perhaps deleted when the network was rebuilt. Remove it from the knowledge network or link it again, then open the review again. Nothing can be written into the network until the review is read.',
+          capability:
+            'The release review cannot be read: the {{kind}} "{{name}}" the network uses could not be read. Try again later, and ask an administrator if it keeps failing. Nothing can be written into the network until the review is read.',
+          other:
+            "The release review cannot be read right now. Try again later. Nothing can be written into the network until the review is read.",
+        },
         target: "Creates the new version {{name}}, based on live v{{version}}.",
         targetFirst: "Creates the first version, {{name}}.",
         targetRunning:
@@ -2992,7 +3037,7 @@ export const bknProjectEnUS = {
         },
         reason: {
           knowledge_base_not_ready:
-            "Complete and review the full knowledge-base build for the current model.",
+            "Process all knowledge-base files for the current model and review the result first.",
           knowledge_base_review_items:
             "The knowledge base still has items to review: {{items}}. Review them on the build page, or accept publishing with them.",
           reviewItems: {
@@ -3125,9 +3170,11 @@ export const bknProjectEnUS = {
         publishVersion: "Publish v{{version}}",
         regressionHint:
           "Once written into the network, the scenario questions are asked once as a regression; its result does not stop publishing.",
+        regressionEmpty:
+          "The project has no scenario questions yet, so the regression will check nothing. Generate questions under Business scenarios before writing into the network.",
         error: {
           KnowledgeBaseNotReady:
-            "Complete and review the full knowledge-base build for the current model.",
+            "Process all knowledge-base files for the current model and review the result first.",
           OriginalsChanged:
             "Whether files keep their original text changed after the model was confirmed. Confirm the model again.",
           SourcePermission:
@@ -3264,7 +3311,7 @@ export const bknProjectEnUS = {
           "The community edition keeps the running version and the previous one. Only the record of earlier versions is kept; copy one as a draft to publish it again. The professional edition keeps the full history.",
         loadFailed: "The versions cannot be read right now",
         none: "No version has been published yet.",
-        number: "Version {{number}}",
+        number: "v{{number}}",
         empty: "—",
         you: "You",
         someone: "Another member",
@@ -3469,11 +3516,12 @@ export const bknProjectEnUS = {
         missing: "Missing: {{fields}}",
         field: {
           primary_key_fields: "identity field",
-          incremental_fields: "update field",
+          incremental_fields: "update-time field",
         },
-        fullRebuildOnly: "No update field, so it rebuilds in full only",
+        fullRebuildOnly:
+          "No field records when data changes, so each refresh re-indexes the whole table",
         noTimeField: "This object type has no time field to use",
-        chooseUpdateField: "Choose an update field",
+        chooseUpdateField: "Choose an update-time field",
         outcome: {
           created: "Build started",
           existing: "A build is already running",
@@ -3486,7 +3534,7 @@ export const bknProjectEnUS = {
             primary_key_fields:
               "The identity field's type cannot be used for an index (it must be a number or text).",
             incremental_fields:
-              "The update field's type cannot drive refreshes; it needs to be a date or time.",
+              "The update-time field needs to be a date or time to refresh only the data that changed.",
             other: "The table lacks settings the build needs.",
           },
         },

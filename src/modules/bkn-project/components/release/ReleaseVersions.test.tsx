@@ -147,7 +147,7 @@ describe("ReleaseVersions", () => {
     }
     const running = rowOf("v1.7.0");
     expect(within(running).getByText("运行中")).toBeInTheDocument();
-    expect(within(running).getByText("第 7 版")).toBeInTheDocument();
+    expect(within(running).getByText("v7")).toBeInTheDocument();
     expect(within(running).getAllByRole("cell")[2]).toHaveTextContent("v1.6.0");
     expect(within(running).getByText("增加故障部位")).toBeInTheDocument();
     expect(within(running).getByText("发布时接受：部分本地索引没有就绪")).toBeInTheDocument();
@@ -161,7 +161,7 @@ describe("ReleaseVersions", () => {
     expect(within(rowOf("v1.5.0")).getByText("切换为运行版本")).toBeInTheDocument();
     // A name the reply carries is shown to anyone, even one who may not list users.
     expect(within(rowOf("v1.5.0")).getByText("李四")).toBeInTheDocument();
-    const workspace = rowOf("第 4 版");
+    const workspace = rowOf("v4");
     expect(within(workspace).getByText("已废止")).toBeInTheDocument();
     expect(within(workspace).getByText("工作区")).toBeInTheDocument();
     expect(within(workspace).getByText("没有回归")).toBeInTheDocument();

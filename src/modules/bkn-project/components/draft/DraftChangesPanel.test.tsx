@@ -121,31 +121,31 @@ describe("DraftChangesPanel update field", () => {
 
   it("suggests an update field by its display name, and sets the property's name", async () => {
     const onSet = renderPanel([updateField()]);
-    expect(screen.getByText("选择更新字段")).toBeInTheDocument();
+    expect(screen.getByText("选择更新时间字段")).toBeInTheDocument();
     expect(
-      screen.getByText(/还没有更新字段。设好后，本地索引会按它增量刷新，只更新变化的记录。/),
+      screen.getByText(/还没有指定记录数据更新时间的字段。指定后，索引只刷新有变化的数据。/),
     ).toBeInTheDocument();
     expect(screen.getByText("更新时间")).toBeInTheDocument();
     expect(screen.queryByText("updated_at")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "设为更新字段" }));
+    fireEvent.click(screen.getByRole("button", { name: "设为更新时间字段" }));
     await waitFor(() => expect(onSet).toHaveBeenCalledWith("customers", "updated_at"));
   });
 
   it("offers nothing to set on an archived project, nor without a time field", () => {
     renderPanel([updateField({ allowed: false, reason: "archived" })]);
-    expect(screen.getByRole("button", { name: "设为更新字段" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "设为更新时间字段" })).toBeDisabled();
   });
 
   it("says when there is no time field to choose", () => {
     renderPanel([updateField({ values: [] })]);
     expect(screen.getByText("没有可用的时间字段")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "设为更新字段" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "设为更新时间字段" })).toBeNull();
   });
 
   it("marks the update field a link led to", () => {
     renderPanel([updateField()], undefined, undefined, "update-field:customers");
-    expect(screen.getByText("选择更新字段").closest("li")?.className).toMatch(/changeFocused/);
+    expect(screen.getByText("选择更新时间字段").closest("li")?.className).toMatch(/changeFocused/);
   });
 
   it("opens the folded list when the update field a link led to is past the first few", () => {
@@ -157,7 +157,7 @@ describe("DraftChangesPanel update field", () => {
       name: `关系${at}`,
     }));
     renderWithoutAntdStyles(panel(of, ends, [updateField()]));
-    expect(screen.getByText("选择更新字段").closest("li")?.className).toMatch(/changeFocused/);
+    expect(screen.getByText("选择更新时间字段").closest("li")?.className).toMatch(/changeFocused/);
     expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
   });
 
@@ -169,9 +169,9 @@ describe("DraftChangesPanel update field", () => {
       name: `关系${at}`,
     }));
     const { rerender } = renderWithoutAntdStyles(panel(of, ends, []));
-    expect(screen.queryByText("选择更新字段")).toBeNull();
+    expect(screen.queryByText("选择更新时间字段")).toBeNull();
     rerender(panel(of, ends, [updateField()]));
-    expect(screen.getByText("选择更新字段")).toBeInTheDocument();
+    expect(screen.getByText("选择更新时间字段")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
   });
 
@@ -179,6 +179,6 @@ describe("DraftChangesPanel update field", () => {
     const next = draft();
     next.items.objectTypes.find((item) => item.id === "customers")!.incrementalKey = "updated_at";
     renderPanel([updateField()], vi.fn(), next);
-    expect(screen.queryByText("选择更新字段")).toBeNull();
+    expect(screen.queryByText("选择更新时间字段")).toBeNull();
   });
 });

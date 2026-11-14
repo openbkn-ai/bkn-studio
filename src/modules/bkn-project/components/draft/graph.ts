@@ -11,7 +11,7 @@ import type {
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { relationsWithUnadoptedEnds } from "@/modules/bkn-project/components/draft/evidence";
-import type { Draft } from "@/modules/bkn-project/types/draft";
+import type { Draft, ExistingDefinitions } from "@/modules/bkn-project/types/draft";
 
 /**
  * The concept model the draft would publish: adopted object types, and adopted relation types
@@ -85,5 +85,46 @@ export function draftGraphRecords(draft: Draft): {
       updateTime: "",
       updaterName: "",
     })),
+  };
+}
+
+/**
+ * The model the network already has, as the knowledge network's ontology graph reads it: its
+ * object types, and its relation types between two of them. Nothing is faded: it is all live.
+ */
+export function existingGraphRecords(
+  network: ExistingDefinitions,
+): ReturnType<typeof draftGraphRecords> {
+  const names = new Map(network.objectTypes.map((item) => [item.id, item.name]));
+  return {
+    faded: new Set(),
+    objectTypes: network.objectTypes.map((item) => ({
+      color: "",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      description: item.description,
+      hasIndex: false,
+      id: item.id,
+      name: item.name,
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    })),
+    relationTypes: network.relationTypes
+      .filter((item) => names.has(item.source) && names.has(item.target))
+      .map((item) => ({
+        color: "",
+        description: "",
+        id: item.id,
+        mappingMode: "direct",
+        name: item.name,
+        sourceObjectTypeId: item.source,
+        sourceObjectTypeName: names.get(item.source) ?? "",
+        tags: [],
+        targetObjectTypeId: item.target,
+        targetObjectTypeName: names.get(item.target) ?? "",
+        updateTime: "",
+        updaterName: "",
+      })),
   };
 }

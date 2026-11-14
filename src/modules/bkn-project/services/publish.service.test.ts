@@ -580,7 +580,16 @@ describe("publish.service", () => {
           {
             catalog_id: "c",
             counts: { completed: 1 },
-            tables: [{ name: "orders", resource_id: "r", status: "completed" }],
+            tables: [
+              { name: "orders", resource_id: "r", status: "completed" },
+              {
+                described: true,
+                name: "lines",
+                network_object_types: ["Order line"],
+                resource_id: "r2",
+                status: "not_started",
+              },
+            ],
             visible: true,
           },
           { catalog_id: "d", counts: {}, visible: false },
@@ -606,10 +615,21 @@ describe("publish.service", () => {
         tables: [
           {
             applied: false,
+            described: false,
             finishTime: null,
             name: "orders",
+            networkObjectTypes: [],
             resourceId: "r",
             status: "completed",
+          },
+          {
+            applied: false,
+            described: true,
+            finishTime: null,
+            name: "lines",
+            networkObjectTypes: ["Order line"],
+            resourceId: "r2",
+            status: "not_started",
           },
         ],
         visible: true,

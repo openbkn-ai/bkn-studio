@@ -9,8 +9,11 @@ import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
-import { draftGraphRecords } from "@/modules/bkn-project/components/draft/graph";
-import type { Draft } from "@/modules/bkn-project/types/draft";
+import {
+  draftGraphRecords,
+  existingGraphRecords,
+} from "@/modules/bkn-project/components/draft/graph";
+import type { Draft, ExistingDefinitions } from "@/modules/bkn-project/types/draft";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 
 /**
@@ -29,7 +32,8 @@ export function DraftConceptGraph({
 }: {
   /** Shown after the key in the header, such as a link to the modeling page. */
   action?: ReactNode;
-  draft: Draft;
+  /** The draft, or else the model the network already has. */
+  draft: Draft | ExistingDefinitions;
   /** The project's network: the graph is drawn as its ontology. */
   networkId: string;
   onOpen?: (objectTypeId: string) => void;
@@ -38,10 +42,18 @@ export function DraftConceptGraph({
   title: string;
 }) {
   const { t } = useTranslation();
-  const records = useMemo(() => draftGraphRecords(draft), [draft]);
+  const records = useMemo(
+    () => ("items" in draft ? draftGraphRecords(draft) : existingGraphRecords(draft)),
+    [draft],
+  );
   // What the network already has is drawn with a dot, as the lists mark it.
   const existing = useMemo(
-    () => new Set(draft.items.objectTypes.filter((item) => item.existing).map((item) => item.id)),
+    () =>
+      new Set(
+        "items" in draft
+          ? draft.items.objectTypes.filter((item) => item.existing).map((item) => item.id)
+          : draft.objectTypes.map((item) => item.id),
+      ),
     [draft],
   );
 
@@ -60,7 +72,8 @@ export function DraftConceptGraph({
               relations: records.relationTypes.length,
             })}
           </span>
-          <span>{t("bknProject.model.graph.legend")}</span>
+          {/* Only a draft has what is not adopted, drawn faint. */}
+          {"items" in draft ? <span>{t("bknProject.model.graph.legend")}</span> : null}
           {existing.size ? (
             <span>
               <ExistingMark />

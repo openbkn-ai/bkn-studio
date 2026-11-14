@@ -65,8 +65,10 @@ test("bkn project: understand the data, confirm the draft, and see its check and
   // The state tag itself, not the summary line, which says "可用" too.
   await expect(indexes.getByText("可用", { exact: true }).first()).toBeVisible();
   await expect(indexes.getByText("3 / 3 张表的索引可用")).toBeVisible();
-  // No type has an update field yet: each still builds, in full, and says so.
-  await expect(indexes.getByText("没有更新字段，只能全量重建").first()).toBeVisible();
+  // No type has an update-time field yet: each re-indexes the whole table, and says so.
+  await expect(
+    indexes.getByText("没有记录更新时间的字段，每次都要整表重新建索引").first(),
+  ).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });
