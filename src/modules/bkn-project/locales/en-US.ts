@@ -951,6 +951,12 @@ export const bknProjectEnUS = {
           "Some tables of the draft come from a data catalog that no longer exists or you cannot see. Drafting again reads the project's current catalogs.",
         draftReadsMissingUnnamed_other:
           "Some tables of the draft come from data catalogs that no longer exist or you cannot see. Drafting again reads the project's current catalogs.",
+        networkReadsMissing:
+          "{{count}} object types the knowledge network already has ({{names}}) use tables from data catalogs that no longer exist or you cannot see. Drafting again does not change them; choose their data sources again in the knowledge network.",
+        networkReadsMissing_one:
+          "{{count}} object type the knowledge network already has ({{names}}) uses a table from a data catalog that no longer exists or you cannot see. Drafting again does not change it; choose its data source again in the knowledge network.",
+        networkReadsMissing_other:
+          "{{count}} object types the knowledge network already has ({{names}}) use tables from data catalogs that no longer exist or you cannot see. Drafting again does not change them; choose their data sources again in the knowledge network.",
         askOwner: "Ask the project owner to change the data catalogs.",
         missingCatalogs:
           "Data catalogs {{names}} no longer exist, or you cannot see them. Choosing identities, restoring fields and drafting again will fail until the project's catalogs change.",
@@ -1620,6 +1626,7 @@ export const bknProjectEnUS = {
       collapse: "Show fewer",
     },
     listSeparator: ", ",
+    listMore: "{{names}} and others",
     leaveUnsaved: {
       title: "You have changes not saved",
       content: "Save them before leaving this page? Changes not saved will be lost.",

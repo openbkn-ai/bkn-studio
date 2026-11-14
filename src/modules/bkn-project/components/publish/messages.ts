@@ -79,6 +79,14 @@ export function listText(t: TFunction, items: string[]) {
   return items.join(t("bknProject.listSeparator"));
 }
 
+/** The first few of the items, with the rest said as "and others" rather than listed. */
+export function shortListText(t: TFunction, items: string[], shown = 3) {
+  if (items.length <= shown) {
+    return listText(t, items);
+  }
+  return t("bknProject.listMore", { names: listText(t, items.slice(0, shown)) });
+}
+
 /** The ids of the definition files a refusal lists, such as `object_types/customers.bkn`. */
 export function definitionIds(details: unknown): string[] {
   if (!Array.isArray(details)) {

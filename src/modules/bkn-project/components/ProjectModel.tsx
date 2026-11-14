@@ -9,7 +9,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Alert, Checkbox, Segmented, Space, Spin } from "antd";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -63,12 +63,16 @@ import type {
   DraftItemKind,
   DraftObjectType,
 } from "@/modules/bkn-project/types/draft";
-import { listText } from "@/modules/bkn-project/components/publish/messages";
+import { listText, shortListText } from "@/modules/bkn-project/components/publish/messages";
 import { getProjectPending } from "@/modules/bkn-project/services/publish.service";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
-import type { ResourceTab } from "@/modules/bkn-project/types/workspace";
+import {
+  networkObjectTypePath,
+  networkWorkspacePath,
+  type ResourceTab,
+} from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectModel.module.css";
@@ -407,7 +411,22 @@ export function ProjectModel({
   // The project's own catalogs that are gone are fixed by changing them; catalogs only the draft
   // still reads are fixed by drafting again, so the two notices offer different actions.
   const projectMissing = missing.filter((id) => project.catalogIds.includes(id));
-  const draftMissing = missing.filter((id) => !project.catalogIds.includes(id));
+  // Object types the network already has keep the tables the knowledge network binds them to:
+  // drafting again leaves them as they are, so their gone catalogs are fixed in the network, and
+  // only the catalogs the project's own drafted items read are fixed by drafting again.
+  const networkStale = useMemo(() => {
+    const gone = new Set(missing);
+    return (draft?.items.objectTypes ?? []).filter(
+      (item) => item.existing && gone.has(item.table.catalogId),
+    );
+  }, [draft, missing]);
+  const draftMissing = missing.filter(
+    (id) =>
+      !project.catalogIds.includes(id) &&
+      (draft?.items.objectTypes ?? []).some(
+        (item) => !item.existing && item.table.catalogId === id,
+      ),
+  );
   // Catalogs by name; those without a known name, as gone ones are, are said without one.
   const catalogNotice = (key: string, ids: string[]) => {
     const names = catalogNamesOf(ids, catalogNames);
@@ -534,6 +553,32 @@ export function ProjectModel({
       {draftMissing.length ? (
         <Alert
           message={catalogNotice("bknProject.model.notice.draftReadsMissing", draftMissing)}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+      {networkStale.length ? (
+        <Alert
+          action={
+            project.knId ? (
+              <Link
+                to={
+                  networkStale.length === 1
+                    ? networkObjectTypePath(project.knId, networkStale[0].id)
+                    : networkWorkspacePath(project.knId)
+                }
+              >
+                {t("bknProject.model.existing.open")}
+              </Link>
+            ) : null
+          }
+          message={t("bknProject.model.notice.networkReadsMissing", {
+            count: networkStale.length,
+            names: shortListText(
+              t,
+              networkStale.map((item) => item.name),
+            ),
+          })}
           showIcon
           type="warning"
         />
