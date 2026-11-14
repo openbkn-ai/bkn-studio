@@ -794,7 +794,7 @@ describe("ReleasePublish", () => {
     expect(onGoToKinetic).toHaveBeenCalledTimes(1);
   });
 
-  it("says which gone functions and Skills the release links to the current ones of the same names", async () => {
+  it("says which gone functions and Skills the release links to what replaces them now", async () => {
     getReleaseReviewMock.mockResolvedValue(
       review({
         relinked: [
@@ -818,7 +818,7 @@ describe("ReleasePublish", () => {
     const view = await dialog();
     expect(
       await view.findByText(
-        "网络原先用到的函数工具箱“供应链计算”、Skill“采购跟进”已不存在，已改为关联现在的同名项（共 2 项），发布时按新的关联写入。",
+        "网络原先用到的函数工具箱“供应链计算”、Skill“采购跟进”已不存在，已改为关联现在取代它的项（共 2 项），发布时按新的关联写入。",
       ),
     ).toBeInTheDocument();
   });

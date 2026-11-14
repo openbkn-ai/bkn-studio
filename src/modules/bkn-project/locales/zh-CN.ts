@@ -2970,11 +2970,11 @@ export const bknProjectZhCN = {
         copied: "复制为新版本",
         reused: "直接沿用",
         relinked:
-          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+          "网络原先用到的{{items}}已不存在，已改为关联现在取代它的项（共 {{count}} 项），发布时按新的关联写入。",
         relinked_one:
-          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+          "网络原先用到的{{items}}已不存在，已改为关联现在取代它的项（共 {{count}} 项），发布时按新的关联写入。",
         relinked_other:
-          "网络原先用到的{{items}}已不存在，已改为关联现在的同名项（共 {{count}} 项），发布时按新的关联写入。",
+          "网络原先用到的{{items}}已不存在，已改为关联现在取代它的项（共 {{count}} 项），发布时按新的关联写入。",
         relinkedItem: "{{kind}}“{{name}}”",
         capabilityReason: {
           changed: "内容和上个版本不同",

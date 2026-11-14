@@ -3183,11 +3183,11 @@ export const bknProjectEnUS = {
         copied: "Copied to the new version",
         reused: "Reused as it is",
         relinked:
-          "The network used {{items}}, which no longer exist; the release links the current ones of the same names instead ({{count}} items).",
+          "The network used {{items}}, which no longer exist; the release links what replaces them now instead ({{count}} items).",
         relinked_one:
-          "The network used {{items}}, which no longer exists; the release links the current one of the same name instead.",
+          "The network used {{items}}, which no longer exists; the release links what replaces it now instead.",
         relinked_other:
-          "The network used {{items}}, which no longer exist; the release links the current ones of the same names instead ({{count}} items).",
+          "The network used {{items}}, which no longer exist; the release links what replaces them now instead ({{count}} items).",
         relinkedItem: '{{kind}} "{{name}}"',
         capabilityReason: {
           changed: "It differs from the previous version",
