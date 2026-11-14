@@ -189,9 +189,7 @@ export const bknProjectZhCN = {
       tabs: {
         data: "数据侧概念 {{count}}",
         requirement: "需求概念 {{count}}",
-        unmatched: "{{count}} 个暂未匹配",
-        unmatched_one: "{{count}} 个暂未匹配",
-        unmatched_other: "{{count}} 个暂未匹配",
+        requirementUnmatched: "需求概念 {{count}} 个，其中 {{unmatched}} 个暂未匹配",
       },
       notice: {
         notUnderstood:
@@ -1235,8 +1233,8 @@ export const bknProjectZhCN = {
         tables: {
           label: "数据表",
           noun: "数据表",
-          ok: "{{total}} 张，都能查到数据",
-          missing: "{{missing}} / {{total}} 张查不到数据",
+          ok: "模型用到 {{total}} 张，都能查到数据",
+          missing: "模型用到的 {{total}} 张里，{{missing}} 张查不到数据",
           unreachable: "暂时无法确认",
           not_bound: "还没有采用的条目",
         },

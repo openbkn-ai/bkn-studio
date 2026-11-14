@@ -132,7 +132,7 @@ describe("DataSourceHealth", () => {
     expect(screen.queryByText("可用")).toBeNull();
     expect(screen.getAllByText("正常")).toHaveLength(2);
     expect(screen.getByText("2 个，都在")).toBeInTheDocument();
-    expect(screen.getByText("11 张，都能查到数据")).toBeInTheDocument();
+    expect(screen.getByText("模型用到 11 张，都能查到数据")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     view.unmount();
 
@@ -171,7 +171,7 @@ describe("DataSourceHealth", () => {
       ),
     );
 
-    expect(await screen.findByText("11 张，都能查到数据")).toBeInTheDocument();
+    expect(await screen.findByText("模型用到 11 张，都能查到数据")).toBeInTheDocument();
     expect(getProjectStatusMock).toHaveBeenCalledTimes(2);
   });
 
@@ -200,7 +200,7 @@ describe("DataSourceHealth", () => {
     // Each source states itself with the platform's tag: the network is connected, the others gone.
     expect(screen.getByText("已连接")).toBeInTheDocument();
     expect(screen.getAllByText("已失效")).toHaveLength(2);
-    expect(screen.getByText("2 / 10 张查不到数据")).toBeInTheDocument();
+    expect(screen.getByText("模型用到的 10 张里，2 张查不到数据")).toBeInTheDocument();
     // One cause, one notice: the gone catalog, with the items it takes along and one thing to do.
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(
@@ -321,7 +321,9 @@ describe("DataSourceHealth", () => {
       }),
     );
     renderHealth();
-    expect(await screen.findByText("1 of 40 return no data")).toBeInTheDocument();
+    expect(
+      await screen.findByText("1 of the 40 the model uses return no data"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(`Object type "${name}" (table po_line_items_v2) returns no data`),
     ).toBeInTheDocument();
@@ -370,7 +372,7 @@ describe("DataSourceHealth", () => {
   it("says nothing was reconnected when nothing was", async () => {
     getProjectStatusMock.mockResolvedValue(status({ ...ok, reconnected: 0 }));
     renderHealth();
-    expect(await screen.findByText("11 张，都能查到数据")).toBeInTheDocument();
+    expect(await screen.findByText("模型用到 11 张，都能查到数据")).toBeInTheDocument();
     expect(screen.queryByText(/已按表名重新连接/)).toBeNull();
   });
 });

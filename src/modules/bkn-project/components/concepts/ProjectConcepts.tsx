@@ -37,6 +37,7 @@ import {
   mergeConcept,
   reviseConcept,
 } from "@/modules/bkn-project/services/draft.service";
+import { tally } from "@/modules/bkn-project/components/model/understanding";
 import { getUnderstanding, projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import {
   getRequirements,
@@ -83,7 +84,13 @@ const PREFIX = "bknProject.concepts";
 type Refusal = { reload: boolean; text: string; extract?: "knowledgeBase" };
 
 /** What the page reads besides the concepts: how much each source holds. */
-type SourceCounts = { catalogs: number; documents: number | null; tables: number | null };
+type SourceCounts = {
+  catalogs: number;
+  documents: number | null;
+  tables: number | null;
+  /** How far the tables are understood, as the modeling page says it; null while unread. */
+  understanding: ReturnType<typeof tally> | null;
+};
 
 /** How many unmatched names the notice lists before it says how many more. */
 const NOTICE_NAMES = 5;
@@ -126,6 +133,7 @@ export function ProjectConcepts({
     catalogs: project.catalogIds.length,
     documents: null,
     tables: null,
+    understanding: null,
   });
   const [loadError, setLoadError] = useState<string | null>(null);
   // Reads failed in a row, of the page and of the specification's run: following a run stops
@@ -189,6 +197,7 @@ export function ProjectConcepts({
         tables: understanding
           ? understanding.reduce((sum, catalog) => sum + catalog.tables.length, 0)
           : before.tables,
+        understanding: understanding ? tally(understanding) : before.understanding,
       }));
       // At first the list shows what waits for a person, when anything does.
       if (!filterChosen.current) {
@@ -248,7 +257,10 @@ export function ProjectConcepts({
   const drafting = draft?.status === "drafting";
   const conceptsRun = requirements?.spec.conceptsRun;
   const extractingRequirements = conceptsRun?.status === "running";
-  const following = !run && (drafting || extractingRequirements);
+  // Understanding the tables goes on in the background too; the sources card shows how far.
+  const understandingTables = Boolean(counts.understanding?.remaining);
+  // During a run the page reads too, so each source's result shows as soon as it is written.
+  const following = Boolean(run) || drafting || extractingRequirements || understandingTables;
   const stalled =
     (following && failures >= POLL_FAILURE_LIMIT) ||
     (extractingRequirements && runFailures >= POLL_FAILURE_LIMIT);
@@ -824,6 +836,7 @@ export function ProjectConcepts({
             unstructured: network.filter((concept) => kindOf(concept) === "unstructured").length,
           }}
           notUnderstood={concepts.notUnderstood}
+          understanding={counts.understanding}
           onGoToResources={() => onGoToResources()}
           onRun={(key) => askRun([key])}
           onView={viewSource}
@@ -879,13 +892,14 @@ export function ProjectConcepts({
                 ),
                 key: "requirement",
                 label: (
+                  // One sentence, so the two counts never run together.
                   <span>
-                    {t(`${PREFIX}.tabs.requirement`, { count: requirementList.length })}
-                    {waiting.length ? (
-                      <span className={styles.tabBadge}>
-                        {t(`${PREFIX}.tabs.unmatched`, { count: waiting.length })}
-                      </span>
-                    ) : null}
+                    {waiting.length
+                      ? t(`${PREFIX}.tabs.requirementUnmatched`, {
+                          count: requirementList.length,
+                          unmatched: waiting.length,
+                        })
+                      : t(`${PREFIX}.tabs.requirement`, { count: requirementList.length })}
                   </span>
                 ),
               },

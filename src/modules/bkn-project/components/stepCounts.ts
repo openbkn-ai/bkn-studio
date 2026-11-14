@@ -46,3 +46,18 @@ export const questionCount = (requirements: Requirements | null | undefined) =>
   requirements?.status === "ready" && requirements.spec
     ? requirements.spec.questions.length
     : undefined;
+
+/**
+ * The requirement concepts the concept page lists: evidence follows the business items, so it is
+ * not counted, as the concepts read leaves it out.
+ */
+const LISTED_CATEGORIES = new Set([
+  "object",
+  "event",
+  "property",
+  "relation",
+  "kinetic",
+  "not_ontology",
+]);
+export const requirementConceptCount = (concepts: readonly { category: string }[]) =>
+  concepts.filter((concept) => LISTED_CATEGORIES.has(concept.category)).length;

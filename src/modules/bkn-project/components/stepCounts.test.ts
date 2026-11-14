@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   modelObjectCount,
   questionCount,
+  requirementConceptCount,
   tableCount,
 } from "@/modules/bkn-project/components/stepCounts";
 import type { Draft } from "@/modules/bkn-project/types/draft";
@@ -51,5 +52,18 @@ describe("stepCounts", () => {
     ).toBe(2);
     expect(questionCount({ status: "drafting" } as unknown as Requirements)).toBeUndefined();
     expect(questionCount(null)).toBeUndefined();
+  });
+});
+
+describe("requirementConceptCount", () => {
+  it("counts the requirement concepts as the concept page lists them, evidence left out", () => {
+    expect(
+      requirementConceptCount([
+        { category: "object" },
+        { category: "kinetic" },
+        { category: "not_ontology" },
+        { category: "evidence" },
+      ]),
+    ).toBe(3);
   });
 });

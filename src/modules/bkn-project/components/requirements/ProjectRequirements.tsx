@@ -14,6 +14,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
 import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
+import { requirementConceptCount } from "@/modules/bkn-project/components/stepCounts";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
@@ -536,7 +537,8 @@ export function ProjectRequirements({
               </div>
               <AskSources
                 canEdit={canEdit}
-                concepts={spec?.concepts.length ?? 0}
+                // Counted as the concept page lists them.
+                concepts={spec ? requirementConceptCount(spec.concepts) : 0}
                 documents={documents}
                 hasBackground={background}
                 kineticNeeds={spec?.logicNeeds.length ?? 0}
