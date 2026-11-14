@@ -116,7 +116,7 @@ vi.mock("@/shared/catalog", async (importOriginal) => ({
 
 import { DRAFT_POLL_MS, mapDraft, mockDraft } from "@/modules/bkn-project/services/draft.service";
 import { shortListText } from "@/modules/bkn-project/components/publish/messages";
-import { networkObjectTypePath } from "@/modules/bkn-project/types/workspace";
+import { networkObjectTypePath, networkWorkspacePath } from "@/modules/bkn-project/types/workspace";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { ProjectModel } from "./ProjectModel";
@@ -939,20 +939,37 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(draft);
     renderModel({ catalogIds: ["cat-001"] });
 
-    expect(
-      await screen.findByText(
-        `bknProject.model.notice.networkReadsMissing:${JSON.stringify({
-          count: 1,
-          names: existing.name,
-        })}`,
-      ),
-    ).toBeInTheDocument();
+    const notice = await screen.findByText(
+      `bknProject.model.notice.networkReadsMissing:${JSON.stringify({
+        count: 1,
+        names: existing.name,
+      })}`,
+    );
     expect(screen.queryByText(/bknProject.model.notice.draftReadsMissing/)).not.toBeInTheDocument();
+    // The table row of the object type has a link of the same name: look inside the notice only.
+    const alert = notice.closest<HTMLElement>(".ant-alert")!;
     expect(
-      screen
-        .getAllByRole("link", { name: "bknProject.model.existing.open" })
-        .some((link) => link.getAttribute("href")?.includes("/object-types/customers/")),
-    ).toBe(true);
+      within(alert).getByRole("link", { name: "bknProject.model.existing.open" }),
+    ).toHaveAttribute("href", networkObjectTypePath("orders", "customers"));
+  });
+
+  it("sends several network object types on a gone catalog to the network's overview", async () => {
+    const draft = mapDraft(mockDraft("p1"));
+    const stale = draft.items.objectTypes.slice(0, 2);
+    for (const item of stale) {
+      item.existing = true;
+      item.table.catalogId = "old-catalog";
+    }
+    getDraftMock.mockResolvedValue(draft);
+    renderModel({ catalogIds: ["cat-001"] });
+
+    const notice = await screen.findByText(
+      /bknProject.model.notice.networkReadsMissing:.*"count":2/,
+    );
+    const alert = notice.closest<HTMLElement>(".ant-alert")!;
+    expect(
+      within(alert).getByRole("link", { name: "bknProject.model.existing.open" }),
+    ).toHaveAttribute("href", networkWorkspacePath("orders"));
   });
 
   it("lists a few network object types and says the rest as others", () => {
