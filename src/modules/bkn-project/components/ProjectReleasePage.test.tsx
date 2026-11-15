@@ -223,9 +223,61 @@ describe("ProjectReleasePage", () => {
     expect(await section.findByText("通过")).toBeInTheDocument();
     expect(section.getByText("已核对 2 / 3 项")).toBeInTheDocument();
     expect(section.getAllByText(customers.name).length).toBeGreaterThan(0);
-    expect(section.getByText(relation.name)).toBeInTheDocument();
+    // Identities and relations are two tabs, each counting its rows.
+    fireEvent.click(section.getByRole("tab", { name: "关联 1" }));
+    expect(await section.findByText(relation.name)).toBeInTheDocument();
     expect(section.getByText("99.5%")).toBeInTheDocument();
     expect(section.getByText("找不到对应记录只作提示，不影响校验结果。")).toBeInTheDocument();
+  });
+
+  it("puts rows with problems first and rows another check covers last, ten to a page", async () => {
+    const key = (objectType: string, extra: Record<string, unknown> = {}) => ({
+      duplicates: 0,
+      fields: ["id"],
+      nulls: 0,
+      objectType,
+      rows: 10,
+      state: "counted" as const,
+      ...extra,
+    });
+    getOntologyCheckMock.mockResolvedValue(
+      check({
+        results: {
+          coverage: { counted: 12, total: 14 },
+          excludedMapped: [],
+          keys: [
+            key("kb-built", { reason: "knowledge_base_build", state: "not_counted" }),
+            ...Array.from({ length: 10 }, (_, at) => key(`fine-${at}`)),
+            key("repeats", { duplicates: 3 }),
+            key("unread", { reason: "timeout", state: "failed" }),
+            key("empty", { nulls: 2 }),
+          ],
+          relations: [],
+        },
+        status: "issues",
+      }),
+    );
+    renderRelease();
+
+    const section = within(await screen.findByRole("region", { name: "数据校验" }));
+    const tab = await section.findByRole("tab", { name: /唯一标识 14/ });
+    expect(within(tab).getByText("3 项有问题")).toBeInTheDocument();
+    // No relations were counted, so there is no relations tab.
+    expect(section.queryByRole("tab", { name: /关联/ })).not.toBeInTheDocument();
+    const firstColumn = () =>
+      section
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => within(row).getAllByRole("cell")[0].textContent);
+    expect(firstColumn()).toEqual([
+      "repeats",
+      "unread",
+      "empty",
+      ...Array.from({ length: 7 }, (_, at) => `fine-${at}`),
+    ]);
+    fireEvent.click(section.getByTitle("2"));
+    expect(firstColumn()).toEqual(["fine-7", "fine-8", "fine-9", "kb-built"]);
+    expect(section.getByText("由知识库构建检查负责")).toBeInTheDocument();
   });
 
   it("prepares the release and lists the network's versions beside the check, reading them again", async () => {
@@ -313,15 +365,16 @@ describe("ProjectReleasePage", () => {
     expect(await section.findByText("发现问题")).toBeInTheDocument();
     expect(section.getByText("有重复或空值")).toBeInTheDocument();
     expect(section.getByText("读取数据超时")).toBeInTheDocument();
-    expect(section.getByText("两张表在不同的数据目录，无法核对")).toBeInTheDocument();
     expect(
       section.getByText(`对象类 ${customers.name} 的属性 phone 对应了因隐私规则排除的字段 phone`),
     ).toBeInTheDocument();
-    expect(section.queryByText(/timeout|cross_catalog/)).toBeNull();
     // Counts stay on one line; a reason is a sentence and wraps in its cell.
     expect(section.getByText("读取数据超时").closest("td")?.className).not.toMatch(/nowrap/);
     expect(section.getAllByText("结果")[0].closest("th")?.className).toMatch(/nowrap/);
     expect(section.getAllByText("重复")[0].closest("th")?.className).toMatch(/nowrap/);
+    fireEvent.click(section.getByRole("tab", { name: "关联 1" }));
+    expect(await section.findByText("两张表在不同的数据目录，无法核对")).toBeInTheDocument();
+    expect(section.queryByText(/timeout|cross_catalog/)).toBeNull();
   });
 
   it("says when the draft changed after it was confirmed, and leads back to confirm", async () => {

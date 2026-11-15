@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Spin } from "antd";
+import { Alert, Spin, Tabs } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
@@ -51,6 +51,25 @@ import styles from "./ProjectReleasePage.module.css";
 const formatTime = (value: number) => dayjs(value).format("YYYY/MM/DD HH:mm");
 
 type JoinRow = CheckJoinResult & { key: string; relationType: string };
+
+const PAGE_SIZE = 10;
+
+/** A count that could not be read, or identities that repeat or are empty. */
+const keyHasProblem = (item: CheckKeyResult) =>
+  item.state === "failed" || (item.state === "counted" && Boolean(item.duplicates || item.nulls));
+// Records without a match are only reported, so a counted join has no problem.
+const joinHasProblem = (item: CheckJoinResult) => item.state === "failed";
+
+/**
+ * Rows with a problem first, rows another check covers last; the rest keep the check's order.
+ */
+function byAttention<T extends CheckCountState>(rows: T[], hasProblem: (row: T) => boolean): T[] {
+  const rank = (row: T) => (hasProblem(row) ? 0 : row.reason === "knowledge_base_build" ? 2 : 1);
+  return rows
+    .map((row, at) => ({ at, rank: rank(row), row }))
+    .sort((a, b) => a.rank - b.rank || a.at - b.at)
+    .map(({ row }) => row);
+}
 
 /**
  * The data check of the last confirmation: identities that repeat or are empty, and relations
@@ -212,14 +231,29 @@ function CheckSection({
   ];
 
   const results = check?.results ?? null;
-  const joins: JoinRow[] =
+  const keys = byAttention(results?.keys ?? [], keyHasProblem);
+  const joins: JoinRow[] = byAttention(
     results?.relations.flatMap((relation) =>
       relation.joins.map((join, at) => ({
         ...join,
         key: `${relation.relationType}/${at}`,
         relationType: relation.relationType,
       })),
-    ) ?? [];
+    ) ?? [],
+    joinHasProblem,
+  );
+  const keyProblems = keys.filter(keyHasProblem).length;
+  const joinProblems = joins.filter(joinHasProblem).length;
+  const tabLabel = (title: string, count: number, problems: number) => (
+    <span className={styles.tabLabel}>
+      {t("bknProject.release.check.tab", { count, title })}
+      {problems ? (
+        <span className={styles.issue}>
+          {t("bknProject.release.check.tabProblems", { count: problems })}
+        </span>
+      ) : null}
+    </span>
+  );
 
   return (
     <Section
@@ -287,29 +321,54 @@ function CheckSection({
           ) : null}
           {results ? (
             <>
-              <h4 className={styles.subTitle}>{t("bknProject.release.check.keys.title")}</h4>
-              <AppTable<CheckKeyResult>
-                columns={keyColumns}
-                dataSource={results.keys}
-                pagination={false}
-                rowKey="objectType"
+              <Tabs
+                items={[
+                  {
+                    key: "keys",
+                    label: tabLabel(
+                      t("bknProject.release.check.keys.title"),
+                      keys.length,
+                      keyProblems,
+                    ),
+                    children: (
+                      <AppTable<CheckKeyResult>
+                        columns={keyColumns}
+                        dataSource={keys}
+                        pagination={{ defaultPageSize: PAGE_SIZE }}
+                        rowKey="objectType"
+                        size="small"
+                      />
+                    ),
+                  },
+                  ...(joins.length
+                    ? [
+                        {
+                          key: "relations",
+                          label: tabLabel(
+                            t("bknProject.release.check.relations.title"),
+                            joins.length,
+                            joinProblems,
+                          ),
+                          children: (
+                            <div className={styles.tabBody}>
+                              <AppTable<JoinRow>
+                                columns={joinColumns}
+                                dataSource={joins}
+                                pagination={{ defaultPageSize: PAGE_SIZE }}
+                                rowKey="key"
+                                size="small"
+                              />
+                              <p className={styles.muted}>
+                                {t("bknProject.release.check.orphansHint")}
+                              </p>
+                            </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
                 size="small"
               />
-              {joins.length ? (
-                <>
-                  <h4 className={styles.subTitle}>
-                    {t("bknProject.release.check.relations.title")}
-                  </h4>
-                  <AppTable<JoinRow>
-                    columns={joinColumns}
-                    dataSource={joins}
-                    pagination={false}
-                    rowKey="key"
-                    size="small"
-                  />
-                  <p className={styles.muted}>{t("bknProject.release.check.orphansHint")}</p>
-                </>
-              ) : null}
               {results.excludedMapped.length ? (
                 <>
                   <h4 className={styles.subTitle}>

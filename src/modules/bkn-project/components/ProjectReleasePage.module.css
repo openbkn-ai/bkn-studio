@@ -72,6 +72,18 @@
   font-size: 13px;
 }
 
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .nowrap {
   white-space: nowrap;
 }
