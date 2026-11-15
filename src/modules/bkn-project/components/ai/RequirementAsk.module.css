@@ -157,27 +157,56 @@
   font-weight: 600;
 }
 
-/* What AI reads, beside the supplement note: two columns, one under the other when narrow. */
+/* What AI reads: one summary line, opened to the inputs one by one and the supplement note. */
 .sources {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 24px;
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--color-bg-surface);
 }
 
-@media (max-width: 1100px) {
-  .sources {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.sourcesBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.sourcesLabel {
+  color: var(--color-text-secondary);
+}
+
+.sourcesSummary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sourcesDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.selectionBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: 13px;
 }
 
 .sources h3 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: var(--color-text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -228,6 +257,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.sourceMissingText {
+  color: var(--color-warning-text);
 }
 
 .sourceHint {

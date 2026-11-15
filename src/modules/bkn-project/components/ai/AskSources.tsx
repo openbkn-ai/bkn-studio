@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Input } from "antd";
 import dayjs from "dayjs";
-import { type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -86,9 +86,9 @@ function Source({
 }
 
 /**
- * What AI reads on kinetic modeling and business scenarios, beside the project's supplement note:
- * each input with how much of it there is, what is missing with how to add it, and what the
- * network already has marked with the blue dot.
+ * What AI reads on kinetic modeling and business scenarios, in one line: opened, each input with how
+ * much of it there is, what is missing with how to add it, what the network already has marked with
+ * the blue dot, and the project's supplement note.
  */
 export function AskSources({
   canEdit,
@@ -145,146 +145,211 @@ export function AskSources({
     };
   }, [projectId]);
   const knowledgeCount = knowledge ? knowledge.concepts.length + knowledge.rules.length : 0;
+  const [open, setOpen] = useState(false);
+  const supplement = useSupplement(projectId);
+  // The same inputs as the list below, each said in a few words; what is missing is marked.
+  const summary: { key: string; missing?: boolean; text: string }[] = [];
+  if (documents !== null) {
+    summary.push({
+      key: "documents",
+      missing: !documents.length,
+      text: t(`${PREFIX}.documents`, { count: documents.length }),
+    });
+  }
+  if (model) {
+    const objectTypes = model.network + (model.confirmed ? model.project : 0);
+    if (objectTypes) {
+      summary.push({
+        key: "objectTypes",
+        text: t(`${PREFIX}.summary.objectTypes`, { count: objectTypes }),
+      });
+    }
+    if (!model.confirmed) {
+      summary.push({ key: "model", missing: true, text: t(`${PREFIX}.notConfirmed`) });
+    }
+  }
+  if (page !== "kinetic") {
+    summary.push({
+      key: "concepts",
+      text: t(`${PREFIX}.concepts`, { count: concepts ?? 0 }),
+    });
+  }
+  summary.push({ key: "rules", text: t(`${PREFIX}.rules`, { count: rules }) });
+  if (page !== "kinetic") {
+    summary.push({
+      key: "kineticNeeds",
+      text: t(`${PREFIX}.kineticNeeds`, { count: kineticNeeds ?? 0 }),
+    });
+  }
+  if (knowledge && knowledgeCount) {
+    summary.push({
+      key: "knowledge",
+      text: t(`${PREFIX}.summary.knowledge`, { count: knowledge.files }),
+    });
+  }
+  if (hasBackground) {
+    summary.push({ key: "background", text: t(`${PREFIX}.background`) });
+  }
+  if (supplement.note?.text) {
+    summary.push({ key: "supplement", text: t(`${NOTE}.title`) });
+  }
   return (
-    <section className={styles.sources}>
-      <div>
-        <h3>{t(`${PREFIX}.title`)}</h3>
-        <ul className={styles.sourceList}>
-          {documents === null ? null : documents.length ? (
-            <Source action={{ label: t(`${PREFIX}.view`), onClick: onOpenDocuments }} tone="ok">
-              {t(`${PREFIX}.documents`, { count: documents.length })}
-              <span className={styles.sourceNames}>
-                {t(`${PREFIX}.names`, {
-                  names: documents.map((document) => document.name).join(separator),
-                })}
+    <section aria-label={t(`${PREFIX}.title`)} className={styles.sources}>
+      <div className={styles.sourcesBar}>
+        <span className={styles.sourcesLabel}>{t(`${PREFIX}.summary.label`)}</span>
+        <span className={styles.sourcesSummary}>
+          {summary.map((item, index) => (
+            <Fragment key={item.key}>
+              {index ? t(`${PREFIX}.summary.separator`) : null}
+              <span className={item.missing ? styles.sourceMissingText : undefined}>
+                {item.text}
               </span>
-            </Source>
-          ) : (
-            <Source
-              action={{ label: t(`${PREFIX}.uploadDocuments`), onClick: onOpenDocuments }}
-              hint={<span className={styles.sourceHint}>{t(`${PREFIX}.noDocuments.${page}`)}</span>}
-              tone="missing"
-            >
-              {t(`${PREFIX}.documents`, { count: 0 })}
-            </Source>
-          )}
-          {model?.network ? (
-            <Source inNetwork tone="ok">
-              {t(`${PREFIX}.networkObjectTypes`, { count: model.network })}
-            </Source>
-          ) : null}
-          {model === null ? null : model.confirmed ? (
-            <Source action={{ label: t(`${PREFIX}.goToModel`), onClick: onGoToModel }} tone="ok">
-              {t(`${PREFIX}.model`, { count: model.project })}
-            </Source>
-          ) : (
-            // What the network has is not the project's confirmed model: say none is confirmed.
-            <Source
-              action={{ label: t(`${PREFIX}.confirmModel`), onClick: onGoToModel }}
-              hint={<span className={styles.sourceHint}>{t(`${PREFIX}.noModel`)}</span>}
-              tone="missing"
-            >
-              {t(`${PREFIX}.notConfirmed`)}
-            </Source>
-          )}
-          {page === "kinetic" ? (
-            <Source
-              action={rules ? { label: t(`${PREFIX}.view`), onClick: onViewRules } : undefined}
-              tone={rules ? "ok" : "none"}
-            >
-              {t(`${PREFIX}.rules`, { count: rules })}
-            </Source>
-          ) : (
-            <>
-              <Source
-                action={rules ? { label: t(`${PREFIX}.view`), onClick: onViewRules } : undefined}
-                tone={concepts || rules ? "ok" : "none"}
-              >
-                {t(`${PREFIX}.conceptsAndRules`, {
-                  concepts: t(`${PREFIX}.concepts`, { count: concepts ?? 0 }),
-                  rules: t(`${PREFIX}.rules`, { count: rules }),
-                })}
-              </Source>
-              <Source
-                action={
-                  onGoToKinetic
-                    ? { label: t(`${PREFIX}.goToKinetic`), onClick: onGoToKinetic }
-                    : undefined
-                }
-                tone={kineticNeeds ? "ok" : "none"}
-              >
-                {t(`${PREFIX}.kineticNeeds`, { count: kineticNeeds ?? 0 })}
-              </Source>
-            </>
-          )}
-          {knowledge && knowledgeCount ? (
-            <Source
-              hint={
-                knowledge.rules.length ? (
-                  <span className={styles.sourceHint}>
-                    {t(`${PREFIX}.knowledgeRuleNames`, {
-                      names: knowledge.rules.map((rule) => rule.name).join(separator),
+            </Fragment>
+          ))}
+        </span>
+        <AppButton
+          aria-expanded={open}
+          className={styles.sourceAction}
+          onClick={() => setOpen(!open)}
+          size="small"
+          type="link"
+        >
+          {t(`${PREFIX}.summary.${open ? "collapse" : "expand"}`)}
+        </AppButton>
+      </div>
+      {open ? (
+        <div className={styles.sourcesDetail}>
+          <div>
+            <ul className={styles.sourceList}>
+              {documents === null ? null : documents.length ? (
+                <Source action={{ label: t(`${PREFIX}.view`), onClick: onOpenDocuments }} tone="ok">
+                  {t(`${PREFIX}.documents`, { count: documents.length })}
+                  <span className={styles.sourceNames}>
+                    {t(`${PREFIX}.names`, {
+                      names: documents.map((document) => document.name).join(separator),
                     })}
                   </span>
-                ) : undefined
-              }
-              tone="ok"
-            >
-              {t(`${PREFIX}.knowledge`, {
-                concepts: t(`${PREFIX}.knowledgeConcepts`, { count: knowledge.concepts.length }),
-                files: t(`${PREFIX}.knowledgeFiles`, { count: knowledge.files }),
-                rules: t(`${PREFIX}.knowledgeRules`, { count: knowledge.rules.length }),
-              })}
-            </Source>
-          ) : null}
-          {items ? (
-            <Source inNetwork tone="ok">
-              {t(`${PREFIX}.networkItems`, { items })}
-            </Source>
-          ) : null}
-          {hasBackground ? (
-            <Source
-              action={{ label: t(`${PREFIX}.view`), onClick: onViewBackground }}
-              hint={
-                page === "kinetic" ? (
-                  <span className={styles.note}>{t(`${PREFIX}.backgroundNew`)}</span>
-                ) : undefined
-              }
-              inNetwork
-              tone="ok"
-            >
-              {t(`${PREFIX}.background`)}
-            </Source>
-          ) : null}
-        </ul>
-      </div>
-      <SupplementNote canEdit={canEdit} page={page} projectId={projectId} />
+                </Source>
+              ) : (
+                <Source
+                  action={{ label: t(`${PREFIX}.uploadDocuments`), onClick: onOpenDocuments }}
+                  hint={
+                    <span className={styles.sourceHint}>{t(`${PREFIX}.noDocuments.${page}`)}</span>
+                  }
+                  tone="missing"
+                >
+                  {t(`${PREFIX}.documents`, { count: 0 })}
+                </Source>
+              )}
+              {model?.network ? (
+                <Source inNetwork tone="ok">
+                  {t(`${PREFIX}.networkObjectTypes`, { count: model.network })}
+                </Source>
+              ) : null}
+              {model === null ? null : model.confirmed ? (
+                <Source
+                  action={{ label: t(`${PREFIX}.goToModel`), onClick: onGoToModel }}
+                  tone="ok"
+                >
+                  {t(`${PREFIX}.model`, { count: model.project })}
+                </Source>
+              ) : (
+                // What the network has is not the project's confirmed model: say none is confirmed.
+                <Source
+                  action={{ label: t(`${PREFIX}.confirmModel`), onClick: onGoToModel }}
+                  hint={<span className={styles.sourceHint}>{t(`${PREFIX}.noModel`)}</span>}
+                  tone="missing"
+                >
+                  {t(`${PREFIX}.notConfirmed`)}
+                </Source>
+              )}
+              {page === "kinetic" ? (
+                <Source
+                  action={rules ? { label: t(`${PREFIX}.view`), onClick: onViewRules } : undefined}
+                  tone={rules ? "ok" : "none"}
+                >
+                  {t(`${PREFIX}.rules`, { count: rules })}
+                </Source>
+              ) : (
+                <>
+                  <Source
+                    action={
+                      rules ? { label: t(`${PREFIX}.view`), onClick: onViewRules } : undefined
+                    }
+                    tone={concepts || rules ? "ok" : "none"}
+                  >
+                    {t(`${PREFIX}.conceptsAndRules`, {
+                      concepts: t(`${PREFIX}.concepts`, { count: concepts ?? 0 }),
+                      rules: t(`${PREFIX}.rules`, { count: rules }),
+                    })}
+                  </Source>
+                  <Source
+                    action={
+                      onGoToKinetic
+                        ? { label: t(`${PREFIX}.goToKinetic`), onClick: onGoToKinetic }
+                        : undefined
+                    }
+                    tone={kineticNeeds ? "ok" : "none"}
+                  >
+                    {t(`${PREFIX}.kineticNeeds`, { count: kineticNeeds ?? 0 })}
+                  </Source>
+                </>
+              )}
+              {knowledge && knowledgeCount ? (
+                <Source
+                  hint={
+                    knowledge.rules.length ? (
+                      <span className={styles.sourceHint}>
+                        {t(`${PREFIX}.knowledgeRuleNames`, {
+                          names: knowledge.rules.map((rule) => rule.name).join(separator),
+                        })}
+                      </span>
+                    ) : undefined
+                  }
+                  tone="ok"
+                >
+                  {t(`${PREFIX}.knowledge`, {
+                    concepts: t(`${PREFIX}.knowledgeConcepts`, {
+                      count: knowledge.concepts.length,
+                    }),
+                    files: t(`${PREFIX}.knowledgeFiles`, { count: knowledge.files }),
+                    rules: t(`${PREFIX}.knowledgeRules`, { count: knowledge.rules.length }),
+                  })}
+                </Source>
+              ) : null}
+              {items ? (
+                <Source inNetwork tone="ok">
+                  {t(`${PREFIX}.networkItems`, { items })}
+                </Source>
+              ) : null}
+              {hasBackground ? (
+                <Source
+                  action={{ label: t(`${PREFIX}.view`), onClick: onViewBackground }}
+                  hint={
+                    page === "kinetic" ? (
+                      <span className={styles.note}>{t(`${PREFIX}.backgroundNew`)}</span>
+                    ) : undefined
+                  }
+                  inNetwork
+                  tone="ok"
+                >
+                  {t(`${PREFIX}.background`)}
+                </Source>
+              ) : null}
+            </ul>
+          </div>
+          <SupplementNote canEdit={canEdit} page={page} projectId={projectId} {...supplement} />
+        </div>
+      ) : null}
     </section>
   );
 }
 
-/**
- * The project's one paragraph of extra direction, shared by kinetic modeling and business
- * scenarios: every analysis, generation and question takes it along.
- */
-export function SupplementNote({
-  canEdit,
-  page,
-  projectId,
-}: {
-  canEdit: boolean;
-  page: AskPage;
-  projectId: string;
-}) {
-  const { t } = useTranslation();
-  const { message } = useAppServices();
-  // null while unread; a note that could not be read is never shown as none, nor written over.
+/** The project's supplement note as read: null while unread; read again after a failure. */
+function useSupplement(projectId: string) {
   const [note, setNote] = useState<Supplement | null>(null);
   const [readFailed, setReadFailed] = useState(false);
   const [reads, setReads] = useState(0);
-  const [draft, setDraft] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     let active = true;
     setReadFailed(false);
@@ -295,6 +360,35 @@ export function SupplementNote({
       active = false;
     };
   }, [projectId, reads]);
+  return { note, onRetry: () => setReads((count) => count + 1), readFailed, setNote };
+}
+
+/**
+ * The project's one paragraph of extra direction, shared by kinetic modeling and business
+ * scenarios: every analysis, generation and question takes it along.
+ */
+function SupplementNote({
+  canEdit,
+  note,
+  onRetry,
+  page,
+  projectId,
+  readFailed,
+  setNote,
+}: {
+  canEdit: boolean;
+  /** null while unread; a note that could not be read is never shown as none, nor written over. */
+  note: Supplement | null;
+  onRetry: () => void;
+  page: AskPage;
+  projectId: string;
+  readFailed: boolean;
+  setNote: (note: Supplement) => void;
+}) {
+  const { t } = useTranslation();
+  const { message } = useAppServices();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (draft === null) {
@@ -348,7 +442,7 @@ export function SupplementNote({
       ) : readFailed ? (
         <Alert
           action={
-            <AppButton onClick={() => setReads((count) => count + 1)} size="small">
+            <AppButton onClick={onRetry} size="small">
               {t("common.retry")}
             </AppButton>
           }

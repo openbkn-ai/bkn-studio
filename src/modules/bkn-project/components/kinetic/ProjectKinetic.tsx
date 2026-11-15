@@ -7,7 +7,7 @@
 
 import { Alert, Select, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -20,7 +20,9 @@ import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
 import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
+import { SelectionBar } from "@/modules/bkn-project/components/ai/SelectionBar";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
+import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import {
   KINETIC,
   logicKindText,
@@ -36,6 +38,7 @@ import {
   KineticNeedPanel,
 } from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
 import { KineticNetworkItems } from "@/modules/bkn-project/components/kinetic/KineticNetworkItems";
+import { NoticeList } from "@/modules/bkn-project/components/NoticeList";
 import {
   canExecute,
   coveredNeedIds,
@@ -524,7 +527,9 @@ export function ProjectKinetic({
     );
   }
 
-  const count = (state: NeedState) => states.filter((entry) => entry.state === state).length;
+  // The summary counts what the table lists: needs the network covers are shown apart.
+  const listed = states.filter((entry) => !covered.has(entry.need.id));
+  const count = (state: NeedState) => listed.filter((entry) => entry.state === state).length;
   const newNeeds = needs.filter((need) => !covered.has(need.id)).length;
   const waiting = needs.filter((need) => !need.accepted);
   const editable = canEdit && requirements !== null && !running;
@@ -547,7 +552,9 @@ export function ProjectKinetic({
       render: (_, { need }) => (
         <span className={styles.name}>
           <span>{need.name}</span>
-          {need.definition ? <span className={styles.definition}>{need.definition}</span> : null}
+          {need.definition ? (
+            <ClampedText className={styles.definition} text={need.definition} />
+          ) : null}
         </span>
       ),
       title: t(`${KINETIC}.columns.name`),
@@ -563,29 +570,35 @@ export function ProjectKinetic({
         </span>
       ),
       title: t(`${KINETIC}.columns.kind`),
-      width: 150,
+      width: 130,
     },
     {
       key: "source",
       render: (_, { need }) => (
-        <span className={styles.definition}>
-          {need.source === "documents" && need.citations.length
-            ? t(`${KINETIC}.source.documentsFrom`, {
-                name: citing.documentName(need.citations[0].documentId),
-              })
-            : sourceText(t, need.source)}
-        </span>
+        <ClampedText
+          className={styles.definition}
+          text={
+            need.source === "documents" && need.citations.length
+              ? t(`${KINETIC}.source.documentsFrom`, {
+                  name: citing.documentName(need.citations[0].documentId),
+                })
+              : sourceText(t, need.source)
+          }
+        />
       ),
       title: t(`${KINETIC}.columns.source`),
+      width: 140,
     },
     {
       key: "objects",
       render: (_, { need }) => (
-        <span className={styles.definition}>
-          {need.objectTypeIds.map(objectName).join(t("bknProject.listSeparator"))}
-        </span>
+        <ClampedText
+          className={styles.definition}
+          text={need.objectTypeIds.map(objectName).join(t("bknProject.listSeparator"))}
+        />
       ),
       title: t(`${KINETIC}.columns.objects`),
+      width: 160,
     },
     {
       key: "state",
@@ -603,7 +616,7 @@ export function ProjectKinetic({
         </span>
       ),
       title: t(`${KINETIC}.columns.state`),
-      width: 180,
+      width: 140,
     },
     {
       key: "actions",
@@ -648,8 +661,9 @@ export function ProjectKinetic({
           ) : null}
         </span>
       ),
+      // As wide as its links, which do not wrap.
+      className: styles.actionsCell,
       title: t(`${KINETIC}.columns.actions`),
-      width: 220,
     },
   ];
 
@@ -759,22 +773,19 @@ export function ProjectKinetic({
               type="success"
             />
           ) : null}
-          {/* Before the network runs a version nothing is implemented live: that is not a failure. */}
-          {logic && !logic.live ? (
-            <Alert message={t(`${KINETIC}.beforeRelease`)} showIcon type="info" />
-          ) : null}
-          {/* A network the project started from runs already: what it has can be linked now. */}
-          {existingNetwork ? (
-            <Alert message={t(`${KINETIC}.liveBeforeRelease`)} showIcon type="info" />
-          ) : null}
           {!live || logic?.reason ? (
             <Alert message={t(`${KINETIC}.liveUnavailable`)} showIcon type="warning" />
           ) : null}
-          {/* Waiting for the first release is said only while the network runs no version. */}
-          <Alert
-            message={t(`${KINETIC}.${logic?.live ? "liveNoteRunning" : "liveNote"}`)}
-            showIcon
-            type="info"
+          {/* One quiet line until the network runs: a network the project started from runs
+              already, and what it has can be linked now. */}
+          <NoticeList
+            items={
+              existingNetwork
+                ? [{ key: "live", text: t(`${KINETIC}.liveBeforeRelease`), tone: "info" }]
+                : logic && !logic.live
+                  ? [{ key: "release", text: t(`${KINETIC}.beforeRelease`), tone: "info" }]
+                  : []
+            }
           />
           <AskSources
             canEdit={canEdit}
@@ -796,18 +807,6 @@ export function ProjectKinetic({
               {networkSummary(t, networkItems, newNeeds)}
             </p>
           ) : null}
-          {live && needs.length ? (
-            <div className={styles.stats}>
-              {(["implemented", "pending", "waitingRelease"] as const).map((state) => (
-                <div className={styles.stat} key={state}>
-                  <span className={styles.muted}>{t(`${KINETIC}.stats.${state}`)}</span>
-                  <span className={styles.statValue}>
-                    {state === "pending" ? count("pending") + count("broken") : count(state)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
           {hasNetworkItems ? (
             <KineticNetworkItems
               items={networkItems}
@@ -822,6 +821,42 @@ export function ProjectKinetic({
             <p className={styles.muted}>{t(`${KINETIC}.allCovered`)}</p>
           ) : needs.length ? (
             <>
+              {live ? (
+                <p className={styles.summary}>
+                  <AppButton
+                    aria-pressed={stateFilter === ALL}
+                    className={stateFilter === ALL ? styles.summaryOn : styles.summaryLink}
+                    onClick={() => setStateFilter(ALL)}
+                    size="small"
+                    type="link"
+                  >
+                    {t(`${KINETIC}.stats.total`, { count: listed.length })}
+                  </AppButton>
+                  {NEED_STATES.filter(
+                    // The usual three always; the others only when some need is in them.
+                    (state) =>
+                      state === "implemented" ||
+                      state === "pending" ||
+                      state === "waitingRelease" ||
+                      count(state) > 0,
+                  ).map((state, index) => (
+                    <Fragment key={state}>
+                      {index ? (
+                        <span className={styles.muted}>{t(`${KINETIC}.stats.separator`)}</span>
+                      ) : null}
+                      <AppButton
+                        aria-pressed={stateFilter === state}
+                        className={stateFilter === state ? styles.summaryOn : styles.summaryLink}
+                        onClick={() => setStateFilter(state)}
+                        size="small"
+                        type="link"
+                      >
+                        {t(`${KINETIC}.stats.${state}`, { count: count(state) })}
+                      </AppButton>
+                    </Fragment>
+                  ))}
+                </p>
+              ) : null}
               <div className={styles.filters}>
                 <Select
                   aria-label={t(`${KINETIC}.filter.kind`)}
@@ -847,6 +882,10 @@ export function ProjectKinetic({
                     value={stateFilter}
                   />
                 ) : null}
+                <span className={styles.spacer} />
+                {canAsk ? (
+                  <SelectionBar count={refs.length} onBring={() => setAsking(true)} />
+                ) : null}
               </div>
               <AppTable<{ need: LogicNeedView; state: NeedState }>
                 columns={columns}
@@ -858,28 +897,18 @@ export function ProjectKinetic({
                 rowSelection={
                   canAsk
                     ? {
-                        columnTitle: t("bknProject.ask.select.column"),
                         getCheckboxProps: (entry) => ({
                           title: t("bknProject.ask.select.item", { name: entry.need.name }),
                         }),
                         // Ticked needs stay ticked on other pages and filters.
                         preserveSelectedRowKeys: true,
-                        onChange: (keys) => {
-                          setSelected(keys.map(String));
-                          // Ticking is for asking: the panel opens to ask about them.
-                          if (keys.length) {
-                            setAsking(true);
-                          }
-                        },
+                        onChange: (keys) => setSelected(keys.map(String)),
                         selectedRowKeys: selected,
                       }
                     : undefined
                 }
                 size="middle"
               />
-              {canAsk ? (
-                <p className={styles.muted}>{t("bknProject.ask.select.hint.kinetic")}</p>
-              ) : null}
             </>
           ) : (
             // After an analysis that found nothing new, say so rather than that none ran.
