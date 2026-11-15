@@ -92,6 +92,7 @@ export const evalPart = {
         enum: "{{path}}不在允许值中",
       },
       ruleModel: {
+        nameDeclarationMissing: "名称声明缺失或为空。",
         unsupported: "当前资源类型不支持此检查方式",
         fieldRequired: "请选择检查字段",
         boundaryRequired: "至少填写一个数值边界",

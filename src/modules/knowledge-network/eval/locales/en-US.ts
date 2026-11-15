@@ -95,6 +95,7 @@ export const evalPart = {
         enum: "{{path}} is not an allowed value",
       },
       ruleModel: {
+        nameDeclarationMissing: "The name declaration is missing or empty.",
         unsupported: "This resource type does not support this check",
         fieldRequired: "Select a field to check",
         boundaryRequired: "Enter at least one numeric boundary",

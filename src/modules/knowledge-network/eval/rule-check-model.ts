@@ -274,7 +274,7 @@ export function newDeclarationProgram(kind: string): DeclarationProgram {
           required: ["name"],
           properties: { name: { type: "string", minLength: 1 } },
         },
-        message: "名称声明缺失或为空。",
+        message: ruleText("nameDeclarationMissing"),
       },
     ],
   };
