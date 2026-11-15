@@ -583,7 +583,6 @@ export type BknCallScope = {
   nextContext(): BknContext;
 };
 
-/** Merges managed context into request body or arguments without overwriting bkn_context. */
 /* ============================ Tool Summary Display ============================ */
 /**
  * Length past which a tool summary is collapsed in the UI.
@@ -770,11 +769,18 @@ export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   };
 }
 
+/**
+ * Puts the managed context into the payload, replacing whatever `bkn_context` the payload carries.
+ *
+ * The ids are platform identity, not caller input. A placeholder (`{}`), a half-filled object, or a
+ * stale or made-up pair must not stop the live context going out, so the payload's own value never
+ * wins. Without a live context (no interaction opened yet) the payload is left as it is.
+ */
 function withBknContext(
   payload: Record<string, unknown>,
   bknContext: BknContext | undefined,
 ): Record<string, unknown> {
-  if (!bknContext || hasUsableBknContext(payload)) return payload;
+  if (!bknContext) return payload;
   return { ...payload, bkn_context: bknContext };
 }
 
@@ -788,26 +794,6 @@ function withOperationContext(
   bknContext: BknContext | undefined,
 ): Record<string, unknown> {
   return isLifecycleTool(op) ? payload : withBknContext(payload, bknContext);
-}
-
-/**
- * Whether the payload already carries a context worth keeping.
- *
- * Presence of the key is not enough. Context Loader requires both ids on every
- * business tool, so a `bkn_context` that lacks either one is not an override —
- * it is a placeholder, and treating it as one silently drops the real context
- * and gets the call rejected with conversation_required.
- */
-function hasUsableBknContext(payload: Record<string, unknown>): boolean {
-  const value = payload.bkn_context;
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const context = value as Record<string, unknown>;
-  return (
-    typeof context.conversation_id === "string" &&
-    context.conversation_id.trim() !== "" &&
-    typeof context.interaction_id === "string" &&
-    context.interaction_id.trim() !== ""
-  );
 }
 
 /** Parses request-body JSON; non-object or invalid JSON falls back to an empty object. */
