@@ -50,7 +50,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
     title: "RETURN、聚合与排序",
     rules: [
       "可以返回节点、关系、属性（a.name），用 AS 起别名；条件也能作为一列，值为 true、false 或空。",
-      "聚合：count(*)、count(x)、count(DISTINCT a.p)、sum、avg、min、max。没有 GROUP BY，按 RETURN 里的其余列自动分组。",
+      "聚合：count(*)、count(x)、count(DISTINCT a.p)、sum、avg、min、max。count(r) 统计关系条数（OPTIONAL MATCH 里没找到的行不计），count(DISTINCT r) 按两端对象去重。没有 GROUP BY，按 RETURN 里的其余列自动分组。",
       "collect(x) 把每组收成列表，{k: v} 构造映射；collect 不能和 count、sum 等聚合同时返回，计数请单独查。",
       "算术 + - * / %：两个整数相除会被拒，要小数时一边乘 1.0；% 只用于整数。",
       "CASE WHEN … THEN … ELSE … END 和 coalesce(a, b)：各分支要么都是数字，要么都不是。",
