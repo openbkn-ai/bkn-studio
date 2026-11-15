@@ -16,7 +16,10 @@ import {
   replaceObjectMetricDependencyAliases,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
-import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import {
+  objectMetricAveragePriceKeywords,
+  objectMetricText,
+} from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ObjectMetricValidationIssuePresentation = {
   location: string;
@@ -112,9 +115,9 @@ function unitMismatchPresentation(
   const leftName = operandName(node.left);
   const rightName = operandName(node.right);
   const metricName = (context.metricName ?? "").toLocaleLowerCase();
-  const priceIntent = objectMetricText("expressionAveragePriceKeywords")
-    .split("|")
-    .some((keyword) => metricName.includes(keyword.toLocaleLowerCase()));
+  const priceIntent = objectMetricAveragePriceKeywords().some((keyword) =>
+    metricName.includes(keyword.toLocaleLowerCase()),
+  );
   const rightIsCount =
     right.unit?.quantity_kind === "count" ||
     (node.right.node_type === "dependency" &&

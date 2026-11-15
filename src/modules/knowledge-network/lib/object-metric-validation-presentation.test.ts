@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
+
 import { presentObjectMetricValidationIssue } from "@/modules/knowledge-network/lib/object-metric-validation-presentation";
 
 describe("object metric validation presentation", () => {
@@ -44,51 +46,59 @@ describe("object metric validation presentation", () => {
     });
   });
 
-  it("explains the exact amount and count conflict in an average-price formula", () => {
-    const presentation = presentObjectMetricValidationIssue(
-      {
-        code: "expression_unit_mismatch",
-        field: "specification.expression",
-        message: "addition, subtraction, and modulo require compatible units",
+  it("explains the exact amount and count conflict in an average-price formula", async () => {
+    const issue = {
+      code: "expression_unit_mismatch",
+      field: "specification.expression",
+      message: "addition, subtraction, and modulo require compatible units",
+    };
+    const context: NonNullable<Parameters<typeof presentObjectMetricValidationIssue>[1]> = {
+      metricName: "商品销售均价",
+      expression: {
+        node_type: "binary",
+        operator: "add",
+        left: { node_type: "dependency", dependency_alias: "amount" },
+        right: { node_type: "dependency", dependency_alias: "quantity" },
       },
-      {
-        metricName: "商品销售均价",
-        expression: {
-          node_type: "binary",
-          operator: "add",
-          left: { node_type: "dependency", dependency_alias: "amount" },
-          right: { node_type: "dependency", dependency_alias: "quantity" },
-        },
-        dependencies: {
-          amount: {
-            name: "实付总金额",
-            value: {
-              physical_type: "decimal",
-              semantic_type: "amount",
-              unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
-            },
+      dependencies: {
+        amount: {
+          name: "实付总金额",
+          value: {
+            physical_type: "decimal",
+            semantic_type: "amount",
+            unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
           },
-          quantity: {
-            name: "销售件数",
-            value: {
-              physical_type: "int64",
-              semantic_type: "count",
-              unit: {
-                code: "piece",
-                quantity_kind: "custom",
-                scale_factor: 1,
-                system: "registered",
-              },
+        },
+        quantity: {
+          name: "销售件数",
+          value: {
+            physical_type: "int64",
+            semantic_type: "count",
+            unit: {
+              code: "piece",
+              quantity_kind: "custom",
+              scale_factor: 1,
+              system: "registered",
             },
           },
         },
       },
-    );
+    };
+    const presentation = presentObjectMetricValidationIssue(issue, context);
 
     expect(presentation.problem).toBe("实付总金额与销售件数的单位不同，不能直接相加。");
     expect(presentation.detail).toContain("实付总金额（元 · CNY） + 销售件数（件 · piece）");
     expect(presentation.suggestion).toContain("实付总金额 ÷ 销售件数");
     expect(presentation.focusPath).toBe("specification.expression");
+
+    try {
+      await i18n.changeLanguage("en-US");
+      expect(presentObjectMetricValidationIssue(issue, context).suggestion).toContain(
+        "实付总金额 ÷ 销售件数",
+      );
+    } finally {
+      await i18n.changeLanguage("zh-CN");
+    }
   });
 
   it("locates a nested conflict and does not recommend division for unrelated metrics", () => {
