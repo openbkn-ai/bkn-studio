@@ -595,12 +595,16 @@ export function ProjectConcepts({
   const produced = (origin: "table" | "knowledgeBase") =>
     data.filter((concept) => originOf(concept) === origin && statusOf(concept) !== "candidate")
       .length;
+  const pendingOf = (origin: "table" | "knowledgeBase") =>
+    data.filter((concept) => originOf(concept) === origin && statusOf(concept) === "pending")
+      .length;
   const conceptsRunRecord = requirements?.spec.runs.concepts;
   const tableFacts: SourceFacts = {
     count: counts.tables,
     extracted: ready,
     extractedAt: ready ? (draft?.createTime ?? null) : null,
     failed: runFailed.table ?? (draft?.status === "failed" ? t(`${PREFIX}.run.failed.table`) : ""),
+    pending: pendingOf("table"),
     produced: produced("table"),
     running: drafting,
   };
@@ -634,6 +638,7 @@ export function ProjectConcepts({
         failed:
           runFailed.knowledgeBase ??
           (kbStatus?.state === "failed" ? t(`${PREFIX}.run.failed.knowledgeBase`) : ""),
+        pending: pendingOf("knowledgeBase"),
         produced: produced("knowledgeBase"),
         running: kbStatus?.state === "running",
       }
@@ -698,7 +703,7 @@ export function ProjectConcepts({
     />
   ) : null;
 
-  const viewSource = (key: ConceptSourceKey) => {
+  const viewSource = (key: ConceptSourceKey, pending = false) => {
     if (key === "document") {
       setTab("requirement");
       setRequirementFilter("all");
@@ -708,7 +713,7 @@ export function ProjectConcepts({
     setFilters({
       origin: key === "table" ? "table" : "knowledgeBase",
       query: "",
-      status: "all",
+      status: pending ? "pending" : "all",
       verdict: "all",
     });
   };
