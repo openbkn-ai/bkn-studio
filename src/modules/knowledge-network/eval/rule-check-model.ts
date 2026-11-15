@@ -23,14 +23,12 @@ const ruleText = (key: string, values?: Record<string, unknown>): string =>
 
 export const resourceCaseKinds = ["function", "api", "mcp", "metric", "action", "skill"];
 export const resourceCaseChecks = [
-  "action_execution",
   "resource_available",
   "input_contract",
   "output_contract",
   "resource_result",
   "resource_error",
   "resource_request",
-  "metric_lineage",
   "result_compare",
 ];
 

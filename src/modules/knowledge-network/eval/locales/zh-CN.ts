@@ -250,34 +250,7 @@ export const evalPart = {
       enableHint: "当前检查尚未配置自动执行能力，保存后为未启用用例。",
       chooseCheck: "选择检查项",
     },
-    actionChecks: {
-      negativeInputHelp:
-        "目标拒绝场景只修改待验证的目标，其他必填参数仍需补全；若因缺少参数或权限被拒绝，不能证明目标检查正确。准入异常场景可有意提供无效输入。",
-      unavailable: "行动服务尚未提供本项执行观测，请先启动对应的行动运行时。",
-      inspectionHelp: "本项只检查真实执行准入，不创建执行任务，不调用行动来源。",
-      duplicateHelp:
-        "发起一次受控行动，在其仍运行时检查相同输入能否被正确拒绝；执行过快时返回无法判定。",
-      executionHelp:
-        "本项会实际执行行动，请使用专用测试样本；完成后核对运行时记录和明确范围内的数据。",
-      decision: "预期准入结果",
-      accepted: "允许执行",
-      rejected: "拒绝执行",
-      authorizationPhase: "权限检查阶段",
-      submission: "提交前准入检查",
-      invocation: "实际调用阶段",
-      failurePhase: "异常检查阶段",
-      source: "行动来源调用",
-      admission: "执行前拒绝",
-      scenario: "异常场景",
-      failure: "失败或部分失败",
-      cancellation: "取消执行",
-      cancelAfter: "发起后等待毫秒再取消",
-      actionInput: "行动输入",
-      effectsHelp:
-        "默认核对本次对象或关系目标。新建对象或独立工具行动需补充明确范围；仅对该范围下结论，不证明范围外无变化。",
-    },
     resourceCases: {
-      actionStandard: "依据真实行动观测检查，违反数应为 0；证据不足时返回无法判定。",
       independentValueRequired:
         "本项必须至少比较一个独立确认的结果值；仅检查存在或返回结构不足以判断结果正确。",
       validInputSamples:

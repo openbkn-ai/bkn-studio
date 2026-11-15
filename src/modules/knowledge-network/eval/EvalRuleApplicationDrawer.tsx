@@ -470,7 +470,7 @@ function ResourceSampleEditor({
         expected: definition.expected_spec,
         source_kind: definition.expected_source.kind,
         evidence_refs: definition.expected_source.evidence_refs,
-        ...(["resource_result", "resource_error", "resource_request", "metric_lineage"].includes(
+        ...(["resource_result", "resource_error", "resource_request"].includes(
           row.check?.type ?? "",
         )
           ? {

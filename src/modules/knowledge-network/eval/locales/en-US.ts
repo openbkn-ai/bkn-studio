@@ -260,36 +260,7 @@ export const evalPart = {
       enableHint: "Execution is not configured. The definition will be saved disabled.",
       chooseCheck: "Select a check",
     },
-    actionChecks: {
-      negativeInputHelp:
-        "For target rejection, change only the target under test and complete all other required inputs. Missing parameters or permission denials do not prove target validation. Admission-failure scenarios may intentionally use invalid input.",
-      unavailable: "The action runtime does not provide the required execution observations.",
-      inspectionHelp:
-        "Checks actual execution admission without creating a task or invoking its source.",
-      duplicateHelp:
-        "Starts one controlled action and checks duplicate admission while it is in flight. Fast completion may be inconclusive.",
-      executionHelp:
-        "Executes the action on dedicated test samples, then checks runtime observations and the specified data scope.",
-      decision: "Expected admission",
-      accepted: "Allow",
-      rejected: "Reject",
-      authorizationPhase: "Authorization phase",
-      submission: "Before submission",
-      invocation: "Before invocation",
-      failurePhase: "Failure phase",
-      source: "Source invocation",
-      admission: "Admission rejection",
-      scenario: "Failure scenario",
-      failure: "Failure or partial failure",
-      cancellation: "Cancellation",
-      cancelAfter: "Milliseconds before cancellation",
-      actionInput: "Action input",
-      effectsHelp:
-        "Checks the explicit object or relation target. Creation and standalone tools require an additional scope. Conclusions apply only to that scope.",
-    },
     resourceCases: {
-      actionStandard:
-        "Checks actual action observations with zero violations; insufficient evidence is inconclusive.",
       independentValueRequired:
         "Compare at least one independently verified value. Existence or response structure alone cannot establish correctness.",
       validInputSamples:

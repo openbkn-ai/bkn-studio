@@ -513,13 +513,6 @@ it.each([
     value: "GET",
     valueType: "string" as const,
   },
-  {
-    resourceKind: "metric",
-    check: "metric_lineage",
-    path: "$.result.entries[0].value",
-    value: "0",
-    valueType: "number" as const,
-  },
 ])(
   "configures $resourceKind $check with independent criteria and optional notes",
   async ({ resourceKind, check, path, value, valueType }) => {

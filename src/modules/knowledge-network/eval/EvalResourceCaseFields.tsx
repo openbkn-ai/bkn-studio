@@ -9,9 +9,6 @@ import { evalScalarText } from "./eval-scalar-text";
 
 import { Alert, Button, Input, Select, Space, Spin, type SelectProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EvalActionCheckFields } from "./EvalActionCheckFields";
-import { actionCheckArgumentsSchema, defaultActionCheck } from "./action-check-model";
-import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { EvalResourceArguments } from "./EvalResourceArguments";
 import { EvalCaseArguments } from "./EvalCaseArguments";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
@@ -126,12 +123,9 @@ export function EvalResourceCaseFields({
     modeCallback.current?.(definitionOnly);
     return () => modeCallback.current?.(false);
   }, [definitionOnly]);
-  const business = [
-    "resource_result",
-    "resource_error",
-    "resource_request",
-    "metric_lineage",
-  ].includes(check?.type ?? "");
+  const business = ["resource_result", "resource_error", "resource_request"].includes(
+    check?.type ?? "",
+  );
   const needsReference =
     business &&
     (check?.independent_value ||
@@ -198,12 +192,7 @@ export function EvalResourceCaseFields({
     if (!base || !selected || base.match !== "applicable" || contract.available === false) return;
     let sample;
     try {
-      const argumentsValue = validateCaseArguments(
-        args || "{}",
-        check?.type === "action_execution"
-          ? actionCheckArgumentsSchema(contract, check.binding ?? "")
-          : contract.input,
-      );
+      const argumentsValue = validateCaseArguments(args || "{}", contract.input);
       if (
         check?.independent_value &&
         !criteria.some((c) =>
@@ -320,30 +309,6 @@ export function EvalResourceCaseFields({
           placeholder={text("chooseCheck")}
           options={checkOptions}
           onChange={(id) => {
-            const nextCheck =
-              rules.find((rule) => rule.id === id)?.check ?? config?.execution_support?.[id]?.check;
-            if (check?.type === "action_execution" || nextCheck?.type === "action_execution") {
-              try {
-                const previous = parsePrecisionPreservingJSON(args || "{}") as Record<
-                  string,
-                  unknown
-                >;
-                const actionInput =
-                  check?.type === "action_execution" ? (previous.action_input ?? {}) : previous;
-                changeArguments(
-                  transformPrecisionSafeJSONRequest(
-                    nextCheck?.type === "action_execution"
-                      ? {
-                          action_input: actionInput,
-                          check: defaultActionCheck(nextCheck.binding ?? ""),
-                        }
-                      : actionInput,
-                  ),
-                );
-              } catch {
-                changeArguments("{}");
-              }
-            }
             setRuleId(id);
             setRecordDefinition(false);
             setBase(undefined);
@@ -409,16 +374,7 @@ export function EvalResourceCaseFields({
             >
               {text("arguments")}
             </EvalFieldLabel>
-            {check?.type === "action_execution" ? (
-              <EvalActionCheckFields
-                key={check.binding}
-                networkId={networkId}
-                contract={contract}
-                binding={check.binding ?? ""}
-                value={args}
-                onChange={changeArguments}
-              />
-            ) : resource.kind === "function" ? (
+            {resource.kind === "function" ? (
               <EvalCaseArguments
                 value={args}
                 onChange={changeArguments}
@@ -480,13 +436,11 @@ export function EvalResourceCaseFields({
               hint={text(
                 check?.type === "output_contract"
                   ? "schemaStandard"
-                  : check?.type === "action_execution"
-                    ? "actionStandard"
-                    : check?.type === "input_contract"
-                      ? "inputStandard"
-                      : check?.type === "result_compare"
-                        ? "fixedStandard"
-                        : "availabilityStandard",
+                  : check?.type === "input_contract"
+                    ? "inputStandard"
+                    : check?.type === "result_compare"
+                      ? "fixedStandard"
+                      : "availabilityStandard",
               )}
             >
               {text("criteria")}
