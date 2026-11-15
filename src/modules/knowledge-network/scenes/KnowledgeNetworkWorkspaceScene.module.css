@@ -257,12 +257,27 @@
 }
 
 .sideTitle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
   height: 30px;
-  padding-left: 12px;
+  justify-content: space-between;
+  padding: 0 12px;
   color: var(--color-text-secondary);
   font-size: 13px;
-  line-height: 30px;
-  opacity: 0.65;
+  text-align: left;
+  width: 100%;
+}
+
+.sideTitle:hover {
+  background: var(--color-hover);
+}
+
+.sideTitle :global(svg) {
+  font-size: 11px;
 }
 
 .overviewBox {

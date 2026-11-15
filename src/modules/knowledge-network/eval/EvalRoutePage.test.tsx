@@ -164,6 +164,11 @@ it("opens a direct Eval URL with workspace navigation and can switch to overview
   fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.workspaceOverviewShort/ }));
   expect(screen.getByText("Network overview")).toBeTruthy();
   expect(screen.queryByText("Eval content: supply")).toBeNull();
+  const verificationGroup = screen.getByRole("button", {
+    name: "knowledgeNetwork.workspaceAbilityVerification",
+  });
+  expect(verificationGroup).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(verificationGroup);
   fireEvent.click(screen.getByTitle("knowledgeNetwork.eval.title"));
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
 });
