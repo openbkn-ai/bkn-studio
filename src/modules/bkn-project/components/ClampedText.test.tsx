@@ -29,6 +29,15 @@ describe("ClampedText", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent(LONG);
   });
 
+  it("keeps the paragraphs and lists of a long description on hover", async () => {
+    render(<ClampedText text={`${LONG}\n\n- 物料\n- 仓库`} />);
+    const text = screen.getByTestId("clamped-text");
+    overflow(text, 120);
+    fireEvent.mouseEnter(text);
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.querySelectorAll("li")).toHaveLength(2);
+  });
+
   it("shows no tooltip when nothing was cut", () => {
     render(<ClampedText text="库存快照" />);
     const text = screen.getByTestId("clamped-text");
