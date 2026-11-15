@@ -191,7 +191,10 @@ beforeEach(() => {
   });
   mocks.getObjectTypeDisplayKeys.mockResolvedValue({ teams: "team_name" });
   mocks.getObjectTypeProperties.mockResolvedValue({
-    teams: [{ name: "team_name", displayName: "球队名" }],
+    teams: [
+      { name: "team_name", displayName: "球队名", mapped: true },
+      { name: "team_segment", displayName: "分群", mapped: false },
+    ],
   });
   mocks.getObjectTypeDisplayKeys.mockClear();
   mocks.runCypherQuery.mockReset();
@@ -570,6 +573,55 @@ describe("CypherQueryScene", () => {
       screen.getByRole("button", { name: "knowledgeNetwork.cypherQuery.schema.expandPanel" }),
     );
     expect(screen.getByTestId("cypher-schema-object-goals")).toBeTruthy();
+  });
+
+  it("greys out a property without a mapped column, with the reason, and inserts nothing for it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+      await screen.findByTestId("cypher-schema-object-teams");
+      fireEvent.click(
+        screen.getAllByLabelText("knowledgeNetwork.cypherQuery.schema.toggleProperties")[1],
+      );
+
+      const mapped = await screen.findByTestId("cypher-schema-property-teams-team_name");
+      const unmapped = screen.getByTestId("cypher-schema-property-teams-team_segment");
+      expect(mapped.getAttribute("aria-disabled")).toBeNull();
+      // Focusable, so the reason reaches a keyboard user, and named with it for a screen reader.
+      expect(unmapped.getAttribute("aria-disabled")).toBe("true");
+      expect(unmapped.getAttribute("aria-label")).toContain(
+        "knowledgeNetwork.cypherQuery.schema.unmappedHint",
+      );
+
+      fireEvent.click(unmapped);
+      await vi.advanceTimersByTimeAsync(10);
+      expect(editor().value).toBe("");
+      fireEvent.click(mapped);
+      await vi.advanceTimersByTimeAsync(10);
+      expect(editor().value).toBe("team_name");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("explains a refusal for an unmapped property in terms of the property and object type", async () => {
+    const query = "MATCH (t:teams) RETURN t.team_segment";
+    mocks.runCypherQuery.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        message: 'property "team_segment" of object type "teams" has no mapped column',
+        code: "BknBackend.Cypher.InvalidQuery",
+      },
+      exchange: { ...exchange, status: 400 },
+    });
+    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
+
+    fireEvent.change(editor(), { target: { value: query } });
+    fireEvent.keyDown(editor(), { key: "Enter", metaKey: true });
+
+    await screen.findByText("knowledgeNetwork.cypherQuery.frames.unmappedProperty");
+    // The backend's own wording stays below it.
+    expect(screen.getByText(/has no mapped column/)).toBeTruthy();
   });
 
   it("plans the editor's query with the Plan button or an EXPLAIN prefix, reading nothing", async () => {

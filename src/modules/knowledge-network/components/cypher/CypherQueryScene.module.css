@@ -842,3 +842,11 @@
     overflow-y: auto;
   }
 }
+
+/* A property with no mapped column: visible, but it cannot be queried or inserted. */
+.schemaPropertyDisabled,
+.schemaPropertyDisabled:hover {
+  background: transparent;
+  color: var(--color-text-quaternary, #bfbfbf);
+  cursor: not-allowed;
+}

@@ -26,6 +26,44 @@ const schema: CypherCompletionSchema = {
 const labels = (before: string, full = before) =>
   cypherSuggestions(before, full, schema).map((item) => item.insert);
 
+describe("cypherSuggestions for properties without a mapped column", () => {
+  const withMapping: CypherCompletionSchema = {
+    ...schema,
+    properties: {
+      teams: [
+        { name: "a_mapped", mapped: true },
+        { name: "b_unmapped", mapped: false },
+        { name: "c_legacy" },
+      ],
+    },
+  };
+
+  it("does not offer them, and leaves mapped ones and ones without mapping info alone", () => {
+    const items = cypherSuggestions(
+      "MATCH (t:teams) RETURN t.",
+      "MATCH (t:teams) RETURN t.",
+      withMapping,
+    );
+
+    expect(items.map((item) => item.label)).toEqual(["a_mapped", "c_legacy"]);
+  });
+
+  it("offers it again once the reload reports the column as mapped", () => {
+    const remapped = {
+      ...withMapping,
+      properties: { teams: [{ name: "b_unmapped", mapped: true }] },
+    };
+
+    const items = cypherSuggestions(
+      "MATCH (t:teams) RETURN t.",
+      "MATCH (t:teams) RETURN t.",
+      remapped,
+    );
+
+    expect(items.map((item) => item.label)).toEqual(["b_unmapped"]);
+  });
+});
+
 describe("cypherSuggestions", () => {
   it("offers object types after a node colon, quoting ids that need it", () => {
     expect(labels("MATCH (t:")).toEqual(["teams", "`my-type`"]);

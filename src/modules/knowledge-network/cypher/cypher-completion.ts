@@ -13,7 +13,7 @@ export type CypherCompletionSchema = {
   objectTypes: { id: string; name: string }[];
   relationTypes: { id: string; name: string; sourceId: string; targetId: string }[];
   /** Per object type id, its property names with their display names. */
-  properties: Record<string, { name: string; displayName?: string }[]>;
+  properties: Record<string, { name: string; displayName?: string; mapped?: boolean }[]>;
 };
 
 export type CypherSuggestion = {
@@ -84,12 +84,16 @@ export function cypherSuggestions(
     const otId =
       schema.objectTypes.find((item) => item.id === label)?.id ??
       schema.objectTypes.find((item) => item.name === label)?.id;
-    return (otId ? (schema.properties[otId] ?? []) : []).map((property) => ({
-      kind: "property",
-      insert: cypherName(property.name),
-      label: property.name,
-      ...(property.displayName ? { detail: property.displayName } : {}),
-    }));
+    // A property without a mapped column cannot be queried, so it is not offered at all; the
+    // schema panel shows it greyed out with the reason.
+    return (otId ? (schema.properties[otId] ?? []) : [])
+      .filter((property) => property.mapped !== false)
+      .map((property) => ({
+        kind: "property",
+        insert: cypherName(property.name),
+        label: property.name,
+        ...(property.displayName ? { detail: property.displayName } : {}),
+      }));
   }
   return [
     ...CYPHER_KEYWORDS.map((keyword) => ({
