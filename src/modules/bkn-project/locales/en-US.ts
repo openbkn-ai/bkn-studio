@@ -334,6 +334,9 @@ export const bknProjectEnUS = {
           },
         },
         view: "View concepts",
+        pending: "{{count}} to confirm",
+        pending_one: "{{count}} to confirm",
+        pending_other: "{{count}} to confirm",
         runOne: {
           first: "Extract only this",
           again: "Extract only this again",
@@ -347,14 +350,14 @@ export const bknProjectEnUS = {
         network_other:
           "The network already has {{count}} concepts ({{structured}} bound to data tables, {{unstructured}} to knowledge-base extraction data); they need no extraction and are listed below.",
       },
-      stats: {
-        total: "Concepts",
-        pending: "To confirm",
-        confirmed: "Confirmed",
-        excluded: "Excluded",
-        network: "Includes {{count}} the network has",
-        network_one: "Includes {{count}} the network has",
-        network_other: "Includes {{count}} the network has",
+      summary: {
+        total: "{{count}} concepts",
+        total_one: "{{count}} concept",
+        total_other: "{{count}} concepts",
+        network: "(incl. {{count}} already in the network)",
+        network_one: "(incl. {{count}} already in the network)",
+        network_other: "(incl. {{count}} already in the network)",
+        separator: "·",
       },
       verdict: {
         object: "Object",
@@ -405,9 +408,9 @@ export const bknProjectEnUS = {
         blocked: "{{verdict}} · {{blocked}}",
       },
       filter: {
-        all: "All",
-        origin: "Source",
-        status: "Status",
+        status: "Filter by status",
+        onlyOrigin: "Showing only: {{origin}}",
+        clearOrigin: "Show all sources",
         verdict: "Type",
         allVerdicts: "All types",
         search: "Search concepts",

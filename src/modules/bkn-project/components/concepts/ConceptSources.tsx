@@ -39,6 +39,8 @@ export type SourceFacts = {
   running: boolean;
   /** The concepts it made. */
   produced: number;
+  /** How many of those wait for the person to confirm. */
+  pending?: number;
   /** Why its last extraction failed, as words; empty when it did not. */
   failed: string;
 };
@@ -78,7 +80,8 @@ export function ConceptSources({
   notUnderstood: number;
   onGoToResources: () => void;
   onRun: (key: ConceptSourceKey) => void;
-  onView: (key: ConceptSourceKey) => void;
+  /** Shows the source's concepts; with `pending`, only those still to confirm. */
+  onView: (key: ConceptSourceKey, pending?: boolean) => void;
   run: ConceptRun | null;
   tables: SourceFacts;
   /** How far the tables are understood, as the modeling page says it; null while unknown. */
@@ -157,6 +160,21 @@ export function ConceptSources({
       <span>
         {t(`${PREFIX}.${at ? "extractedAt" : "extracted"}`, { time: at })}
         {t(`${PREFIX}.produced.${key}`, { count: facts.produced })}
+        {facts.pending ? (
+          <>
+            <span aria-hidden className={styles.separated}>
+              {t("bknProject.concepts.summary.separator")}
+            </span>
+            <AppButton
+              className={styles.inlineLink}
+              onClick={() => onView(key, true)}
+              size="small"
+              type="link"
+            >
+              {t(`${PREFIX}.pending`, { count: facts.pending })}
+            </AppButton>
+          </>
+        ) : null}
         {key === "document" && unmatched ? (
           <span className={styles.warning}>{t(`${PREFIX}.unmatched`, { count: unmatched })}</span>
         ) : null}

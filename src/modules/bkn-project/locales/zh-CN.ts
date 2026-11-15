@@ -305,6 +305,9 @@ export const bknProjectZhCN = {
           knowledgeBase: { reading: "读取文件", analyzing: "抽取概念", writing: "写入数据" },
         },
         view: "看概念",
+        pending: "待确认 {{count}} 个",
+        pending_one: "待确认 {{count}} 个",
+        pending_other: "待确认 {{count}} 个",
         runOne: {
           first: "只抽这一类",
           again: "只重抽这一类",
@@ -318,14 +321,14 @@ export const bknProjectZhCN = {
         network_other:
           "网络已有 {{count}} 个概念（{{structured}} 个绑定数据表，{{unstructured}} 个绑定知识库抽取数据），不用抽取，直接列在下面。",
       },
-      stats: {
-        total: "概念总数",
-        pending: "待确认",
-        confirmed: "已确认",
-        excluded: "不纳入",
-        network: "含网络已有 {{count}} 个",
-        network_one: "含网络已有 {{count}} 个",
-        network_other: "含网络已有 {{count}} 个",
+      summary: {
+        total: "共 {{count}} 个概念",
+        total_one: "共 {{count}} 个概念",
+        total_other: "共 {{count}} 个概念",
+        network: "（含网络已有 {{count}}）",
+        network_one: "（含网络已有 {{count}}）",
+        network_other: "（含网络已有 {{count}}）",
+        separator: "·",
       },
       verdict: {
         object: "对象",
@@ -374,9 +377,9 @@ export const bknProjectZhCN = {
         blocked: "{{verdict}} · {{blocked}}",
       },
       filter: {
-        all: "全部",
-        origin: "来源",
-        status: "状态",
+        status: "按状态筛选",
+        onlyOrigin: "只看{{origin}}",
+        clearOrigin: "看全部来源",
         verdict: "类型",
         allVerdicts: "全部类型",
         search: "搜索概念",
