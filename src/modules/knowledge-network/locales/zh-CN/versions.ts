@@ -19,6 +19,8 @@ export const versionsPart = {
     outdated:
       "运行版本已切换为 {{running}}，草稿仍基于 {{base}}。发布草稿会把已回退的改动重新带回线上。",
     outdatedTag: "已落后",
+    draftHasChanges:
+      "草稿里有尚未发布的修改，不能直接修改运行版本。请切换到草稿后再修改，或先审阅并发布、放弃草稿。",
     writeBlocked: "当前版本只读。请切换到草稿后再修改。",
     stateUnknown: "暂时无法确认这个知识网络的版本状态，请稍后重试。",
     history: "版本历史",
