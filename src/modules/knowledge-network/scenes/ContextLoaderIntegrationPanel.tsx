@@ -952,7 +952,7 @@ export function ContextLoaderIntegrationPanel({
                   <details
                     key={key}
                     className={styles.toolTreeGroup}
-                    open={mode === "rest" ? true : undefined}
+                    open={mode === "rest" || filterText ? true : undefined}
                   >
                     <summary className={styles.grp}>
                       <span className={styles.grpLabel}>{label}</span>
