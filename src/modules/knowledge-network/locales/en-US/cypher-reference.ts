@@ -50,7 +50,7 @@ export const cypherReferenceEnUS: CypherReferenceTexts = [
     title: "RETURN, aggregates and ordering",
     rules: [
       "Return nodes, relationships or properties (a.name), renamed with AS; a condition can be a column too, valued true, false or null.",
-      "Aggregates: count(*), count(x), count(DISTINCT a.p), sum, avg, min, max. There is no GROUP BY: aggregating groups by the other returned columns.",
+      "Aggregates: count(*), count(x), count(DISTINCT a.p), sum, avg, min, max. count(r) counts relationships (a row an OPTIONAL MATCH found nothing for is not counted), and count(DISTINCT r) counts each pair of objects once. There is no GROUP BY: aggregating groups by the other returned columns.",
       "collect(x) gathers each group into a list and {k: v} builds a map; collect cannot be returned beside count, sum and the like, so count in a query of its own.",
       "Arithmetic + - * / %: dividing two integers is refused, so multiply one side by 1.0 for a fraction; % takes integers.",
       "CASE WHEN … THEN … ELSE … END and coalesce(a, b): the branches are all numbers or all non-numbers.",
