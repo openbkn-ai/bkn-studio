@@ -7,8 +7,8 @@
 
 export const versionsPart = {
   versions: {
-    nav: "Versions",
-    title: "Versions",
+    nav: "Version changes",
+    title: "Version changes",
     description: "Publish, compare and switch the versions of this knowledge network.",
     draft: "Draft",
     viewing: "Version on screen",

@@ -7,8 +7,8 @@
 
 export const versionsPart = {
   versions: {
-    nav: "版本管理",
-    title: "版本管理",
+    nav: "版本变更",
+    title: "版本变更",
     description: "发布、比较和切换知识网络的版本。",
     draft: "草稿",
     viewing: "当前查看的版本",
