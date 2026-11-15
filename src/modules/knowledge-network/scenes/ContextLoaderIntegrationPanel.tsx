@@ -949,7 +949,11 @@ export function ContextLoaderIntegrationPanel({
             <div className={styles.eplist}>
               {treeGroups.map(({ key, label, description, items }) => {
                 return (
-                  <details key={key} className={styles.toolTreeGroup} open>
+                  <details
+                    key={key}
+                    className={styles.toolTreeGroup}
+                    open={mode === "rest" ? true : undefined}
+                  >
                     <summary className={styles.grp}>
                       <span className={styles.grpLabel}>{label}</span>
                       <span className={styles.grpCount}>{items.length}</span>

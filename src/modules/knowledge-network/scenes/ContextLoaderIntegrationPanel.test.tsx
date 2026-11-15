@@ -92,6 +92,32 @@ afterEach(() => {
 });
 
 describe("ContextLoaderIntegrationPanel tool catalog", () => {
+  it("starts MCP tool groups collapsed and lets each group expand independently", () => {
+    const toolDefs = ["bkn_start_interaction", "search_schema"].map((name) => ({
+      name,
+      inputSchema: { type: "object", properties: {} },
+    }));
+    const ops = mcpOpsFrom(toolDefs);
+    const { container } = renderPanel({
+      activeOps: ops,
+      op: ops[0],
+      selectedId: toolDefs[0].name,
+      toolDefs,
+      currentTool: toolDefs[0],
+    });
+    const groups = container.querySelectorAll<HTMLDetailsElement>(
+      'details[class*="toolTreeGroup"]',
+    );
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0].open).toBe(false);
+    expect(groups[1].open).toBe(false);
+
+    fireEvent.click(groups[0].querySelector("summary")!);
+    expect(groups[0].open).toBe(true);
+    expect(groups[1].open).toBe(false);
+  });
+
   it("keeps known tool names in sync with the active locale after tools/list was loaded", async () => {
     const i18n = createInstance();
     await i18n.init({

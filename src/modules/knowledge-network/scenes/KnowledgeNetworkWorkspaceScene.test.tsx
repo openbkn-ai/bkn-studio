@@ -147,13 +147,71 @@ function entitlement(overrides: Partial<Entitlement> = {}): Entitlement {
   };
 }
 
-function renderScene(snapshot: Entitlement) {
+function renderScene(snapshot: Entitlement, expandGroups = true) {
   render(
     <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
       <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
     </EntitlementContext.Provider>,
   );
+  if (expandGroups) {
+    for (const name of [
+      "knowledgeNetwork.workspaceAbilityVerification",
+      "knowledgeNetwork.workspaceConceptModel",
+      "knowledgeNetwork.workspaceDynamicModel",
+    ]) {
+      const group = screen.queryByRole("button", { name });
+      if (group) fireEvent.click(group);
+    }
+  }
 }
+
+describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
+  it("starts collapsed on overview and toggles each group independently", () => {
+    renderScene(entitlement(), false);
+
+    const verification = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceAbilityVerification",
+    });
+    const concept = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceConceptModel",
+    });
+    const dynamic = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceDynamicModel",
+    });
+    for (const group of [verification, concept, dynamic]) {
+      expect(group).toHaveAttribute("aria-expanded", "false");
+    }
+    expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /行动类/ })).toBeNull();
+
+    fireEvent.click(concept);
+    expect(concept).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
+    expect(verification).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(concept);
+    expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
+  });
+
+  it.each([
+    ["experience-agent", "workspaceAbilityVerification", /智能问答/],
+    ["object-types", "workspaceConceptModel", /workspaceObjectTypes/],
+    ["action-types", "workspaceDynamicModel", /行动类/],
+  ] as const)("expands the active %s group", (section, groupName, entryName) => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+      </EntitlementContext.Provider>,
+    );
+    expect(screen.getByRole("button", { name: `knowledgeNetwork.${groupName}` })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: entryName })).toBeTruthy();
+  });
+});
 
 describe("KnowledgeNetworkWorkspaceScene object metric navigation", () => {
   beforeEach(() => {
@@ -354,9 +412,10 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
     const actionEntry = screen.getByRole("button", { name: /行动类/ });
-    expect(screen.getByText("knowledgeNetwork.workspaceDynamicModel").nextElementSibling).toBe(
-      actionEntry,
-    );
+    expect(
+      screen.getByRole("button", { name: "knowledgeNetwork.workspaceDynamicModel" })
+        .nextElementSibling?.firstElementChild,
+    ).toBe(actionEntry);
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /API/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
@@ -452,6 +511,7 @@ describe("KnowledgeNetworkWorkspaceScene extension pages", () => {
     expect(page.parentElement?.className).toMatch(/workspaceSectionPage/);
     expect(page.parentElement?.className).toMatch(/workspaceSectionFlush/);
     // The workspace's own entries are still there.
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.workspaceConceptModel" }));
     expect(screen.getByRole("button", { name: /workspaceObjectTypes/ })).toBeTruthy();
     resetExtensionsForTesting();
   });
@@ -487,5 +547,8 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
     </EntitlementContext.Provider>,
   );
   expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
+  expect(
+    screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
+  ).toHaveAttribute("aria-expanded", "true");
   expect(screen.getByTitle("质量评测")).toBeTruthy();
 });
