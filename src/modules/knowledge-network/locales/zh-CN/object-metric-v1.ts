@@ -572,6 +572,7 @@ export const objectMetricV1Part = {
   compositeResultUnitSuggestion: "请检查公式和结果单位，选择与计算结果一致的单位。",
   expressionUnitMismatchPriceSuggestion:
     "若要计算均价，请将公式改为“{{p0}} ÷ {{p1}}”，并检查结果单位。",
+  expressionAveragePriceKeywords: "均价|单价|average price|unit price",
   expressionDimensionless: "无量纲",
   expressionUnitCny: "元 · CNY",
   expressionUnitPiece: "件 · piece",

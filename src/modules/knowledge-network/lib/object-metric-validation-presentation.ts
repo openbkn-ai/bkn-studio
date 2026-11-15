@@ -111,7 +111,10 @@ function unitMismatchPresentation(
   }[node.operator as "add" | "subtract" | "modulo"];
   const leftName = operandName(node.left);
   const rightName = operandName(node.right);
-  const priceIntent = /均价|单价|average price|unit price/i.test(context.metricName ?? "");
+  const metricName = (context.metricName ?? "").toLocaleLowerCase();
+  const priceIntent = objectMetricText("expressionAveragePriceKeywords")
+    .split("|")
+    .some((keyword) => metricName.includes(keyword.toLocaleLowerCase()));
   const rightIsCount =
     right.unit?.quantity_kind === "count" ||
     (node.right.node_type === "dependency" &&

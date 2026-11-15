@@ -1683,6 +1683,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     form.setFieldsValue(derivedBaseMetricFormPatch(base.definition));
   };
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
+    setValidation(undefined);
     setCompositeExpression(next);
     const dependencyTypes = Object.fromEntries(
       dependencies.flatMap((dependency) => {

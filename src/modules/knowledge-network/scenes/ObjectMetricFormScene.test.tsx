@@ -1525,6 +1525,93 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot.unitCode).toBeUndefined();
   }, 60_000);
 
+  it("clears a formula validation highlight when the formula changes", async () => {
+    const amount = createObjectMetricDefinitionV1("atomic", "order");
+    amount.id = "amount";
+    amount.name = "实付金额";
+    amount.lifecycle.status = "published";
+    amount.result_semantics.value = {
+      physical_type: "decimal",
+      precision: 18,
+      rounding_mode: "half_up",
+      scale: 6,
+      semantic_type: "amount",
+      unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+    };
+    const count = createObjectMetricDefinitionV1("atomic", "order");
+    count.id = "count";
+    count.name = "订单数";
+    count.lifecycle.status = "published";
+    count.result_semantics.value = {
+      physical_type: "int64",
+      semantic_type: "count",
+      unit: { code: "1", quantity_kind: "count", scale_factor: 1, system: "UCUM" },
+    };
+    const draft = createObjectMetricDefinitionV1("composite", "order");
+    draft.id = "average-draft";
+    draft.code = "average_draft";
+    draft.name = "平均实付金额";
+    draft.description = "每单平均实付金额";
+    draft.result_semantics.value = amount.result_semantics.value;
+    if (draft.specification.kind !== "composite") throw new Error("expected composite metric");
+    draft.specification.dependencies = [
+      {
+        alias: "total",
+        metric_ref: { metric_id: "amount", version: 1 },
+        object_alignment: { mode: "same_object", deduplication: "none" },
+        evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+      },
+      {
+        alias: "orders",
+        metric_ref: { metric_id: "count", version: 1 },
+        object_alignment: { mode: "same_object", deduplication: "none" },
+        evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+      },
+    ];
+    draft.specification.expression = {
+      node_type: "binary",
+      operator: "divide",
+      left: { node_type: "dependency", dependency_alias: "total" },
+      right: { node_type: "dependency", dependency_alias: "orders" },
+    };
+    mocks.routeParams.current = { metricId: draft.id, networkId: "network-1" };
+    mocks.getObjectMetricV1.mockResolvedValue({ definition: draft });
+    mocks.listObjectMetricsV1.mockResolvedValue({
+      entries: [{ definition: amount }, { definition: count }],
+      total_count: 2,
+    });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    mocks.validateObjectMetricV1.mockResolvedValueOnce({
+      valid: false,
+      issues: [
+        {
+          code: "expression_unit_mismatch",
+          field: "specification.expression",
+          message: "incompatible units",
+        },
+      ],
+      output_shape: "summary",
+    });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+    await screen.findByText("实付金额");
+    await screen.findByText("订单数");
+    fireEvent.click(getButtonByText("语义校验"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    expect(await screen.findByText("定位到运算公式")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "运算符" }).closest(".ant-select")).toHaveClass(
+      "ant-select-status-error",
+    );
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "运算符" }));
+    fireEvent.click(await screen.findByText("加"));
+
+    await waitFor(() => expect(screen.queryByText("定位到运算公式")).not.toBeInTheDocument());
+    expect(screen.getByRole("combobox", { name: "运算符" }).closest(".ant-select")).not.toHaveClass(
+      "ant-select-status-error",
+    );
+  });
+
   it("resets inherited fields when AI changes a derived metric's base metric", async () => {
     const ref = (propertyName: string) => ({
       object_type_id: "order",

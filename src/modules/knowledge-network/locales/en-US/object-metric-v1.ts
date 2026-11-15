@@ -647,6 +647,7 @@ export const objectMetricV1Part = {
     "Review the formula and select a result unit that matches its output.",
   expressionUnitMismatchPriceSuggestion:
     "To calculate an average price, use “{{p0}} ÷ {{p1}}” and review the result unit.",
+  expressionAveragePriceKeywords: "average price|unit price",
   expressionDimensionless: "dimensionless",
   expressionUnitCny: "CNY",
   expressionUnitPiece: "piece",
