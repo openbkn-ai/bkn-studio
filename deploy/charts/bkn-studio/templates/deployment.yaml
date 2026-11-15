@@ -17,6 +17,11 @@ spec:
     metadata:
       labels:
         app: {{ .Values.image.name }}
+      {{- if ne (include "bkn-studio.runtime" .) "{}" }}
+      annotations:
+        # A changed runtime config rolls the pods, so the new config.js is served.
+        checksum/runtime: {{ include "bkn-studio.runtime" . | sha256sum }}
+      {{- end }}
     spec:
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -49,13 +54,13 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if not .Values.auth.enabled }}
+          {{- if ne (include "bkn-studio.runtime" .) "{}" }}
           volumeMounts:
             - name: runtime-config
               mountPath: /usr/share/nginx/html/studio/config.js
               subPath: config.js
           {{- end }}
-      {{- if not .Values.auth.enabled }}
+      {{- if ne (include "bkn-studio.runtime" .) "{}" }}
       volumes:
         - name: runtime-config
           configMap:

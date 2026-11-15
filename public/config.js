@@ -14,4 +14,5 @@
 // A deployment that does not run some services can also leave their entries out
 // of the side navigation and the knowledge-network workspace, by key:
 //   window.__BKN_STUDIO_RUNTIME__ = { hiddenNavigation: ["bkn-project", "observability"] };
+// With the Helm chart, set these through its `runtime` value: it renders this file.
 window.__BKN_STUDIO_RUNTIME__ = window.__BKN_STUDIO_RUNTIME__ || {};
