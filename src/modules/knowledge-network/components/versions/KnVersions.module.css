@@ -403,15 +403,6 @@
   word-break: break-word;
 }
 
-.titleSlot {
-  display: inline-flex;
-  align-items: center;
-}
-
-.titleSlot:empty {
-  display: none;
-}
-
 .pickerActions {
   display: flex;
   flex-direction: column;

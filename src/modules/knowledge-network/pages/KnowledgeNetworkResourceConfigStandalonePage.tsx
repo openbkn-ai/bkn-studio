@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 
 import { TopBar } from "@/app/shell/TopBar";
+import { ShellTrailSlotProvider } from "@/app/shell/workspace-slots";
 
 type KnowledgeNetworkResourceConfigStandalonePageProps = {
   children: ReactNode;
@@ -19,19 +20,22 @@ export function KnowledgeNetworkResourceConfigStandalonePage({
   immersive = false,
 }: KnowledgeNetworkResourceConfigStandalonePageProps) {
   return (
-    <div
-      className={
-        immersive
-          ? "knowledge-workspace-shell knowledge-workspace-shell-immersive"
-          : "knowledge-workspace-shell"
-      }
-    >
-      {/* 与控制台同款顶栏，保持全站一致 */}
-      {immersive ? null : <TopBar />}
+    // Pages that host the workspace (e.g. evals) put its version picker after this TopBar's trail.
+    <ShellTrailSlotProvider>
+      <div
+        className={
+          immersive
+            ? "knowledge-workspace-shell knowledge-workspace-shell-immersive"
+            : "knowledge-workspace-shell"
+        }
+      >
+        {/* 与控制台同款顶栏，保持全站一致 */}
+        {immersive ? null : <TopBar />}
 
-      <main className="knowledge-workspace-main">
-        <div className="knowledge-workspace-scene-host">{children}</div>
-      </main>
-    </div>
+        <main className="knowledge-workspace-main">
+          <div className="knowledge-workspace-scene-host">{children}</div>
+        </main>
+      </div>
+    </ShellTrailSlotProvider>
   );
 }
