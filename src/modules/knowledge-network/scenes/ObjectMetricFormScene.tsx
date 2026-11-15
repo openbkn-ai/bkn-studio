@@ -1399,6 +1399,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   });
   const [formValidationIssueCount, setFormValidationIssueCount] = useState(0);
   const [validation, setValidation] = useState<ObjectMetricValidationResultV1>();
+  const [validationDefinition, setValidationDefinition] = useState<ObjectMetricDefinitionV1>();
   const [preview, setPreview] = useState<ObjectMetricPreviewV1>();
   const [trialDefinition, setTrialDefinition] = useState<ObjectMetricDefinitionV1>();
   const [aiPromptRequest, setAiPromptRequest] = useState<
@@ -1539,6 +1540,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const roundingMode = Form.useWatch("roundingMode", form);
   const scale = Form.useWatch("scale", form);
   const semanticType = Form.useWatch("semanticType", form);
+  const metricName = Form.useWatch("name", form);
   const unitCode = Form.useWatch("unitCode", form);
   const unitScaleFactor = Form.useWatch("unitScaleFactor", form);
   const unitSystem = Form.useWatch("unitSystem", form);
@@ -1546,9 +1548,46 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   // as the empty collection so a server-side contract variation cannot crash the
   // authoring screen while a compatibility deployment is rolling out.
   const validationIssues = validation?.issues ?? [];
-  const presentedValidationIssues = validationIssues.map((issue) =>
-    presentObjectMetricValidationIssue(issue, { aggregation }),
+  const validationSpec = validationDefinition?.specification;
+  const validationDependencies = Object.fromEntries(
+    (validationSpec?.kind === "composite" ? validationSpec.dependencies : dependencies).flatMap(
+      (dependency) => {
+        const selected = publishedMetrics.find(
+          (item) =>
+            item.definition.id === dependency.metric_ref.metric_id &&
+            item.definition.version === dependency.metric_ref.version,
+        );
+        return selected
+          ? [
+              [
+                dependency.alias,
+                {
+                  name: selected.definition.name,
+                  value: selected.definition.result_semantics.value,
+                },
+              ] as const,
+            ]
+          : [];
+      },
+    ),
   );
+  const presentedValidationIssues = validationIssues.map((issue) =>
+    presentObjectMetricValidationIssue(issue, {
+      aggregation,
+      dependencies: validationDependencies,
+      expression: validationSpec?.kind === "composite" ? validationSpec.expression : undefined,
+      metricName: validationDefinition?.name ?? metricName,
+    }),
+  );
+  const expressionErrorPath = presentedValidationIssues.find((issue) => issue.focusPath)?.focusPath;
+  const focusExpressionIssue = (path: string) => {
+    const target =
+      [...document.querySelectorAll<HTMLElement>("[data-expression-path]")].find(
+        (element) => element.dataset.expressionPath === path,
+      ) ?? document.getElementById("object-metric-expression-editor");
+    target?.scrollIntoView?.({ block: "center" });
+    target?.focus();
+  };
   const compatibleUnitOptions = objectMetricUnitOptions(
     semanticType,
     physicalType,
@@ -1644,6 +1683,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     form.setFieldsValue(derivedBaseMetricFormPatch(base.definition));
   };
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
+    setValidation(undefined);
     setCompositeExpression(next);
     const dependencyTypes = Object.fromEntries(
       dependencies.flatMap((dependency) => {
@@ -3007,6 +3047,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const next = await buildCompleteDefinition();
     if (!next) return;
     const result = await validateObjectMetricV1(networkId, next);
+    setValidationDefinition(next);
     setValidation(result);
     if (!result.valid) return;
     const saved = record
@@ -3044,6 +3085,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const next = await buildCompleteDefinition();
     if (!next) return false;
     const result = await validateObjectMetricV1(networkId, next);
+    setValidationDefinition(next);
     setValidation(result);
     if (!result.valid) return false;
     setTrialDefinition(next);
@@ -3082,6 +3124,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         return;
       }
       setValidation(result);
+      setValidationDefinition(next);
       const contract = result.valid ? await previewObjectMetricV1(networkId, next) : undefined;
       if (currentAiSnapshotGetterRef.current() !== snapshot) {
         appendAiReply(objectMetricText("aiDiagnosticStale"));
@@ -3089,6 +3132,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       }
       const checked = contract?.validation ?? result;
       setValidation(checked);
+      setValidationDefinition(next);
       const data: Omit<ObjectMetricDesignDiagnostic, "form_revision"> = {
         kind: "validation",
         status: checked.valid ? "valid" : "invalid",
@@ -3151,6 +3195,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const saved = await save();
     if (!saved) return;
     const result = await validateObjectMetricV1(networkId, saved.definition);
+    setValidationDefinition(saved.definition);
     setValidation(result);
     if (!result.valid) return;
     const validated = await validateObjectMetricVersionV1(
@@ -3158,15 +3203,21 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       saved.definition.id,
       saved.definition.version,
     );
+    if (!validated || validated.definition.lifecycle.status !== "validated") return;
+    let completedOperation: "validated" | "published" = "validated";
+    let completedVersion = validated.definition.version;
     if (knVersioned) {
       // The network's publish takes a validated metric live; a metric-level publish is not needed.
       void message.success(t("knowledgeNetwork.versions.metricValidated"));
     } else {
-      await publishObjectMetricV1(
+      const published = await publishObjectMetricV1(
         networkId,
-        validated?.definition.id ?? saved.definition.id,
-        validated?.definition.version ?? saved.definition.version,
+        validated.definition.id,
+        validated.definition.version,
       );
+      if (!published || published.definition.lifecycle.status !== "published") return;
+      completedOperation = "published";
+      completedVersion = published.definition.version;
       void message.success(objectMetricText("mbf73c8faca59"));
     }
     if (navigationContext) {
@@ -3174,8 +3225,17 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       return;
     }
     void navigate(
-      `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/detail`,
-      { state: { justPublished: true, knowledgeNetworkReturnTo: returnTo } },
+      `/knowledge-network/workspace/${networkId}/metrics/${saved.definition.id}/detail?version=${completedVersion}`,
+      {
+        state: {
+          metricOperation: {
+            kind: completedOperation,
+            metricId: saved.definition.id,
+            version: completedVersion,
+          },
+          knowledgeNetworkReturnTo: returnTo,
+        },
+      },
     );
   };
 
@@ -4482,7 +4542,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     </div>
                   </div>
                   {dependencies.filter(selectedDependencyMetric).length >= 2 ? (
-                    <div className={styles.editorBox}>
+                    <div
+                      className={styles.editorBox}
+                      id="object-metric-expression-editor"
+                      tabIndex={-1}
+                    >
                       <ObjectMetricExpressionEditor
                         allowedFunctions={capabilities?.functions}
                         allowedOperators={capabilities?.expression_operators}
@@ -4490,6 +4554,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           .filter(selectedDependencyMetric)
                           .map((item) => item.alias)
                           .filter(Boolean)}
+                        errorPath={expressionErrorPath}
                         onChange={updateCompositeExpression}
                         properties={[]}
                         value={compositeExpression}
@@ -5304,10 +5369,29 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         <li key={`${issue.location}-${issue.problem}-${index}`}>
                           <strong>{issue.location}</strong>
                           <span>{issue.problem}</span>
+                          {issue.detail ? <span>{issue.detail}</span> : null}
                           <span className={styles.validationSuggestion}>
                             {objectMetricText("mf99abae6107a")}
                             {issue.suggestion}
                           </span>
+                          {issue.focusPath ? (
+                            <Button
+                              onClick={() => {
+                                if (issue.focusPath) focusExpressionIssue(issue.focusPath);
+                              }}
+                              type="link"
+                            >
+                              {objectMetricText("expressionLocateError")}
+                            </Button>
+                          ) : null}
+                          {issue.technicalDetails ? (
+                            <details>
+                              <summary>{objectMetricText("validationTechnicalDetails")}</summary>
+                              <code>{issue.technicalDetails.code}</code>
+                              <code>{issue.technicalDetails.field}</code>
+                              <span>{issue.technicalDetails.message}</span>
+                            </details>
+                          ) : null}
                         </li>
                       ))}
                     </ul>

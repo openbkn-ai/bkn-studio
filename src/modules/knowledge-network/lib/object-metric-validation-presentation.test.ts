@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import i18n from "@/app/locales/i18n";
+
 import { presentObjectMetricValidationIssue } from "@/modules/knowledge-network/lib/object-metric-validation-presentation";
 
 describe("object metric validation presentation", () => {
@@ -27,7 +29,7 @@ describe("object metric validation presentation", () => {
     });
   });
 
-  it("does not expose an unknown backend field path or English message", () => {
+  it("keeps unknown backend details collapsed behind a readable fallback", () => {
     const presentation = presentObjectMetricValidationIssue({
       code: "invalid_future_rule",
       field: "specification.future.internal_path",
@@ -35,8 +37,139 @@ describe("object metric validation presentation", () => {
     });
 
     expect(presentation.location).toBe("当前配置");
-    expect(JSON.stringify(presentation)).not.toContain("specification.future.internal_path");
-    expect(JSON.stringify(presentation)).not.toContain("internal validation detail");
+    expect(presentation.problem).not.toContain("specification.future.internal_path");
+    expect(presentation.problem).not.toContain("internal validation detail");
+    expect(presentation.technicalDetails).toEqual({
+      code: "invalid_future_rule",
+      field: "specification.future.internal_path",
+      message: "internal validation detail",
+    });
+  });
+
+  it("explains the exact amount and count conflict in an average-price formula", async () => {
+    const issue = {
+      code: "expression_unit_mismatch",
+      field: "specification.expression",
+      message: "addition, subtraction, and modulo require compatible units",
+    };
+    const context: NonNullable<Parameters<typeof presentObjectMetricValidationIssue>[1]> = {
+      metricName: "商品销售均价",
+      expression: {
+        node_type: "binary",
+        operator: "add",
+        left: { node_type: "dependency", dependency_alias: "amount" },
+        right: { node_type: "dependency", dependency_alias: "quantity" },
+      },
+      dependencies: {
+        amount: {
+          name: "实付总金额",
+          value: {
+            physical_type: "decimal",
+            semantic_type: "amount",
+            unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+          },
+        },
+        quantity: {
+          name: "销售件数",
+          value: {
+            physical_type: "int64",
+            semantic_type: "count",
+            unit: {
+              code: "piece",
+              quantity_kind: "custom",
+              scale_factor: 1,
+              system: "registered",
+            },
+          },
+        },
+      },
+    };
+    const presentation = presentObjectMetricValidationIssue(issue, context);
+
+    expect(presentation.problem).toBe("实付总金额与销售件数的单位不同，不能直接相加。");
+    expect(presentation.detail).toContain("实付总金额（元 · CNY） + 销售件数（件 · piece）");
+    expect(presentation.suggestion).toContain("实付总金额 ÷ 销售件数");
+    expect(presentation.focusPath).toBe("specification.expression");
+
+    try {
+      await i18n.changeLanguage("en-US");
+      expect(presentObjectMetricValidationIssue(issue, context).suggestion).toContain(
+        "实付总金额 ÷ 销售件数",
+      );
+    } finally {
+      await i18n.changeLanguage("zh-CN");
+    }
+  });
+
+  it("locates a nested conflict and does not recommend division for unrelated metrics", () => {
+    const presentation = presentObjectMetricValidationIssue(
+      {
+        code: "expression_unit_mismatch",
+        field: "specification.expression.right",
+        message: "incompatible units",
+      },
+      {
+        metricName: "库存合计",
+        expression: {
+          node_type: "binary",
+          operator: "multiply",
+          left: { node_type: "literal", value_type: "int64", value: 2 },
+          right: {
+            node_type: "binary",
+            operator: "add",
+            left: { node_type: "dependency", dependency_alias: "amount" },
+            right: { node_type: "dependency", dependency_alias: "quantity" },
+          },
+        },
+        dependencies: {
+          amount: {
+            name: "金额",
+            value: {
+              physical_type: "decimal",
+              semantic_type: "amount",
+              unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+            },
+          },
+          quantity: {
+            name: "件数",
+            value: {
+              physical_type: "int64",
+              semantic_type: "count",
+              unit: {
+                code: "piece",
+                quantity_kind: "custom",
+                scale_factor: 1,
+                system: "registered",
+              },
+            },
+          },
+        },
+      },
+    );
+
+    expect(presentation.focusPath).toBe("specification.expression.right");
+    expect(presentation.detail).toContain("金额（元 · CNY） + 件数（件 · piece）");
+    expect(presentation.suggestion).not.toContain("÷");
+  });
+
+  it("keeps other known unit errors specific", () => {
+    expect(
+      presentObjectMetricValidationIssue({
+        code: "function_argument_unit_mismatch",
+        field: "specification.expression.right",
+        message: "function arguments must have compatible units",
+      }),
+    ).toMatchObject({
+      problem: "函数使用的参数单位不一致。",
+      focusPath: "specification.expression.right",
+    });
+    expect(
+      presentObjectMetricValidationIssue({
+        code: "composite_result_unit_mismatch",
+        field: "result_semantics.value.unit",
+        message: "declared result unit does not match the expression",
+      }).problem,
+    ).toBe("公式结果单位与“结果与分析”中配置的单位不一致。");
   });
 
   it("explains why a derived metric needs a business qualifier", () => {

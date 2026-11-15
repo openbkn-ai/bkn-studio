@@ -6,17 +6,150 @@
  */
 
 import type { ObjectMetricValidationIssueV1 } from "@/modules/knowledge-network/types/object-metric";
-import { objectMetricText } from "@/modules/knowledge-network/lib/object-metric-text";
+import type {
+  ObjectMetricExpressionV1,
+  ObjectMetricValueSemanticsV1,
+} from "@/modules/knowledge-network/types/object-metric";
+import {
+  expressionLabel,
+  inferCompositeExpressionValueV1,
+  replaceObjectMetricDependencyAliases,
+} from "@/modules/knowledge-network/components/object-metric/object-metric-model";
+import { objectMetricUnitDisplayLabel } from "@/modules/knowledge-network/lib/object-metric-unit-catalog";
+import {
+  objectMetricAveragePriceKeywords,
+  objectMetricText,
+} from "@/modules/knowledge-network/lib/object-metric-text";
 
 export type ObjectMetricValidationIssuePresentation = {
   location: string;
   problem: string;
   suggestion: string;
+  detail?: string;
+  focusPath?: string;
+  technicalDetails?: ObjectMetricValidationIssueV1;
 };
 
 type PresentationContext = {
   aggregation?: string;
+  expression?: ObjectMetricExpressionV1;
+  metricName?: string;
+  dependencies?: Readonly<Record<string, { name: string; value: ObjectMetricValueSemanticsV1 }>>;
 };
+
+function expressionAtPath(expression: ObjectMetricExpressionV1, field: string) {
+  const root = "specification.expression";
+  if (field !== root && !field.startsWith(`${root}.`)) return undefined;
+  let current = expression;
+  let remaining = field.slice(root.length);
+  while (remaining) {
+    const match = /^(?:\.(left|right)|\.arguments\[(\d+)\])/.exec(remaining);
+    if (!match) return undefined;
+    const side = match[1];
+    if (side === "left" && (current.node_type === "binary" || current.node_type === "unary")) {
+      current = current.left;
+    } else if (side === "right" && current.node_type === "binary") {
+      current = current.right;
+    } else if (match[2] && current.node_type === "call") {
+      current = current.arguments[Number(match[2])];
+      if (!current) return undefined;
+    } else return undefined;
+    remaining = remaining.slice(match[0].length);
+  }
+  return current;
+}
+
+function unitMismatchPresentation(
+  issue: ObjectMetricValidationIssueV1,
+  context: PresentationContext,
+): ObjectMetricValidationIssuePresentation {
+  const location = validationLocation(issue.field);
+  const fallback = {
+    location,
+    problem: objectMetricText("expressionUnitMismatchGeneric"),
+    suggestion: objectMetricText("expressionUnitMismatchSuggestion"),
+    focusPath: issue.field.startsWith("specification.expression")
+      ? issue.field
+      : "specification.expression",
+  };
+  if (!context.expression || !context.dependencies) return fallback;
+  const node = expressionAtPath(context.expression, issue.field);
+  if (
+    !node ||
+    node.node_type !== "binary" ||
+    !["add", "subtract", "modulo"].includes(node.operator)
+  ) {
+    return fallback;
+  }
+  const values = Object.fromEntries(
+    Object.entries(context.dependencies).map(([alias, dependency]) => [alias, dependency.value]),
+  );
+  const left = inferCompositeExpressionValueV1(node.left, values);
+  const right = inferCompositeExpressionValueV1(node.right, values);
+  if (!left.unitKnown || !right.unitKnown) return fallback;
+  const names = Object.fromEntries(
+    Object.entries(context.dependencies).map(([alias, dependency]) => [alias, dependency.name]),
+  );
+  const operandName = (operand: ObjectMetricExpressionV1) =>
+    operand.node_type === "dependency"
+      ? (context.dependencies?.[operand.dependency_alias]?.name ?? operand.dependency_alias)
+      : expressionLabel(replaceObjectMetricDependencyAliases(operand, names));
+  const unitName = (unit: typeof left.unit) =>
+    !unit
+      ? objectMetricText("expressionDimensionless")
+      : unit.system === "ISO_4217" && unit.code === "CNY"
+        ? objectMetricText("expressionUnitCny")
+        : unit.system === "registered" && unit.code === "piece"
+          ? objectMetricText("expressionUnitPiece")
+          : objectMetricUnitDisplayLabel(unit);
+  const operator = {
+    add: objectMetricText("expressionAddSymbol"),
+    subtract: objectMetricText("expressionSubtractSymbol"),
+    modulo: objectMetricText("expressionModuloSymbol"),
+  }[node.operator as "add" | "subtract" | "modulo"];
+  const operation = {
+    add: objectMetricText("expressionAddVerb"),
+    subtract: objectMetricText("expressionSubtractVerb"),
+    modulo: objectMetricText("expressionModuloVerb"),
+  }[node.operator as "add" | "subtract" | "modulo"];
+  const leftName = operandName(node.left);
+  const rightName = operandName(node.right);
+  const metricName = (context.metricName ?? "").toLocaleLowerCase();
+  const priceIntent = objectMetricAveragePriceKeywords().some((keyword) =>
+    metricName.includes(keyword.toLocaleLowerCase()),
+  );
+  const rightIsCount =
+    right.unit?.quantity_kind === "count" ||
+    (node.right.node_type === "dependency" &&
+      context.dependencies[node.right.dependency_alias]?.value.semantic_type === "count");
+  const canSuggestDivision =
+    priceIntent &&
+    node.operator === "add" &&
+    left.unit?.quantity_kind === "currency" &&
+    rightIsCount;
+  return {
+    location,
+    problem: objectMetricText("expressionUnitMismatchSpecific", {
+      p0: leftName,
+      p1: rightName,
+      p2: operation,
+    }),
+    detail: objectMetricText("expressionUnitMismatchFormula", {
+      p0: leftName,
+      p1: unitName(left.unit),
+      p2: operator,
+      p3: rightName,
+      p4: unitName(right.unit),
+    }),
+    suggestion: canSuggestDivision
+      ? objectMetricText("expressionUnitMismatchPriceSuggestion", {
+          p0: leftName,
+          p1: rightName,
+        })
+      : objectMetricText("expressionUnitMismatchSuggestion"),
+    focusPath: issue.field,
+  };
+}
 
 const fieldLabels = (): ReadonlyArray<readonly [string, string]> => [
   ["specification.measure.expression", objectMetricText("m7995b720bc22")],
@@ -122,6 +255,21 @@ export function presentObjectMetricValidationIssue(
   const location = validationLocation(issue.field);
 
   switch (issue.code) {
+    case "expression_unit_mismatch":
+      return unitMismatchPresentation(issue, context);
+    case "function_argument_unit_mismatch":
+      return {
+        location,
+        problem: objectMetricText("functionArgumentUnitMismatch"),
+        suggestion: objectMetricText("functionArgumentUnitSuggestion"),
+        focusPath: issue.field,
+      };
+    case "composite_result_unit_mismatch":
+      return {
+        location,
+        problem: objectMetricText("compositeResultUnitMismatch"),
+        suggestion: objectMetricText("compositeResultUnitSuggestion"),
+      };
     case "aggregation_input_type_invalid": {
       const aggregation = context.aggregation
         ? (aggregationLabels[context.aggregation] ?? objectMetricText("m8b9263fad19c"))
@@ -325,6 +473,6 @@ export function presentObjectMetricValidationIssue(
         suggestion: objectMetricText("m9108ee54f522"),
       };
     default:
-      return { location, ...genericPresentation(issue) };
+      return { location, ...genericPresentation(issue), technicalDetails: issue };
   }
 }
