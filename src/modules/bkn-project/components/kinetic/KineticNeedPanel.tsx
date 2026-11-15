@@ -322,18 +322,14 @@ export function KineticNeedPanel({
         ) : null}
 
         {state === "implemented" ? null : (
-          <Alert
-            action={
-              metricBlocked && metricsMode === "locked" ? (
-                <AppButton onClick={() => setUpgrading(true)} size="small">
-                  {t(`${PANEL}.upgrade`)}
-                </AppButton>
-              ) : undefined
-            }
-            message={guide}
-            showIcon
-            type="info"
-          />
+          <p className={styles.muted}>
+            {guide}
+            {metricBlocked && metricsMode === "locked" ? (
+              <AppButton onClick={() => setUpgrading(true)} size="small" type="link">
+                {t(`${PANEL}.upgrade`)}
+              </AppButton>
+            ) : null}
+          </p>
         )}
         {canImplement ? (
           <span>

@@ -138,7 +138,7 @@ export function ReleasePublishDialog({
           </Checkbox>
         ) : null}
         {purgedName ? (
-          <Alert message={t(`${PREFIX}.community`, { version: purgedName })} showIcon type="info" />
+          <p className={styles.muted}>{t(`${PREFIX}.community`, { version: purgedName })}</p>
         ) : null}
         <div className={styles.stack}>
           <label className={styles.label} htmlFor="release-notes">

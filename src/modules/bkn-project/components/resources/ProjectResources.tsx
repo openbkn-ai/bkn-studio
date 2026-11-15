@@ -379,18 +379,14 @@ export function ProjectResources({
                     />
                   ) : null}
                   {draft?.status === "ready" && draft.items.adding ? (
-                    <Alert
-                      action={
-                        <AppButton onClick={onGoToModel} size="small">
-                          {t(`${PREFIX}.catalogs.goToModel`)}
-                        </AppButton>
-                      }
-                      message={t("bknProject.model.catalogs.adding", {
+                    <p className={styles.muted}>
+                      {t("bknProject.model.catalogs.adding", {
                         count: draft.items.adding.catalogIds.length,
-                      })}
-                      showIcon
-                      type="info"
-                    />
+                      })}{" "}
+                      <AppButton onClick={onGoToModel} size="small" type="link">
+                        {t(`${PREFIX}.catalogs.goToModel`)}
+                      </AppButton>
+                    </p>
                   ) : null}
                   {project.catalogIds.length ? (
                     <>

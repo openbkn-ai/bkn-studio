@@ -1,0 +1,17 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.icon {
+  margin-inline: 4px;
+  color: var(--color-text-secondary);
+  cursor: help;
+}
+
+.icon:hover,
+.icon:focus-visible {
+  color: var(--color-text-primary);
+}

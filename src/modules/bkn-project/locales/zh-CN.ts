@@ -869,7 +869,6 @@ export const bknProjectZhCN = {
         description: "页面会自动刷新，你可以先离开，稍后再回来。",
       },
       failed: {
-        title: "起草失败",
         interrupted: "起草被中断了，请重新起草。",
         timeout: "起草超时，请重新起草，或减少数据目录。",
         source: "数据源返回了错误，请稍后重新起草。",
@@ -1517,6 +1516,7 @@ export const bknProjectZhCN = {
       },
     },
     notices: {
+      about: "说明",
       expand: "展开",
       collapse: "收起",
     },
@@ -1536,6 +1536,7 @@ export const bknProjectZhCN = {
       stay: "留在这一页",
     },
     readStalled: "暂时读不到最新进度，页面显示的可能不是最新内容。",
+    failedWithReason: "{{what}}：{{reason}}",
     sentenceSeparator: "",
     understand: {
       hint: {
@@ -1554,7 +1555,7 @@ export const bknProjectZhCN = {
         unnamedNew_other:
           "要新起草的表里大多数还没有业务名称（{{count}}/{{total}} 张没有描述），起草出的名称会直接用表名和字段名。网络已有对象类在用的表不算在内。建议先做语义理解，再起草。",
         run: "开始语义理解",
-        ownerOnly: "只有项目负责人可以发起语义理解",
+        ownerOnly: "只有项目负责人可以发起语义理解。",
       },
       button: "语义理解",
       ownerOnly: "只有项目负责人可以运行语义理解",

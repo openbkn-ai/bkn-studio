@@ -6,7 +6,7 @@
  */
 
 import { CheckOutlined } from "@ant-design/icons";
-import { Alert, Progress } from "antd";
+import { Alert, Progress, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -245,13 +245,11 @@ export function ReleasePublish({
             <dt>{t(`${PREFIX}.fields.regression`)}</dt>
             <dd>{regressionLine(prepared.version, true)}</dd>
           </dl>
-          {unchangedAs ? (
-            <Alert
-              message={t(`${PREFIX}.nothingToPublish`, { version: name(running) })}
-              showIcon
-              type="info"
-            />
-          ) : failedQuestions ? (
+          {unchangedAs && !canPublish ? (
+            <p className={styles.muted}>
+              {t(`${PREFIX}.nothingToPublish`, { version: name(running) })}
+            </p>
+          ) : !unchangedAs && failedQuestions ? (
             <Alert
               message={t(`${PREFIX}.regressionFailed`, { count: failedQuestions })}
               showIcon
@@ -260,13 +258,24 @@ export function ReleasePublish({
           ) : null}
           <div className={styles.row}>
             {canPublish ? (
-              <AppButton
-                disabled={Boolean(unchangedAs)}
-                onClick={() => setPublishing(true)}
-                type="primary"
+              // Why there is nothing to publish is said when hovering the greyed button.
+              <Tooltip
+                title={
+                  unchangedAs
+                    ? t(`${PREFIX}.nothingToPublish`, { version: name(running) })
+                    : undefined
+                }
               >
-                {t(`${PREFIX}.publishVersion`, { version: prepared.version })}
-              </AppButton>
+                <span>
+                  <AppButton
+                    disabled={Boolean(unchangedAs)}
+                    onClick={() => setPublishing(true)}
+                    type="primary"
+                  >
+                    {t(`${PREFIX}.publishVersion`, { version: prepared.version })}
+                  </AppButton>
+                </span>
+              </Tooltip>
             ) : null}
             {reviewButton}
           </div>

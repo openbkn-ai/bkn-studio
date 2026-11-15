@@ -155,13 +155,6 @@
   justify-content: flex-end;
 }
 
-.confirmWaiting {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  margin-right: auto;
-  text-align: left;
-}
-
 .networkCatalogs {
   display: flex;
   flex-direction: column;

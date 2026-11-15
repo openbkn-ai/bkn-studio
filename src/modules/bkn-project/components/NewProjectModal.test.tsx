@@ -298,7 +298,7 @@ describe("NewProjectModal", () => {
   it("shows why the catalogs could not be loaded", () => {
     renderModal(vi.fn(), "catalogs are down");
 
-    expect(screen.getByText("bknProject.create.catalogsLoadFailed")).toBeInTheDocument();
-    expect(screen.getByText("catalogs are down")).toBeInTheDocument();
+    // One line: what failed, then why.
+    expect(screen.getByText("bknProject.failedWithReason")).toBeInTheDocument();
   });
 });

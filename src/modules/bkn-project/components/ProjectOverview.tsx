@@ -809,8 +809,10 @@ export function ProjectOverview({
                   {t("common.retry")}
                 </AppButton>
               }
-              description={draftError}
-              message={t("bknProject.overview.model.loadFailed")}
+              message={t("bknProject.failedWithReason", {
+                reason: draftError,
+                what: t("bknProject.overview.model.loadFailed"),
+              })}
               showIcon
               type="warning"
             />

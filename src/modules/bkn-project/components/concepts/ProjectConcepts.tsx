@@ -564,8 +564,10 @@ export function ProjectConcepts({
             {t("common.retry")}
           </AppButton>
         }
-        description={loadError}
-        message={t(`${PREFIX}.loadFailed`)}
+        message={t("bknProject.failedWithReason", {
+          reason: loadError,
+          what: t(`${PREFIX}.loadFailed`),
+        })}
         showIcon
         type="error"
       />
@@ -667,13 +669,12 @@ export function ProjectConcepts({
   // One notice at most, for what needs the person: tables still named by their table names, then
   // requirement concepts nothing in the data is yet.
   const notice = run ? null : concepts.notUnderstood ? (
-    <Alert
-      message={t(`${PREFIX}.notice.${canEdit ? "notUnderstood" : "notUnderstoodReadOnly"}`, {
+    // Said as how extraction goes, not as something to settle: a quiet line.
+    <p className={styles.muted}>
+      {t(`${PREFIX}.notice.${canEdit ? "notUnderstood" : "notUnderstoodReadOnly"}`, {
         count: concepts.notUnderstood,
       })}
-      showIcon
-      type="info"
-    />
+    </p>
   ) : waiting.length ? (
     <Alert
       action={
@@ -780,7 +781,14 @@ export function ProjectConcepts({
                   {t(`${PREFIX}.${run ? "running" : extracted ? "reextract" : "extract"}`)}
                 </AppButton>
               ) : (
-                <span className={styles.muted}>{t(`${PREFIX}.readOnly`)}</span>
+                // Who may extract is said when hovering the greyed button.
+                <Tooltip title={t(`${PREFIX}.readOnly`)}>
+                  <span>
+                    <AppButton disabled type="primary">
+                      {t(`${PREFIX}.${extracted ? "reextract" : "extract"}`)}
+                    </AppButton>
+                  </span>
+                </Tooltip>
               )}
               <AppButton onClick={onGoToModel}>{t(`${PREFIX}.goToModel`)}</AppButton>
               {askButton}

@@ -179,8 +179,10 @@ export function ProjectWorkspaceScene({
               {t("common.retry")}
             </AppButton>
           }
-          description={loadError}
-          message={t("bknProject.workspace.loadFailed")}
+          message={t("bknProject.failedWithReason", {
+            reason: loadError,
+            what: t("bknProject.workspace.loadFailed"),
+          })}
           showIcon
           type="error"
         />

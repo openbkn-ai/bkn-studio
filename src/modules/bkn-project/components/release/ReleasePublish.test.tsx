@@ -992,10 +992,12 @@ describe("ReleasePublish", () => {
     fireEvent.click(screen.getByRole("button", { name: "发布 v1.0.3" }));
     fireEvent.click((await dialog()).getByRole("button", { name: /^发\s?布$/ }));
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "发布 v1.0.3" })).toBeDisabled());
+    // Why there is nothing to publish is said when hovering the greyed button.
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "发布 v1.0.3" }).parentElement!);
     expect(
       await screen.findByText("网络没有变化。确认的内容与运行版本 v1.0.2 相同，不需要发布。"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "发布 v1.0.3" })).toBeDisabled();
     expect(onChanged).not.toHaveBeenCalled();
   });
 

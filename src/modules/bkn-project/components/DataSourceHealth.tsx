@@ -249,11 +249,9 @@ export function DataSourceHealth({
         ) : null}
         {/* Tables recreated under their names are bound again on their own: said once, as done. */}
         {sources.reconnected ? (
-          <Alert
-            message={t(`${PREFIX}.reconnected`, { count: sources.reconnected })}
-            showIcon
-            type="info"
-          />
+          <p className={styles.muted}>
+            {t(`${PREFIX}.reconnected`, { count: sources.reconnected })}
+          </p>
         ) : null}
         {unreachable.length ? (
           <p className={styles.muted}>

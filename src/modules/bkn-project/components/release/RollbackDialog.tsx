@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Modal, Spin } from "antd";
+import { Alert, Modal, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -116,6 +116,17 @@ export function RollbackDialog({
       cancelText={t("common.cancel")}
       confirmLoading={rolling}
       destroyOnHidden
+      footer={(_, { CancelBtn, OkBtn }) => (
+        <>
+          <CancelBtn />
+          {/* Who may switch is said when hovering the greyed button. */}
+          <Tooltip title={canRollBack ? undefined : t(`${PREFIX}.ownerOnly`)}>
+            <span>
+              <OkBtn />
+            </span>
+          </Tooltip>
+        </>
+      )}
       okButtonProps={{ disabled: !plan || refused || !canRollBack }}
       okText={t(`${PREFIX}.confirm`)}
       onCancel={onCancel}
@@ -185,10 +196,9 @@ export function RollbackDialog({
                   />
                 </div>
               ) : null}
-              <Alert message={t(`${PREFIX}.projectStays`)} showIcon type="info" />
+              <p className={styles.muted}>{t(`${PREFIX}.projectStays`)}</p>
             </>
           ) : null}
-          {canRollBack ? null : <p className={styles.muted}>{t(`${PREFIX}.ownerOnly`)}</p>}
         </div>
       )}
     </Modal>

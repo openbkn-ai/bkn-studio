@@ -290,8 +290,10 @@ export function ProjectImport({
             <div className={styles.stack}>
               {catalogsError ? (
                 <Alert
-                  description={catalogsError}
-                  message={t("bknProject.create.catalogsLoadFailed")}
+                  message={t("bknProject.failedWithReason", {
+                    reason: catalogsError,
+                    what: t("bknProject.create.catalogsLoadFailed"),
+                  })}
                   showIcon
                   type="error"
                 />

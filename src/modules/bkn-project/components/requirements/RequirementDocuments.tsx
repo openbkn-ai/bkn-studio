@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Modal, Select, Upload } from "antd";
+import { Modal, Select, Upload } from "antd";
 import type { RcFile } from "antd/es/upload";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -277,7 +277,7 @@ function UploadDialog({
           >
             <p>{t(`${PREFIX}.drop`)}</p>
           </Upload.Dragger>
-          <Alert message={t(`${PREFIX}.limits`)} showIcon type="info" />
+          <p className={styles.muted}>{t(`${PREFIX}.limits`)}</p>
         </div>
       )}
     </Modal>

@@ -939,7 +939,6 @@ export const bknProjectEnUS = {
         description: "This page refreshes by itself; you may leave it and come back.",
       },
       failed: {
-        title: "Drafting failed",
         interrupted: "Drafting was interrupted. Draft again.",
         timeout: "Drafting took too long. Draft again, or select fewer data catalogs.",
         source: "The data source answered with an error. Draft again later.",
@@ -1623,6 +1622,7 @@ export const bknProjectEnUS = {
       },
     },
     notices: {
+      about: "About this",
       expand: "Show",
       collapse: "Hide",
     },
@@ -1642,6 +1642,7 @@ export const bknProjectEnUS = {
       stay: "Stay on this page",
     },
     readStalled: "Couldn't get the latest progress. What you see may be out of date.",
+    failedWithReason: "{{what}}: {{reason}}",
     sentenceSeparator: " ",
     understand: {
       hint: {
@@ -1660,7 +1661,7 @@ export const bknProjectEnUS = {
         unnamedNew_other:
           "Most of the new tables to draft have no business names yet ({{count}} of {{total}} have no description), so drafting would name items after table and field names. Tables the network's object types already read are not counted. Run semantic understanding first, then draft.",
         run: "Run semantic understanding",
-        ownerOnly: "Only the project owner can run semantic understanding",
+        ownerOnly: "Only the project owner can run semantic understanding.",
       },
       button: "Semantic understanding",
       ownerOnly: "Only the project owner can run semantic understanding",

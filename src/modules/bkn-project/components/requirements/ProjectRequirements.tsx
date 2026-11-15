@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { LoadingOutlined } from "@ant-design/icons";
 import { Alert, Segmented, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +20,7 @@ import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
 import { SelectionBar } from "@/modules/bkn-project/components/ai/SelectionBar";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
+import { InfoHint } from "@/modules/bkn-project/components/InfoHint";
 import { type Notice, NoticeList } from "@/modules/bkn-project/components/NoticeList";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
@@ -622,28 +624,31 @@ export function ProjectRequirements({
                 <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
               ) : null}
               {!requirements || (ready && !started) ? (
-                <Alert
-                  action={
-                    <AppButton onClick={() => onGoToResources("documents")} size="small">
-                      {t(`${PREFIX}.goToDocuments`)}
-                    </AppButton>
-                  }
-                  description={t(
-                    documents?.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
-                  )}
-                  message={t(`${PREFIX}.notDrafted`)}
-                  showIcon
-                  type="info"
-                />
+                // Nothing generated yet: one quiet line, how documents are used on hover.
+                <p className={styles.muted}>
+                  {t(`${PREFIX}.notDrafted`)}
+                  <InfoHint
+                    text={t(
+                      documents?.length ? `${PREFIX}.notDraftedDocuments` : `${PREFIX}.noDocuments`,
+                    )}
+                  />
+                  <AppButton onClick={() => onGoToResources("documents")} size="small" type="link">
+                    {t(`${PREFIX}.goToDocuments`)}
+                  </AppButton>
+                </p>
               ) : isDrafting ? (
-                <Alert message={draftingText} showIcon type="info" />
+                <p className={styles.muted}>
+                  <LoadingOutlined /> {draftingText}
+                </p>
               ) : requirements?.status === "failed" ? (
                 <Alert message={draftErrorText(t, requirements.error)} showIcon type="error" />
               ) : ready && requirements?.error ? (
                 // Generating again failed: the version below is the one before it, still editable.
                 <Alert
-                  description={draftErrorText(t, requirements.error)}
-                  message={t(`${PREFIX}.redraftFailed`)}
+                  message={[
+                    t(`${PREFIX}.redraftFailed`),
+                    draftErrorText(t, requirements.error),
+                  ].join(t("bknProject.sentenceSeparator"))}
                   showIcon
                   type="warning"
                 />

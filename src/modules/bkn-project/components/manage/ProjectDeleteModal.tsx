@@ -79,18 +79,13 @@ export function ProjectDeleteModal({
       title={t("bknProject.manage.delete.title", { name: project?.name ?? "" })}
     >
       <div className={styles.stack}>
-        <Alert
-          description={
-            <ul className={styles.list}>
-              <li>{t("bknProject.manage.delete.removes")}</li>
-              <li>{t("bknProject.manage.delete.withdraws")}</li>
-              <li>{t("bknProject.manage.delete.keeps")}</li>
-            </ul>
-          }
-          message={t("bknProject.manage.delete.warning")}
-          showIcon
-          type="warning"
-        />
+        <Alert message={t("bknProject.manage.delete.warning")} showIcon type="warning" />
+        {/* What goes and what stays, as plain lines under the one-line warning. */}
+        <ul className={styles.list}>
+          <li>{t("bknProject.manage.delete.removes")}</li>
+          <li>{t("bknProject.manage.delete.withdraws")}</li>
+          <li>{t("bknProject.manage.delete.keeps")}</li>
+        </ul>
         <label className={styles.field}>
           <span>{t("bknProject.manage.delete.typeName", { name: project?.name ?? "" })}</span>
           <Input

@@ -233,20 +233,19 @@ export function ConfirmDraft({
       : "bknProject.confirm.button",
   );
   if (!action.allowed) {
-    // Why confirming waits is said beside the button, not only when hovering it.
+    // Why confirming waits is said when hovering the greyed button.
     const why =
       (linkMismatch && mismatched.length
         ? linkTypesText(t, draft, mismatched[0], mismatched.length - 1)
         : null) ?? blockedText(t, action.reason, status.blockers);
     return (
-      <span className={styles.confirmBlocked}>
-        <AppButton aria-describedby="confirm-blocked-reason" disabled type="primary">
-          {label}
-        </AppButton>
-        <span className={styles.confirmWaiting} id="confirm-blocked-reason" role="status">
-          {why}
+      <Tooltip title={why}>
+        <span className={styles.confirmBlocked}>
+          <AppButton disabled type="primary">
+            {label}
+          </AppButton>
         </span>
-      </span>
+      </Tooltip>
     );
   }
 
@@ -381,9 +380,13 @@ export function ConfirmDraft({
         confirmLoading={sending}
         footer={(_, { CancelBtn, OkBtn }) => (
           <div className={styles.confirmFooter}>
-            {waitingFor ? <span className={styles.confirmWaiting}>{waitingFor}</span> : null}
             <CancelBtn />
-            <OkBtn />
+            {/* What confirming still waits for is said when hovering the greyed button. */}
+            <Tooltip title={waitingFor}>
+              <span>
+                <OkBtn />
+              </span>
+            </Tooltip>
           </div>
         )}
         okButtonProps={{ disabled: !ready }}
@@ -407,14 +410,16 @@ export function ConfirmDraft({
                   </AppButton>
                 ) : undefined
               }
-              description={
+              message={
                 canDefer
-                  ? t("bknProject.confirm.dialog.documentsNotReadyHelp", {
-                      count: documents.length,
-                    })
-                  : undefined
+                  ? [
+                      documentsProblem,
+                      t("bknProject.confirm.dialog.documentsNotReadyHelp", {
+                        count: documents.length,
+                      }),
+                    ].join(t("bknProject.sentenceSeparator"))
+                  : documentsProblem
               }
-              message={documentsProblem}
               showIcon
               type="warning"
             />
