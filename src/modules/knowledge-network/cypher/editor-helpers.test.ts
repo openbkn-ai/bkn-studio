@@ -26,6 +26,49 @@ const schema: CypherCompletionSchema = {
 const labels = (before: string, full = before) =>
   cypherSuggestions(before, full, schema).map((item) => item.insert);
 
+describe("cypherSuggestions for properties without a mapped column", () => {
+  const withMapping: CypherCompletionSchema = {
+    ...schema,
+    properties: {
+      teams: [
+        { name: "a_mapped", mapped: true },
+        { name: "b_unmapped", mapped: false },
+        { name: "c_legacy" },
+      ],
+    },
+    unmappedReason: "map it first",
+  };
+
+  it("lists them as disabled with the reason, and leaves mapped ones alone", () => {
+    const items = cypherSuggestions(
+      "MATCH (t:teams) RETURN t.",
+      "MATCH (t:teams) RETURN t.",
+      withMapping,
+    );
+
+    expect(items.map((item) => [item.label, item.disabled ?? false, item.reason])).toEqual([
+      ["a_mapped", false, undefined],
+      ["b_unmapped", true, "map it first"],
+      ["c_legacy", false, undefined],
+    ]);
+  });
+
+  it("offers it again once the reload reports the column as mapped", () => {
+    const remapped = {
+      ...withMapping,
+      properties: { teams: [{ name: "b_unmapped", mapped: true }] },
+    };
+
+    const [item] = cypherSuggestions(
+      "MATCH (t:teams) RETURN t.",
+      "MATCH (t:teams) RETURN t.",
+      remapped,
+    );
+
+    expect(item.disabled).toBeUndefined();
+  });
+});
+
 describe("cypherSuggestions", () => {
   it("offers object types after a node colon, quoting ids that need it", () => {
     expect(labels("MATCH (t:")).toEqual(["teams", "`my-type`"]);

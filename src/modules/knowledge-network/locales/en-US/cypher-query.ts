@@ -19,6 +19,8 @@ export const cypherQueryPart = {
       objectTypes: "Object types",
       relationTypes: "Relation types",
       empty: "None",
+      unmappedHint:
+        "Not mapped to a data field, so it cannot be queried. Map the field in the object type's data properties, then reload this page.",
       loadFailed: "Failed to load the network schema: {{message}}",
       sampleHint: "Click to fill in and run a sample query",
     },
@@ -92,6 +94,8 @@ export const cypherQueryPart = {
         "Running this query failed. Fix it according to the error and give the query again.\nQuery:\n{{query}}\nError: {{error}}",
       answer: "Agent answer",
       noQuery: "The agent's answer holds no query to run.",
+      unmappedProperty:
+        "Property {{property}} of object type {{objectType}} is not mapped to a data field, so it cannot be queried. Map the field in the object type's data properties, then run the query again.",
       resultDropped:
         "The result was too large to keep in this browser. Run the query again to see it.",
     },

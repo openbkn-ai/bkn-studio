@@ -282,8 +282,9 @@ export function CypherQueryScene({
         targetId: item.targetId,
       })),
       properties,
+      unmappedReason: t("knowledgeNetwork.cypherQuery.schema.unmappedHint"),
     }),
-    [properties, schema],
+    [properties, schema, t],
   );
 
   /* ---------------- editor ---------------- */
@@ -906,18 +907,30 @@ export function CypherQueryScene({
                             <Tooltip
                               key={property.name}
                               placement="right"
-                              title={[
-                                property.displayName,
-                                property.type,
-                                t("knowledgeNetwork.cypherQuery.schema.insertHint"),
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
+                              title={
+                                property.mapped
+                                  ? [
+                                      property.displayName,
+                                      property.type,
+                                      t("knowledgeNetwork.cypherQuery.schema.insertHint"),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")
+                                  : t("knowledgeNetwork.cypherQuery.schema.unmappedHint")
+                              }
                             >
                               <button
-                                className={styles.schemaProperty}
+                                aria-disabled={property.mapped ? undefined : true}
+                                aria-label={
+                                  property.mapped
+                                    ? undefined
+                                    : `${property.name}. ${t("knowledgeNetwork.cypherQuery.schema.unmappedHint")}`
+                                }
+                                className={`${styles.schemaProperty} ${property.mapped ? "" : styles.schemaPropertyDisabled}`}
                                 data-testid={`cypher-schema-property-${item.id}-${property.name}`}
-                                onClick={() => insertIntoEditor(cypherName(property.name))}
+                                onClick={() => {
+                                  if (property.mapped) insertIntoEditor(cypherName(property.name));
+                                }}
                                 type="button"
                               >
                                 <TagOutlined />

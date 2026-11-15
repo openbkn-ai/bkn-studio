@@ -136,7 +136,30 @@ export async function getObjectTypeDisplayKeys(
   return keys;
 }
 
-export type ObjectTypeProperty = { name: string; displayName?: string; type?: string };
+export type ObjectTypeProperty = {
+  name: string;
+  displayName?: string;
+  type?: string;
+  /** Whether the property maps to a column of the bound data; Cypher cannot read one that does not. */
+  mapped: boolean;
+};
+
+/** A property is mapped when its `mapped_field` names a column. */
+function hasMappedColumn(property: Rec): boolean {
+  const field = property.mapped_field;
+  return isRec(field) && typeof field.name === "string" && field.name.trim() !== "";
+}
+
+/**
+ * The property and object type a Cypher refusal says have no mapped column, or null when the
+ * refusal is about something else.
+ */
+export function unmappedPropertyFrom(
+  message: string,
+): { property: string; objectType: string } | null {
+  const match = /property "([^"]+)" of object type "([^"]+)" has no mapped column/i.exec(message);
+  return match ? { property: match[1], objectType: match[2] } : null;
+}
 
 /**
  * The properties of the given object types, keyed by id, through Context Loader's
@@ -174,6 +197,7 @@ export async function getObjectTypeProperties(params: {
           ? { displayName: property.display_name }
           : {}),
         ...(typeof property.type === "string" ? { type: property.type } : {}),
+        mapped: hasMappedColumn(property),
       }));
   }
   return properties;

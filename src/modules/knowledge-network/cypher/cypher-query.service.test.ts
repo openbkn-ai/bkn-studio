@@ -7,7 +7,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { cypherErrorFrom, runCypherQuery } from "./cypher-query.service";
+import {
+  cypherErrorFrom,
+  getObjectTypeProperties,
+  runCypherQuery,
+  unmappedPropertyFrom,
+} from "./cypher-query.service";
 
 const env = { base: "https://platform.example.com/", token: "token-1", knId: "worldcup" };
 
@@ -215,5 +220,50 @@ describe("cypherErrorFrom", () => {
       message: "gateway timeout",
     });
     expect(cypherErrorFrom(undefined, 502, "")).toEqual({ message: "HTTP 502" });
+  });
+});
+
+describe("getObjectTypeProperties mapping", () => {
+  it("marks a property mapped only when its mapped_field names a column", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        reply(200, {
+          object_types: [
+            {
+              id: "uc",
+              data_properties: [
+                {
+                  name: "days",
+                  type: "integer",
+                  mapped_field: { name: "days_col", type: "integer" },
+                },
+                { name: "segment", type: "string" },
+                { name: "blank", type: "string", mapped_field: { name: " ", type: "string" } },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await getObjectTypeProperties({ env, objectTypeIds: ["uc"] });
+
+    expect(result.uc.map((property) => [property.name, property.mapped])).toEqual([
+      ["days", true],
+      ["segment", false],
+      ["blank", false],
+    ]);
+  });
+});
+
+describe("unmappedPropertyFrom", () => {
+  it("reads the property and object type out of the backend's refusal", () => {
+    expect(
+      unmappedPropertyFrom(
+        'BknBackend.Cypher.InvalidQuery: property "consumption_segment" of object type "user_consumption" has no mapped column',
+      ),
+    ).toEqual({ objectType: "user_consumption", property: "consumption_segment" });
+    expect(unmappedPropertyFrom("unexpected token")).toBeNull();
   });
 });

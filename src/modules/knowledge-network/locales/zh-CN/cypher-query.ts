@@ -18,6 +18,8 @@ export const cypherQueryPart = {
       objectTypes: "对象类",
       relationTypes: "关系类",
       empty: "暂无",
+      unmappedHint:
+        "尚未映射到底层数据字段，暂不能用于 Cypher 查询。请在对象类的数据属性配置中完成字段映射后，重新加载本页。",
       loadFailed: "加载网络结构失败：{{message}}",
       sampleHint: "点击填入并运行采样查询",
     },
@@ -90,6 +92,8 @@ export const cypherQueryPart = {
         "运行这条查询时出错，请按错误修正后重新给出查询。\n查询：\n{{query}}\n错误：{{error}}",
       answer: "Agent 的回答",
       noQuery: "Agent 的回答里没有可运行的查询。",
+      unmappedProperty:
+        "对象类 {{objectType}} 的属性 {{property}} 尚未映射到底层数据字段，暂不能查询。请在对象类的数据属性配置中完成字段映射后重试。",
       resultDropped: "结果较大，未保存在本地，请重新运行查看。",
     },
     status: {

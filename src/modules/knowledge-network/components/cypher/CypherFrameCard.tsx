@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { unmappedPropertyFrom } from "@/modules/knowledge-network/cypher/cypher-query.service";
 import {
   BulbOutlined,
   CloseOutlined,
@@ -335,7 +336,14 @@ export function CypherFrameCard({
       );
     }
     if (frame.error) {
+      const unmapped = unmappedPropertyFrom(frame.error.message);
       const errorText = [
+        unmapped
+          ? t("knowledgeNetwork.cypherQuery.frames.unmappedProperty", {
+              objectType: unmapped.objectType,
+              property: unmapped.property,
+            })
+          : "",
         frame.error.message,
         frame.error.code
           ? t("knowledgeNetwork.cypherQuery.status.code", { code: frame.error.code })
