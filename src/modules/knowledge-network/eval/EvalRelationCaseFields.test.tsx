@@ -9,11 +9,7 @@ import { beforeAll, afterAll } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { EvalRelationCaseFields } from "./EvalRelationCaseFields";
-import {
-  getCaseTargetSchema,
-  listRelationCheckInstances,
-  type RelationCheckForm,
-} from "./case-form.service";
+import { listRelationCheckInstances, type RelationCheckForm } from "./case-form.service";
 import {
   previewRuleApplication,
   type RuleApplicationPreview,
@@ -49,7 +45,6 @@ vi.mock("./useEvalTranslation", async () => {
   };
 });
 vi.mock("./case-form.service", () => ({
-  getCaseTargetSchema: vi.fn(),
   listRelationCheckInstances: vi.fn(),
 }));
 vi.mock("./rule-application.service", () => ({ previewRuleApplication: vi.fn() }));
@@ -165,12 +160,14 @@ it("prepares query availability without exposing meaningless invocation paramete
   choose("检查项", "关系查询可用");
   await waitFor(() => expect(onPrepared).toHaveBeenCalledWith(prepared));
   expect(screen.queryByText("调用参数")).toBeNull();
-  expect(screen.getByText(/零关联允许通过/)).toBeTruthy();
+  expect(screen.queryByText(/零关联允许通过/)).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "判定标准 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("零关联允许通过");
   expect(vi.mocked(previewRuleApplication).mock.calls.at(-1)?.[1].samples?.[0].arguments).toEqual({
     relation_check: { rule: "relation-query" },
   });
 });
-it("requires real endpoints, an explicit negative expectation and independent evidence", async () => {
+it("preserves optional business verification notes for an explicit negative expectation", async () => {
   const onPrepared = vi.fn();
   render(
     <EvalRelationCaseFields
@@ -199,6 +196,39 @@ it("requires real endpoints, an explicit negative expectation and independent ev
   });
   expect(sample?.source_kind).toBe("business_expert");
 });
+
+it.each(["应关联", "不应关联"])(
+  "prepares %s without optional reference notes",
+  async (expectation) => {
+    const onPrepared = vi.fn();
+    render(
+      <EvalRelationCaseFields
+        networkId="kn"
+        resource={resource}
+        contract={contract}
+        onPrepared={onPrepared}
+      />,
+    );
+    choose("检查项", "关联结果正确");
+    await waitFor(() => expect(listRelationCheckInstances).toHaveBeenCalledTimes(2));
+    choose("起点实例 · 采购单", '采购单一 · {"id":"PO001"}');
+    expect(onPrepared).not.toHaveBeenCalledWith(prepared);
+    choose("终点实例 · 供应商", '供应商一 · {"id":"S001"}');
+    expect(onPrepared).not.toHaveBeenCalledWith(prepared);
+    choose("预期关联", expectation);
+    await waitFor(() => expect(onPrepared).toHaveBeenCalledWith(prepared));
+    const sample = vi.mocked(previewRuleApplication).mock.calls.at(-1)?.[1].samples?.[0];
+    expect(sample?.expected).toEqual({ related: expectation === "应关联" });
+    expect(sample?.evidence_refs).toEqual([]);
+    expect(sample?.source_kind).toBe("business_expert");
+    const fieldLabel = screen
+      .getByRole("combobox", { name: "检查项" })
+      .closest(".ant-select")?.previousElementSibling;
+    expect(fieldLabel?.textContent).toBe("*检查项");
+    const referenceLabel = screen.getByRole("textbox", { name: "预期依据" }).previousElementSibling;
+    expect(referenceLabel?.textContent).toBe("预期依据");
+  },
+);
 it("restricts cardinality checks to the constrained side and keeps sampling explicit", async () => {
   const onPrepared = vi.fn();
   render(
@@ -217,7 +247,7 @@ it("restricts cardinality checks to the constrained side and keeps sampling expl
     relation_check: { rule: "relation-cardinality", end: "source", limit: 100 },
   });
 });
-it("keeps inapplicable reasons collapsed and links to the actual relation editor", async () => {
+it("keeps inapplicable reasons collapsed without relation configuration actions", async () => {
   render(
     <EvalRelationCaseFields
       networkId="kn"
@@ -227,14 +257,8 @@ it("keeps inapplicable reasons collapsed and links to the actual relation editor
     />,
   );
   expect(screen.queryByText("仅声明了关系属性的间接关系适用。")).not.toBeInTheDocument();
-  const link = screen.getByRole("link", { name: "配置关联约束" });
-  expect(link).toHaveAttribute(
-    "href",
-    expect.stringContaining(
-      "/knowledge-network/workspace/kn/relation-types/purchase_supplier/edit",
-    ),
-  );
-  expect(link).toHaveAttribute("target", "_blank");
+  expect(screen.queryByRole("link", { name: "配置关联约束" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "刷新关系配置" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByText(/不适用的检查项/));
   expect(await screen.findByText("仅声明了关系属性的间接关系适用。")).toBeInTheDocument();
 });
@@ -256,16 +280,9 @@ it("clears a prepared definition on service failure and allows retry", async () 
   await waitFor(() => expect(onPrepared).toHaveBeenCalledWith(prepared));
 });
 
-it("refreshes declarations after configuration and exposes newly applicable checks", async () => {
+it("uses updated declarations supplied by the parent form", async () => {
   const onPrepared = vi.fn();
-  vi.mocked(getCaseTargetSchema).mockResolvedValue({
-    relation: {
-      ...contract,
-      cardinality: "one_to_one",
-      checks: contract.checks.map((c) => ({ ...c, applicable: true })),
-    },
-  });
-  render(
+  const view = render(
     <EvalRelationCaseFields
       networkId="kn"
       resource={resource}
@@ -274,9 +291,19 @@ it("refreshes declarations after configuration and exposes newly applicable chec
     />,
   );
   expect(screen.getByText("每个起点最多关联一个终点")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "刷新关系配置" }));
+  view.rerender(
+    <EvalRelationCaseFields
+      networkId="kn"
+      resource={resource}
+      onPrepared={onPrepared}
+      contract={{
+        ...contract,
+        cardinality: "one_to_one",
+        checks: contract.checks.map((c) => ({ ...c, applicable: true })),
+      }}
+    />,
+  );
   await screen.findByText("两端各自最多关联一个对象");
-  expect(getCaseTargetSchema).toHaveBeenCalledWith(resource, "kn");
   expect(screen.queryByText(/不适用的检查项/)).not.toBeInTheDocument();
   expect(onPrepared).toHaveBeenCalledWith(undefined);
 });

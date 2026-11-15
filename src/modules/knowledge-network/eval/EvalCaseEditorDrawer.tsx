@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalDeclarationCaseFields } from "./EvalDeclarationCaseFields";
+import { declarationRowFromDefinition } from "./declaration-case-model";
 import { caseUiText } from "./case-ui-text";
 import { evalScalarText } from "./eval-scalar-text";
 
@@ -52,8 +54,12 @@ import { EvalRelationCaseFields } from "./EvalRelationCaseFields";
 import { EvalResourceCaseFields } from "./EvalResourceCaseFields";
 import { resourceCaseKinds } from "./rule-check-model";
 import { EvalObjectCaseFields } from "./EvalObjectCaseFields";
+import { JsonTextBlock } from "@/framework/json/JsonTextBlock";
+import { EvalCaseContract } from "./EvalCaseContract";
 import { EvalCaseArguments } from "./EvalCaseArguments";
 import { EvalResourceArguments } from "./EvalResourceArguments";
+import { buildScenarioCase } from "./scenario-case";
+import { EvalScenarioCaseFields } from "./EvalScenarioCaseFields";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
 import {
   getCaseFormOptions,
@@ -94,6 +100,9 @@ type CaseForm = {
   checkLimit?: number;
   title: string;
   question: string;
+  scenarioContext?: string;
+  scenarioConstraints?: string;
+  outputRequirements?: string;
   answer: string;
   sourceKind: EvalCaseDefinition["expected_source"]["kind"];
   evidenceRef: string;
@@ -227,15 +236,15 @@ const assertionReasons = (): Record<string, string> => ({
     "knowledgeNetwork.eval.m0.findingCategory.EVIDENCE",
   ),
   "resource use cannot be verified without complete evidence": caseUiText(
-    "incompleteEvidencePreventsVerificationOfTheFunctionCall",
+    "incompleteEvidencePreventsTargetVerification",
   ),
   "reviewed Function call is absent from complete evidence": caseUiText(
-    "noAuthorizedFunctionCallWasFoundInThe",
+    "noAuthorizedTargetCallInEvidence",
   ),
-  "target execution did not complete": caseUiText("theFunctionCallDidNotComplete"),
+  "target execution did not complete": caseUiText("targetExecutionDidNotComplete"),
 });
 const trialErrorClasses = (): Record<string, string> => ({
-  PERMISSION: caseUiText("noPermissionToCallTheTargetFunctionOr"),
+  PERMISSION: caseUiText("noPermissionToExecuteTargetOrReadEvidence"),
   EVALUATION_CONTRACT: caseUiText("theActualOutputDoesNotMatchTheCase"),
   EVIDENCE: caseUiText("executionEvidenceIsMissing"),
   ENVIRONMENT: caseUiText("theTargetResourceOrADependentServiceCall"),
@@ -263,6 +272,9 @@ const toForm = (draft: EvalCaseDraft, imported: boolean): CaseForm => ({
   title: draft.definition.title,
   criteria: readCriteria(draft.definition),
   question: stringField(draft.definition.input_spec.question),
+  scenarioContext: stringField(draft.definition.input_spec.context),
+  scenarioConstraints: stringField(draft.definition.input_spec.constraints),
+  outputRequirements: stringField(draft.definition.input_spec.output_requirements),
   answer:
     imported ||
     ["direct_capability", "object_data_check", "resource_query"].includes(
@@ -271,7 +283,7 @@ const toForm = (draft: EvalCaseDraft, imported: boolean): CaseForm => ({
       ? formatPrecisionSafeJSON(transformPrecisionSafeJSONRequest(draft.definition.expected_spec))
       : stringField(draft.definition.expected_spec.answer),
   sourceKind: draft.definition.expected_source.kind,
-  evidenceRef: draft.definition.expected_source.evidence_refs.join("\n"),
+  evidenceRef: draft.definition.expected_source.evidence_refs?.join("\n") ?? "",
   diagnosticNote: stringField(draft.definition.diagnostic_spec.note),
   callableFunction:
     draft.definition.execution_spec.runner === "direct_capability"
@@ -313,6 +325,7 @@ const fromForm = (
   preparedObject?: EvalCaseDefinition,
   executionResource?: EvalCaseResource,
 ): EvalCaseDefinition => {
+  if (values.caseType === "scenario") return buildScenarioCase(values, networkId);
   const executionMode =
     runner === "direct_capability" ? "direct" : runner === "resource_query" ? "resource" : "manual";
   const question =
@@ -324,7 +337,8 @@ const fromForm = (
       ? values.title.trim()
       : "");
   if (
-    preparedObject?.diagnostic_spec.resource_case_form &&
+    (preparedObject?.diagnostic_spec.resource_case_form ||
+      preparedObject?.execution_spec.logical_property) &&
     !preparedObject.execution_spec.relation_rule
   ) {
     const definition = structuredClone(preparedObject);
@@ -340,6 +354,21 @@ const fromForm = (
       !definition.diagnostic_spec.definition_only
     )
       definition.input_spec = { ...definition.input_spec, question: values.question.trim() };
+    return definition;
+  }
+  const declaration = preparedObject ?? draft?.definition;
+  if (
+    declaration?.execution_spec.runner === "declaration_preflight" &&
+    (declaration.execution_spec.check as { type?: string } | undefined)?.type === "declaration"
+  ) {
+    const definition = structuredClone(declaration);
+    definition.title = values.title.trim();
+    definition.diagnostic_spec = {
+      ...definition.diagnostic_spec,
+      note: values.diagnosticNote?.trim() ?? "",
+      case_type: values.caseType ?? "functional",
+    };
+    if (question) definition.input_spec = { ...definition.input_spec, question };
     return definition;
   }
   const preparedRelation = preparedObject?.execution_spec.relation_rule;
@@ -412,9 +441,7 @@ const fromForm = (
       : undefined);
   const resourceExecution = executionMode === "resource" && queryResource;
   const scopeType =
-    values.caseType === "scenario" || (values.caseType === "security" && !selectedResource)
-      ? "business_scenario"
-      : "resource";
+    values.caseType === "security" && !selectedResource ? "business_scenario" : "resource";
   const compiled = values.criteria ? compileCriteria(values.criteria, true) : undefined;
   return {
     title: values.title.trim(),
@@ -624,18 +651,42 @@ export function EvalCaseEditorDrawer({
   const [form] = Form.useForm<CaseForm>();
   const [draft, setDraft] = useState<EvalCaseDraft>();
   const [preparedObject, setPreparedObject] = useState<EvalCaseDefinition>();
+  const [contextRevision, setContextRevision] = useState(0);
+  const [editorSession, setEditorSession] = useState(0);
+  // Persisted input belongs only to its original target and case type.
+  const definitionDraft = contextRevision === 0 ? draft : undefined;
+  const contextGeneration = useRef(0);
+  const formRevision = useRef(0);
   const [definitionOnlyMode, setDefinitionOnlyMode] = useState(false);
   const objectAutoTitle = useRef("");
   const isObjectDefinition =
-    draft?.definition.execution_spec.runner === "object_data_check" ||
+    (contextRevision === 0 && draft?.definition.execution_spec.runner === "object_data_check") ||
     preparedObject?.execution_spec.runner === "object_data_check";
   const isRelationDefinition = !!(
-    preparedObject?.execution_spec.relation_rule ?? draft?.definition.execution_spec.relation_rule
+    preparedObject?.execution_spec.relation_rule ??
+    (contextRevision === 0 && draft?.definition.execution_spec.relation_rule)
   );
   const isFixedResourceDefinition =
+    contextRevision === 0 &&
     draft?.definition.execution_spec.runner === "resource_query" &&
     !!draft.definition.diagnostic_spec.rule_snapshot;
-  const hasFixedStandard = isObjectDefinition || isFixedResourceDefinition || isRelationDefinition;
+  const declarationDefinition =
+    contextRevision === 0 &&
+    draft?.definition.execution_spec.runner === "declaration_preflight" &&
+    (draft.definition.execution_spec.check as { type?: string } | undefined)?.type === "declaration"
+      ? draft.definition
+      : undefined;
+  const declarationEditor = !!declarationDefinition;
+  const declarationRow = useMemo(
+    () => (declarationDefinition ? declarationRowFromDefinition(declarationDefinition) : undefined),
+    [declarationDefinition],
+  );
+  const hasFixedStandard =
+    isObjectDefinition ||
+    isFixedResourceDefinition ||
+    isRelationDefinition ||
+    declarationEditor ||
+    (preparedObject?.execution_spec.check as { type?: string } | undefined)?.type === "declaration";
   const checkMode = Form.useWatch("checkMode", form) ?? "sample";
   const [busy, setBusy] = useState(false);
   const [enableOnSave, setEnableOnSave] = useState(false);
@@ -668,20 +719,23 @@ export function EvalCaseEditorDrawer({
   const [relatedResources, setRelatedResources] = useState<EvalCaseResource[]>([]);
   const caseType = Form.useWatch<CaseForm["caseType"]>("caseType", form) ?? "functional";
   const definitionOnly =
-    definitionOnlyMode || !!(preparedObject ?? draft?.definition)?.diagnostic_spec.definition_only;
+    definitionOnlyMode ||
+    !!(preparedObject ?? (contextRevision === 0 ? draft?.definition : undefined))?.diagnostic_spec
+      .definition_only;
   const objectCreation =
-    ((!caseId && !draft) || !!draft?.definition.diagnostic_spec.definition_only) &&
+    (!definitionDraft || !!definitionDraft.definition.diagnostic_spec.definition_only) &&
     selectedResource?.kind === "objectType" &&
     caseType !== "scenario";
   const relationEditor =
+    !declarationEditor &&
     selectedResource?.kind === "relationType" &&
     caseType !== "scenario" &&
     (!imported || isRelationDefinition);
   const resourceEditor =
     (targetSchema.rule_based === true ||
       (schemaError && formOptions?.version === 2) ||
-      !!draft?.definition.diagnostic_spec.definition_only) &&
-    (!draft || !!draft.definition.diagnostic_spec.resource_case_form) &&
+      (contextRevision === 0 && !!draft?.definition.diagnostic_spec.definition_only)) &&
+    (!definitionDraft || !!definitionDraft.definition.diagnostic_spec.resource_case_form) &&
     !!selectedResource &&
     resourceCaseKinds.includes(selectedResource.kind) &&
     caseType !== "scenario" &&
@@ -697,12 +751,16 @@ export function EvalCaseEditorDrawer({
         : targetSchema,
     [targetSchema, schemaError, t],
   );
-  const standaloneExecution = !imported && !selectedResource && caseType !== "functional";
+  const scenario = caseType === "scenario";
+  const standaloneExecution = !imported && !selectedResource && caseType === "security";
   const resolvedRunner = preparedObject
     ? String(preparedObject.execution_spec.runner)
-    : (targetSchema.runner ?? stringField(draft?.definition.execution_spec.runner));
-  const executionMode =
-    relationEditor || isRelationDefinition
+    : (targetSchema.runner ??
+      (contextRevision === 0 ? stringField(draft?.definition.execution_spec.runner) : ""));
+  const awaitingResource = !imported && caseType === "functional" && !selectedResource;
+  const executionMode = scenario
+    ? "agent"
+    : relationEditor || isRelationDefinition
       ? "relation"
       : resolvedRunner === "direct_capability"
         ? "direct"
@@ -738,14 +796,15 @@ export function EvalCaseEditorDrawer({
     (["direct", "resource", "relation"].includes(executionMode) || isObjectDefinition);
   const criteria = Form.useWatch<CaseCriterion[] | undefined>("criteria", form);
   const criteriaMode =
-    formOptions?.version === 2 &&
-    !isObjectDefinition &&
-    !relationEditor &&
-    !resourceEditor &&
-    !isRelationDefinition &&
-    !objectCreation &&
-    !draft?.definition.diagnostic_spec.rule_snapshot &&
-    (!draft || !!readCriteria(draft.definition));
+    scenario ||
+    (formOptions?.version === 2 &&
+      !isObjectDefinition &&
+      !relationEditor &&
+      !resourceEditor &&
+      !isRelationDefinition &&
+      !objectCreation &&
+      !definitionDraft?.definition.diagnostic_spec.rule_snapshot &&
+      (!definitionDraft || !!readCriteria(definitionDraft.definition)));
   const fixedAvailability =
     criteriaMode &&
     executionMode === "resource" &&
@@ -765,6 +824,7 @@ export function EvalCaseEditorDrawer({
   }, []);
   const bindObjectDefinition = useCallback(
     (definition?: EvalCaseDefinition) => {
+      formRevision.current++;
       setPreparedObject(definition);
       if (definition?.diagnostic_spec.definition_only) setEnableOnSave(false);
       setTrialStale(true);
@@ -786,7 +846,7 @@ export function EvalCaseEditorDrawer({
   const queryResourceKind =
     selectedResource?.kind ??
     (
-      draft?.definition.execution_spec.target as
+      definitionDraft?.definition.execution_spec.target as
         | {
             resource_kind?: string;
           }
@@ -796,15 +856,16 @@ export function EvalCaseEditorDrawer({
     ["relationType", "metric", "api", "mcp", "skill", "action"].includes(queryResourceKind ?? "") &&
     caseType !== "scenario";
   const isActionCase =
-    selectedResource?.kind === "action" || draft?.definition.category === "action";
+    selectedResource?.kind === "action" || definitionDraft?.definition.category === "action";
+  const currentResources = resources.filter((item) => item.kind === resourceKind);
   const resourceOptions =
     selectedResource &&
     selectedResource.kind === resourceKind &&
-    !resources.some((item) => item.id === selectedResource.id)
-      ? [selectedResource, ...resources]
-      : resources;
+    !currentResources.some((item) => item.id === selectedResource.id)
+      ? [selectedResource, ...currentResources]
+      : currentResources;
   const selectableFunctions = useMemo(() => {
-    const target = draft?.definition.execution_spec.target as
+    const target = definitionDraft?.definition.execution_spec.target as
       { name?: string; resource_id?: string; operation?: string } | undefined;
     const selectedId =
       selectedResource?.kind === "function" ? selectedResource.id : target?.resource_id;
@@ -815,7 +876,7 @@ export function EvalCaseEditorDrawer({
         ? callableFunctions.filter((item) =>
             item.resource_id ? item.resource_id === selectedId : item.name === selectedName,
           )
-        : draft?.definition.execution_spec.runner === "direct_capability"
+        : definitionDraft?.definition.execution_spec.runner === "direct_capability"
           ? callableFunctions.filter((item) =>
               selectedId && item.resource_id
                 ? item.resource_id === selectedId
@@ -834,7 +895,7 @@ export function EvalCaseEditorDrawer({
         ? { operation: target.operation }
         : {}),
     }));
-  }, [callableFunctions, imported, selectedResource, draft, standaloneExecution]);
+  }, [callableFunctions, imported, selectedResource, definitionDraft, standaloneExecution]);
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -854,7 +915,7 @@ export function EvalCaseEditorDrawer({
     let active = true;
     setExecutionLookupError("");
     setExecutionLookupBusy(false);
-    if (draft) return;
+    if (definitionDraft) return;
     setExecutionResource(undefined);
     if (!open || !standaloneExecution || !currentFunction) return;
     const selected = callableFunctions.find((item) => functionKey(item) === currentFunction);
@@ -883,12 +944,17 @@ export function EvalCaseEditorDrawer({
     return () => {
       active = false;
     };
-  }, [open, standaloneExecution, currentFunction, callableFunctions, networkId, draft]);
+  }, [open, standaloneExecution, currentFunction, callableFunctions, networkId, definitionDraft]);
   useEffect(() => {
     if (!open || !criteriaMode) return;
     if (!form.getFieldValue("criteria"))
-      form.setFieldValue("criteria", draft ? readCriteria(draft.definition) : [newCriterion()]);
-  }, [criteriaMode, draft, form, open]);
+      form.setFieldValue(
+        "criteria",
+        (definitionDraft ? readCriteria(definitionDraft.definition) : undefined) ?? [
+          newCriterion(),
+        ],
+      );
+  }, [criteriaMode, definitionDraft, form, open, contextRevision]);
   useEffect(() => {
     let active = true;
     setTargetSchema({});
@@ -903,7 +969,9 @@ export function EvalCaseEditorDrawer({
     const target =
       selectedResource ??
       executionResource ??
-      (persisted?.resource_id && (persisted.resource_kind ?? persisted.capability_type)
+      (contextRevision === 0 &&
+      persisted?.resource_id &&
+      (persisted.resource_kind ?? persisted.capability_type)
         ? {
             id: persisted.resource_id,
             kind: (persisted.resource_kind ?? persisted.capability_type)!,
@@ -912,7 +980,7 @@ export function EvalCaseEditorDrawer({
         : undefined);
     setSchemaError(false);
     setSchemaLoading(false);
-    if (open && target && target.kind !== "objectType") {
+    if (open && !scenario && target && target.kind !== "objectType") {
       setSchemaLoading(true);
       getCaseTargetSchema(target, networkId)
         .then((schema) => {
@@ -963,7 +1031,18 @@ export function EvalCaseEditorDrawer({
     return () => {
       active = false;
     };
-  }, [open, selectedResource, executionResource, draft, networkId, caseId, form, schemaRetry]);
+  }, [
+    open,
+    selectedResource,
+    executionResource,
+    draft,
+    networkId,
+    caseId,
+    form,
+    schemaRetry,
+    contextRevision,
+    scenario,
+  ]);
   useEffect(() => {
     if (!open || imported || caseType === "scenario") return;
     let active = true;
@@ -1025,8 +1104,14 @@ export function EvalCaseEditorDrawer({
     };
   }, [networkId, open]);
   useEffect(() => {
+    contextGeneration.current++;
     if (!open) return;
+    formRevision.current = 0;
+    setContextRevision(0);
+    setEditorSession((session) => session + 1);
+    setDefinitionOnlyMode(false);
     setError("");
+    setTrialBusy(false);
     setEnableOnSave(false);
     setTrialView(false);
     setTrialStale(false);
@@ -1156,7 +1241,10 @@ export function EvalCaseEditorDrawer({
     }
   };
   const save = async (activate: boolean) => {
-    if ((objectCreation || relationEditor || resourceEditor) && !preparedObject) {
+    if (
+      (objectCreation || relationEditor || resourceEditor || declarationEditor) &&
+      !preparedObject
+    ) {
       setError(caseUiText("selectACheckAndCompleteTheTargetInstance"));
       return;
     }
@@ -1188,6 +1276,7 @@ export function EvalCaseEditorDrawer({
       return;
     }
     if (
+      !scenario &&
       !definitionOnly &&
       !isObjectDefinition &&
       draft?.definition.execution_spec.runner !== "declaration_preflight" &&
@@ -1220,7 +1309,7 @@ export function EvalCaseEditorDrawer({
                   values,
                   networkId,
                   callableFunction,
-                  draft,
+                  definitionDraft,
                   imported,
                   selectedResource,
                   relatedResources,
@@ -1251,7 +1340,7 @@ export function EvalCaseEditorDrawer({
           values,
           networkId,
           callableFunction,
-          draft,
+          definitionDraft,
           imported,
           selectedResource,
           relatedResources,
@@ -1293,8 +1382,6 @@ export function EvalCaseEditorDrawer({
     if (criteriaMode) {
       try {
         compileCriteria(values.criteria ?? []);
-        if (needsReference && !(values.evidenceRef ?? "").trim())
-          throw Error(caseUiText("provideIndependentEvidenceForTheExpectedResultBefore"));
         if (executionMode === "direct")
           validateCaseArguments(values.argumentsJson ?? "{}", targetSchema.input);
         if (executionMode === "resource")
@@ -1316,7 +1403,10 @@ export function EvalCaseEditorDrawer({
       setError(caseUiText("executionBindingChanged"));
       return;
     }
+    const requestContext = contextGeneration.current;
+    const requestRevision = formRevision.current;
     setTrialBusy(true);
+    setTrialView(true);
     setError("");
     setTrialResult(undefined);
     try {
@@ -1324,7 +1414,7 @@ export function EvalCaseEditorDrawer({
         values,
         networkId,
         callableFunction,
-        draft,
+        definitionDraft,
         imported,
         selectedResource,
         relatedResources,
@@ -1333,14 +1423,17 @@ export function EvalCaseEditorDrawer({
         executionResource,
       );
       const result = await trialEvalCase(networkId, definition);
+      if (requestContext !== contextGeneration.current) return;
       setTrialResult(result);
       setObservedContext(fieldContext);
       setTrialView(true);
-      setTrialStale(false);
+      setTrialStale(requestRevision !== formRevision.current);
     } catch (cause) {
+      if (requestContext !== contextGeneration.current) return;
       setError(trialErrorMessage(cause));
+      setTrialView(false);
     } finally {
-      setTrialBusy(false);
+      if (requestContext === contextGeneration.current) setTrialBusy(false);
     }
   };
   const changeContext = (apply: () => void) => {
@@ -1358,14 +1451,32 @@ export function EvalCaseEditorDrawer({
           (c: unknown) => !!c && typeof c === "object" && "value" in c && c.value !== "",
         ));
     const change = () => {
+      contextGeneration.current++;
+      formRevision.current++;
+      setContextRevision((revision) => revision + 1);
       setPreparedObject(undefined);
+      setDefinitionOnlyMode(false);
+      setExecutionResource(undefined);
+      setRelatedResources([]);
+      setTargetSchema({});
+      setSchemaError(false);
+      setExecutionLookupError("");
+      setError("");
+      setTrialResult(undefined);
+      setObservedContext(undefined);
+      setTrialView(false);
+      setTrialBusy(false);
+      if (form.getFieldValue("title") === objectAutoTitle.current) form.setFieldValue("title", "");
+      objectAutoTitle.current = "";
       form.setFieldsValue({
         callableFunction: undefined,
         argumentsJson: "{}",
         expectedPath: undefined,
         answer: "",
         evidenceRef: "",
-        ...(criteriaMode ? { criteria: [newCriterion()] } : {}),
+        criteria: undefined,
+        checkMode: "sample",
+        checkLimit: 100,
       });
       setTrialStale(true);
       apply();
@@ -1390,8 +1501,8 @@ export function EvalCaseEditorDrawer({
   }, [criteriaMode, draft, form, selectableFunctions, selectedResource?.id, standaloneExecution]);
   const canEdit = !caseId || !!draft;
   const isManualDefinition =
-    !draft ||
-    (draft.definition.execution_spec.runner === "unbound" &&
+    !definitionDraft ||
+    (draft?.definition.execution_spec.runner === "unbound" &&
       draft.definition.assertions.length === 1 &&
       draft.definition.assertions[0]?.type === "manual_review");
   const isDirectDefinition =
@@ -1418,6 +1529,7 @@ export function EvalCaseEditorDrawer({
         assertion.id === "execution-evidence" && assertion.type === "evidence_complete",
     );
   const canEditDefinition =
+    scenario ||
     isManualDefinition ||
     isDirectDefinition ||
     isApplicationDefinition ||
@@ -1430,6 +1542,7 @@ export function EvalCaseEditorDrawer({
     ) &&
       !!draft &&
       !!readCriteria(draft.definition));
+  const showTrialPanel = Boolean(trialResult) || trialBusy;
   return (
     <Drawer
       className={styles.caseEditorDrawer}
@@ -1439,18 +1552,22 @@ export function EvalCaseEditorDrawer({
           : caseUiText("knowledgeNetwork.eval.resourceOverview.createCase")
       }
       open={open}
-      width="min(800px, 100vw)"
+      width={showTrialPanel ? "min(1440px, 100vw)" : "min(800px, 100vw)"}
       onClose={onClose}
       forceRender
       footer={
         <div className={styles.drawerFooter}>
           <div className={styles.footerActions}>
             {trialView ? (
-              <Button onClick={() => setTrialView(false)}>{label("backToEdit")}</Button>
+              <Button className={styles.paneSwitch} onClick={() => setTrialView(false)}>
+                {label("backToEdit")}
+              </Button>
             ) : trialResult ? (
-              <Button onClick={() => setTrialView(true)}>{label("lastTrial")}</Button>
+              <Button className={styles.paneSwitch} onClick={() => setTrialView(true)}>
+                {label("lastTrial")}
+              </Button>
             ) : null}
-            {!trialView &&
+            {!scenario &&
               !definitionOnly &&
               canEdit &&
               canEditDefinition &&
@@ -1467,7 +1584,8 @@ export function EvalCaseEditorDrawer({
                     busy ||
                     schemaLoading ||
                     !trialAvailable ||
-                    ((objectCreation || relationEditor || resourceEditor) && !preparedObject)
+                    ((objectCreation || relationEditor || resourceEditor || declarationEditor) &&
+                      !preparedObject)
                   }
                   title={
                     trialAvailable
@@ -1513,6 +1631,8 @@ export function EvalCaseEditorDrawer({
                 loading={busy}
                 disabled={
                   trialBusy ||
+                  schemaLoading ||
+                  awaitingResource ||
                   (standaloneExecution &&
                     (executionLookupBusy ||
                       !!executionLookupError ||
@@ -1520,7 +1640,8 @@ export function EvalCaseEditorDrawer({
                       (!executionResource && !draft) ||
                       schemaLoading ||
                       schemaError)) ||
-                  ((objectCreation || relationEditor || resourceEditor) && !preparedObject)
+                  ((objectCreation || relationEditor || resourceEditor || declarationEditor) &&
+                    !preparedObject)
                 }
                 onClick={() => void save(enableOnSave)}
               >
@@ -1531,954 +1652,1040 @@ export function EvalCaseEditorDrawer({
         </div>
       }
     >
-      {loading ? (
-        <Spin />
-      ) : (
-        <>
-          {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
-          {!trialView && !criteriaMode && !isObjectDefinition && imported ? (
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 20 }}
-              message={caseUiText("checkTheImportedSampleInputCompleteExpectedJson")}
-            />
-          ) : null}
-          {!canEditDefinition && (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-              message={caseUiText("thisCaseContainsConfigurationNotSupportedByThis")}
-            />
-          )}
-          <Form
-            form={form}
-            name={`eval-case-${formId}`}
-            layout="vertical"
-            initialValues={initialValues}
-            style={{ display: trialView ? "none" : undefined }}
-            onValuesChange={() => {
-              if (trialResult) setTrialStale(true);
-            }}
-            disabled={busy || !canEdit || !canEditDefinition}
-          >
-            <div className={styles.sectionTitle}>{caseUiText("basicInformation")}</div>
-            <Form.Item
-              name="caseType"
-              getValueFromEvent={() => caseType}
-              label={caseUiText("knowledgeNetwork.eval.definitionUi.caseType")}
-              extra={
-                !imported && caseType === "scenario"
-                  ? caseUiText("noSingleEvaluationTargetIsRequiredSelectAn")
-                  : !imported && caseType === "security"
-                    ? caseUiText("describeTheSecurityBehaviorToVerifyForThe")
-                    : undefined
-              }
-              rules={[{ required: true, message: caseUiText("selectACaseType") }]}
-            >
-              <Segmented
-                name={`eval-case-type-${formId}`}
-                disabled={isObjectDefinition && !!caseId}
-                block
-                options={[
-                  {
-                    value: "functional",
-                    label: caseUiText("knowledgeNetwork.eval.definitionUi.functional"),
-                  },
-                  {
-                    value: "scenario",
-                    label: caseUiText("knowledgeNetwork.eval.definitionUi.scenario"),
-                    disabled: false,
-                  },
-                  {
-                    value: "security",
-                    label: caseUiText("knowledgeNetwork.eval.definitionUi.security"),
-                  },
-                ]}
-                onChange={(nextType) =>
-                  changeContext(() => {
-                    form.setFieldValue("caseType", nextType);
-                    form.setFieldsValue({ callableFunction: undefined });
-                    if (nextType === "scenario") {
-                      setSelectedResource(undefined);
-                      setRelatedResources([]);
-                      form.setFieldValue("resourceKey", undefined);
-                    }
-                  })
-                }
-              />
-            </Form.Item>
-            <Form.Item
-              name="title"
-              label={evalTerm("caseName")}
-              rules={[{ required: true, whitespace: true }]}
-            >
-              <Input
-                maxLength={255}
-                placeholder={caseUiText("brieflyDescribeWhatYouWantToVerify")}
-              />
-            </Form.Item>
-            {!imported && caseType !== "scenario" && (
-              <>
-                <div className={styles.sectionTitle}>{evalTerm("assessmentTarget")}</div>
-                <div className={styles.resourceGrid}>
-                  <Form.Item label={caseUiText("knowledgeNetwork.eval.filterUi.resourceType")}>
-                    <Select
-                      aria-label={caseUiText("knowledgeNetwork.eval.filterUi.resourceType")}
-                      disabled={isObjectDefinition && !!caseId}
-                      value={resourceKind}
-                      options={[
-                        {
-                          value: "objectType",
-                          label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.objectType"),
-                        },
-                        {
-                          value: "relationType",
-                          label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.relationType"),
-                        },
-                        {
-                          value: "metric",
-                          label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.metric"),
-                        },
-                        {
-                          value: "action",
-                          label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.action"),
-                        },
-                        {
-                          value: "function",
-                          label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.function"),
-                        },
-                        { value: "api", label: "API" },
-                        { value: "mcp", label: "MCP" },
-                        { value: "skill", label: "SKILLS" },
-                      ]}
-                      onChange={(kind) =>
-                        changeContext(() => {
-                          setResourceKind(kind);
-                          setResourceQuery("");
-                          setSelectedResource(undefined);
-                          form.setFieldsValue({
-                            resourceKey: undefined,
-                            callableFunction: undefined,
-                          });
-                        })
-                      }
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="resourceKey"
-                    validateTrigger="onBlur"
-                    getValueFromEvent={() =>
-                      selectedResource
-                        ? `${selectedResource.kind}:${selectedResource.id}`
-                        : undefined
-                    }
-                    label={
-                      caseType === "security"
-                        ? caseUiText("evaluationTargetOptional")
-                        : evalTerm("assessmentTarget")
-                    }
-                    rules={
-                      caseType === "functional"
-                        ? [{ required: true, message: caseUiText("selectAnEvaluationTarget") }]
-                        : []
-                    }
-                    extra={
-                      resourceTotal > 30
-                        ? caseUiText("resourceSearchCount", { count: resourceTotal })
-                        : undefined
-                    }
-                  >
-                    <Select
-                      aria-label={evalTerm("assessmentTarget")}
-                      disabled={isObjectDefinition && !!caseId}
-                      showSearch
-                      allowClear={caseType === "security"}
-                      filterOption
-                      optionFilterProp="label"
-                      loading={resourcesLoading}
-                      placeholder={
-                        caseType === "security"
-                          ? caseUiText("optionalSelectAResourceForTheSecurityTest")
-                          : caseUiText("selectOrSearchResources")
-                      }
-                      notFoundContent={
-                        resourcesLoading
-                          ? caseUiText("loadingResources")
-                          : caseUiText("noResourcesFound")
-                      }
-                      onSearch={setResourceQuery}
-                      options={resourceOptions.map((item) => ({
-                        value: `${item.kind}:${item.id}`,
-                        label: item.name,
-                      }))}
-                      onChange={(key) =>
-                        changeContext(() => {
-                          form.setFieldValue("resourceKey", key);
-                          setSelectedResource(
-                            resourceOptions.find((item) => `${item.kind}:${item.id}` === key),
-                          );
-                          form.setFieldsValue({
-                            callableFunction: undefined,
-                          });
-                        })
-                      }
-                    />
-                  </Form.Item>
-                </div>
-                {resourceReadWarnings.length > 0 && (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                    message={label("resourceListWarning")}
-                    description={resourceReadWarnings.join("；")}
-                  />
-                )}
-                {resourcesError && caseType === "functional" && (
-                  <Alert
-                    type="error"
-                    showIcon
-                    message={caseUiText("failedToLoadResourcesCloseAndReopenThis")}
-                    style={{ marginBottom: 16 }}
-                  />
-                )}
-              </>
-            )}
-            {standaloneExecution && (
-              <Form.Item
-                name="callableFunction"
-                label={caseUiText("executionEntry")}
-                validateTrigger="onBlur"
-                getValueFromEvent={() => currentFunction}
-                extra={caseUiText("selectACallableFunctionForTheScenario")}
-                rules={[
-                  { required: true, message: caseUiText("selectAnExecutionEntryForTheScenario") },
-                ]}
-              >
-                <Select
-                  aria-label={caseUiText("executionEntry")}
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder={caseUiText("selectAnEntryThatExecutesThisScenario")}
-                  loading={executionLookupBusy}
-                  options={selectableFunctions.map((item) => ({
-                    value: functionKey(item),
-                    label: item.name + (item.operation !== item.name ? ` · ${item.operation}` : ""),
-                  }))}
-                  onChange={(value) =>
-                    changeContext(() => form.setFieldValue("callableFunction", value))
-                  }
-                />
-              </Form.Item>
-            )}
-            {standaloneExecution && !callableFunctionsError && !callableFunctions.length && (
-              <Alert type="warning" message={caseUiText("noScenarioExecutionEntriesAvailable")} />
-            )}
-            {standaloneExecution && executionLookupError && (
-              <Alert type="error" message={executionLookupError} />
-            )}
-            <div className={styles.sectionTitle}>{evalTerm("testContent")}</div>
-            {callableFunctionsError &&
-              (selectedResource?.kind === "function" || standaloneExecution) && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  message={caseUiText("functionCatalogueUnavailable")}
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-            {resourceEditor && selectedResource && !schemaLoading && (
-              <EvalResourceCaseFields
-                key={`${networkId}:${selectedResource.kind}:${selectedResource.id}:${caseId ?? "new"}`}
-                networkId={networkId}
-                resource={selectedResource}
-                contract={resourceContract}
-                onDefinitionOnlyChange={bindDefinitionOnlyMode}
-                outputSchema={outputSchema}
-                onArgumentsChange={(value) => form.setFieldValue("argumentsJson", value)}
-                initialDefinition={draft?.definition}
-                ruleId={
-                  caseId
-                    ? evalScalarText(draft?.definition.diagnostic_spec.template_rule_id ?? "") ||
-                      undefined
-                    : undefined
-                }
-                onPrepared={bindObjectDefinition}
-              />
-            )}
-            {relationEditor && selectedResource && targetSchema.relation && (
-              <EvalRelationCaseFields
-                key={`${networkId}:${selectedResource.id}:${caseId ?? "new"}`}
-                networkId={networkId}
-                resource={selectedResource}
-                contract={targetSchema.relation}
-                initialDefinition={draft?.definition}
-                lockedCheck={
-                  caseId
-                    ? evalScalarText(draft?.definition.execution_spec.relation_rule ?? "") ||
-                      undefined
-                    : undefined
-                }
-                onPrepared={bindObjectDefinition}
-              />
-            )}
-            {objectCreation && selectedResource && (
-              <EvalObjectCaseFields
-                key={`${networkId}:${selectedResource.id}`}
-                networkId={networkId}
-                resource={selectedResource}
-                initialDefinition={draft?.definition}
-                onDefinitionOnlyChange={bindDefinitionOnlyMode}
-                onPrepared={bindObjectDefinition}
-              />
-            )}
-            {!isObjectDefinition &&
-              !objectCreation &&
-              !resourceEditor &&
-              draft?.definition.execution_spec.runner !== "declaration_preflight" &&
-              selectableFunctions.length === 0 &&
-              !canQueryResource &&
-              selectedResource && (
+      {error && <Alert className={styles.editorError} type="error" showIcon message={error} />}
+      <div
+        className={`${styles.workspace} ${showTrialPanel ? styles.withTrial : ""} ${trialView ? styles.showResult : styles.showEdit}`}
+      >
+        <div className={styles.editPane}>
+          {loading ? (
+            <Spin />
+          ) : (
+            <>
+              {!scenario && !criteriaMode && !isObjectDefinition && imported ? (
                 <Alert
                   type="info"
                   showIcon
-                  style={{ marginBottom: 16 }}
-                  message={caseUiText("thisEvaluationTargetDoesNotSupportAutomaticExecutionYet")}
-                  description={
-                    <>
-                      <span>{caseUiText("selectAnotherEvaluationTargetOrConfigureAnObject")}</span>
-                    </>
-                  }
+                  style={{ marginBottom: 20 }}
+                  message={caseUiText("checkTheImportedSampleInputCompleteExpectedJson")}
                 />
-              )}
-            {(canQueryResource || executionMode === "direct") && schemaLoading && (
-              <Spin size="small" />
-            )}
-            {!resourceEditor && (canQueryResource || executionMode === "direct") && schemaError && (
-              <Alert
-                type="error"
-                showIcon
-                message={caseUiText("failedToLoadTheParameterContractInputCompleteness")}
-                action={
-                  <Button size="small" onClick={() => setSchemaRetry((n) => n + 1)}>
-                    {caseUiText("knowledgeNetwork.eval.suiteCaseUi.retry")}
-                  </Button>
-                }
-                style={{ marginBottom: 16 }}
-              />
-            )}
-            {(canQueryResource || executionMode === "direct") &&
-              targetSchema.available === false && (
+              ) : null}
+              {!canEditDefinition && (
                 <Alert
                   type="warning"
                   showIcon
-                  message={targetSchema.reason}
                   style={{ marginBottom: 16 }}
+                  message={caseUiText("thisCaseContainsConfigurationNotSupportedByThis")}
                 />
               )}
-            {executionMode === "resource" && !resourceEditor && (
-              <>
-                {targetSchema.help && (
-                  <Alert
-                    type="info"
-                    showIcon
-                    message={targetSchema.help}
-                    style={{ marginBottom: 16 }}
-                  />
-                )}
-                {criteriaMode && (
-                  <Form.Item label={caseUiText("checkPurpose")}>
-                    <Segmented
-                      name={`eval-check-purpose-${formId}`}
-                      value={resourceCheckPurpose(criteria ?? [])}
-                      options={[
-                        { value: "availability", label: caseUiText("callAvailability") },
-                        { value: "business", label: caseUiText("customResultCriteria") },
-                        { value: "observe", label: caseUiText("recordOutputOnly") },
-                      ]}
-                      onChange={(purpose) => {
-                        if (purpose === resourceCheckPurpose(criteria ?? [])) return;
-                        const apply = () => {
-                          form.setFieldValue("criteria", purposeCriteria(purpose as CheckPurpose));
-                          setTrialStale(true);
-                        };
-                        if (
-                          resourceCheckPurpose(criteria ?? []) === "business" &&
-                          (criteria ?? []).some((c) => c.value !== "" || c.valueProvided)
-                        ) {
-                          modal.confirm({
-                            title: caseUiText("changeTheCheckPurpose"),
-                            content: caseUiText("theCurrentEvaluationCriteriaWillBeResetCall"),
-                            okText: caseUiText("confirmChange"),
-                            cancelText: caseUiText("keepCurrentCriteria"),
-                            onOk: apply,
-                          });
-                        } else apply();
-                      }}
-                    />
-                  </Form.Item>
-                )}
+              <Form
+                form={form}
+                name={`eval-case-${formId}`}
+                layout="vertical"
+                initialValues={initialValues}
+                onValuesChange={() => {
+                  formRevision.current++;
+                  if (trialResult) setTrialStale(true);
+                }}
+                disabled={busy || !canEdit || !canEditDefinition}
+              >
+                <div className={styles.sectionTitle}>{caseUiText("basicInformation")}</div>
                 <Form.Item
-                  name="argumentsJson"
-                  label={caseUiText("callParameters")}
-                  extra={caseUiText("parametersFollowTheActualContractTheTestDescription")}
-                  rules={[
-                    { required: true },
-                    {
-                      validator: (_, value: string) => {
-                        try {
-                          validateCaseArguments(value || "{}", targetSchema.input);
-                          return Promise.resolve();
-                        } catch (cause) {
-                          return Promise.reject(
-                            cause instanceof Error
-                              ? cause
-                              : new Error(caseUiText("checkTheParameters")),
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  <EvalResourceArguments
-                    networkId={networkId}
-                    kind={queryResourceKind}
-                    contract={targetSchema}
-                  />
-                </Form.Item>
-              </>
-            )}
-            {executionMode === "direct" && !resourceEditor && (
-              <>
-                {!standaloneExecution && (
-                  <Form.Item
-                    name="callableFunction"
-                    hidden={criteriaMode && selectableFunctions.length === 1}
-                    label={caseUiText("targetFunction")}
-                    rules={[{ required: true, message: caseUiText("selectACallableFunction") }]}
-                  >
-                    <Select
-                      aria-label={caseUiText("targetFunction")}
-                      placeholder={caseUiText("selectAnAuthorizedFunction")}
-                      options={selectableFunctions.map((item) => ({
-                        value: functionKey(item),
-                        label: `${item.name} · ${item.operation}`,
-                      }))}
-                    />
-                  </Form.Item>
-                )}
-                <Form.Item
-                  name="argumentsJson"
-                  label={evalTerm("arguments")}
-                  extra={caseUiText("parametersArePassedToTheSelectedFunctionUsing")}
-                  rules={[
-                    { required: true },
-                    {
-                      validator: (_: unknown, value: string) => {
-                        try {
-                          validateCaseArguments(value, targetSchema.input, true);
-                          return Promise.resolve();
-                        } catch (cause) {
-                          return Promise.reject(
-                            cause instanceof Error
-                              ? cause
-                              : new Error(caseUiText("enterAJsonObject")),
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  <EvalCaseArguments
-                    schema={targetSchema.input}
-                    hiddenFields={Object.keys(targetSchema.system_arguments ?? {})}
-                    systemArguments={targetSchema.system_arguments}
-                  />
-                </Form.Item>
-              </>
-            )}
-            {criteriaMode &&
-              executionMode !== "direct" &&
-              executionMode !== "resource" &&
-              caseType !== "scenario" &&
-              selectedResource &&
-              ["function", "api", "mcp"].includes(selectedResource.kind) && (
-                <Form.Item
-                  name="argumentsJson"
-                  label={evalTerm("arguments")}
-                  extra={label("unboundArguments")}
-                  rules={[
-                    {
-                      validator: (_, value: string) => {
-                        try {
-                          validateCaseArguments(value ?? "{}", targetSchema.input, true);
-                          return Promise.resolve();
-                        } catch (cause) {
-                          return Promise.reject(
-                            cause instanceof Error
-                              ? cause
-                              : new Error(caseUiText("invalidParameterFormat")),
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  <EvalCaseArguments schema={targetSchema.input} />
-                </Form.Item>
-              )}
-            {isObjectDefinition && !objectCreation && !resourceEditor && (
-              <div className={styles.criteriaValues}>
-                <Form.Item label={caseUiText("knowledgeNetwork.eval.relationChecks.check")}>
-                  <Input
-                    readOnly
-                    aria-label={caseUiText("savedCheck")}
-                    value={evalScalarText(
-                      draft?.definition.input_spec.template_rule_title ??
-                        draft?.definition.diagnostic_spec.template_rule_title ??
-                        caseUiText("objectDataCheck"),
-                    )}
-                  />
-                </Form.Item>
-                <Form.Item
-                  label={
-                    evalScalarText(draft?.definition.input_spec.template_rule_id ?? "").startsWith(
-                      "property-",
-                    )
-                      ? caseUiText("knowledgeNetwork.eval.relationChecks.property")
-                      : caseUiText("knowledgeNetwork.eval.terms.checkTarget")
+                  name="caseType"
+                  getValueFromEvent={() => caseType}
+                  label={caseUiText("knowledgeNetwork.eval.definitionUi.caseType")}
+                  tooltip={
+                    !imported && caseType === "security"
+                      ? caseUiText("describeTheSecurityBehaviorToVerifyForThe")
+                      : undefined
                   }
+                  rules={[{ required: true, message: caseUiText("selectACaseType") }]}
                 >
-                  <Input
-                    readOnly
-                    aria-label={caseUiText("savedCheckTarget")}
-                    value={evalScalarText(
-                      (draft?.definition.input_spec.target as Record<string, unknown> | undefined)
-                        ?.evaluation_target_name ??
-                        draft?.definition.diagnostic_spec.target_name ??
-                        selectedResource?.name ??
-                        caseUiText("currentEvaluationTarget"),
-                    )}
-                  />
-                </Form.Item>
-              </div>
-            )}
-            {isObjectDefinition && (
-              <Space align="start" style={{ width: "100%" }}>
-                <Form.Item name="checkMode" label={evalTerm("checkScope")}>
-                  <Select
-                    style={{ width: 160 }}
-                    options={[
-                      {
-                        value: "sample",
-                        label: caseUiText("knowledgeNetwork.eval.resultUi.sampleScope"),
-                      },
-                      ...((
-                        (preparedObject ?? draft?.definition)?.input_spec.check
-                          ? ruleCheckAllowsAll(
-                              (preparedObject ?? draft?.definition)?.input_spec
-                                .check as EvalRuleCheck,
-                            )
-                          : ["object-key-completeness", "object-key-uniqueness"].includes(
-                              String(
-                                (preparedObject ?? draft?.definition)?.input_spec.template_rule_id,
-                              ),
-                            )
-                      )
+                  <Segmented
+                    name={`eval-case-type-${formId}`}
+                    disabled={isObjectDefinition && !!caseId}
+                    block
+                    options={
+                      caseId && caseType === "security"
                         ? [
                             {
-                              value: "all",
-                              label: caseUiText("knowledgeNetwork.eval.suiteCaseUi.allRows"),
+                              value: "security",
+                              label: caseUiText("knowledgeNetwork.eval.definitionUi.security"),
+                              disabled: true,
                             },
                           ]
-                        : []),
-                    ]}
+                        : [
+                            {
+                              value: "functional",
+                              label: caseUiText("knowledgeNetwork.eval.definitionUi.functional"),
+                            },
+                            {
+                              value: "scenario",
+                              label: caseUiText("knowledgeNetwork.eval.definitionUi.scenario"),
+                            },
+                          ]
+                    }
+                    onChange={(nextType) =>
+                      changeContext(() => {
+                        form.setFieldValue("caseType", nextType);
+                        form.setFieldsValue({ callableFunction: undefined, argumentsJson: "{}" });
+                        if (nextType === "scenario") {
+                          setSelectedResource(undefined);
+                          setRelatedResources([]);
+                          form.setFieldValue("resourceKey", undefined);
+                        }
+                      })
+                    }
                   />
                 </Form.Item>
-                {checkMode === "sample" && (
+                <Form.Item
+                  name="title"
+                  label={evalTerm("caseName")}
+                  rules={[{ required: true, whitespace: true }]}
+                >
+                  <Input
+                    maxLength={255}
+                    placeholder={caseUiText("brieflyDescribeWhatYouWantToVerify")}
+                  />
+                </Form.Item>
+                {!imported && caseType !== "scenario" && (
+                  <>
+                    <div className={styles.sectionTitle}>{evalTerm("assessmentTarget")}</div>
+                    <div className={styles.resourceGrid}>
+                      <Form.Item label={caseUiText("knowledgeNetwork.eval.filterUi.resourceType")}>
+                        <Select
+                          aria-label={caseUiText("knowledgeNetwork.eval.filterUi.resourceType")}
+                          disabled={isObjectDefinition && !!caseId}
+                          value={resourceKind}
+                          options={[
+                            {
+                              value: "objectType",
+                              label: caseUiText(
+                                "knowledgeNetwork.eval.templateUi.kinds.objectType",
+                              ),
+                            },
+                            {
+                              value: "relationType",
+                              label: caseUiText(
+                                "knowledgeNetwork.eval.templateUi.kinds.relationType",
+                              ),
+                            },
+                            {
+                              value: "metric",
+                              label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.metric"),
+                            },
+                            {
+                              value: "action",
+                              label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.action"),
+                            },
+                            {
+                              value: "function",
+                              label: caseUiText("knowledgeNetwork.eval.templateUi.kinds.function"),
+                            },
+                            { value: "api", label: "API" },
+                            { value: "mcp", label: "MCP" },
+                            { value: "skill", label: "SKILLS" },
+                          ]}
+                          onChange={(kind) =>
+                            changeContext(() => {
+                              setResourceKind(kind);
+                              setResourceQuery("");
+                              setSelectedResource(undefined);
+                              form.setFieldsValue({
+                                resourceKey: undefined,
+                                callableFunction: undefined,
+                              });
+                            })
+                          }
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        name="resourceKey"
+                        validateTrigger="onBlur"
+                        getValueFromEvent={() =>
+                          selectedResource
+                            ? `${selectedResource.kind}:${selectedResource.id}`
+                            : undefined
+                        }
+                        getValueProps={() => ({
+                          value: selectedResource
+                            ? `${selectedResource.kind}:${selectedResource.id}`
+                            : null,
+                        })}
+                        label={
+                          caseType === "security"
+                            ? caseUiText("evaluationTargetOptional")
+                            : evalTerm("assessmentTarget")
+                        }
+                        rules={
+                          caseType === "functional"
+                            ? [{ required: true, message: caseUiText("selectAnEvaluationTarget") }]
+                            : []
+                        }
+                        extra={
+                          resourceTotal > 30
+                            ? caseUiText("resourceSearchCount", { count: resourceTotal })
+                            : undefined
+                        }
+                      >
+                        <Select
+                          aria-label={evalTerm("assessmentTarget")}
+                          disabled={isObjectDefinition && !!caseId}
+                          showSearch
+                          allowClear={caseType === "security"}
+                          filterOption
+                          optionFilterProp="label"
+                          loading={resourcesLoading}
+                          placeholder={
+                            caseType === "security"
+                              ? caseUiText("optionalSelectAResourceForTheSecurityTest")
+                              : caseUiText("selectOrSearchResources")
+                          }
+                          notFoundContent={
+                            resourcesLoading
+                              ? caseUiText("loadingResources")
+                              : caseUiText("noResourcesFound")
+                          }
+                          onSearch={setResourceQuery}
+                          options={resourceOptions.map((item) => ({
+                            value: `${item.kind}:${item.id}`,
+                            label: item.name,
+                          }))}
+                          onChange={(key) =>
+                            changeContext(() => {
+                              form.setFieldValue("resourceKey", key);
+                              setSelectedResource(
+                                resourceOptions.find((item) => `${item.kind}:${item.id}` === key),
+                              );
+                              form.setFieldsValue({
+                                callableFunction: undefined,
+                              });
+                            })
+                          }
+                        />
+                      </Form.Item>
+                    </div>
+                    {resourceReadWarnings.length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message={label("resourceListWarning")}
+                        description={resourceReadWarnings.join("；")}
+                      />
+                    )}
+                    {resourcesError && caseType === "functional" && (
+                      <Alert
+                        type="error"
+                        showIcon
+                        message={caseUiText("failedToLoadResourcesCloseAndReopenThis")}
+                        style={{ marginBottom: 16 }}
+                      />
+                    )}
+                  </>
+                )}
+                {standaloneExecution && (
                   <Form.Item
-                    name="checkLimit"
-                    label={caseUiText("knowledgeNetwork.eval.ruleApplication.sampleRows")}
-                    rules={[{ required: true }]}
+                    name="callableFunction"
+                    label={caseUiText("executionEntry")}
+                    validateTrigger="onBlur"
+                    getValueFromEvent={() => currentFunction}
+                    tooltip={caseUiText("selectACallableFunctionForTheScenario")}
+                    rules={[
+                      {
+                        required: true,
+                        message: caseUiText("selectAnExecutionEntryForTheScenario"),
+                      },
+                    ]}
                   >
-                    <InputNumber min={1} max={1000} precision={0} />
+                    <Select
+                      aria-label={caseUiText("executionEntry")}
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder={caseUiText("selectAnEntryThatExecutesThisScenario")}
+                      loading={executionLookupBusy}
+                      options={selectableFunctions.map((item) => ({
+                        value: functionKey(item),
+                        label:
+                          item.name + (item.operation !== item.name ? ` · ${item.operation}` : ""),
+                      }))}
+                      onChange={(value) =>
+                        changeContext(() => form.setFieldValue("callableFunction", value))
+                      }
+                    />
                   </Form.Item>
                 )}
-              </Space>
-            )}
-            {caseType === "security" &&
-              !definitionOnly &&
-              (objectCreation || resourceEditor || relationEditor) && (
-                <Form.Item
-                  name="question"
-                  label={caseUiText("securityAssumptionsAndVerificationGoals")}
-                  extra={caseUiText("describeTheCurrentAccountInputAndExpectedSecurity")}
-                  rules={[
-                    {
-                      required: true,
-                      whitespace: true,
-                      message: caseUiText("describeTheSecurityBehaviorToVerify"),
-                    },
-                  ]}
-                >
-                  <Input.TextArea
-                    rows={2}
-                    maxLength={2000}
-                    placeholder={caseUiText("forExampleReadThisFieldWithTheCurrent")}
+                {standaloneExecution && !callableFunctionsError && !callableFunctions.length && (
+                  <Alert
+                    type="warning"
+                    message={caseUiText("noScenarioExecutionEntriesAvailable")}
                   />
-                </Form.Item>
-              )}
-            {!objectCreation && !resourceEditor && !relationEditor && !isRelationDefinition && (
-              <Form.Item
-                name="question"
-                label={
-                  caseType === "scenario" && !imported
-                    ? caseUiText("scenarioDescriptionAndTestInput")
-                    : caseType === "security" && !imported
-                      ? caseUiText("securityTestInput")
-                      : descriptionOptional
-                        ? label("functionalDescription")
-                        : evalTerm("testInput")
-                }
-                extra={
-                  caseType === "scenario"
-                    ? label("scenarioInputHint")
-                    : caseType === "security"
-                      ? label("securityInputHint")
-                      : descriptionOptional
-                        ? label("functionalDescriptionHint")
-                        : undefined
-                }
-                rules={descriptionOptional ? [] : [{ required: true, whitespace: true }]}
-              >
-                <Input.TextArea
-                  rows={descriptionOptional ? 2 : 3}
-                  maxLength={4000}
-                  placeholder={
-                    caseType === "scenario"
-                      ? label("scenarioInputPlaceholder")
-                      : caseType === "security"
-                        ? label("securityInputPlaceholder")
-                        : label("functionalDescriptionPlaceholder")
-                  }
-                />
-              </Form.Item>
-            )}
-            {!definitionOnly &&
-              !relationEditor &&
-              !resourceEditor &&
-              !isRelationDefinition &&
-              (!objectCreation || preparedObject) && (
-                <>
-                  <div className={styles.sectionTitle}>{label("criteriaSection")}</div>
-                  {fixedAvailability && (
-                    <Typography.Paragraph>
-                      {caseUiText("theQueryOrCallSucceededAndReturnedAn")}
-                    </Typography.Paragraph>
-                  )}
-                  {criteriaMode &&
-                    observedContext === fieldContext &&
-                    trialResult?.actual !== undefined && (
-                      <Typography.Paragraph type="secondary">
-                        {caseUiText("resultFieldsIncludeThoseDiscoveredInThisTest")}
-                      </Typography.Paragraph>
+                )}
+                {standaloneExecution && executionLookupError && (
+                  <Alert type="error" message={executionLookupError} />
+                )}
+                <div className={styles.sectionTitle}>{evalTerm("testContent")}</div>
+                {awaitingResource && (
+                  <Typography.Text type="secondary">{label("chooseResourceFirst")}</Typography.Text>
+                )}
+                {schemaLoading && (
+                  <div role="status" className={styles.contractLoading}>
+                    <Spin size="small" />
+                    <Typography.Text type="secondary">{label("loadingContract")}</Typography.Text>
+                  </div>
+                )}
+                <div hidden={awaitingResource || schemaLoading}>
+                  {!schemaLoading &&
+                    selectedResource &&
+                    ["function", "api", "mcp"].includes(selectedResource.kind) && (
+                      <EvalCaseContract contract={targetSchema} />
                     )}
-                  {criteriaMode ? (
-                    <Form.Item
-                      hidden={fixedAvailability}
-                      name="criteria"
-                      label={label("criteriaLabel")}
-                      extra={label("criteriaHelp")}
-                      rules={[
-                        {
-                          validator: (_, value: CaseCriterion[]) => {
-                            try {
-                              compileCriteria(value ?? []);
-                              return Promise.resolve();
-                            } catch (cause) {
-                              return Promise.reject(
-                                cause instanceof Error
-                                  ? cause
-                                  : new Error(label("invalidCriteria")),
-                              );
-                            }
-                          },
-                        },
-                      ]}
-                    >
-                      <EvalCaseCriteria predicates={formOptions.predicates} schema={outputSchema} />
-                    </Form.Item>
-                  ) : (
+                  {callableFunctionsError &&
+                    (selectedResource?.kind === "function" || standaloneExecution) && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message={caseUiText("functionCatalogueUnavailable")}
+                        style={{ marginBottom: 16 }}
+                      />
+                    )}
+                  {resourceEditor && selectedResource && !schemaLoading && (
+                    <EvalResourceCaseFields
+                      key={`${networkId}:${selectedResource.kind}:${selectedResource.id}:${caseId ?? "new"}:${editorSession}:${contextRevision}`}
+                      networkId={networkId}
+                      resource={selectedResource}
+                      contract={resourceContract}
+                      onDefinitionOnlyChange={bindDefinitionOnlyMode}
+                      outputSchema={outputSchema}
+                      onArgumentsChange={(value) => form.setFieldValue("argumentsJson", value)}
+                      initialDefinition={contextRevision === 0 ? draft?.definition : undefined}
+                      ruleId={
+                        caseId && contextRevision === 0
+                          ? evalScalarText(
+                              draft?.definition.diagnostic_spec.template_rule_id ?? "",
+                            ) || undefined
+                          : undefined
+                      }
+                      onPrepared={bindObjectDefinition}
+                    />
+                  )}
+                  {relationEditor && selectedResource && targetSchema.relation && (
+                    <EvalRelationCaseFields
+                      key={`${networkId}:${selectedResource.id}:${caseId ?? "new"}:${editorSession}:${contextRevision}`}
+                      networkId={networkId}
+                      resource={selectedResource}
+                      contract={targetSchema.relation}
+                      initialDefinition={contextRevision === 0 ? draft?.definition : undefined}
+                      lockedCheck={
+                        caseId && contextRevision === 0
+                          ? evalScalarText(draft?.definition.execution_spec.relation_rule ?? "") ||
+                            undefined
+                          : undefined
+                      }
+                      onPrepared={bindObjectDefinition}
+                    />
+                  )}
+                  {declarationDefinition && declarationRow && (
+                    <EvalDeclarationCaseFields
+                      key={`${caseId}:${editorSession}`}
+                      networkId={networkId}
+                      row={declarationRow}
+                      initialDefinition={declarationDefinition}
+                      frozenDefinition={declarationDefinition}
+                      onPrepared={bindObjectDefinition}
+                    />
+                  )}
+                  {objectCreation && selectedResource && (
+                    <EvalObjectCaseFields
+                      key={`${networkId}:${selectedResource.id}:${editorSession}:${contextRevision}`}
+                      networkId={networkId}
+                      resource={selectedResource}
+                      initialDefinition={contextRevision === 0 ? draft?.definition : undefined}
+                      onDefinitionOnlyChange={bindDefinitionOnlyMode}
+                      onPrepared={bindObjectDefinition}
+                    />
+                  )}
+                  {!isObjectDefinition &&
+                    !objectCreation &&
+                    !resourceEditor &&
+                    draft?.definition.execution_spec.runner !== "declaration_preflight" &&
+                    selectableFunctions.length === 0 &&
+                    !canQueryResource &&
+                    selectedResource && (
+                      <Alert
+                        type="info"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message={caseUiText(
+                          "thisEvaluationTargetDoesNotSupportAutomaticExecutionYet",
+                        )}
+                        description={
+                          <>
+                            <span>
+                              {caseUiText("selectAnotherEvaluationTargetOrConfigureAnObject")}
+                            </span>
+                          </>
+                        }
+                      />
+                    )}
+                  {!resourceEditor &&
+                    (canQueryResource || executionMode === "direct") &&
+                    schemaError && (
+                      <Alert
+                        type="error"
+                        showIcon
+                        message={caseUiText("failedToLoadTheParameterContractInputCompleteness")}
+                        action={
+                          <Button size="small" onClick={() => setSchemaRetry((n) => n + 1)}>
+                            {caseUiText("knowledgeNetwork.eval.suiteCaseUi.retry")}
+                          </Button>
+                        }
+                        style={{ marginBottom: 16 }}
+                      />
+                    )}
+                  {(canQueryResource || executionMode === "direct") &&
+                    targetSchema.available === false && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message={targetSchema.reason}
+                        style={{ marginBottom: 16 }}
+                      />
+                    )}
+                  {executionMode === "resource" && !resourceEditor && (
                     <>
-                      {hasFixedStandard && (
-                        <Typography.Paragraph>
-                          {label(
-                            isFixedResourceDefinition ? "fixedResourceStandard" : "fixedStandard",
-                          )}
-                        </Typography.Paragraph>
+                      {criteriaMode && (
+                        <Form.Item label={caseUiText("checkPurpose")} tooltip={targetSchema.help}>
+                          <Segmented
+                            name={`eval-check-purpose-${formId}`}
+                            value={resourceCheckPurpose(criteria ?? [])}
+                            options={[
+                              { value: "availability", label: caseUiText("callAvailability") },
+                              { value: "business", label: caseUiText("customResultCriteria") },
+                              { value: "observe", label: caseUiText("recordOutputOnly") },
+                            ]}
+                            onChange={(purpose) => {
+                              if (purpose === resourceCheckPurpose(criteria ?? [])) return;
+                              const apply = () => {
+                                form.setFieldValue(
+                                  "criteria",
+                                  purposeCriteria(purpose as CheckPurpose),
+                                );
+                                setTrialStale(true);
+                              };
+                              if (
+                                resourceCheckPurpose(criteria ?? []) === "business" &&
+                                (criteria ?? []).some((c) => c.value !== "" || c.valueProvided)
+                              ) {
+                                modal.confirm({
+                                  title: caseUiText("changeTheCheckPurpose"),
+                                  content: caseUiText(
+                                    "theCurrentEvaluationCriteriaWillBeResetCall",
+                                  ),
+                                  okText: caseUiText("confirmChange"),
+                                  cancelText: caseUiText("keepCurrentCriteria"),
+                                  onOk: apply,
+                                });
+                              } else apply();
+                            }}
+                          />
+                        </Form.Item>
                       )}
                       <Form.Item
-                        name="answer"
-                        hidden={hasFixedStandard || objectCreation}
-                        label={
-                          imported || executionMode === "direct"
-                            ? caseUiText("knowledgeNetwork.eval.ruleApplication.expected")
-                            : caseType === "scenario"
-                              ? evalTerm("expected")
-                              : caseType === "security"
-                                ? evalTerm("expected")
-                                : evalTerm("expected")
-                        }
+                        name="argumentsJson"
+                        label={caseUiText("callParameters")}
+                        tooltip={caseUiText("parametersFollowTheActualContractTheTestDescription")}
                         rules={[
-                          { required: true, whitespace: true },
-                          ...(imported || executionMode === "direct"
-                            ? [
-                                {
-                                  validator: (_: unknown, value: string) => {
-                                    try {
-                                      parseObject(value);
-                                      return Promise.resolve();
-                                    } catch {
-                                      return Promise.reject(
-                                        new Error(caseUiText("enterANonEmptyJsonObject")),
-                                      );
-                                    }
+                          { required: true },
+                          {
+                            validator: (_, value: string) => {
+                              try {
+                                validateCaseArguments(value || "{}", targetSchema.input);
+                                return Promise.resolve();
+                              } catch (cause) {
+                                return Promise.reject(
+                                  cause instanceof Error
+                                    ? cause
+                                    : new Error(caseUiText("checkTheParameters")),
+                                );
+                              }
+                            },
+                          },
+                        ]}
+                      >
+                        <EvalResourceArguments
+                          networkId={networkId}
+                          kind={queryResourceKind}
+                          contract={targetSchema}
+                        />
+                      </Form.Item>
+                    </>
+                  )}
+                  {executionMode === "direct" && !resourceEditor && (
+                    <>
+                      {!standaloneExecution && (
+                        <Form.Item
+                          name="callableFunction"
+                          hidden={criteriaMode && selectableFunctions.length === 1}
+                          label={caseUiText("targetFunction")}
+                          rules={[
+                            { required: true, message: caseUiText("selectACallableFunction") },
+                          ]}
+                        >
+                          <Select
+                            aria-label={caseUiText("targetFunction")}
+                            placeholder={caseUiText("selectAnAuthorizedFunction")}
+                            options={selectableFunctions.map((item) => ({
+                              value: functionKey(item),
+                              label: `${item.name} · ${item.operation}`,
+                            }))}
+                          />
+                        </Form.Item>
+                      )}
+                      <Form.Item
+                        name="argumentsJson"
+                        label={evalTerm("arguments")}
+                        tooltip={caseUiText("parametersArePassedToTheSelectedFunctionUsing")}
+                        rules={[
+                          { required: true },
+                          {
+                            validator: (_: unknown, value: string) => {
+                              try {
+                                validateCaseArguments(value, targetSchema.input, true);
+                                return Promise.resolve();
+                              } catch (cause) {
+                                return Promise.reject(
+                                  cause instanceof Error
+                                    ? cause
+                                    : new Error(caseUiText("enterAJsonObject")),
+                                );
+                              }
+                            },
+                          },
+                        ]}
+                      >
+                        <EvalCaseArguments
+                          schema={targetSchema.input}
+                          hiddenFields={Object.keys(targetSchema.system_arguments ?? {})}
+                          systemArguments={targetSchema.system_arguments}
+                        />
+                      </Form.Item>
+                    </>
+                  )}
+                  {criteriaMode &&
+                    executionMode !== "direct" &&
+                    executionMode !== "resource" &&
+                    caseType !== "scenario" &&
+                    selectedResource &&
+                    ["function", "api", "mcp"].includes(selectedResource.kind) && (
+                      <Form.Item
+                        name="argumentsJson"
+                        label={evalTerm("arguments")}
+                        tooltip={label("unboundArguments")}
+                        rules={[
+                          {
+                            validator: (_, value: string) => {
+                              try {
+                                validateCaseArguments(value ?? "{}", targetSchema.input, true);
+                                return Promise.resolve();
+                              } catch (cause) {
+                                return Promise.reject(
+                                  cause instanceof Error
+                                    ? cause
+                                    : new Error(caseUiText("invalidParameterFormat")),
+                                );
+                              }
+                            },
+                          },
+                        ]}
+                      >
+                        <EvalCaseArguments schema={targetSchema.input} />
+                      </Form.Item>
+                    )}
+                  {isObjectDefinition && !objectCreation && !resourceEditor && (
+                    <div className={styles.criteriaValues}>
+                      <Form.Item label={caseUiText("knowledgeNetwork.eval.relationChecks.check")}>
+                        <Input
+                          readOnly
+                          aria-label={caseUiText("savedCheck")}
+                          value={evalScalarText(
+                            draft?.definition.input_spec.template_rule_title ??
+                              draft?.definition.diagnostic_spec.template_rule_title ??
+                              caseUiText("objectDataCheck"),
+                          )}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        label={
+                          evalScalarText(
+                            draft?.definition.input_spec.template_rule_id ?? "",
+                          ).startsWith("property-")
+                            ? caseUiText("knowledgeNetwork.eval.relationChecks.property")
+                            : caseUiText("knowledgeNetwork.eval.terms.checkTarget")
+                        }
+                      >
+                        <Input
+                          readOnly
+                          aria-label={caseUiText("savedCheckTarget")}
+                          value={evalScalarText(
+                            (
+                              draft?.definition.input_spec.target as
+                                Record<string, unknown> | undefined
+                            )?.evaluation_target_name ??
+                              draft?.definition.diagnostic_spec.target_name ??
+                              selectedResource?.name ??
+                              caseUiText("currentEvaluationTarget"),
+                          )}
+                        />
+                      </Form.Item>
+                    </div>
+                  )}
+                  {isObjectDefinition && (
+                    <Space align="start" style={{ width: "100%" }}>
+                      <Form.Item name="checkMode" label={evalTerm("checkScope")}>
+                        <Select
+                          style={{ width: 160 }}
+                          options={[
+                            {
+                              value: "sample",
+                              label: caseUiText("knowledgeNetwork.eval.resultUi.sampleScope"),
+                            },
+                            ...((
+                              (preparedObject ?? draft?.definition)?.input_spec.check
+                                ? ruleCheckAllowsAll(
+                                    (preparedObject ?? draft?.definition)?.input_spec
+                                      .check as EvalRuleCheck,
+                                  )
+                                : ["object-key-completeness", "object-key-uniqueness"].includes(
+                                    String(
+                                      (preparedObject ?? draft?.definition)?.input_spec
+                                        .template_rule_id,
+                                    ),
+                                  )
+                            )
+                              ? [
+                                  {
+                                    value: "all",
+                                    label: caseUiText("knowledgeNetwork.eval.suiteCaseUi.allRows"),
                                   },
-                                },
-                              ]
-                            : []),
+                                ]
+                              : []),
+                          ]}
+                        />
+                      </Form.Item>
+                      {checkMode === "sample" && (
+                        <Form.Item
+                          name="checkLimit"
+                          label={caseUiText("knowledgeNetwork.eval.ruleApplication.sampleRows")}
+                          rules={[{ required: true }]}
+                        >
+                          <InputNumber min={1} max={1000} precision={0} />
+                        </Form.Item>
+                      )}
+                    </Space>
+                  )}
+                  {caseType === "security" &&
+                    !definitionOnly &&
+                    (objectCreation || resourceEditor || relationEditor) && (
+                      <Form.Item
+                        name="question"
+                        label={caseUiText("securityAssumptionsAndVerificationGoals")}
+                        tooltip={caseUiText("describeTheCurrentAccountInputAndExpectedSecurity")}
+                        rules={[
+                          {
+                            required: true,
+                            whitespace: true,
+                            message: caseUiText("describeTheSecurityBehaviorToVerify"),
+                          },
                         ]}
                       >
                         <Input.TextArea
-                          readOnly={
-                            isObjectDefinition ||
-                            draft?.definition.diagnostic_spec.expected_locked === true
-                          }
-                          rows={imported || executionMode === "direct" ? 8 : 3}
-                          maxLength={imported || executionMode === "direct" ? 64000 : 4000}
-                          placeholder={caseUiText("independentlyVerifiedCorrectResult")}
+                          rows={2}
+                          maxLength={2000}
+                          placeholder={caseUiText("forExampleReadThisFieldWithTheCurrent")}
                         />
                       </Form.Item>
-                      {executionMode === "direct" && !resourceEditor && (
-                        <Form.Item
-                          name="expectedPath"
-                          label={caseUiText("comparisonFieldPath")}
-                          dependencies={["answer"]}
-                          extra={caseUiText("useToCompareTheCompleteResultOr")}
-                          rules={[
-                            { required: true },
-                            {
-                              validator: (_: unknown, value: string) => {
-                                try {
-                                  const answer: unknown = form.getFieldValue("answer");
-                                  if (
-                                    typeof answer === "string" &&
-                                    expectedPathExists(parseObject(answer), value)
-                                  )
+                    )}
+                  {scenario && <EvalScenarioCaseFields />}
+                  {!scenario &&
+                    !objectCreation &&
+                    !resourceEditor &&
+                    !relationEditor &&
+                    !isRelationDefinition && (
+                      <Form.Item
+                        name="question"
+                        label={
+                          caseType === "security" && !imported
+                            ? caseUiText("securityTestInput")
+                            : descriptionOptional
+                              ? label("functionalDescription")
+                              : evalTerm("testInput")
+                        }
+                        tooltip={
+                          caseType === "security"
+                            ? label("securityInputHint")
+                            : descriptionOptional
+                              ? label("functionalDescriptionHint")
+                              : undefined
+                        }
+                        rules={descriptionOptional ? [] : [{ required: true, whitespace: true }]}
+                      >
+                        <Input.TextArea
+                          rows={descriptionOptional ? 2 : 3}
+                          maxLength={4000}
+                          placeholder={
+                            caseType === "security"
+                              ? label("securityInputPlaceholder")
+                              : label("functionalDescriptionPlaceholder")
+                          }
+                        />
+                      </Form.Item>
+                    )}
+                  {!definitionOnly &&
+                    !relationEditor &&
+                    !resourceEditor &&
+                    !isRelationDefinition &&
+                    (!objectCreation || preparedObject) && (
+                      <>
+                        <div className={styles.sectionTitle}>{label("criteriaSection")}</div>
+                        {fixedAvailability && (
+                          <Typography.Paragraph>
+                            {caseUiText("theQueryOrCallSucceededAndReturnedAn")}
+                          </Typography.Paragraph>
+                        )}
+                        {criteriaMode &&
+                          observedContext === fieldContext &&
+                          trialResult?.actual !== undefined && (
+                            <Typography.Paragraph type="secondary">
+                              {caseUiText("resultFieldsIncludeThoseDiscoveredInThisTest")}
+                            </Typography.Paragraph>
+                          )}
+                        {criteriaMode ? (
+                          <Form.Item
+                            hidden={fixedAvailability}
+                            name="criteria"
+                            label={label("criteriaLabel")}
+                            tooltip={label("criteriaHelp")}
+                            rules={[
+                              {
+                                validator: (_, value: CaseCriterion[]) => {
+                                  try {
+                                    compileCriteria(value ?? []);
                                     return Promise.resolve();
-                                } catch {
-                                  /* invalid expected JSON */
-                                }
-                                return Promise.reject(
-                                  new Error(caseUiText("theFieldPathMustExistInTheExpected")),
-                                );
+                                  } catch (cause) {
+                                    return Promise.reject(
+                                      cause instanceof Error
+                                        ? cause
+                                        : new Error(label("invalidCriteria")),
+                                    );
+                                  }
+                                },
                               },
+                            ]}
+                          >
+                            <EvalCaseCriteria
+                              predicates={
+                                formOptions?.predicates.length
+                                  ? formOptions.predicates
+                                  : [
+                                      "equals",
+                                      "exists",
+                                      "contains",
+                                      "approx",
+                                      "numeric_range",
+                                      "json_schema",
+                                      "observation_only",
+                                    ]
+                              }
+                              schema={outputSchema}
+                            />
+                          </Form.Item>
+                        ) : (
+                          <>
+                            {hasFixedStandard && (
+                              <Typography.Paragraph>
+                                {label(
+                                  isFixedResourceDefinition
+                                    ? "fixedResourceStandard"
+                                    : "fixedStandard",
+                                )}
+                              </Typography.Paragraph>
+                            )}
+                            <Form.Item
+                              name="answer"
+                              hidden={hasFixedStandard || objectCreation}
+                              label={
+                                imported || executionMode === "direct"
+                                  ? caseUiText("knowledgeNetwork.eval.ruleApplication.expected")
+                                  : evalTerm("expected")
+                              }
+                              rules={[
+                                { required: true, whitespace: true },
+                                ...(imported || executionMode === "direct"
+                                  ? [
+                                      {
+                                        validator: (_: unknown, value: string) => {
+                                          try {
+                                            parseObject(value);
+                                            return Promise.resolve();
+                                          } catch {
+                                            return Promise.reject(
+                                              new Error(caseUiText("enterANonEmptyJsonObject")),
+                                            );
+                                          }
+                                        },
+                                      },
+                                    ]
+                                  : []),
+                              ]}
+                            >
+                              <Input.TextArea
+                                readOnly={
+                                  isObjectDefinition ||
+                                  draft?.definition.diagnostic_spec.expected_locked === true
+                                }
+                                rows={imported || executionMode === "direct" ? 8 : 3}
+                                maxLength={imported || executionMode === "direct" ? 64000 : 4000}
+                                placeholder={caseUiText("independentlyVerifiedCorrectResult")}
+                              />
+                            </Form.Item>
+                            {executionMode === "direct" && !resourceEditor && (
+                              <Form.Item
+                                name="expectedPath"
+                                label={caseUiText("comparisonFieldPath")}
+                                dependencies={["answer"]}
+                                tooltip={caseUiText("useToCompareTheCompleteResultOr")}
+                                rules={[
+                                  { required: true },
+                                  {
+                                    validator: (_: unknown, value: string) => {
+                                      try {
+                                        const answer: unknown = form.getFieldValue("answer");
+                                        if (
+                                          typeof answer === "string" &&
+                                          expectedPathExists(parseObject(answer), value)
+                                        )
+                                          return Promise.resolve();
+                                      } catch {
+                                        /* invalid expected JSON */
+                                      }
+                                      return Promise.reject(
+                                        new Error(caseUiText("theFieldPathMustExistInTheExpected")),
+                                      );
+                                    },
+                                  },
+                                ]}
+                              >
+                                <Input placeholder="$.leadtime_days" />
+                              </Form.Item>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  {needsReference &&
+                    executionMode === "direct" &&
+                    sourceKind === "declared_contract" && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message={caseUiText("aDeclarationDescribesTheCheckRequirementsButDoes")}
+                      />
+                    )}
+                  {needsReference && (
+                    <>
+                      <Form.Item
+                        name="sourceKind"
+                        label={label("sourceLabel")}
+                        tooltip={label("sourceHelp")}
+                        rules={[
+                          { required: true },
+                          {
+                            validator: (_: unknown, value: CaseForm["sourceKind"]) => {
+                              if (
+                                (executionMode === "direct" || (criteriaMode && needsReference)) &&
+                                value === "declared_contract"
+                              )
+                                return Promise.reject(
+                                  new Error(
+                                    caseUiText("automaticExecutionRequiresAnIndependentSampleOrAn"),
+                                  ),
+                                );
+                              return Promise.resolve();
                             },
+                          },
+                        ]}
+                      >
+                        <Select
+                          disabled={isObjectDefinition && !!caseId}
+                          options={[
+                            {
+                              value: "declared_contract",
+                              label: label("sourceContract"),
+                              disabled:
+                                executionMode === "direct" || (criteriaMode && needsReference),
+                            },
+                            { value: "independent_sample", label: label("sourceSample") },
+                            { value: "business_expert", label: label("sourceExpert") },
                           ]}
-                        >
-                          <Input placeholder="$.leadtime_days" />
-                        </Form.Item>
-                      )}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        name="evidenceRef"
+                        label={label("evidenceLabel")}
+                        tooltip={label("evidenceHelp")}
+                        rules={[
+                          {
+                            validator: (_, value: string) => {
+                              const line = (value ?? "")
+                                .split("\n")
+                                .findIndex((entry) => Array.from(entry.trim()).length > 512);
+                              return line < 0
+                                ? Promise.resolve()
+                                : Promise.reject(
+                                    new Error(
+                                      t("knowledgeNetwork.eval.caseEditor.evidenceTooLong", {
+                                        line: line + 1,
+                                      }),
+                                    ),
+                                  );
+                            },
+                          },
+                        ]}
+                      >
+                        <Input.TextArea
+                          readOnly={isObjectDefinition}
+                          rows={2}
+                          maxLength={2000}
+                          placeholder={label(
+                            sourceKind === "independent_sample"
+                              ? "evidenceSamplePlaceholder"
+                              : "evidenceExpertPlaceholder",
+                          )}
+                        />
+                      </Form.Item>
                     </>
                   )}
-                </>
-              )}
-            {needsReference && executionMode === "direct" && sourceKind === "declared_contract" && (
-              <Alert
-                type="warning"
-                showIcon
-                style={{ marginBottom: 16 }}
-                message={caseUiText("aDeclarationDescribesTheCheckRequirementsButDoes")}
-              />
-            )}
-            {needsReference && (
-              <>
+                </div>
+                <div className={styles.sectionTitle}>{label("additionalSection")}</div>
                 <Form.Item
-                  name="sourceKind"
-                  label={label("sourceLabel")}
-                  extra={label("sourceHelp")}
-                  rules={[
-                    { required: true },
-                    {
-                      validator: (_: unknown, value: CaseForm["sourceKind"]) => {
-                        if (
-                          (executionMode === "direct" || (criteriaMode && needsReference)) &&
-                          value === "declared_contract"
-                        )
-                          return Promise.reject(
-                            new Error(
-                              caseUiText("automaticExecutionRequiresAnIndependentSampleOrAn"),
-                            ),
-                          );
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
+                  name="diagnosticNote"
+                  label={caseUiText("knowledgeNetwork.eval.suiteCaseUi.note")}
+                  tooltip={label("diagnosticHint")}
                 >
-                  <Select
-                    disabled={isObjectDefinition && !!caseId}
-                    options={[
-                      {
-                        value: "declared_contract",
-                        label: label("sourceContract"),
-                        disabled: executionMode === "direct" || (criteriaMode && needsReference),
-                      },
-                      { value: "independent_sample", label: label("sourceSample") },
-                      { value: "business_expert", label: label("sourceExpert") },
-                    ]}
-                  />
+                  <Input.TextArea rows={2} maxLength={2000} />
                 </Form.Item>
-                <Form.Item
-                  name="evidenceRef"
-                  label={label("evidenceLabel")}
-                  extra={label("evidenceHelp")}
-                  rules={[
-                    { required: true, whitespace: true, message: label("evidenceRequired") },
-                    {
-                      validator: (_, value: string) => {
-                        const line = (value ?? "")
-                          .split("\n")
-                          .findIndex((entry) => Array.from(entry.trim()).length > 512);
-                        return line < 0
-                          ? Promise.resolve()
-                          : Promise.reject(
-                              new Error(
-                                t("knowledgeNetwork.eval.caseEditor.evidenceTooLong", {
-                                  line: line + 1,
-                                }),
-                              ),
-                            );
-                      },
-                    },
-                  ]}
-                >
-                  <Input.TextArea
-                    readOnly={isObjectDefinition}
-                    rows={2}
-                    maxLength={2000}
-                    placeholder={label(
-                      sourceKind === "independent_sample"
-                        ? "evidenceSamplePlaceholder"
-                        : "evidenceExpertPlaceholder",
-                    )}
-                  />
-                </Form.Item>
-              </>
-            )}
-            <div className={styles.sectionTitle}>{label("additionalSection")}</div>
-            <Form.Item
-              name="diagnosticNote"
-              label={caseUiText("knowledgeNetwork.eval.suiteCaseUi.note")}
-              extra={label("diagnosticHint")}
-            >
-              <Input.TextArea rows={2} maxLength={2000} />
-            </Form.Item>
-            {canEdit && canEditDefinition && (
-              <Form.Item
-                label={caseUiText("knowledgeNetwork.eval.templateUi.enabled")}
-                extra={
-                  definitionOnly
-                    ? t("knowledgeNetwork.eval.definitionOnly.enableHint")
-                    : caseUiText("whenDisabledTheCaseIsSavedButExcluded")
-                }
-              >
-                <Switch
-                  aria-label={caseUiText("enableCase")}
-                  checked={enableOnSave}
-                  disabled={busy || definitionOnly}
-                  onChange={setEnableOnSave}
-                />
-              </Form.Item>
-            )}
-          </Form>
-        </>
-      )}
-      {trialView && (
-        <section aria-label={caseUiText("caseTestRunResult")}>
-          <Typography.Title level={5}>{caseUiText("caseTestRunResult")}</Typography.Title>
-          {trialStale && <Alert type="warning" showIcon message={label("trialStale")} />}
-          {trialResult && (
-            <Space direction="vertical" style={{ width: "100%" }} size={12}>
-              <Space>
-                <Tag
-                  color={
-                    trialResult.evaluation.quality_outcome === "pass"
-                      ? "green"
-                      : trialResult.evaluation.quality_outcome === "fail"
-                        ? "red"
-                        : "orange"
-                  }
-                >
-                  {trialResult.evaluation.quality_outcome === "pass"
-                    ? evalTerm("passed")
-                    : trialResult.evaluation.quality_outcome === "fail"
-                      ? evalTerm("notPassed")
-                      : evalTerm("inconclusive")}
-                </Tag>
-              </Space>
-              {trialResult.error_class && (
-                <Alert
-                  type="error"
-                  showIcon
-                  message={caseUiText("trialExecutionError", {
-                    reason: trialErrorClasses()[trialResult.error_class] ?? trialResult.error_class,
-                  })}
-                  description={trialResult.resource_query_summary?.execution_error}
-                />
-              )}
-              <EvalRelationCheckResult summary={trialResult.resource_query_summary} />
-              <Typography.Text strong>{evalTerm("actual")}</Typography.Text>
-              <pre style={{ maxHeight: 220, overflow: "auto", background: "#f7f8fa", padding: 12 }}>
-                {formatPrecisionSafeJSON(
-                  transformPrecisionSafeJSONRequest(trialResult.actual ?? null),
-                )}
-              </pre>
-              <Typography.Text strong>{evalTerm("expected")}</Typography.Text>
-              <pre style={{ maxHeight: 220, overflow: "auto", background: "#f7f8fa", padding: 12 }}>
-                {formatPrecisionSafeJSON(transformPrecisionSafeJSONRequest(trialResult.expected))}
-              </pre>
-              <Typography.Text strong>
-                {caseUiText("knowledgeNetwork.eval.terms.decisionDetails")}
-              </Typography.Text>
-              {trialResult.evaluation.assertions.map((item, index) => (
-                <div key={item.id}>
-                  <Tag
-                    color={
-                      item.outcome === "pass" ? "green" : item.outcome === "fail" ? "red" : "orange"
+                {canEdit && canEditDefinition && (
+                  <Form.Item
+                    label={caseUiText("knowledgeNetwork.eval.templateUi.enabled")}
+                    tooltip={
+                      definitionOnly
+                        ? t("knowledgeNetwork.eval.definitionOnly.enableHint")
+                        : caseUiText("whenDisabledTheCaseIsSavedButExcluded")
                     }
                   >
-                    {evalOutcomeLabel(item.outcome)}
-                  </Tag>
-                  {criteria?.find((c) => c.id === item.id)
-                    ? `${criteria.find((c) => c.id === item.id)?.path} · ${label(`predicates.${criteria.find((c) => c.id === item.id)?.type}`)}`
-                    : (assertionNames[item.id] ??
-                      evalReferenceLabel("decision", { index: index + 1 }))}
-                  {item.reason ? `：${assertionReasons()[item.reason] ?? item.reason}` : ""}
-                </div>
-              ))}
-              {trialResult.evidence_status !== "complete" && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  message={caseUiText("executionEvidenceIsIncompleteTheTestRunCannot")}
-                />
-              )}
-            </Space>
+                    <Switch
+                      aria-label={caseUiText("enableCase")}
+                      checked={enableOnSave}
+                      disabled={busy || definitionOnly}
+                      onChange={setEnableOnSave}
+                    />
+                  </Form.Item>
+                )}
+              </Form>
+            </>
           )}
-        </section>
-      )}
+        </div>
+        {showTrialPanel && (
+          <section className={styles.resultPane} aria-label={caseUiText("caseTestRunResult")}>
+            <Typography.Title level={5}>{caseUiText("caseTestRunResult")}</Typography.Title>
+            {trialBusy && <Spin />}
+            {!trialResult && !trialBusy && (
+              <Typography.Paragraph type="secondary">{label("trialEmpty")}</Typography.Paragraph>
+            )}
+            {trialResult && trialStale && (
+              <Alert type="warning" showIcon message={label("trialStale")} />
+            )}
+            {trialResult && (
+              <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                <Space>
+                  <Tag
+                    color={
+                      trialResult.evaluation.quality_outcome === "pass"
+                        ? "green"
+                        : trialResult.evaluation.quality_outcome === "fail"
+                          ? "red"
+                          : "orange"
+                    }
+                  >
+                    {trialResult.evaluation.quality_outcome === "pass"
+                      ? evalTerm("passed")
+                      : trialResult.evaluation.quality_outcome === "fail"
+                        ? evalTerm("notPassed")
+                        : evalTerm("inconclusive")}
+                  </Tag>
+                </Space>
+                {trialResult.error_class && (
+                  <Alert
+                    type="error"
+                    showIcon
+                    message={caseUiText("trialExecutionError", {
+                      reason:
+                        trialErrorClasses()[trialResult.error_class] ?? trialResult.error_class,
+                    })}
+                    description={trialResult.resource_query_summary?.execution_error}
+                  />
+                )}
+                <EvalRelationCheckResult summary={trialResult.resource_query_summary} />
+                <Typography.Text strong>{evalTerm("actual")}</Typography.Text>
+                <JsonTextBlock
+                  maxHeight={360}
+                  text={formatPrecisionSafeJSON(
+                    transformPrecisionSafeJSONRequest(trialResult.actual ?? null),
+                  )}
+                />
+                <Typography.Text strong>{evalTerm("expected")}</Typography.Text>
+                <JsonTextBlock
+                  maxHeight={360}
+                  text={formatPrecisionSafeJSON(
+                    transformPrecisionSafeJSONRequest(trialResult.expected),
+                  )}
+                />
+                <Typography.Text strong>
+                  {caseUiText("knowledgeNetwork.eval.terms.decisionDetails")}
+                </Typography.Text>
+                {trialResult.evaluation.assertions.map((item, index) => (
+                  <div key={item.id}>
+                    <Tag
+                      color={
+                        item.outcome === "pass"
+                          ? "green"
+                          : item.outcome === "fail"
+                            ? "red"
+                            : "orange"
+                      }
+                    >
+                      {evalOutcomeLabel(item.outcome)}
+                    </Tag>
+                    {criteria?.find((c) => c.id === item.id)
+                      ? `${criteria.find((c) => c.id === item.id)?.path} · ${label(`predicates.${criteria.find((c) => c.id === item.id)?.type}`)}`
+                      : (assertionNames[item.id] ??
+                        evalReferenceLabel("decision", { index: index + 1 }))}
+                    {item.reason ? `：${assertionReasons()[item.reason] ?? item.reason}` : ""}
+                  </div>
+                ))}
+                {trialResult.evidence_status !== "complete" && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message={caseUiText("executionEvidenceIsIncompleteTheTestRunCannot")}
+                  />
+                )}
+              </Space>
+            )}
+          </section>
+        )}
+      </div>
     </Drawer>
   );
 }

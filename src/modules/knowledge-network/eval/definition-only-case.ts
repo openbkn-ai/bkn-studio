@@ -40,7 +40,7 @@ export function definitionOnlyCase({
     .split("\n")
     .map((r) => r.trim())
     .filter(Boolean);
-  if (!refs.length || refs.length > 20 || refs.some((r) => r.length > 512))
+  if (refs.length > 20 || refs.some((r) => r.length > 512))
     throw Error("EVAL_DEFINITION_REFERENCES_REQUIRED");
   const args = validateCaseArguments(argumentsJson || "{}");
   const compiled = compileCriteria(criteria);

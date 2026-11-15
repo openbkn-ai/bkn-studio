@@ -281,7 +281,11 @@ export async function getKnowledgeNetworkObjectType(
   return record ? mapObjectType(record) : null;
 }
 
-export async function getKnowledgeNetworkObjectTypeDetail(networkId: string, objectTypeId: string) {
+export async function getKnowledgeNetworkObjectTypeDetail(
+  networkId: string,
+  objectTypeId: string,
+  options: { skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
     const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
     return wait(
@@ -293,11 +297,17 @@ export async function getKnowledgeNetworkObjectTypeDetail(networkId: string, obj
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}`,
+    { skipErrorToast: options.skipErrorToast },
   );
 
   const record = unwrapSingleEntryResponse(response.data);
   return record
-    ? ensureKnowledgeNetworkChildOperations(networkId, "object-types", mapObjectTypeDetail(record))
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "object-types",
+        mapObjectTypeDetail(record),
+        options,
+      )
     : null;
 }
 

@@ -131,7 +131,9 @@ it("compares published revisions and does not call a Case definition change an i
   expect(await screen.findByText("用例定义已变更")).toBeTruthy();
   expect(screen.queryByText("old", { exact: true })).toBeNull();
   expect(screen.queryByText("new", { exact: true })).toBeNull();
-  expect(screen.getByText(/结果仅说明两次测评的差异/)).toBeTruthy();
+  expect(screen.queryByText(/结果仅说明两次测评的差异/)).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "基线运行 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("结果仅说明两次测评的差异");
   expect(screen.getByText(/数据基线没有可验证的不可变修订/)).toBeTruthy();
 });
 

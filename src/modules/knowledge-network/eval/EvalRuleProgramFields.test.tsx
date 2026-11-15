@@ -6,8 +6,12 @@
  */
 
 import { useState } from "react";
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
+}));
+
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeAll, expect, it } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { evalLocales } from "./locales";
@@ -28,6 +32,25 @@ function Editor() {
     </>
   );
 }
+
+it("configures composite key duplicates using the existing aggregate editor", () => {
+  render(<Editor />);
+  fireEvent.click(screen.getByRole("button", { name: "添加聚合比较" }));
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "聚合方式" }));
+  fireEvent.click(
+    screen.getByText("联合键重复条数", { selector: ".ant-select-item-option-content" }),
+  );
+  fireEvent.change(screen.getByLabelText("联合业务键字段（逗号分隔）"), {
+    target: { value: "tenant_id,customer_code" },
+  });
+  const plan = JSON.parse(screen.getByTestId("plan").textContent ?? "") as EvalRuleProgram;
+  expect(plan.aggregates?.[0]).toMatchObject({
+    function: "duplicate_count",
+    fields: ["tenant_id", "customer_code"],
+  });
+  expect(plan.aggregates?.[0].field).toBeUndefined();
+  expect(() => validateRuleProgram(plan)).not.toThrow();
+});
 it("combines structured predicates and aggregate comparison without asking for a program", () => {
   render(<Editor />);
   expect(screen.getByLabelText("检查字段", { selector: "input,textarea" })).toHaveValue(

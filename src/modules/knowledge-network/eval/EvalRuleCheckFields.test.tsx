@@ -6,6 +6,10 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
+}));
+
 import { expect, it, vi } from "vitest";
 import { EvalRuleCheckFields } from "./EvalRuleCheckFields";
 const capabilities = [

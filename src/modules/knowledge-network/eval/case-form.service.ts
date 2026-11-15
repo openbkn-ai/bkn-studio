@@ -22,6 +22,8 @@ export type RelationEndpoint = {
   data_properties: { name: string; type: string; display_name?: string }[];
 };
 export type RelationCheckInput = {
+  policy_version?: string;
+  policy_evidence_refs?: string[];
   rule: string;
   end?: string;
   limit?: number;
@@ -39,9 +41,16 @@ export type RelationCheckForm = {
   required: string[];
   characteristics: string[];
   properties: { name: string; type: string }[];
-  checks: { id: string; title: string; applicable: boolean; reason?: string }[];
+  checks: { id: string; rule_id?: string; title: string; applicable: boolean; reason?: string }[];
 };
 export type CaseTargetSchema = {
+  action_checks?: Record<string, CaseSchema>;
+  logical_properties?: {
+    name: string;
+    display_name: string;
+    input: CaseSchema;
+    output: CaseSchema;
+  }[];
   rule_based?: boolean;
   relation?: RelationCheckForm;
   runner?: "direct_capability" | "resource_query";

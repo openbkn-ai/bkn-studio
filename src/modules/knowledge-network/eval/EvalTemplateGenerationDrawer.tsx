@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { evalTerm } from "./eval-terminology";
 
 import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -756,13 +757,6 @@ export function EvalAssistantDrawer({
         />
       }
       contentTestId="eval-ai-scroll-content"
-      description={
-        repairRequest ? (
-          t("knowledgeNetwork.eval.repair.description")
-        ) : (
-          <>{workspaceUi("askAboutAndUseTheEntireQualityEvaluationModule")}</>
-        )
-      }
       examples={repairRequest ? [] : examples}
       examplesLabel={workspaceUi("examples")}
       generating={repairRequest ? (activeRepairView?.thinking ?? true) : aiGenerating}
@@ -822,7 +816,19 @@ export function EvalAssistantDrawer({
                   })
                 : workspaceUi("evaluationContextNotLoaded", { value0: tabLabels[activeTab] })
       }
-      title={workspaceUi("qualityEvaluationAIAssistant")}
+      title={
+        <>
+          {workspaceUi("qualityEvaluationAIAssistant")}{" "}
+          <EvalHelpTooltip
+            label={workspaceUi("qualityEvaluationAIAssistant")}
+            title={
+              repairRequest
+                ? t("knowledgeNetwork.eval.repair.description")
+                : workspaceUi("askAboutAndUseTheEntireQualityEvaluationModule")
+            }
+          />
+        </>
+      }
     >
       {repairRequest ? (
         <EvalRepairPanel

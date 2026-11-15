@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { resultUiText } from "./result-ui-text";
 
 import { evalReferenceLabel } from "./eval-readable-references";
@@ -143,10 +144,20 @@ export function EvalSuiteCaseDetailDrawer({
         />
       ) : detail && definition ? (
         <Space direction="vertical" size={20} style={{ width: "100%" }}>
-          {suiteId && <Alert type="info" showIcon message={definitionText("currentCase")} />}
           {detail.archived && <Alert type="warning" showIcon message={label("archived")} />}
           <Descriptions className={styles.detailDescriptions} bordered size="small" column={1}>
-            <Descriptions.Item label={label("name")}>{definition.title}</Descriptions.Item>
+            <Descriptions.Item
+              label={
+                <>
+                  {label("name")}
+                  {suiteId && (
+                    <EvalHelpTooltip label={label("name")} title={definitionText("currentCase")} />
+                  )}
+                </>
+              }
+            >
+              {definition.title}
+            </Descriptions.Item>
             <Descriptions.Item label={definitionText("creation")}>
               {definitionText(
                 ["manual", "template", "imported_sample"].includes(String(detail.source.type))
@@ -182,11 +193,32 @@ export function EvalSuiteCaseDetailDrawer({
               <Descriptions.Item label={label("dependencies")}>{renderTargets()}</Descriptions.Item>
             )}
             <Descriptions.Item label={label("rule")}>{ruleLabel(detail)}</Descriptions.Item>
-            <Descriptions.Item label={label("question")}>
+            <Descriptions.Item
+              label={scenario ? t("knowledgeNetwork.eval.scenarioCase.goal") : label("question")}
+            >
               <span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                 {textValue(input.question) || "—"}
               </span>
             </Descriptions.Item>
+            {scenario &&
+              (
+                [
+                  ["context", "context"],
+                  ["constraints", "constraints"],
+                  ["output_requirements", "output"],
+                ] as const
+              ).map(([field, key]) =>
+                textValue(input[field]) ? (
+                  <Descriptions.Item
+                    key={field}
+                    label={t(`knowledgeNetwork.eval.scenarioCase.${key}`)}
+                  >
+                    <span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                      {textValue(input[field])}
+                    </span>
+                  </Descriptions.Item>
+                ) : null,
+              )}
             {Object.keys(object(input.arguments)).length > 0 && (
               <Descriptions.Item label={label("arguments")}>
                 {json(input.arguments)}

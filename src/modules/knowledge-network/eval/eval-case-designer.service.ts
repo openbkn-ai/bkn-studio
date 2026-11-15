@@ -108,7 +108,7 @@ export type EvalAssistantWorkspaceContext = {
       uncovered: number;
       unresolvedBindings: number;
     };
-    rulePoints: {
+    rulePoints?: {
       enabledRules: number;
       applicable: number;
       covered: number;
@@ -132,7 +132,7 @@ export type EvalAssistantWorkspaceContext = {
     };
     coverage: {
       resourcePercent: number;
-      rulePercent: number;
+      rulePercent?: number;
       executionPercent: number;
       passPercent: number;
     };

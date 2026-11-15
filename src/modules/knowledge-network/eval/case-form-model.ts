@@ -79,6 +79,10 @@ export function resourceCheckPurpose(
   return "business";
 }
 export function readCriteria(definition: EvalCaseDefinition): CaseCriterion[] | undefined {
+  definition = {
+    ...definition,
+    assertions: definition.assertions.filter((a) => a.id !== "observation-evidence"),
+  };
   if (
     definition.assertions.filter((a) => outputTypes.includes(String(a.type))).length > 20 ||
     definition.assertions.some(

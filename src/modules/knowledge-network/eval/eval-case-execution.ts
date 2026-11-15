@@ -29,6 +29,8 @@ export const caseExecutionSetupLabel = (entry: EvalCaseSummary): string => {
 
 export const caseExecutionSetupReason = (setup: EvalCaseSummary["execution_setup"]): string => {
   switch (setup) {
+    case "ready_for_external_agent":
+      return i18n.t("knowledgeNetwork.eval.scenarioCase.execution");
     case "review_required":
       return evalTerm("notReady");
     case "execution_not_configured":
@@ -48,3 +50,9 @@ export const caseCanConfigureObjectCheck = (entry: EvalCaseSummary): boolean =>
   ["object-key-uniqueness", "object-key-completeness"].includes(
     entry.template_rule_id ?? entry.input_spec?.template_rule_id ?? "",
   );
+
+/** Render the known scenario admission reason without exposing an internal error prefix. */
+export const caseExecutionAdmissionReason = (reason: string): string =>
+  reason.includes("business scenarios require an external agent through MCP")
+    ? i18n.t("knowledgeNetwork.eval.scenarioCase.executionHelp")
+    : reason;

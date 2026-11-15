@@ -21,7 +21,6 @@ import {
 } from "antd";
 import { useEffect, useRef, useState } from "react";
 import {
-  getCaseTargetSchema,
   listRelationCheckInstances,
   type RelationCheckForm,
   type RelationCheckInput,
@@ -35,8 +34,8 @@ import {
 } from "./rule-application.service";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { useEvalTranslation } from "./useEvalTranslation";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import styles from "./EvalCaseEditorDrawer.module.css";
+import { EvalFieldLabel, EvalHelpTooltip } from "./EvalFieldLabel";
 
 const cardinalityLabelKeys: Partial<Record<string, string>> = {
   one_to_one: "oneToOne",
@@ -147,7 +146,7 @@ function InstanceSelect({
     options.unshift({ value: selected, label: selected, identity: value! });
   return (
     <div>
-      <div className={styles.fieldLabel}>{label} *</div>
+      <EvalFieldLabel required>{label}</EvalFieldLabel>
       <Select
         aria-label={label}
         style={{ width: "100%" }}
@@ -191,7 +190,7 @@ function InstanceSelect({
 export function EvalRelationCaseFields({
   networkId,
   resource,
-  contract: providedContract,
+  contract,
   initialDefinition,
   onPrepared,
   onSamplePrepared,
@@ -209,20 +208,6 @@ export function EvalRelationCaseFields({
 }) {
   const { t } = useEvalTranslation();
   const text = (key: string) => t(`knowledgeNetwork.eval.relationChecks.${key}`);
-  const [contract, setContract] = useState(providedContract);
-  const [reloading, setReloading] = useState(false);
-  const [contractError, setContractError] = useState(false);
-  const reloadActive = useRef(true);
-  useEffect(() => {
-    setContract(providedContract);
-    setContractError(false);
-  }, [providedContract]);
-  useEffect(() => {
-    reloadActive.current = true;
-    return () => {
-      reloadActive.current = false;
-    };
-  }, []);
   const initial = initialDefinition?.input_spec.arguments as
     { relation_check?: RelationCheckInput } | undefined;
   const [input, setInput] = useState<RelationCheckInput>(initial?.relation_check ?? { rule: "" });
@@ -245,10 +230,15 @@ export function EvalRelationCaseFields({
     "relation-required",
     "relation-integrity",
     "relation-property-values",
+    "graph_acyclic",
   ].includes(input.rule);
   const request = {
     resources: [{ kind: resource.kind, id: resource.id }],
-    rule_ids: [applicationRuleId ?? input.rule],
+    rule_ids: [
+      applicationRuleId ??
+        contract.checks.find((check) => check.id === input.rule)?.rule_id ??
+        input.rule,
+    ],
     page: 1,
     limit: 1,
   };
@@ -257,7 +247,7 @@ export function EvalRelationCaseFields({
     setBase(undefined);
     onPrepared(undefined);
     setError("");
-    if (!input.rule || reloading || contractError) {
+    if (!input.rule) {
       setBusy(false);
       return;
     }
@@ -285,8 +275,7 @@ export function EvalRelationCaseFields({
     applicationRuleId,
     retry,
     onPrepared,
-    reloading,
-    contractError,
+    contract,
   ]);
   useEffect(() => {
     let active = true;
@@ -294,8 +283,6 @@ export function EvalRelationCaseFields({
     if (
       !base ||
       base.match !== "applicable" ||
-      reloading ||
-      contractError ||
       !contract.checks.some((check) => check.id === input.rule && check.applicable)
     )
       return;
@@ -304,7 +291,6 @@ export function EvalRelationCaseFields({
       (!input.source ||
         !input.target ||
         expected === undefined ||
-        !reference.trim() ||
         (input.characteristic === "transitive" && !input.via))
     )
       return;
@@ -361,19 +347,7 @@ export function EvalRelationCaseFields({
     };
     // Request identity is derived from the complete typed configuration.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    networkId,
-    base,
-    input,
-    expected,
-    reference,
-    retry,
-    onPrepared,
-    reloading,
-    contractError,
-    contract,
-    onSamplePrepared,
-  ]);
+  }, [networkId, base, input, expected, reference, retry, onPrepared, contract, onSamplePrepared]);
   const changeRule = (rule: string) => {
     const end =
       (rule === "relation-cardinality" && contract.cardinality === "one_to_many") ||
@@ -387,6 +361,7 @@ export function EvalRelationCaseFields({
         "relation-required",
         "relation-integrity",
         "relation-property-values",
+        "graph_acyclic",
       ].includes(rule)
         ? { limit: 100 }
         : {}),
@@ -402,28 +377,6 @@ export function EvalRelationCaseFields({
   const selectedRule = contract.checks.find((check) => check.id === input.rule);
   const fieldsApplicable = selectedRule?.applicable !== false;
   const unavailable = contract.checks.filter((check) => !check.applicable);
-  const editPath = `${getRuntimeConfig().router.basename.replace(/\/$/, "")}/knowledge-network/workspace/${encodeURIComponent(networkId)}/relation-types/${encodeURIComponent(resource.id)}/edit`;
-  const reload = async () => {
-    onPrepared(undefined);
-    setBase(undefined);
-    setReloading(true);
-    setContractError(false);
-    setError("");
-    try {
-      const next = await getCaseTargetSchema(resource, networkId);
-      if (!reloadActive.current) return;
-      if (!next.relation) throw Error("relation contract unavailable");
-      setContract(next.relation);
-      setRetry((n) => n + 1);
-    } catch {
-      if (reloadActive.current) {
-        setContractError(true);
-        setError(text("previewError"));
-      }
-    } finally {
-      if (reloadActive.current) setReloading(false);
-    }
-  };
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -431,17 +384,7 @@ export function EvalRelationCaseFields({
         {text("direction")}：{contract.source.name} → {contract.target.name} · {text(contract.type)}
       </Typography.Text>
       <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-        <Space wrap style={{ justifyContent: "space-between", width: "100%" }}>
-          <Typography.Text strong>{text("declared")}</Typography.Text>
-          <Space>
-            <Typography.Link href={editPath} target="_blank" rel="noopener noreferrer">
-              {text("configure")}
-            </Typography.Link>
-            <Button type="link" size="small" loading={reloading} onClick={() => void reload()}>
-              {text("refreshContract")}
-            </Button>
-          </Space>
-        </Space>
+        <Typography.Text strong>{text("declared")}</Typography.Text>
         {contract.cardinality ||
         contract.required.length ||
         contract.characteristics.length ||
@@ -498,7 +441,7 @@ export function EvalRelationCaseFields({
         )}
       </div>
       <div>
-        <div className={styles.fieldLabel}>{text("check")} *</div>
+        <EvalFieldLabel required>{text("check")}</EvalFieldLabel>
         <Select
           aria-label={text("check")}
           disabled={!!lockedCheck}
@@ -527,7 +470,7 @@ export function EvalRelationCaseFields({
               }),
               children: (
                 <Space direction="vertical" style={{ width: "100%" }}>
-                  <Typography.Text type="secondary">{text("inapplicableHelp")}</Typography.Text>
+                  <EvalHelpTooltip title={text("inapplicableHelp")} label={text("check")} />
                   {unavailable.map((check) => (
                     <div key={check.id}>
                       <Typography.Text strong>{check.title}</Typography.Text>
@@ -547,7 +490,9 @@ export function EvalRelationCaseFields({
       )}
       {fieldsApplicable && input.rule === "relation-characteristics" && (
         <div>
-          <div className={styles.fieldLabel}>{text("characteristic")} *</div>
+          <EvalFieldLabel required hint={text("featureHelp")}>
+            {text("characteristic")}
+          </EvalFieldLabel>
           <Select
             aria-label={text("characteristic")}
             style={{ width: "100%" }}
@@ -557,7 +502,6 @@ export function EvalRelationCaseFields({
               setInput((old) => ({ ...old, characteristic: value, via: undefined }))
             }
           />
-          <Typography.Text type="secondary">{text("featureHelp")}</Typography.Text>
         </div>
       )}
       {pair && fieldsApplicable && (
@@ -588,7 +532,12 @@ export function EvalRelationCaseFields({
             />
           )}
           <div>
-            <div className={styles.fieldLabel}>{text("expected")} *</div>
+            <EvalFieldLabel
+              required
+              hint={text(input.rule === "relation-direction" ? "directionHelp" : "pairHelp")}
+            >
+              {text("expected")}
+            </EvalFieldLabel>
             <Select
               aria-label={text("expected")}
               style={{ width: "100%" }}
@@ -601,11 +550,8 @@ export function EvalRelationCaseFields({
               onChange={(value) => setExpected(value === "yes")}
             />
           </div>
-          <Typography.Text type="secondary">
-            {text(input.rule === "relation-direction" ? "directionHelp" : "pairHelp")}
-          </Typography.Text>
           <div>
-            <div className={styles.fieldLabel}>{text("reference")} *</div>
+            <EvalFieldLabel hint={text("referenceHelp")}>{text("reference")}</EvalFieldLabel>
             <Input.TextArea
               aria-label={text("reference")}
               rows={2}
@@ -614,7 +560,6 @@ export function EvalRelationCaseFields({
               placeholder={text("referencePlaceholder")}
               onChange={(e) => setReference(e.target.value)}
             />
-            <Typography.Text type="secondary">{text("referenceHelp")}</Typography.Text>
           </div>
         </>
       )}
@@ -622,7 +567,7 @@ export function EvalRelationCaseFields({
         <div className={styles.criteriaValues}>
           {["relation-cardinality", "relation-required"].includes(input.rule) && (
             <div>
-              <div className={styles.fieldLabel}>{text("checkEnd")} *</div>
+              <EvalFieldLabel required>{text("checkEnd")}</EvalFieldLabel>
               <Select
                 aria-label={text("checkEnd")}
                 style={{ width: "100%" }}
@@ -645,9 +590,24 @@ export function EvalRelationCaseFields({
             </div>
           )}
           <div>
-            <div className={styles.fieldLabel}>{text("limit")} *</div>
+            <EvalFieldLabel
+              required
+              hint={
+                input.rule === "graph_acyclic"
+                  ? t("knowledgeNetwork.eval.declaration.graphLimit")
+                  : text("sampleHelp")
+              }
+            >
+              {input.rule === "graph_acyclic"
+                ? t("knowledgeNetwork.eval.declaration.graphReadLimit")
+                : text("limit")}
+            </EvalFieldLabel>
             <InputNumber
-              aria-label={text("limit")}
+              aria-label={
+                input.rule === "graph_acyclic"
+                  ? t("knowledgeNetwork.eval.declaration.graphReadLimit")
+                  : text("limit")
+              }
               style={{ width: "100%" }}
               min={1}
               max={1000}
@@ -658,8 +618,34 @@ export function EvalRelationCaseFields({
           </div>
         </div>
       )}
-      {sampled && fieldsApplicable && (
-        <Typography.Text type="secondary">{text("sampleHelp")}</Typography.Text>
+      {fieldsApplicable && input.rule === "graph_acyclic" && (
+        <>
+          <label>
+            {t("knowledgeNetwork.eval.declaration.policyVersion")}
+            <Input
+              aria-label={t("knowledgeNetwork.eval.declaration.policyVersion")}
+              value={input.policy_version}
+              maxLength={128}
+              onChange={(e) => setInput((old) => ({ ...old, policy_version: e.target.value }))}
+            />
+          </label>
+          <label>
+            {t("knowledgeNetwork.eval.declaration.policyEvidence")}
+            <Input.TextArea
+              aria-label={t("knowledgeNetwork.eval.declaration.policyEvidence")}
+              value={(input.policy_evidence_refs ?? []).join("\n")}
+              onChange={(e) =>
+                setInput((old) => ({
+                  ...old,
+                  policy_evidence_refs: e.target.value
+                    .split("\n")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                }))
+              }
+            />
+          </label>
+        </>
       )}
       {fieldsApplicable && input.rule === "relation-property-values" && (
         <div>
@@ -680,16 +666,17 @@ export function EvalRelationCaseFields({
       )}
       {fieldsApplicable && input.rule && !pair && (
         <div>
-          <Typography.Text strong>{text("standard")}</Typography.Text>
-          <Typography.Paragraph>
-            {text(
+          <EvalFieldLabel
+            hint={text(
               input.rule === "relation-query"
                 ? "queryStandard"
                 : input.rule === "relation-definition"
                   ? "definitionStandard"
                   : "fixedStandard",
             )}
-          </Typography.Paragraph>
+          >
+            {text("standard")}
+          </EvalFieldLabel>
         </div>
       )}
       {base && base.match !== "applicable" && (

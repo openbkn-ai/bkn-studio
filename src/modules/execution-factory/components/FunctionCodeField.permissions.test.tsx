@@ -35,7 +35,7 @@ vi.mock("@/modules/execution-factory/services/template.service", () => ({
   getPythonCodeTemplate: vi.fn().mockResolvedValue("def handler(event):\n    return event\n"),
 }));
 
-vi.mock("@/modules/execution-factory/components/CodeEditor", () => ({
+vi.mock("@/framework/code-editor/CodeEditor", () => ({
   CodeEditor: ({ value }: { value?: string }) => <textarea readOnly value={value ?? ""} />,
 }));
 

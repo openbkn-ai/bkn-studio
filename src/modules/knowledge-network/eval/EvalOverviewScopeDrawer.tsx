@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { workspaceUi } from "./workspace-ui-text";
 import { useEvalTranslation } from "./useEvalTranslation";
 
@@ -206,13 +207,15 @@ export function EvalOverviewScopeDrawer({ networkId, open, canManage, onClose, o
           {resourceReadWarnings.length > 0 && (
             <Alert type="warning" showIcon message={resourceReadWarnings.join("；")} />
           )}
-          <Alert
-            showIcon
-            type="info"
-            message={workspaceUi("allResourcesInTheCurrentKnowledgeNetworkAreIncluded")}
-          />
+
           <section className={styles.section}>
-            <h3>{workspaceUi("byResourceType")}</h3>
+            <h3>
+              {workspaceUi("byResourceType")}{" "}
+              <EvalHelpTooltip
+                label={workspaceUi("byResourceType")}
+                title={workspaceUi("allResourcesInTheCurrentKnowledgeNetworkAreIncluded")}
+              />
+            </h3>
             <div className={styles.kindGrid}>
               {kinds.map((item) => (
                 <Checkbox

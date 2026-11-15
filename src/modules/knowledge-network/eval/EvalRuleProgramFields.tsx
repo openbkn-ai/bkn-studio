@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalFieldLabel, EvalHelpTooltip } from "./EvalFieldLabel";
+import { JsonInput } from "@/framework/json/JsonInput";
 import { caseUiText } from "./case-ui-text";
 import { useEvalTranslation } from "./useEvalTranslation";
 import { evalScalarText } from "./eval-scalar-text";
@@ -343,7 +345,8 @@ export function EvalRuleProgramFields({
   disabled?: boolean;
   onChange: (value: EvalRuleProgram) => void;
 }) {
-  useEvalTranslation();
+  const { t } = useEvalTranslation();
+  const businessText = (key: string) => t(`knowledgeNetwork.eval.objectRuleUi.${key}`);
   const [referenceJSON, setReferenceJSON] = useState(() =>
     formatPrecisionSafeJSON(transformPrecisionSafeJSONRequest(value.reference?.rows ?? [])),
   );
@@ -351,13 +354,19 @@ export function EvalRuleProgramFields({
   const update = (patch: Partial<EvalRuleProgram>) => onChange({ ...value, ...patch });
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Typography.Text type="secondary">
-        {caseUiText("fieldNamesMustMatchTheResourceDeclarationAnd")}
-        {kind === "objectProperty"
-          ? caseUiText("propertyRefersToThePropertySelectedWhenApplying")
-          : ""}
-        {caseUiText("filtersAndRowChecksCoverOnlyThisSample")}
-      </Typography.Text>
+      <EvalFieldLabel
+        hint={
+          <>
+            {caseUiText("fieldNamesMustMatchTheResourceDeclarationAnd")}
+            {kind === "objectProperty"
+              ? caseUiText("propertyRefersToThePropertySelectedWhenApplying")
+              : ""}
+            {caseUiText("filtersAndRowChecksCoverOnlyThisSample")}
+          </>
+        }
+      >
+        {caseUiText("knowledgeNetwork.eval.templateUi.columns.check")}
+      </EvalFieldLabel>
       <Checkbox
         disabled={disabled}
         checked={!!value.reference}
@@ -373,10 +382,10 @@ export function EvalRuleProgramFields({
         }}
       >
         {caseUiText("locateAndVerifyUsingAnIndependentReferenceSample")}
+        <EvalHelpTooltip title={caseUiText("mapEveryComponentOfTheObjectPrimaryKey")} />
       </Checkbox>
       {value.reference && (
         <Space direction="vertical" size={8} style={{ width: "100%" }}>
-          <Typography.Text>{caseUiText("mapEveryComponentOfTheObjectPrimaryKey")}</Typography.Text>
           {value.reference.keys.map((key, i) => (
             <Space key={i}>
               <Input
@@ -456,16 +465,15 @@ export function EvalRuleProgramFields({
           </label>
           <label>
             {caseUiText("verifiedReferenceRecordsJsonArray")}
-            <Input.TextArea
-              aria-label={caseUiText("independentReferenceRecords")}
-              disabled={disabled}
-              rows={4}
+            <JsonInput
+              ariaLabel={caseUiText("independentReferenceRecords")}
+              readOnly={disabled}
               value={referenceJSON}
               placeholder={caseUiText("forExampleIdSampleaCorrectcount2DoNotUseThisRunS")}
-              onChange={(e) => {
-                setReferenceJSON(e.target.value);
+              onChange={(text) => {
+                setReferenceJSON(text);
                 try {
-                  const rows = parsePrecisionPreservingJSON(e.target.value);
+                  const rows = parsePrecisionPreservingJSON(text);
                   if (
                     !Array.isArray(rows) ||
                     !rows.every(
@@ -490,7 +498,7 @@ export function EvalRuleProgramFields({
               aria-label={caseUiText("referenceEvidence")}
               disabled={disabled}
               rows={2}
-              value={value.reference.evidence_refs.join("\n")}
+              value={(value.reference.evidence_refs ?? []).join("\n")}
               placeholder={caseUiText("provideVerificationRecordsBusinessRulesOrDocumentLocations")}
               onChange={(e) =>
                 update({
@@ -598,6 +606,7 @@ export function EvalRuleProgramFields({
                       ["count", caseUiText("recordCount")],
                       ["non_null_count", caseUiText("nonNullValueCount")],
                       ["distinct_count", caseUiText("distinctValueCount")],
+                      ["duplicate_count", businessText("duplicateCount")],
                       ["sum", caseUiText("sum")],
                       ["min", caseUiText("knowledgeNetwork.eval.caseEditor.minimum")],
                       ["max", caseUiText("knowledgeNetwork.eval.caseEditor.maximum")],
@@ -610,18 +619,40 @@ export function EvalRuleProgramFields({
                                 ...item,
                                 function: fn,
                                 field:
-                                  fn === "count"
+                                  fn === "count" || fn === "duplicate_count"
                                     ? undefined
                                     : kind === "objectProperty"
                                       ? "$property"
                                       : "",
+                                fields: fn === "duplicate_count" ? [] : undefined,
                               }
                             : item,
                         ),
                       })
                     }
                   />
-                  {a.function !== "count" && (
+                  {a.function === "duplicate_count" && (
+                    <Input
+                      aria-label={businessText("businessKeyFields")}
+                      disabled={disabled}
+                      style={{ width: 250 }}
+                      placeholder={businessText("businessKeyFields")}
+                      value={a.fields?.join(", ") ?? ""}
+                      onChange={(e) =>
+                        update({
+                          aggregates: value.aggregates!.map((item, index) =>
+                            index === i
+                              ? {
+                                  ...item,
+                                  fields: e.target.value.split(/[,，]/).map((f) => f.trim()),
+                                }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  )}
+                  {a.function !== "count" && a.function !== "duplicate_count" && (
                     <Input
                       aria-label={caseUiText("aggregationField")}
                       disabled={disabled}

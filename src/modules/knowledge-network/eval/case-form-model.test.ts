@@ -235,3 +235,47 @@ it("discovers bounded array item fields and accepts explicit result positions wi
       compileCriteria([{ id: "invalid", type: "exists", path, value: "", valueType: "string" }]),
     ).toThrow();
 });
+
+it("keeps runtime observation requirements out of editable business criteria", () => {
+  const compiled = compileCriteria([
+    {
+      id: "expected",
+      type: "equals",
+      path: "$.execution.status_code",
+      value: "404",
+      valueType: "number",
+      valueProvided: true,
+    },
+  ]);
+  const definition = {
+    ...compiled,
+    assertions: [
+      ...compiled.assertions,
+      {
+        id: "observation-evidence",
+        type: "json_schema",
+        source: "normalized_output",
+        path: "$.execution",
+        schema: { type: "object" },
+        required: true,
+      },
+    ],
+  } as unknown as EvalCaseDefinition;
+  const criteria = readCriteria(definition);
+  expect(criteria).toHaveLength(1);
+  expect(criteria?.[0].path).toBe("$.execution.status_code");
+});
+
+it("distinguishes an explicitly empty correct text from a cleared incomplete expectation", () => {
+  const blank = {
+    id: "empty",
+    type: "equals",
+    path: "$",
+    value: "",
+    valueType: "string" as const,
+    valueProvided: false,
+  };
+  expect(() => compileCriteria([blank])).toThrow();
+  const compiled = compileCriteria([{ ...blank, valueProvided: true }]);
+  expect(compiled.expected_spec).toEqual({ criteria: { value_0: "" } });
+});

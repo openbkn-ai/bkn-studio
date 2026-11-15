@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
+import { CodeEditor } from "@/framework/code-editor/CodeEditor";
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionExecuteModal } from "@/modules/execution-factory/components/FunctionExecuteModal";
 import { getPythonCodeTemplate } from "@/modules/execution-factory/services/template.service";

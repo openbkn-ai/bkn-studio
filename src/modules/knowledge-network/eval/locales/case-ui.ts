@@ -20,14 +20,14 @@ export const caseUiResources = {
     executionBindingChanged: "执行配置或资源绑定已变化，请刷新后重新选择。",
     theFunctionResourceCannotBeVerifiedRightNow: "暂时无法核对函数资源，请稍后重试。",
     executionDependenciesUnavailable: "执行依赖暂不可用，请稍后重试。",
-    trialFailedCheckInputAndServices: "试运行失败，请核对输入、函数和服务状态后重试。",
+    trialFailedCheckInputAndServices: "试运行失败，请核对输入、评测对象与服务状态后重试。",
     theActualValueDiffersFromTheIndependentExpectation: "实际值与独立预期不一致",
     theActualResultIsMissingTheFieldBeing: "实际结果缺少待比对字段",
     "knowledgeNetwork.eval.m0.findingCategory.EVIDENCE": "执行证据不完整",
-    incompleteEvidencePreventsVerificationOfTheFunctionCall: "证据不完整，无法确认函数调用",
-    noAuthorizedFunctionCallWasFoundInThe: "证据中未找到已授权的函数调用",
-    theFunctionCallDidNotComplete: "函数调用未完成",
-    noPermissionToCallTheTargetFunctionOr: "无权调用目标函数或读取执行证据",
+    incompleteEvidencePreventsTargetVerification: "证据不完整，无法确认评测对象的执行",
+    noAuthorizedTargetCallInEvidence: "证据中未找到评测对象的已授权调用",
+    targetExecutionDidNotComplete: "评测对象未完成执行",
+    noPermissionToExecuteTargetOrReadEvidence: "无权执行评测对象或读取执行证据",
     theActualOutputDoesNotMatchTheCase: "实际输出不符合用例的结果结构",
     executionEvidenceIsMissing: "执行证据缺失",
     theTargetResourceOrADependentServiceCall: "目标资源或依赖服务调用失败",
@@ -47,7 +47,7 @@ export const caseUiResources = {
     caseSaved: "用例已保存",
     loadTheCurrentResourceSParameterContractBeforeStarting:
       "请先读取当前资源的参数合同后再试运行。",
-    provideIndependentEvidenceForTheExpectedResultBefore: "请填写独立预期依据后再试运行",
+
     editCase: "编辑用例",
     "knowledgeNetwork.eval.resourceOverview.createCase": "新建用例",
     runOnceWithTheCurrentIdentityAndCheck: "按当前身份和检查范围试运行一次，不计入正式执行覆盖",
@@ -66,8 +66,6 @@ export const caseUiResources = {
       "此用例包含当前表单不支持的配置，请通过对应的规则或资源管理页面修改。",
     basicInformation: "基本信息",
     "knowledgeNetwork.eval.definitionUi.caseType": "用例类型",
-    noSingleEvaluationTargetIsRequiredSelectAn:
-      "不指定单一评测对象；选择执行整个场景的已授权入口，再填写输入和独立预期。",
     describeTheSecurityBehaviorToVerifyForThe:
       "明确当前账号下要验证的安全行为；不会切换身份或额外授予权限。",
     selectACaseType: "请选择用例类型",
@@ -354,8 +352,8 @@ export const caseUiResources = {
     failedToLoadTheCheckConfigurationTryAgain: "检查配置读取失败，请重试；当前不能保存或运行。",
     objectInstances: "对象实例",
     objectProperties: "对象属性",
-    checkRequired: "检查项 *",
-    propertyToCheckRequired: "检查属性 *",
+    checkRequired: "检查项",
+    propertyToCheckRequired: "检查属性",
     selectAnActualPropertyToCheckSearchBy: "选择要检查的真实属性，可搜索名称",
     previous: "上一页",
     page: "第",
@@ -370,7 +368,7 @@ export const caseUiResources = {
       "已有时间范围无效，请重新选择，或在高级 JSON 中修正；原始参数已保留。",
     analysisDimensionsOptional: "分析维度（可选）",
     analysisDimensions: "分析维度",
-    executionInstanceRequired: "执行实例 *",
+    executionInstanceRequired: "执行实例",
     executionInstance: "执行实例",
     selectAnInstanceVisibleToYourAccount: "选择一个当前账号可见的实例",
     "knowledgeNetwork.eval.relationChecks.instanceError": "实例读取失败，请重试。",
@@ -424,17 +422,17 @@ export const caseUiResources = {
       "The function resource cannot be verified right now. Try again later.",
     executionDependenciesUnavailable: "Execution dependencies are unavailable. Try again later.",
     trialFailedCheckInputAndServices:
-      "The test run failed. Check the input, function and service status, then try again.",
+      "The test run failed. Check the input, target and service status, then try again.",
     theActualValueDiffersFromTheIndependentExpectation:
       "The actual value differs from the independent expectation",
     theActualResultIsMissingTheFieldBeing: "The actual result is missing the field being compared",
     "knowledgeNetwork.eval.m0.findingCategory.EVIDENCE": "Execution evidence is incomplete",
-    incompleteEvidencePreventsVerificationOfTheFunctionCall:
-      "Incomplete evidence prevents verification of the function call",
-    noAuthorizedFunctionCallWasFoundInThe: "No authorized function call was found in the evidence",
-    theFunctionCallDidNotComplete: "The function call did not complete",
-    noPermissionToCallTheTargetFunctionOr:
-      "No permission to call the target function or read execution evidence",
+    incompleteEvidencePreventsTargetVerification:
+      "Incomplete evidence prevents verification of the target execution",
+    noAuthorizedTargetCallInEvidence: "No authorized target call was found in the evidence",
+    targetExecutionDidNotComplete: "The target execution did not complete",
+    noPermissionToExecuteTargetOrReadEvidence:
+      "No permission to execute the target or read execution evidence",
     theActualOutputDoesNotMatchTheCase: "The actual output does not match the case result schema",
     executionEvidenceIsMissing: "Execution evidence is missing",
     theTargetResourceOrADependentServiceCall:
@@ -458,8 +456,7 @@ export const caseUiResources = {
     caseSaved: "Case saved",
     loadTheCurrentResourceSParameterContractBeforeStarting:
       "Load the current resource's parameter contract before starting a test run.",
-    provideIndependentEvidenceForTheExpectedResultBefore:
-      "Provide independent evidence for the expected result before starting a test run",
+
     editCase: "Edit case",
     "knowledgeNetwork.eval.resourceOverview.createCase": "Create case",
     runOnceWithTheCurrentIdentityAndCheck:
@@ -480,8 +477,6 @@ export const caseUiResources = {
       "This case contains configuration not supported by this form. Edit it on the corresponding rule or resource management page.",
     basicInformation: "Basic information",
     "knowledgeNetwork.eval.definitionUi.caseType": "Case type",
-    noSingleEvaluationTargetIsRequiredSelectAn:
-      "No single evaluation target is required. Select an authorized entry that executes the scenario, then provide inputs and independent expectations.",
     describeTheSecurityBehaviorToVerifyForThe:
       "Describe the security behavior to verify for the current account. The test will not switch identities or grant extra permissions.",
     selectACaseType: "Select a case type",
@@ -785,8 +780,8 @@ export const caseUiResources = {
       "Failed to load the check configuration. Try again; saving and execution are unavailable until it loads.",
     objectInstances: "Object instances",
     objectProperties: "Object properties",
-    checkRequired: "Check *",
-    propertyToCheckRequired: "Property to check *",
+    checkRequired: "Check",
+    propertyToCheckRequired: "Property to check",
     selectAnActualPropertyToCheckSearchBy: "Select an actual property to check; search by name",
     previous: "Previous",
     page: "Page ",
@@ -802,7 +797,7 @@ export const caseUiResources = {
       "The existing time range is invalid. Select it again or correct it in advanced JSON. Original parameters are retained.",
     analysisDimensionsOptional: "Analysis dimensions (optional)",
     analysisDimensions: "Analysis dimensions",
-    executionInstanceRequired: "Execution instance *",
+    executionInstanceRequired: "Execution instance",
     executionInstance: "Execution instance",
     selectAnInstanceVisibleToYourAccount: "Select an instance visible to your account",
     "knowledgeNetwork.eval.relationChecks.instanceError": "Unable to load instances. Please retry.",

@@ -46,7 +46,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 // Only the function rail, the bulk bar, and the confirmation they open are under test.
-vi.mock("@/modules/execution-factory/components/CodeEditor", () => ({
+vi.mock("@/framework/code-editor/CodeEditor", () => ({
   CodeEditor: ({ value }: { value?: string }) => <textarea readOnly value={value ?? ""} />,
 }));
 vi.mock("@/modules/execution-factory/components/FunctionAiGenerateModal", () => ({

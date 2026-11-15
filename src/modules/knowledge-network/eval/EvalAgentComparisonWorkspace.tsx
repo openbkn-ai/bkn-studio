@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { ArrowLeftOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Alert,
@@ -227,7 +228,9 @@ export function EvalAgentComparisonWorkspace({ networkId, onBack, onInspect }: P
         <Button type="text" icon={<ArrowLeftOutlined aria-hidden />} onClick={onBack}>
           {text("back")}
         </Button>
-        <Typography.Title level={4}>{text("title")}</Typography.Title>
+        <Typography.Title level={4}>
+          {text("title")} <EvalHelpTooltip label={text("title")} title={text("declaration")} />
+        </Typography.Title>
         {comparison && (
           <>
             <Tag>
@@ -237,7 +240,6 @@ export function EvalAgentComparisonWorkspace({ networkId, onBack, onInspect }: P
           </>
         )}
       </div>
-      <Alert className={styles.notice} type="info" showIcon message={text("declaration")} />
       {error && <Alert className={styles.notice} type="error" showIcon message={error} />}
       {!comparison ? (
         <div className={styles.surface}>

@@ -14,6 +14,7 @@ import {
   ruleCheckAllowsAll,
   ruleCheckCriteria,
   validateRuleCheck,
+  validateRuleProgram,
   type RuleCheckCapability,
 } from "./rule-check-model";
 const caps: RuleCheckCapability[] = [
@@ -108,3 +109,31 @@ it("requires executable composition and independently supplied comparison values
     }),
   ).toThrow("独立对照表");
 });
+
+it.each([undefined, [], ["independent verification"]])(
+  "allows optional reference notes: %j",
+  (evidence_refs) => {
+    const program = {
+      version: 1 as const,
+      reference: {
+        keys: [{ field: "id", reference_field: "id" }],
+        rows: [{ id: 1, gold: 0 }],
+        evidence_refs,
+      },
+      expect: {
+        mode: "all" as const,
+        conditions: [{ field: "amount", operator: "eq" as const, reference_field: "gold" }],
+      },
+    };
+    expect(() => validateRuleProgram(program)).not.toThrow();
+    expect(() =>
+      validateRuleProgram({ ...program, reference: { ...program.reference, rows: [] } }),
+    ).toThrow();
+    expect(() =>
+      validateRuleProgram({
+        ...program,
+        reference: { ...program.reference, evidence_refs: ["x".repeat(513)] },
+      }),
+    ).toThrow();
+  },
+);

@@ -7,7 +7,7 @@
 
 import { evalScalarText } from "./eval-scalar-text";
 
-import { Alert, Collapse, Input, Select, Space, Typography } from "antd";
+import { Alert, Collapse, Input, Select, Space } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
 import { newCriterion, readCriteria, type CaseCriterion } from "./case-form-model";
@@ -16,7 +16,7 @@ import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision
 import type { EvalCaseDefinition, EvalCaseResource } from "./m0-run.service";
 import type { EvalTemplateRule } from "./types";
 import { useEvalTranslation } from "./useEvalTranslation";
-import styles from "./EvalCaseEditorDrawer.module.css";
+import { EvalFieldLabel } from "./EvalFieldLabel";
 
 // Shared by unsupported capability rules and real logical-property targets.
 // Authoring does not call the resource, infer correct output or grant execution.
@@ -88,7 +88,7 @@ export function EvalDefinitionOnlyFields({
       callback.current(undefined);
       // Empty initial controls are explained by their labels, rather than a wall of errors.
       setError(
-        question.trim() && evidence.trim()
+        question.trim()
           ? cause instanceof Error
             ? cause.message === "EVAL_DEFINITION_STEPS_REQUIRED"
               ? text("stepsRequired")
@@ -118,7 +118,7 @@ export function EvalDefinitionOnlyFields({
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Alert type="info" showIcon message={text("title")} description={reason} />
       <label style={{ width: "100%" }}>
-        <div className={styles.fieldLabel}>{text("steps")} *</div>
+        <EvalFieldLabel required>{text("steps")}</EvalFieldLabel>
         <Input.TextArea
           aria-label={text("steps")}
           rows={3}
@@ -146,7 +146,7 @@ export function EvalDefinitionOnlyFields({
         ]}
       />
       <div>
-        <div className={styles.fieldLabel}>{text("criteria")} *</div>
+        <EvalFieldLabel required>{text("criteria")}</EvalFieldLabel>
         <EvalCaseCriteria
           value={criteria}
           onChange={setCriteria}
@@ -162,7 +162,9 @@ export function EvalDefinitionOnlyFields({
         />
       </div>
       <div>
-        <div className={styles.fieldLabel}>{text("source")} *</div>
+        <EvalFieldLabel required hint={text("hint")}>
+          {text("source")}
+        </EvalFieldLabel>
         <Select
           aria-label={text("source")}
           style={{ width: "100%" }}
@@ -175,7 +177,7 @@ export function EvalDefinitionOnlyFields({
         />
       </div>
       <label style={{ width: "100%" }}>
-        <div className={styles.fieldLabel}>{text("evidence")} *</div>
+        <EvalFieldLabel>{text("evidence")}</EvalFieldLabel>
         <Input.TextArea
           aria-label={text("evidence")}
           rows={2}
@@ -184,7 +186,7 @@ export function EvalDefinitionOnlyFields({
           placeholder={text("evidencePlaceholder")}
         />
       </label>
-      <Typography.Text type="secondary">{text("hint")}</Typography.Text>
+
       {error && <Alert type="warning" message={error} />}
     </Space>
   );

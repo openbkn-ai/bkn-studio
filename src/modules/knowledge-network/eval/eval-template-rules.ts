@@ -13,6 +13,6 @@ export function rulePreset(rule: EvalTemplateRule): "required" | "standard" {
 
 export const resourceKindGroups: { key: "conceptGroup" | "modelGroup"; kinds: EvalTargetKind[] }[] =
   [
-    { key: "conceptGroup", kinds: ["objectType", "relationType", "action"] },
-    { key: "modelGroup", kinds: ["metric", "function", "api", "mcp", "skill"] },
+    { key: "conceptGroup", kinds: ["objectType", "relationType"] },
+    { key: "modelGroup", kinds: ["action", "metric", "function", "api", "mcp", "skill"] },
   ];

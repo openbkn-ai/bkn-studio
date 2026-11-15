@@ -7,6 +7,49 @@
 
 export const evalPart = {
   eval: {
+    helpLabel: "Help",
+    declaration: {
+      findings: "Declaration check findings",
+      checked: "Checked",
+      violations: "Violations",
+      candidates: "Candidates",
+      unknown: "Inconclusive",
+      findingType: "Finding type",
+      findingMessage: "Check details",
+      findingResources: "Resources and declaration paths",
+      violation: "Violation",
+      candidate: "Confirmation needed",
+
+      graphReadLimit: "Instance edge read limit",
+      program: "Declaration check configuration",
+      invalidJson: "Enter a valid JSON configuration",
+      policyVersion: "Acyclic business policy version",
+      policyEvidence: "Policy evidence (one reference per line)",
+      graphLimit:
+        "Reads all visible instance edges of this relationship. Exceeding the limit, changes during collection, or truncation prevents an acyclic verdict.",
+
+      scope:
+        "Checks resource declarations visible to the current user. Possible duplicates and redundancies require confirmation.",
+      parameters: "Check standard parameters",
+      required: "Required",
+      example: "View parameter example",
+      exampleHelp:
+        "Examples show the structure only. Supply confirmed business standards, versions, and evidence. Examples are never applied automatically.",
+      noParameters: "This rule needs no additional standard parameters.",
+      prepare: "Validate configuration",
+      invalid: "Complete the check standard parameters.",
+    },
+    overviewLoading: {
+      resultsTitle: "Evaluation results",
+      resources: "Loading resources",
+      results: "Loading results",
+      rules: "Calculating rule coverage",
+      unavailable: "Unavailable",
+      loadingSection: "Loading this section",
+      retry: "Retry",
+      refreshing: "Refreshing; loaded content remains available",
+      rulesFailed: "Rule coverage is unavailable. Resource statistics remain available.",
+    },
     foundation: {
       caseModel: {
         criteriaCount: "Configure 1 to 20 evaluation criteria",
@@ -52,6 +95,7 @@ export const evalPart = {
         enum: "{{path}} is not an allowed value",
       },
       ruleModel: {
+        nameDeclarationMissing: "The name declaration is missing or empty.",
         unsupported: "This resource type does not support this check",
         fieldRequired: "Select a field to check",
         boundaryRequired: "Enter at least one numeric boundary",
@@ -75,7 +119,7 @@ export const evalPart = {
         referenceRows:
           "Provide 1 to 100 independent reference records using text, numeric, boolean or null field values",
         referenceMatches: "Expected match counts in the reference table must be numeric 0 or 1",
-        referenceEvidence: "Provide an independent reference for the reference samples",
+        referenceEvidence: "Provide at most 20 references, up to 512 characters each",
         conditionCount: "{{label}} must contain 1 to 20 conditions",
         conditionField: "{{label}}, condition {{index}}: enter a field",
         conditionValue: "{{label}}, condition {{index}}: enter a comparison value",
@@ -195,12 +239,11 @@ export const evalPart = {
       sample: "Verified independent sample",
       evidence: "Expected-result reference",
       evidencePlaceholder:
-        "One verifiable business document, independent sample or confirmation record per line. Do not use the system under test to supply the expected answer.",
+        "Optional: one verifiable business document, independent sample or confirmation record per line. Do not use the system under test to supply the expected answer.",
       hint: "Saved disabled. Configure automatic execution after meeting the runtime requirements above.",
       incomplete: "Check the configuration.",
       stepsRequired: "Enter the test steps and verification goal.",
-      referencesRequired:
-        "Provide 1 to 20 independent references, no more than 512 characters each.",
+      referencesRequired: "Provide at most 20 references, no more than 512 characters each.",
       executionReady: "Executable checks",
       recordable: "Definition authoring; automatic execution unavailable",
       configure: "Configure a definition first",
@@ -222,6 +265,8 @@ export const evalPart = {
         "Compare at least one independently verified value. Existence or response structure alone cannot establish correctness.",
       validInputSamples:
         "Enter concrete parameters allowed by the source contract and an independently confirmed result. This check executes valid input samples. Platform rejection of invalid input does not verify the function’s rejection behavior. Create separate cases for input and boundary samples.",
+      independentInvocationSamples:
+        "Specify the expected invocation status, error content or request facts independently; actual output never supplies expected answers.",
       independentMetricSamples:
         "Use independent detail data or dependency results to calculate the correct value for the fixed metric definition. Provide comparison criteria and the calculation reference. Do not use the metric’s own output as the expected value; create separate relation or formula boundary cases.",
       unsupportedReason: "This rule has no executable check yet. Select a supported check.",
@@ -251,8 +296,6 @@ export const evalPart = {
       noExtraDeclarations:
         "No additional association constraints are declared. Query availability and association-result checks are available.",
       declared: "Current relation declarations",
-      configure: "Configure association constraints",
-      refreshContract: "Refresh relation configuration",
       countLimit: "Association count limit",
       requiredAssociation: "Required associations",
       notDeclared: "Not declared",
@@ -264,7 +307,7 @@ export const evalPart = {
       inapplicable_one: "Inapplicable check ({{count}})",
       inapplicable_other: "Inapplicable checks ({{count}})",
       inapplicableHelp:
-        "These checks require corresponding relation declarations. Inapplicable does not mean an incomplete case or failed evaluation. Configure actual business requirements, then refresh.",
+        "These checks require corresponding relation declarations. Inapplicable does not mean an incomplete case or failed evaluation.",
 
       check: "Check",
       chooseCheck: "Select a relation check",
@@ -296,7 +339,7 @@ export const evalPart = {
       referencePlaceholder:
         "For example, a business-confirmed purchase order and supplier mapping or an independent sample.",
       referenceHelp:
-        "Provide independent sample evidence or business confirmation, not the actual output.",
+        "Optional: add business confirmation or verification notes. Specify the expected association yourself; do not use the actual output as the correct answer.",
       property: "Property to check",
       allProperties: "All declared relation properties",
       characteristic: "Characteristic",
@@ -307,8 +350,7 @@ export const evalPart = {
       scopeHelp:
         "Uses declared constraints. Missing constraints make a check inapplicable; business requirements are never inferred.",
       previewError: "Unable to prepare this check. Please retry.",
-      incomplete:
-        "Select real instances and provide an independent expectation and reference, or specify the check scope.",
+      incomplete: "Select real instances and an expected association, or specify the check scope.",
       preparing: "Validating the check configuration…",
       standard: "Pass criteria",
       fixedStandard:
@@ -344,6 +386,17 @@ export const evalPart = {
       count_failed: "Failed to load",
       count_unavailable: "Unavailable",
       retryCount: "Retry loading run plan count",
+    },
+    resourceCoverage: {
+      create: "New case",
+      apply: "Apply rules",
+      cases: "View cases",
+      results: "View results",
+      run: "Run",
+      repair: "AI repair",
+      scope: "Edit scope",
+      back: "Back",
+      actionsFor: "Actions for {{name}}",
     },
     resourceOverview: {
       allCases: "All cases",
@@ -608,19 +661,36 @@ export const evalPart = {
       receiptRecord: "Execution receipt",
       interactionRecord: "Interaction record",
     },
+    logicalPropertyUi: {
+      help: "Choose a real instance and supply every dynamic parameter for reproducible execution. Missing parameters are not inferred by AI.",
+      callStandard:
+        "The call must succeed, return the selected instance, and report dynamic parameters matching this input.",
+      unavailable:
+        "The selected logical property has no readable execution source. Check its binding and access.",
+    },
     objectRuleUi: {
+      businessHelp:
+        "Combine business conditions, required fields, status and field comparisons. For composite business keys, select duplicate row count in aggregates and add non-empty checks for each key field. Sample findings apply only to that sample. Confirm units, currencies and exceptions in the business standard.",
+      standardVersion: "Business standard version",
+      standardRefs: "Business standard evidence (required, one per line)",
+      prepareBusiness: "Validate standard and configure check",
+      businessInvalid:
+        "Business check validation failed. Check the standard version, evidence, fields and conditions.",
+      duplicateCount: "Composite key duplicate rows",
+      businessKeyFields: "Business key fields (comma separated)",
+      targetNotReady: "{{target}}: automatic checking is not ready",
+      applicability: "Applies when: {{condition}}",
       sampleHelp:
         "Each independent row must include every primary key and __matches (1 for a match, 0 for no match), with at least one of each. Do not derive samples from this query.",
       mappingHelp:
-        "Supply independently verified source rows using object field names, with all primary keys and compared fields. Cite the source records or business verification.",
+        "Supply independently verified source rows using object field names, with all primary keys and compared fields. Source records or business verification notes are optional.",
       fields: "Compared fields (comma separated)",
       operator: "Filter operator",
       filterValue: "Filter value (JSON)",
       rows: "Independent rows (JSON array)",
-      refs: "Independent evidence (one per line)",
+      refs: "Independent evidence (optional, one per line)",
       prepare: "Validate samples and configure check",
-      sampleInvalid:
-        "Sample validation failed. Check complete keys, fields, expected matches and independent evidence.",
+      sampleInvalid: "Sample validation failed. Check complete keys, fields and expected matches.",
     },
     executionUi: {
       yes: "Yes",
@@ -874,6 +944,7 @@ export const evalPart = {
       checkExists: "Required fields",
       checkResource: "Target resource use",
       checkEvidence: "Execution evidence completeness",
+      checkDeclaration: "Declaration rule check",
       checkManual: "Business judgment",
       checkOther: "Case check",
       uniqueKeys: "Primary-key uniqueness",
@@ -969,6 +1040,8 @@ export const evalPart = {
       evidenceFailed: "Cannot read execution evidence. Check access or retry later.",
     },
     caseEditor: {
+      argumentTemplateHelp:
+        "Replace the null placeholders with actual values for the required parameters. Add optional parameters as needed. Existing values are preserved; the template is not submitted automatically.",
       advancedJsonHelp:
         "Enter JSON matching the current field contract. Switching back to the form preserves parameters.",
       argumentArray:
@@ -1023,9 +1096,7 @@ export const evalPart = {
       sourceLabel: "Where does the correct value come from?",
       evidenceLabel: "Basis for the correct value",
       evidenceHelp:
-        "Explain why the value is correct. Include a document location, verified sample or ticket if available. One entry per line, up to 512 characters each.",
-      evidenceRequired:
-        "Explain the correct value using a business rule, calculation or verified sample.",
+        "Optional: include a document location, verified sample or confirmation record. One entry per line, up to 512 characters each.",
       evidenceTooLong:
         "Evidence entry {{line}} exceeds 512 characters. Shorten it or split it into lines.",
       sourceExpert: "Human-confirmed rule, calculation or expert",
@@ -1041,7 +1112,7 @@ export const evalPart = {
       functionalDescriptionHint:
         "Execution uses the parameters above. Add the test purpose here, or leave blank to record the case name. Notes do not become parameters.",
       functionalDescriptionPlaceholder:
-        "Example: Verify lead time for material A001. Enter the material identifier in the parameters above.",
+        "Describe the behavior or result to verify. Enter actual invocation input in the parameters.",
       scenarioInputHint:
         "Describe the business setup, action or question, and key input. Function calls still require actual contract parameters.",
       scenarioInputPlaceholder:
@@ -1065,12 +1136,25 @@ export const evalPart = {
         "This rule fixes the criterion: zero violations within the selected scope. No separate reference answer is needed.",
       contextChangeTitle: "Reconfigure this test after switching?",
       contextChangeBody:
-        "Keep the title and description; clear previous target arguments, criteria and reference evidence to avoid using stale configuration.",
+        "Keep a name and description you entered. Clear the generated name and the previous target's arguments, criteria and reference evidence to avoid stale configuration.",
       continue: "Continue",
       cancel: "Cancel",
 
       structuredInput: "Form input",
+      chooseResourceFirst: "Select an evaluation target to configure its checks.",
+      loadingContract: "Loading the selected target's check configuration…",
       advancedJson: "Advanced JSON",
+      contractTitle: "Input and output contracts",
+      inputContract: "Input contract",
+      outputContract: "Output contract",
+      contractField: "Field",
+      contractType: "Type",
+      contractDescription: "Description",
+      contractUndeclared: "This resource has not declared this schema.",
+      trialEmpty: "Complete the case configuration, then run a trial to see the result.",
+      addArrayItem: "Add item",
+      removeArrayItem: "Remove item {{index}}",
+      arrayItem: "Item {{index}}",
       argumentsJson: "Arguments (JSON)",
       noArguments: "No parameters are needed here.",
       removeArgument: "Clear",
@@ -1117,11 +1201,7 @@ export const evalPart = {
       },
     },
     caseCreation: {
-      manual: "Create manually",
-      template: "Create from template",
       templateTitle: "Create cases from a template",
-      loading: "Loading evaluation templates…",
-      noRules: "Enable rules in Evaluation templates first.",
     },
     caseBatch: {
       selected: "{{count}} selected",
@@ -1230,6 +1310,23 @@ export const evalPart = {
       apply: "Apply",
       batchApply: "Apply rules",
     },
+    scenarioCase: {
+      executionHelp:
+        "Scenario cases are picked up and executed by the evaluated agent through MCP. Direct and scheduled platform runs are not supported.",
+      goal: "Business goal",
+      goalPlaceholder:
+        "Example: Can available stock fulfill 50 units of 382-000005? How many units remain available to promise?",
+      context: "Business conditions",
+      contextPlaceholder:
+        "Optional: business date, data scope, calculation rules and known facts. Example: 2026-08-25; available stock in the three finished-goods warehouses only.",
+      constraints: "Execution boundaries",
+      constraintsPlaceholder:
+        "Optional: read-only calculation; do not create orders or change stock; no substitute materials.",
+      output: "Output requirements",
+      outputPlaceholder:
+        "Optional: required fields, units and explanation without expected answers. Example: fulfillment decision, remaining units available to promise, and supporting facts.",
+      execution: "Executed by an external agent",
+    },
     agentCompare: {
       baseline: "Baseline",
       chooseBaseline: "Select baseline",
@@ -1324,8 +1421,10 @@ export const evalPart = {
       },
       revisionChanged:
         "Run details now show v{{current}}, different from the matrix pinned to v{{compared}}. Return and regenerate the comparison.",
-      title: "Agent comparison",
-      back: "Back to runs",
+      title: "Evaluation comparison",
+      helpLabel: "About evaluation comparison",
+      help: "Compare evaluation results completed and submitted by external agents through MCP. Compare different agents or repeated runs by the same agent within one test suite version. Platform-executed runs are not included.",
+      back: "Back",
       reselect: "Reselect runs",
       declaration:
         "Agent names, models and client versions are client declared, not identity verified. Keep data, permissions and tool settings consistent.",
@@ -1398,16 +1497,8 @@ export const evalPart = {
     assistantUi: { resize: "Resize AI assistant" },
     externalUi: {
       finalAnswer: "Agent final answer",
-      title: "External agent evaluation",
-      capabilityCheck: "Validate capabilities",
-      close: "Close",
       suite: "Test suite",
       version: "Pinned version",
-      copyInstruction: "Copy evaluation instructions",
-      manualHint:
-        "Send the instructions below manually in Codex, DSH, or WorkBuddy. The platform records and evaluates submitted results.",
-      connectionHint:
-        "Reuse one OpenBKN MCP connection with a reachable platform URL and your account credential. The platform must enable the evaluation tool extension.",
       instruction:
         "Use OpenBKN MCP to start an external agent evaluation of suite {{suiteId}}, pinned version {{version}}, in knowledge network {{knId}}.\nCall bkn_eval_start_run with a new UUID idempotency_key and truthful agent.name, model and client version when available. Retain run_id/run_token.\nCall bkn_eval_next_case one Case at a time. Solve each independently using the returned bkn_context for knowledge-network tools. Call bkn_eval_submit_result with the verbatim final answer and matching business-field JSON structured_output. Continue after successful submission until done=true.\nRetry identical requests after network failures. Do not grade yourself, access expected answers or other participants' results, or finish the Case Interaction yourself. Use run_token/task_token only for tool calls; omit them from summaries. Report progress when finished.",
     },

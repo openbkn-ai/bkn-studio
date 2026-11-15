@@ -6,6 +6,10 @@
  */
 
 import { Modal } from "antd";
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
+}));
+
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 
@@ -135,6 +139,166 @@ beforeEach(() => {
   });
 });
 
+const prepareObjectContext = async (override: Partial<EvalCaseDraft["definition"]> = {}) => {
+  const definition = {
+    ...draft.definition,
+    title: "采购订单 · 实例主键非空",
+    category: "fact" as const,
+    input_spec: { question: "检查主键是否完整", arguments: {} },
+    execution_spec: {
+      runner: "object_data_check",
+      target: {
+        kn_id: "kn-1",
+        resource_id: "order-1",
+        resource_kind: "objectType",
+        capability_type: "objectType",
+        name: "采购订单",
+      },
+    },
+    expected_spec: { violations: 0 },
+    expected_source: { kind: "declared_contract" as const, evidence_refs: ["bkn-rule://key"] },
+    diagnostic_spec: { expected_locked: true, rule_snapshot: { id: "object-key-completeness" } },
+    ...override,
+  };
+  vi.mocked(getCaseFormOptions).mockResolvedValue({ version: 2, predicates: ["equals"] });
+  vi.mocked(getEvalTemplateConfig).mockResolvedValue({
+    revision: 1,
+    checksum: "rules",
+    execution_support: { "object-key-completeness": { status: "supported", reason: "" } },
+    rules: [
+      {
+        id: "object-key-completeness",
+        title: "实例主键非空",
+        kind: "objectType",
+        enabled: true,
+        group: "实例标识",
+        description: "检查主键是否完整",
+        appliesWhen: "",
+        evidence: "",
+        planDimensions: [],
+      },
+    ],
+  });
+  vi.mocked(previewRuleApplication).mockResolvedValue({
+    total: 1,
+    page: 1,
+    limit: 100,
+    scope_revision: 0,
+    entries: [
+      {
+        ready_for_save: true,
+        prepared_definition: definition,
+        key: "order:key",
+        target_key: "order",
+        resource: { kind: "objectType", id: "order-1" },
+        resource_name: "采购订单",
+        target_id: "order-1",
+        target_name: "采购订单",
+        rule_id: "object-key-completeness",
+        rule_title: "实例主键非空",
+        rule_checksum: "rule",
+        resource_checksum: "source",
+        match: "applicable",
+        configuration: "complete",
+        execution: "ready",
+        execution_reason: "",
+        missing: [],
+        expected_locked: true,
+        sample: {
+          target_key: "order",
+          sample_id: "default",
+          title: definition.title,
+          question: "检查主键是否完整",
+          arguments: {},
+          scope: { mode: "sample", limit: 100 },
+        },
+      },
+    ],
+  });
+  const initialResource = { kind: "objectType", id: "order-1", name: "采购订单" };
+  const view = render(
+    <EvalCaseEditorDrawer
+      networkId="kn-1"
+      open
+      initialResource={initialResource}
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  fireEvent.mouseDown(await screen.findByRole("combobox", { name: "检查项" }));
+  fireEvent.click(
+    await screen.findByText("实例主键非空", { selector: ".ant-select-item-option-content" }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("用例名称", { exact: true, selector: "input" })).toHaveValue(
+      definition.title,
+    ),
+  );
+  return { view, initialResource };
+};
+
+it.each([
+  ["function", "函数"],
+  ["relationType", "关系类"],
+  ["metric", "对象指标"],
+  ["api", "API"],
+  ["mcp", "MCP"],
+  ["skill", "SKILLS"],
+  ["action", "行动类"],
+])("clears an object check and generated title when switching to %s", async (kind, name) => {
+  const confirm = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+  onTestFinished(() => confirm.mockRestore());
+  await prepareObjectContext();
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "资源类型" }));
+  fireEvent.click(await screen.findByText(name, { selector: ".ant-select-item-option-content" }));
+  if (confirm.mock.calls.length)
+    await act(async () => {
+      await confirm.mock.calls[0][0].onOk?.();
+    });
+  await waitFor(() => expect(listEvalCaseResources).toHaveBeenCalledWith("kn-1", kind, ""));
+  expect(screen.getByLabelText("用例名称", { exact: true, selector: "input" })).toHaveValue("");
+  expect(
+    screen.getByRole("combobox", { name: "评测对象" }).closest(".ant-select")?.textContent,
+  ).not.toContain("采购订单");
+  expect(screen.queryByRole("combobox", { name: "检查内容" })).toBeNull();
+  expect(
+    screen.queryByText(
+      "规则已固定判定标准：检查范围内的违反数量应为 0。此处不需要重新填写预期答案。",
+    ),
+  ).toBeNull();
+  expect(trialEvalCase).not.toHaveBeenCalled();
+  expect(createEvalCase).not.toHaveBeenCalled();
+});
+
+it("does not offer object resources while the function catalogue is loading", async () => {
+  let complete!: (page: { entries: []; total: number }) => void;
+  const pending = new Promise<{ entries: []; total: number }>((resolve) => {
+    complete = resolve;
+  });
+  const normalList = vi.mocked(listEvalCaseResources).getMockImplementation()!;
+  vi.mocked(listEvalCaseResources).mockImplementation((network, kind, search) =>
+    kind === "function" ? pending : normalList(network, kind, search),
+  );
+  const confirm = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+  onTestFinished(() => confirm.mockRestore());
+  await prepareObjectContext();
+  await waitFor(() => expect(listEvalCaseResources).toHaveBeenCalledWith("kn-1", "objectType", ""));
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "资源类型" }));
+  fireEvent.click(await screen.findByText("函数", { selector: ".ant-select-item-option-content" }));
+  if (confirm.mock.calls.length)
+    await act(async () => {
+      await confirm.mock.calls[0][0].onOk?.();
+    });
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "评测对象" }));
+  expect(
+    screen.queryByText("采购订单", { selector: ".ant-select-item-option-content" }),
+  ).toBeNull();
+  await act(async () => {
+    complete({ entries: [], total: 0 });
+    await Promise.resolve();
+  });
+});
+
 it("creates a Function draft from the current user resource catalogue", async () => {
   vi.mocked(listEvalCallableFunctions).mockResolvedValue([
     { resource_id: "leadtime", name: "标准交期", operation: "leadtime_days" },
@@ -153,7 +317,7 @@ it("creates a Function draft from the current user resource catalogue", async ()
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "交期应该为 14 天" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: /测试输入|测试说明（选填）/ }), {
+  fireEvent.change(await screen.findByRole("textbox", { name: /测试输入|测试说明（选填）/ }), {
     target: { value: "物料交期是多少？" },
   });
   fireEvent.change(screen.getByLabelText("输入参数", { exact: true, selector: "input,textarea" }), {
@@ -184,10 +348,19 @@ it("creates a Function draft from the current user resource catalogue", async ()
   });
   expect(await screen.findByText("用例试运行结果")).toBeTruthy();
   expect(screen.getByText("预期结果比对")).toBeTruthy();
+  expect(
+    screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }),
+  ).toHaveValue("交期应该为 14 天");
+  expect(screen.getByRole("button", { name: "试运行" })).toBeInTheDocument();
+  const trialDefinition = vi.mocked(trialEvalCase).mock.calls[0][1];
+
   fireEvent.click(screen.getByRole("button", { name: "返回编辑" }));
   fireEvent.click(screen.getByRole("button", { name: "确定" }));
   await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
   const definition = vi.mocked(createEvalCase).mock.calls[0][1];
+  expect(definition).toEqual(trialDefinition);
+  expect(trialEvalCase).toHaveBeenCalledOnce();
+
   expect(definition.input_spec).toEqual({
     question: "物料交期是多少？",
     arguments: { material_code: "606-000989" },
@@ -305,7 +478,7 @@ it.each(["新的交期函数", "标准交期"])(
       { target: { value: "新函数独立验收样本" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "试运行" }));
-    await waitFor(() => expect(trialEvalCase).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
     expect(vi.mocked(trialEvalCase).mock.calls[1][1].execution_spec.target).toMatchObject(next);
     fireEvent.click(screen.getByRole("button", { name: "返回编辑" }));
     fireEvent.click(screen.getByRole("button", { name: "确定" }));
@@ -360,6 +533,7 @@ it("preselects an overview resource for creation and resets it on the next blank
 });
 
 it("rejects an unsupported action even when save-after-enable is off", async () => {
+  vi.mocked(getCaseTargetSchema).mockResolvedValue({});
   vi.mocked(listEvalCaseResources).mockImplementation((_networkId, kind) =>
     Promise.resolve({
       entries:
@@ -382,7 +556,7 @@ it("rejects an unsupported action even when save-after-enable is off", async () 
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "发起采购前必须核对权限" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: /测试输入|测试说明（选填）/ }), {
+  fireEvent.change(await screen.findByRole("textbox", { name: /测试输入|测试说明（选填）/ }), {
     target: { value: "当前用户是否有权发起采购？" },
   });
   fireEvent.change(screen.getByLabelText("预期结果", { exact: true, selector: "input,textarea" }), {
@@ -397,122 +571,78 @@ it("rejects an unsupported action even when save-after-enable is off", async () 
   expect(replaceEvalCase).not.toHaveBeenCalled();
 }, 30000);
 
-it("requires an implemented execution for a business scenario", async () => {
+it("saves a business goal without binding a function or a resource", async () => {
   render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  expect(screen.getByText("场景测试")).toBeTruthy();
-  expect(screen.getByText("安全测试")).toBeTruthy();
   fireEvent.click(screen.getByText("场景测试"));
+  expect(screen.queryByLabelText("执行入口", { selector: '[role="combobox"]' })).toBeNull();
   expect(
     screen.queryByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
   ).toBeNull();
-  expect(
-    screen.queryByLabelText("资源类型", { exact: true, selector: '[role="combobox"]' }),
-  ).toBeNull();
-  expect(screen.queryByText("资源关联方式")).toBeNull();
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "供应链需求齐套判断" },
   });
-  fireEvent.change(
-    screen.getByLabelText("场景描述与测试输入", { exact: true, selector: "input,textarea" }),
-    {
-      target: { value: "当前订单能否齐套？" },
-    },
-  );
-  fireEvent.change(screen.getByLabelText("预期结果", { exact: true, selector: "input,textarea" }), {
+  fireEvent.change(screen.getByLabelText("业务目标", { selector: "textarea" }), {
+    target: { value: "判断订单能否齐套" },
+  });
+  fireEvent.change(screen.getByLabelText("业务条件", { selector: "textarea" }), {
+    target: { value: "需求50套，业务日2026-08-25" },
+  });
+  fireEvent.change(screen.getByLabelText("执行边界", { selector: "textarea" }), {
+    target: { value: "只读，不允许创建采购订单" },
+  });
+  fireEvent.change(screen.getByLabelText("输出要求", { selector: "textarea" }), {
+    target: { value: "给出是否齐套及缺料说明" },
+  });
+  fireEvent.change(screen.getByLabelText("正确值 1", { selector: "textarea" }), {
     target: { value: "不能齐套" },
   });
-  fireEvent.change(screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }), {
-    target: { value: "业务验收记录-1" },
-  });
-  saveWithoutEnabling();
-  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
-  expect(
-    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
-  ).toBeTruthy();
-  expect(createEvalCase).not.toHaveBeenCalled();
-  expect(replaceEvalCase).not.toHaveBeenCalled();
-}, 30000);
-
-it("clears a previous resource and blocks an unbound scenario", async () => {
-  render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  fireEvent.mouseDown(
-    screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
-  );
-  fireEvent.click(await screen.findByText("采购订单"));
-  fireEvent.click(screen.getByText("场景测试"));
-  expect(
-    screen.queryByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
-  ).toBeNull();
-  fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
-    target: { value: "跨资源交期核对" },
-  });
-  fireEvent.change(
-    screen.getByLabelText("场景描述与测试输入", { exact: true, selector: "input,textarea" }),
-    {
-      target: { value: "订单能否按期交付？" },
+  fireEvent.click(screen.getByRole("button", { name: "确定" }));
+  await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
+  expect(vi.mocked(createEvalCase).mock.calls[0][1]).toMatchObject({
+    execution_spec: { runner: "agent_task", target_kind: "business_scenario", kn_id: "kn-1" },
+    input_spec: {
+      question: "判断订单能否齐套",
+      context: "需求50套，业务日2026-08-25",
+      constraints: "只读，不允许创建采购订单",
+      output_requirements: "给出是否齐套及缺料说明",
     },
-  );
-  fireEvent.change(screen.getByLabelText("预期结果", { exact: true, selector: "input,textarea" }), {
-    target: { value: "可以" },
+    diagnostic_spec: { case_type: "scenario" },
   });
-  fireEvent.change(screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }), {
-    target: { value: "验收记录-2" },
-  });
-  saveWithoutEnabling();
-  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
-  expect(
-    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
-  ).toBeTruthy();
-  expect(createEvalCase).not.toHaveBeenCalled();
-  expect(replaceEvalCase).not.toHaveBeenCalled();
-}, 30000);
+  expect(vi.mocked(createEvalCase).mock.calls[0][1].execution_spec.target).toBeUndefined();
+}, 15000);
 
-it("does not save an unsupported security scenario", async () => {
+it("hides security testing from new cases while retaining functional and scenario entries", () => {
   render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  fireEvent.click(screen.getByText("安全测试"));
-  expect(screen.getByText("评测对象（可选）")).toBeTruthy();
-  expect(screen.queryByText("资源关联方式")).toBeNull();
-  fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
-    target: { value: "越权访问检查" },
-  });
-  fireEvent.change(
-    screen.getByLabelText("安全测试输入", { exact: true, selector: "input,textarea" }),
-    {
-      target: { value: "普通用户能否读取其他租户资源？" },
+  expect(screen.getByRole("radio", { name: "功能测试" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "场景测试" })).toBeEnabled();
+  expect(screen.queryByRole("radio", { name: "安全测试" })).toBeNull();
+  fireEvent.click(screen.getByText("场景测试", { exact: true }));
+  expect(screen.getByRole("radio", { name: "场景测试" })).toBeChecked();
+  expect(screen.queryByText("安全测试", { exact: true })).toBeNull();
+});
+
+it("preserves the type of an existing security case without offering type conversion", async () => {
+  vi.mocked(getEvalCaseDraft).mockResolvedValue({
+    ...draft,
+    definition: {
+      ...draft.definition,
+      diagnostic_spec: { ...draft.definition.diagnostic_spec, case_type: "security" },
     },
-  );
-  fireEvent.change(screen.getByLabelText("预期结果", { exact: true, selector: "input,textarea" }), {
-    target: { value: "拒绝访问" },
   });
-  fireEvent.change(screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }), {
-    target: { value: "权限设计规范" },
-  });
-  saveWithoutEnabling();
-  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
-  expect(
-    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
-  ).toBeTruthy();
-  expect(createEvalCase).not.toHaveBeenCalled();
-  expect(replaceEvalCase).not.toHaveBeenCalled();
-}, 30000);
-
-it("keeps object security checks structured and blocks saving without a check", async () => {
-  render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  fireEvent.click(screen.getByText("安全测试"));
-  fireEvent.mouseDown(
-    screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
+  render(
+    <EvalCaseEditorDrawer
+      networkId="kn-1"
+      caseId="manual-1"
+      open
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
-  fireEvent.click(await screen.findByText("采购订单"));
-  expect(
-    await screen.findByLabelText("检查项", { exact: true, selector: '[role="combobox"]' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByLabelText("安全前提与验证目标", { exact: true, selector: "input,textarea" }),
-  ).toBeTruthy();
-  expect(screen.queryByRole("textbox", { name: "预期结果" })).toBeNull();
-  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
-  expect(createEvalCase).not.toHaveBeenCalled();
-}, 30000);
+  await screen.findByDisplayValue("供应商必须存在");
+  expect(screen.getByRole("radio", { name: "安全测试" })).toBeDisabled();
+  expect(screen.getByRole("radio", { name: "安全测试" })).toBeChecked();
+  expect(screen.queryByRole("radio", { name: "功能测试" })).toBeNull();
+});
 
 it("shows a disabled case without review actions", async () => {
   render(
@@ -533,6 +663,29 @@ it("shows a disabled case without review actions", async () => {
   expect(screen.queryByRole("button", { name: "确认审核" })).toBeNull();
   expect(screen.queryByRole("button", { name: /驳回/ })).toBeNull();
 });
+
+it.each([undefined, null])(
+  "opens a saved case with omitted optional references (%s)",
+  async (refs) => {
+    vi.mocked(getEvalCaseDraft).mockResolvedValue({
+      ...draft,
+      definition: {
+        ...draft.definition,
+        expected_source: { kind: "business_expert", evidence_refs: refs as unknown as string[] },
+      },
+    });
+    render(
+      <EvalCaseEditorDrawer
+        networkId="kn-1"
+        caseId="manual-1"
+        open
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(await screen.findByDisplayValue("供应商必须存在")).toBeVisible();
+  },
+);
 
 it("keeps the enable switch on for an enabled case", async () => {
   vi.mocked(getEvalCaseDraft).mockResolvedValue({ ...draft, enabled: true });
@@ -792,189 +945,158 @@ it("rejects a title-only case while the enable switch remains off", async () => 
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "稍后完善的检查" },
   });
+  expect(screen.getByText("先选择评测对象，再配置对应的检查内容。")).toBeVisible();
+  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "确定" }));
-  await waitFor(() =>
-    expect(document.querySelectorAll(".ant-form-item-has-error").length).toBeGreaterThan(0),
-  );
   expect(createEvalCase).not.toHaveBeenCalled();
 }, 30000);
 
-it("observation-only cases still require an implemented execution", async () => {
-  vi.mocked(getCaseFormOptions).mockResolvedValue({
-    version: 2,
-    predicates: ["equals", "exists", "observation_only"],
-  });
+it("saves observation-only scenarios without inventing a callable function", async () => {
   render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-  await screen.findByText("判定标准");
   fireEvent.click(screen.getByText("场景测试", { exact: true }));
   fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }), {
     target: { value: "供给场景观察" },
   });
-  fireEvent.change(
-    screen.getByLabelText("场景描述与测试输入", { exact: true, selector: "input,textarea" }),
-    {
-      target: { value: "判断多个订单的供给约束" },
-    },
-  );
-  fireEvent.mouseDown(
-    screen.getByLabelText("如何判断 1", { exact: true, selector: '[role="combobox"]' }),
-  );
+  fireEvent.change(screen.getByLabelText("业务目标", { selector: "textarea" }), {
+    target: { value: "解释多个订单的供给约束" },
+  });
+  fireEvent.mouseDown(screen.getByLabelText("如何判断 1", { selector: '[role="combobox"]' }));
   fireEvent.click(await screen.findByText("只观察输出", { exact: true }));
-  expect(
-    screen.queryByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
-  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "确定" }));
+  await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
+  expect(vi.mocked(createEvalCase).mock.calls[0][1]).toMatchObject({
+    execution_spec: { runner: "agent_task" },
+  });
+  expect(vi.mocked(createEvalCase).mock.calls[0][1].assertions).toContainEqual(
+    expect.objectContaining({ type: "observation_only" }),
+  );
+}, 15000);
+
+it("creates, trials and enables an object check using a server-prepared rule", async () => {
+  vi.mocked(getEvalTemplateConfig).mockResolvedValue({
+    revision: 1,
+    checksum: "rules",
+    execution_support: { "object-key-uniqueness": { status: "supported", reason: "" } },
+    rules: [
+      {
+        id: "object-key-uniqueness",
+        title: "实例主键唯一",
+        kind: "objectType",
+        enabled: true,
+        group: "实例标识",
+        description: "读取真实主键，检查重复值",
+        appliesWhen: "",
+        evidence: "",
+        planDimensions: [],
+      },
+    ],
+  });
+  const definition = {
+    ...draft.definition,
+    title: "采购订单 · 实例主键唯一",
+    category: "fact" as const,
+    input_spec: {
+      question: "按真实主键检查唯一性",
+      arguments: {},
+      template_rule_id: "object-key-uniqueness",
+      template_rule_revision: 1,
+      check_scope: { mode: "sample", limit: 100 },
+    },
+    execution_spec: {
+      runner: "object_data_check",
+      target: {
+        kn_id: "kn-1",
+        resource_id: "order-1",
+        resource_kind: "objectType",
+        capability_type: "objectType",
+        name: "采购订单",
+      },
+    },
+    expected_spec: { violations: 0 },
+    expected_source: {
+      kind: "declared_contract" as const,
+      evidence_refs: ["bkn-rule://object-key-uniqueness"],
+    },
+    diagnostic_spec: { expected_locked: true, rule_snapshot: { id: "object-key-uniqueness" } },
+  };
+  vi.mocked(previewRuleApplication).mockResolvedValue({
+    total: 1,
+    page: 1,
+    limit: 100,
+    scope_revision: 0,
+    entries: [
+      {
+        ready_for_save: true,
+        prepared_definition: definition,
+        key: "target:default",
+        target_key: "target",
+        resource: { kind: "objectType", id: "order-1" },
+        resource_name: "采购订单",
+        target_id: "order-1",
+        target_name: "采购订单",
+        rule_id: "object-key-uniqueness",
+        rule_title: "实例主键唯一",
+        rule_checksum: "rule",
+        resource_checksum: "source",
+        match: "applicable",
+        configuration: "complete",
+        execution: "ready",
+        execution_reason: "",
+        missing: [],
+        expected_locked: true,
+        sample: {
+          target_key: "target",
+          sample_id: "default",
+          title: definition.title,
+          question: "检查唯一性",
+          arguments: {},
+          scope: { mode: "sample", limit: 100 },
+        },
+      },
+    ],
+  });
+  render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
+  fireEvent.mouseDown(
+    screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
+  );
+  fireEvent.click(await screen.findByText("采购订单"));
+  fireEvent.mouseDown(
+    await screen.findByLabelText("检查项", { exact: true, selector: '[role="combobox"]' }),
+  );
+  fireEvent.click(
+    await screen.findByText("实例主键唯一", { selector: ".ant-select-item-option-content" }),
+  );
+  await screen.findByLabelText("最多检查条数", { exact: true, selector: '[role="spinbutton"]' });
+  expect(screen.queryByRole("textbox", { name: /测试输入|测试说明/ })).toBeNull();
   expect(
     screen.queryByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
   ).toBeNull();
+  fireEvent.mouseDown(
+    screen.getByLabelText("检查范围", { exact: true, selector: '[role="combobox"]' }),
+  );
+  fireEvent.click(screen.getByText("全量检查", { selector: ".ant-select-item-option-content" }));
+  fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+  await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
+  expect(vi.mocked(trialEvalCase).mock.calls[0][1]).toMatchObject({
+    execution_spec: { runner: "object_data_check" },
+    expected_spec: { violations: 0 },
+    input_spec: {
+      question: "按真实主键检查唯一性",
+      check_scope: { mode: "all" },
+    },
+    diagnostic_spec: { case_type: "functional" },
+  });
+  expect(createEvalCase).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole("button", { name: "返回编辑" }));
   fireEvent.click(screen.getByLabelText("启用用例", { exact: true, selector: '[role="switch"]' }));
   fireEvent.click(screen.getByRole("button", { name: "确定" }));
-  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
-  expect(
-    await screen.findByText("当前没有可用的场景执行入口，请先在知识网络中挂载函数。"),
-  ).toBeTruthy();
-  expect(createEvalCase).not.toHaveBeenCalled();
+  await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
+  expect(vi.mocked(createEvalCase).mock.calls[0][2]).toBe(true);
+  expect(vi.mocked(createEvalCase).mock.calls[0][1].diagnostic_spec.case_type).toBe("functional");
+  expect(vi.mocked(createEvalCase).mock.calls[0][1].expected_source).toEqual(
+    definition.expected_source,
+  );
 }, 30000);
-
-it.each(["functional", "security"] as const)(
-  "creates, trials and enables an object check using a server-prepared rule (%s)",
-  async (caseType) => {
-    vi.mocked(getEvalTemplateConfig).mockResolvedValue({
-      revision: 1,
-      checksum: "rules",
-      execution_support: { "object-key-uniqueness": { status: "supported", reason: "" } },
-      rules: [
-        {
-          id: "object-key-uniqueness",
-          title: "实例主键唯一",
-          kind: "objectType",
-          enabled: true,
-          group: "实例标识",
-          description: "读取真实主键，检查重复值",
-          appliesWhen: "",
-          evidence: "",
-          planDimensions: [],
-        },
-      ],
-    });
-    const definition = {
-      ...draft.definition,
-      title: "采购订单 · 实例主键唯一",
-      category: "fact" as const,
-      input_spec: {
-        question: "按真实主键检查唯一性",
-        arguments: {},
-        template_rule_id: "object-key-uniqueness",
-        template_rule_revision: 1,
-        check_scope: { mode: "sample", limit: 100 },
-      },
-      execution_spec: {
-        runner: "object_data_check",
-        target: {
-          kn_id: "kn-1",
-          resource_id: "order-1",
-          resource_kind: "objectType",
-          capability_type: "objectType",
-          name: "采购订单",
-        },
-      },
-      expected_spec: { violations: 0 },
-      expected_source: {
-        kind: "declared_contract" as const,
-        evidence_refs: ["bkn-rule://object-key-uniqueness"],
-      },
-      diagnostic_spec: { expected_locked: true, rule_snapshot: { id: "object-key-uniqueness" } },
-    };
-    vi.mocked(previewRuleApplication).mockResolvedValue({
-      total: 1,
-      page: 1,
-      limit: 100,
-      scope_revision: 0,
-      entries: [
-        {
-          ready_for_save: true,
-          prepared_definition: definition,
-          key: "target:default",
-          target_key: "target",
-          resource: { kind: "objectType", id: "order-1" },
-          resource_name: "采购订单",
-          target_id: "order-1",
-          target_name: "采购订单",
-          rule_id: "object-key-uniqueness",
-          rule_title: "实例主键唯一",
-          rule_checksum: "rule",
-          resource_checksum: "source",
-          match: "applicable",
-          configuration: "complete",
-          execution: "ready",
-          execution_reason: "",
-          missing: [],
-          expected_locked: true,
-          sample: {
-            target_key: "target",
-            sample_id: "default",
-            title: definition.title,
-            question: "检查唯一性",
-            arguments: {},
-            scope: { mode: "sample", limit: 100 },
-          },
-        },
-      ],
-    });
-    render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-    if (caseType === "security") fireEvent.click(screen.getByText("安全测试", { exact: true }));
-    fireEvent.mouseDown(
-      screen.getByLabelText("评测对象", { exact: true, selector: '[role="combobox"]' }),
-    );
-    fireEvent.click(await screen.findByText("采购订单"));
-    fireEvent.mouseDown(
-      await screen.findByLabelText("检查项", { exact: true, selector: '[role="combobox"]' }),
-    );
-    fireEvent.click(
-      await screen.findByText("实例主键唯一", { selector: ".ant-select-item-option-content" }),
-    );
-    await screen.findByLabelText("最多检查条数", { exact: true, selector: '[role="spinbutton"]' });
-    if (caseType === "security")
-      fireEvent.change(
-        screen.getByLabelText("安全前提与验证目标", { exact: true, selector: "input,textarea" }),
-        {
-          target: { value: "当前身份只读核对主键，不切换账号。" },
-        },
-      );
-    expect(screen.queryByRole("textbox", { name: /测试输入|测试说明/ })).toBeNull();
-    expect(
-      screen.queryByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
-    ).toBeNull();
-    fireEvent.mouseDown(
-      screen.getByLabelText("检查范围", { exact: true, selector: '[role="combobox"]' }),
-    );
-    fireEvent.click(screen.getByText("全量检查", { selector: ".ant-select-item-option-content" }));
-    fireEvent.click(screen.getByRole("button", { name: "试运行" }));
-    await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
-    expect(vi.mocked(trialEvalCase).mock.calls[0][1]).toMatchObject({
-      execution_spec: { runner: "object_data_check" },
-      expected_spec: { violations: 0 },
-      input_spec: {
-        question:
-          caseType === "security" ? "当前身份只读核对主键，不切换账号。" : "按真实主键检查唯一性",
-        check_scope: { mode: "all" },
-      },
-      diagnostic_spec: { case_type: caseType },
-    });
-    expect(createEvalCase).not.toHaveBeenCalled();
-    fireEvent.click(await screen.findByRole("button", { name: "返回编辑" }));
-    fireEvent.click(
-      screen.getByLabelText("启用用例", { exact: true, selector: '[role="switch"]' }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "确定" }));
-    await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
-    expect(vi.mocked(createEvalCase).mock.calls[0][2]).toBe(true);
-    expect(vi.mocked(createEvalCase).mock.calls[0][1].diagnostic_spec.case_type).toBe(caseType);
-    expect(vi.mocked(createEvalCase).mock.calls[0][1].expected_source).toEqual(
-      definition.expected_source,
-    );
-  },
-  30000,
-);
 
 it("edits resource query cases without converting them to an unbound Function", async () => {
   vi.mocked(getCaseFormOptions).mockResolvedValue({ version: 2, predicates: ["json_schema"] });
@@ -1126,6 +1248,11 @@ it("shows resource authorization failure before asking the user to fill invocati
     />,
   );
   expect(await screen.findByText("此消息资源尚未通过只读审核")).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "用例试运行结果" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("配置已修改，本次结果仅对应修改前的定义，请重新试运行。"),
+  ).not.toBeInTheDocument();
+  expect(trialEvalCase).not.toHaveBeenCalled();
   expect(createEvalCase).not.toHaveBeenCalled();
 });
 
@@ -1575,17 +1702,28 @@ const renderFalseResultCase = async () => {
   );
 };
 
-it("requires business-expert evidence before saving an independent correct value", async () => {
-  await renderFalseResultCase();
-  expect(
-    screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
-  ).toHaveAttribute("placeholder", expect.stringContaining("业务负责人"));
-  fireEvent.click(screen.getByRole("button", { name: "确定" }));
-  expect(
-    await screen.findByText("请说明正确值的依据，例如业务规则、计算过程或已核对的样本。"),
-  ).toBeVisible();
-  expect(createEvalCase).not.toHaveBeenCalled();
-});
+it.each(["business_expert", "independent_sample"])(
+  "saves an independent correct value without optional notes (%s)",
+  async (kind) => {
+    await renderFalseResultCase();
+    if (kind === "independent_sample") {
+      fireEvent.mouseDown(
+        screen.getByLabelText("正确值从哪里来", { exact: true, selector: '[role="combobox"]' }),
+      );
+      fireEvent.click(
+        screen.getByText("已核对的对照样本", { selector: ".ant-select-item-option-content" }),
+      );
+    }
+    expect(
+      screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
+    ).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "确定" }));
+    await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
+    expect(vi.mocked(createEvalCase).mock.calls[0][1]).toMatchObject({
+      expected_source: { kind, evidence_refs: [] },
+    });
+  },
+);
 
 it("validates independent-sample evidence length and saves a valid reference", async () => {
   await renderFalseResultCase();
@@ -1611,89 +1749,6 @@ it("validates independent-sample evidence length and saves a valid reference", a
     },
   });
 }, 15_000);
-
-it.each(["场景测试", "安全测试"])(
-  "configures %s with a real execution entry and keeps it separate from assessment",
-  async (mode) => {
-    vi.mocked(getCaseFormOptions).mockResolvedValue({
-      version: 2,
-      predicates: ["equals", "exists", "json_schema"],
-    });
-    vi.mocked(listEvalCallableFunctions).mockResolvedValue([
-      { resource_id: "entry-fn", name: "标准交期", operation: "leadtime_days" },
-    ]);
-    vi.mocked(listEvalCaseResourcesPage).mockResolvedValue({
-      entries: [{ id: "entry-fn", name: "标准交期", kind: "function" }],
-      total: 1,
-    });
-    vi.mocked(getCaseTargetSchema).mockResolvedValue({
-      runner: "direct_capability",
-      available: true,
-      input: { type: "object", properties: { qty: { type: "number" } }, required: ["qty"] },
-      output: { type: "object", properties: { value: { type: "number" } } },
-    });
-    render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
-    fireEvent.click(screen.getByText(mode));
-    fireEvent.mouseDown(
-      screen.getByLabelText("执行入口", { exact: true, selector: '[role="combobox"]' }),
-    );
-    fireEvent.click(await screen.findByText("标准交期 · leadtime_days"));
-    await waitFor(() =>
-      expect(
-        screen
-          .getByLabelText("执行入口", { exact: true, selector: '[role="combobox"]' })
-          .closest(".ant-form-item"),
-      ).not.toHaveClass("ant-form-item-has-error"),
-    );
-    fireEvent.change(
-      await screen.findByLabelText("qty", { exact: true, selector: '[role="spinbutton"]' }),
-      {
-        target: { value: "0" },
-      },
-    );
-    fireEvent.change(
-      screen.getByLabelText("用例名称", { exact: true, selector: "input,textarea" }),
-      {
-        target: { value: "当前身份下的完整场景" },
-      },
-    );
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: mode === "场景测试" ? "场景描述与测试输入" : "安全测试输入",
-      }),
-      { target: { value: "在当前授权内调用入口，零输入应返回零，不申请其他身份。" } },
-    );
-    fireEvent.mouseDown(
-      screen.getByLabelText("检查什么 1", { exact: true, selector: '[role="combobox"]' }),
-    );
-    fireEvent.click(await screen.findByText("value"));
-    fireEvent.change(
-      await screen.findByLabelText("正确值 1", { exact: true, selector: '[role="spinbutton"]' }),
-      {
-        target: { value: "0" },
-      },
-    );
-    fireEvent.change(
-      screen.getByLabelText("依据说明", { exact: true, selector: "input,textarea" }),
-      {
-        target: { value: "独立核算：零输入的期望结果是0。" },
-      },
-    );
-    fireEvent.click(screen.getByRole("button", { name: "确定" }));
-    await waitFor(() => expect(createEvalCase).toHaveBeenCalled());
-    const definition = vi.mocked(createEvalCase).mock.calls[0][1];
-    expect(definition.execution_spec.target_kind).toBe("business_scenario");
-    expect(definition.execution_spec.target).toEqual(
-      expect.objectContaining({ resource_id: "entry-fn", name: "标准交期" }),
-    );
-    expect(definition.input_spec.arguments).toEqual({ qty: 0 });
-    expect(definition.diagnostic_spec.case_type).toBe(
-      mode === "场景测试" ? "scenario" : "security",
-    );
-    expect(definition.diagnostic_spec.resource_id).toBeUndefined();
-  },
-  30000,
-);
 
 it("edits a disabled definition even when its runtime input contract cannot be read", async () => {
   vi.mocked(getCaseFormOptions).mockResolvedValue({ version: 2, predicates: ["equals"] });
@@ -1781,5 +1836,216 @@ it("edits a disabled definition even when its runtime input contract cannot be r
   expect(vi.mocked(replaceEvalCase).mock.calls[0][2]).toBe(false);
   expect(vi.mocked(replaceEvalCase).mock.calls[0][1].definition.execution_spec.runner).toBe(
     "unbound",
+  );
+});
+
+it("hides unrelated fields and blocks save until the selected contract finishes loading", async () => {
+  let complete!: (schema: import("./case-form.service").CaseTargetSchema) => void;
+  vi.mocked(getCaseFormOptions).mockResolvedValue({ version: 2, predicates: ["equals"] });
+  vi.mocked(getCaseTargetSchema).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  render(
+    <EvalCaseEditorDrawer
+      networkId="kn-1"
+      open
+      initialResource={{ kind: "function", id: "leadtime", name: "标准交期" }}
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  expect(await screen.findByRole("status")).toHaveTextContent("正在读取当前评测对象");
+  expect(screen.queryByRole("combobox", { name: "检查内容" })).toBeNull();
+  expect(screen.queryByRole("textbox", { name: /测试输入|测试说明/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
+  await act(async () => {
+    complete({
+      runner: "direct_capability",
+      available: true,
+      input: { type: "object", properties: { qty: { type: "number" } } },
+    });
+    await Promise.resolve();
+  });
+  expect(await screen.findByRole("spinbutton", { name: "qty" })).toBeVisible();
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "用例试运行结果" })).toBeNull();
+});
+
+it("keeps the resource, custom title and prepared check when a context switch is cancelled", async () => {
+  const confirm = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+  onTestFinished(() => confirm.mockRestore());
+  await prepareObjectContext();
+  fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input" }), {
+    target: { value: "业务自定义标题" },
+  });
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "资源类型" }));
+  fireEvent.click(await screen.findByText("函数", { selector: ".ant-select-item-option-content" }));
+  expect(confirm).toHaveBeenCalledOnce();
+  await act(async () => {
+    await confirm.mock.calls[0][0].onCancel?.();
+  });
+  expect(
+    screen.getByRole("combobox", { name: "资源类型" }).closest(".ant-select"),
+  ).toHaveTextContent("对象类");
+  expect(
+    screen.getByRole("combobox", { name: "评测对象" }).closest(".ant-select"),
+  ).toHaveTextContent("采购订单");
+  expect(screen.getByLabelText("用例名称", { exact: true, selector: "input" })).toHaveValue(
+    "业务自定义标题",
+  );
+  expect(screen.getByRole("combobox", { name: "检查内容" }).closest(".ant-select")).toBeVisible();
+});
+
+it("ignores a trial response from the previous resource context", async () => {
+  let complete!: (result: Awaited<ReturnType<typeof trialEvalCase>>) => void;
+  const result = await vi.mocked(trialEvalCase)("kn-1", draft.definition);
+  vi.mocked(trialEvalCase).mockClear();
+  vi.mocked(trialEvalCase).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  const confirm = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+  onTestFinished(() => confirm.mockRestore());
+  await prepareObjectContext();
+  fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+  await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "资源类型" }));
+  fireEvent.click(await screen.findByText("函数", { selector: ".ant-select-item-option-content" }));
+  await act(async () => {
+    await confirm.mock.calls[0][0].onOk?.();
+  });
+  await act(async () => {
+    complete(result);
+    await Promise.resolve();
+  });
+  expect(screen.queryByRole("heading", { name: "用例试运行结果" })).toBeNull();
+  expect(screen.queryByText("本次试运行通过")).toBeNull();
+  expect(
+    screen.getByRole("combobox", { name: "资源类型" }).closest(".ant-select"),
+  ).toHaveTextContent("函数");
+});
+
+it("marks a trial stale if the case is edited before its response returns", async () => {
+  let complete!: (result: Awaited<ReturnType<typeof trialEvalCase>>) => void;
+  const result = await vi.mocked(trialEvalCase)("kn-1", draft.definition);
+  vi.mocked(trialEvalCase).mockClear();
+  vi.mocked(trialEvalCase).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  await prepareObjectContext();
+  fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+  await waitFor(() => expect(trialEvalCase).toHaveBeenCalledOnce());
+  fireEvent.change(screen.getByLabelText("用例名称", { exact: true, selector: "input" }), {
+    target: { value: "修改后的标题" },
+  });
+  await act(async () => {
+    complete(result);
+    await Promise.resolve();
+  });
+  expect(
+    await screen.findByText("配置已修改，本次结果仅对应修改前的定义，请重新试运行。"),
+  ).toBeVisible();
+});
+
+it("resets child rule state when reopening a new case with the same preselected resource", async () => {
+  const { view, initialResource } = await prepareObjectContext();
+  const props = { networkId: "kn-1", initialResource, onClose: vi.fn(), onChanged: vi.fn() };
+  view.rerender(<EvalCaseEditorDrawer {...props} open={false} />);
+  view.rerender(<EvalCaseEditorDrawer {...props} open />);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("combobox", { name: "检查项" }).closest(".ant-select"),
+    ).toHaveTextContent("选择检查项"),
+  );
+  expect(screen.getByLabelText("用例名称", { exact: true, selector: "input" })).toHaveValue("");
+  expect(screen.getByRole("button", { name: "确定" })).toBeDisabled();
+});
+
+it("uses resource-neutral trial diagnostics instead of calling every target a function", async () => {
+  vi.mocked(trialEvalCase).mockResolvedValue({
+    trial_id: "trial-resource-error",
+    definition_checksum: "a".repeat(64),
+    actual: null,
+    expected: { available: true },
+    error_class: "PERMISSION",
+    evaluation: {
+      quality_outcome: "inconclusive",
+      assertions: [
+        { id: "evidence", outcome: "inconclusive", reason: "target execution did not complete" },
+      ],
+    },
+    evidence_status: "partial",
+  });
+  await prepareObjectContext();
+  fireEvent.click(screen.getByRole("button", { name: "试运行" }));
+  expect(await screen.findByText(/评测对象未完成执行/)).toBeVisible();
+  expect(screen.getByText(/无权执行评测对象或读取执行证据/)).toBeVisible();
+  expect(screen.queryByText(/函数调用未完成/)).toBeNull();
+});
+
+it("saves a prepared logical-property invocation without adding object scan fields", async () => {
+  const input = {
+    question: "验证逻辑属性调用",
+    arguments: { _instance_identities: [{ id: 1 }], dynamic_params: { count: 0 } },
+  };
+  await prepareObjectContext({
+    category: "calculation",
+    input_spec: input,
+    execution_spec: {
+      runner: "resource_query",
+      target_kind: "resource",
+      logical_property: "amount",
+      logical_check: "call",
+      target: {
+        kn_id: "kn-1",
+        resource_id: "order-1",
+        resource_kind: "objectType",
+        capability_type: "objectType",
+        name: "采购订单",
+      },
+    },
+    expected_spec: { available: true, parameters_valid: true },
+    assertions: [
+      {
+        id: "logical-call",
+        type: "json_schema",
+        source: "normalized_output",
+        path: "$",
+        schema: { type: "object" },
+        required: true,
+      },
+      { id: "execution-evidence", type: "evidence_complete", required: true },
+    ],
+  });
+  saveWithoutEnabling();
+  await waitFor(() => expect(createEvalCase).toHaveBeenCalled());
+  const submitted = vi.mocked(createEvalCase).mock.calls[0][1];
+  expect(submitted.input_spec).toEqual(input);
+  expect(submitted.input_spec).not.toHaveProperty("check_scope");
+  expect(submitted.execution_spec.logical_property).toBe("amount");
+});
+
+it("keeps scoring and expectation provenance explanations in field tooltips", async () => {
+  render(<EvalCaseEditorDrawer networkId="kn-1" open onClose={vi.fn()} onChanged={vi.fn()} />);
+  fireEvent.click(screen.getByText("场景测试", { exact: true }));
+  expect(
+    screen.queryByText("先选择要核对的结果字段，再指定通过条件；多项条件须全部满足。"),
+  ).toBeNull();
+  expect(
+    screen.queryByText("依据应独立于本次实际输出；不要直接把试运行结果当作正确答案。"),
+  ).toBeNull();
+  const source = screen
+    .getByLabelText("正确值从哪里来", { exact: true, selector: '[role="combobox"]' })
+    .closest(".ant-form-item");
+  const help = source?.querySelector(".ant-form-item-tooltip");
+  expect(help).toBeTruthy();
+  fireEvent.mouseEnter(help!);
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "依据应独立于本次实际输出；不要直接把试运行结果当作正确答案。",
   );
 });

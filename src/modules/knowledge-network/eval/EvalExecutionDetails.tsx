@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { Typography } from "antd";
 import type { ReactNode } from "react";
 import { EvalRunMaterials } from "./EvalRunMaterials";
@@ -56,8 +57,10 @@ export function EvalExecutionDetails({ target, tool, children, ...materials }: P
       </section>
       {children || (
         <section className={styles.fallback} aria-label={text("recordedIO")}>
-          <Typography.Title level={5}>{text("recordedIO")}</Typography.Title>
-          <Typography.Paragraph type="secondary">{text("recordedIOHelp")}</Typography.Paragraph>
+          <Typography.Title level={5}>
+            {text("recordedIO")}{" "}
+            <EvalHelpTooltip label={text("recordedIO")} title={text("recordedIOHelp")} />
+          </Typography.Title>
           {detail.input_spec && (
             <>
               <Typography.Text strong>{text("evaluationInput")}</Typography.Text>

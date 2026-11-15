@@ -5,8 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { JsonInput } from "@/framework/json/JsonInput";
 import { caseUiText } from "./case-ui-text";
-import { Button, Checkbox, Input, InputNumber, Select, Space, Typography } from "antd";
+import { Button, Checkbox, Input, InputNumber, Select, Space } from "antd";
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { useEffect, useState } from "react";
 import { isCaseResultPath, newCriterion, type CaseCriterion } from "./case-form-model";
 import type { CaseSchema } from "./case-form.service";
@@ -27,6 +29,9 @@ type Props = {
 export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: Props) {
   const { t } = useEvalTranslation();
   const l = (key: string) => t(`knowledgeNetwork.eval.caseEditor.${key}`);
+  const help = (label: string, description: string) => (
+    <EvalHelpTooltip label={label} title={description} />
+  );
   const update = (index: number, patch: Partial<CaseCriterion>) =>
     onChange?.(value.map((c, i) => (i === index ? { ...c, ...patch } : c)));
   const [advancedPaths, setAdvancedPaths] = useState<Record<string, boolean>>({});
@@ -174,7 +179,11 @@ export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: P
         <div key={c.id} className={styles.criterion}>
           <div className={styles.criterionControls}>
             <div>
-              <div className={styles.fieldLabel}>{l("resultField")}</div>
+              <div className={styles.fieldLabel}>
+                {l("resultField")}
+                {advancedPaths[c.id] &&
+                  help(`${l("resultField")} ${index + 1}`, l("fieldPathHelp"))}
+              </div>
               {advancedPaths[c.id] || !fields.some((f) => f.value === c.path) ? (
                 <Input
                   aria-label={`${l("resultField")} ${index + 1}`}
@@ -217,10 +226,21 @@ export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: P
               >
                 {l("advancedPath")}
               </Button>
-              {advancedPaths[c.id] && <div className={styles.fieldHint}>{l("fieldPathHelp")}</div>}
             </div>
             <div>
-              <div className={styles.fieldLabel}>{l("predicate")}</div>
+              <div className={styles.fieldLabel}>
+                {l("predicate")}
+                {help(
+                  `${l("predicate")} ${index + 1}`,
+                  l(
+                    c.type === "exists"
+                      ? "existsHint"
+                      : c.type === "observation_only"
+                        ? "observeHint"
+                        : `comparisonHints.${c.type}`,
+                  ),
+                )}
+              </div>
               <Select
                 style={{ width: "100%" }}
                 aria-label={`${l("predicate")} ${index + 1}`}
@@ -255,11 +275,6 @@ export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: P
               {l("remove")}
             </Button>
           </div>
-          {!["exists", "observation_only"].includes(c.type) && (
-            <Typography.Paragraph type="secondary" className={styles.conditionHelp}>
-              {l(`comparisonHints.${c.type}`)}
-            </Typography.Paragraph>
-          )}
           {c.type === "numeric_range" ? (
             <div className={styles.criteriaValues}>
               <div>
@@ -279,18 +294,23 @@ export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: P
                 {configField(c, index, "relative_tolerance", l("relativeTolerance"))}
               </div>
             </Space>
-          ) : ["exists", "observation_only"].includes(c.type) ? (
-            <Typography.Text type="secondary">
-              {l(c.type === "exists" ? "existsHint" : "observeHint")}
-            </Typography.Text>
-          ) : (
-            <div>
+          ) : ["exists", "observation_only"].includes(c.type) ? null : (
+            <div
+              className={
+                c.type === "equals" && !outputType(c.path)
+                  ? styles.expectedValueGrid
+                  : styles.expectedValueOnly
+              }
+            >
               {c.type === "equals" && !outputType(c.path) && (
-                <div className={styles.valueTypeControl}>
-                  <div className={styles.fieldLabel}>{l("expectedTypeHelp")}</div>
+                <div>
+                  <div className={styles.fieldLabel}>
+                    {l("expectedTypeHelp")}
+                    {help(`${l("valueType")} ${index + 1}`, l("unknownTypeHelp"))}
+                  </div>
                   <Select
                     aria-label={`${l("valueType")} ${index + 1}`}
-                    style={{ width: 180 }}
+                    style={{ width: "100%" }}
                     value={c.valueType}
                     options={["string", "number", "boolean", "json"].map((type) => ({
                       value: type,
@@ -300,57 +320,78 @@ export function EvalCaseCriteria({ value = [], onChange, predicates, schema }: P
                       update(index, { valueType, value: "", valueProvided: false })
                     }
                   />
-                  <div className={styles.fieldHint}>{l("unknownTypeHelp")}</div>
                 </div>
               )}
-              <div className={styles.fieldLabel}>{l("expectedValue")}</div>
-              {c.type === "equals" && c.valueType === "number" ? (
-                <InputNumber<string>
-                  stringMode
-                  style={{ width: "100%" }}
-                  aria-label={`${l("expectedValue")} ${index + 1}`}
-                  placeholder={l("numberPlaceholder")}
-                  value={c.value || undefined}
-                  onChange={(v) =>
-                    update(index, { value: v ?? "", valueProvided: v !== null && v !== "" })
-                  }
-                />
-              ) : c.type === "equals" && c.valueType === "boolean" ? (
-                <Select
-                  style={{ width: "100%" }}
-                  allowClear
-                  aria-label={`${l("expectedValue")} ${index + 1}`}
-                  placeholder={l("booleanPlaceholder")}
-                  value={c.value === "true" || c.value === "false" ? c.value : undefined}
-                  options={[
-                    { value: "true", label: l("yesValue") },
-                    { value: "false", label: l("noValue") },
-                  ]}
-                  onChange={(v) =>
-                    update(index, { value: v ?? "", valueProvided: v !== undefined })
-                  }
-                />
-              ) : (
-                <Input.TextArea
-                  aria-label={`${l("expectedValue")} ${index + 1}`}
-                  value={c.value}
-                  rows={c.type === "json_schema" || c.valueType === "json" ? 3 : 1}
-                  placeholder={
-                    c.type === "json_schema"
-                      ? '{"type":"object","required":["id"]}'
-                      : l(c.valueType === "json" ? "jsonPlaceholder" : "stringPlaceholder")
-                  }
-                  onChange={(e) => update(index, { value: e.target.value, valueProvided: true })}
-                />
-              )}
-              {c.type === "equals" && c.valueType === "string" && (
-                <Checkbox
-                  checked={c.value === "" && c.valueProvided === true}
-                  onChange={(e) => update(index, { value: "", valueProvided: e.target.checked })}
-                >
-                  {l("emptyText")}
-                </Checkbox>
-              )}
+              <div>
+                <div className={`${styles.fieldLabel} ${styles.expectedValueLabel}`}>
+                  <span>{l("expectedValue")}</span>
+                  {c.type === "equals" && c.valueType === "string" && (
+                    <Checkbox
+                      checked={c.value === "" && c.valueProvided === true}
+                      onChange={(e) =>
+                        update(index, { value: "", valueProvided: e.target.checked })
+                      }
+                    >
+                      {l("emptyText")}
+                    </Checkbox>
+                  )}
+                </div>
+                {c.type === "equals" && c.valueType === "number" ? (
+                  <InputNumber<string>
+                    stringMode
+                    style={{ width: "100%" }}
+                    aria-label={`${l("expectedValue")} ${index + 1}`}
+                    placeholder={l("numberPlaceholder")}
+                    value={c.value || undefined}
+                    onChange={(v) =>
+                      update(index, { value: v ?? "", valueProvided: v !== null && v !== "" })
+                    }
+                  />
+                ) : c.type === "equals" && c.valueType === "boolean" ? (
+                  <Select
+                    style={{ width: "100%" }}
+                    allowClear
+                    aria-label={`${l("expectedValue")} ${index + 1}`}
+                    placeholder={l("booleanPlaceholder")}
+                    value={c.value === "true" || c.value === "false" ? c.value : undefined}
+                    options={[
+                      { value: "true", label: l("yesValue") },
+                      { value: "false", label: l("noValue") },
+                    ]}
+                    onChange={(v) =>
+                      update(index, { value: v ?? "", valueProvided: v !== undefined })
+                    }
+                  />
+                ) : c.type === "json_schema" || c.valueType === "json" ? (
+                  <JsonInput
+                    ariaLabel={`${l("expectedValue")} ${index + 1}`}
+                    value={c.value}
+                    placeholder={
+                      c.type === "json_schema"
+                        ? '{"type":"object","required":["id"]}'
+                        : l("jsonPlaceholder")
+                    }
+                    onChange={(text) => update(index, { value: text, valueProvided: true })}
+                  />
+                ) : (
+                  <Input.TextArea
+                    aria-label={`${l("expectedValue")} ${index + 1}`}
+                    value={c.value}
+                    rows={1}
+                    disabled={
+                      (c.type === "equals" &&
+                        c.valueType === "string" &&
+                        c.value === "" &&
+                        c.valueProvided === true) ||
+                      undefined
+                    }
+                    placeholder={l("stringPlaceholder")}
+                    onChange={(e) =>
+                      update(index, { value: e.target.value, valueProvided: e.target.value !== "" })
+                    }
+                  />
+                )}
+              </div>
             </div>
           )}
         </div>

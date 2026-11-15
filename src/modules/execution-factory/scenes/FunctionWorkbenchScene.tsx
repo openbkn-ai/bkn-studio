@@ -37,7 +37,7 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
+import { CodeEditor } from "@/framework/code-editor/CodeEditor";
 import { DetailBasicInfoButton } from "@/modules/execution-factory/components/DetailBasicInfoButton";
 import {
   EntityListRail,

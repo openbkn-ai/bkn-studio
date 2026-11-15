@@ -6,12 +6,23 @@
  */
 
 .sectionTitle {
-  margin: 4px 0 12px;
+  margin: 20px 0 12px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--color-border-secondary);
   color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
+}
+
+.caseEditorDrawer :global(.ant-form) > .sectionTitle:first-child {
+  margin-top: 0;
+}
+
+.contractLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 20px;
 }
 
 .resourceGrid {
@@ -53,6 +64,7 @@
 }
 
 .criterion {
+  container-type: inline-size;
   border: 1px solid var(--color-border-secondary);
   border-radius: 6px;
   padding: 12px;
@@ -99,17 +111,23 @@
   gap: 8px;
   margin-bottom: 6px;
 }
-.fieldHint {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
+.expectedValueGrid {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: start;
 }
-.conditionHelp {
-  margin-bottom: 12px !important;
-  font-size: 12px;
+.expectedValueGrid > div,
+.expectedValueOnly {
+  min-width: 0;
 }
-.valueTypeControl {
-  margin-bottom: 12px;
+.expectedValueLabel {
+  justify-content: space-between;
+}
+@container (max-width: 520px) {
+  .expectedValueGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .criterionRemove {
   align-self: start;
@@ -123,4 +141,133 @@
     margin-top: 0;
     justify-self: end;
   }
+}
+
+.caseEditorDrawer :global(.ant-drawer-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.editorError {
+  flex-shrink: 0;
+  max-height: 160px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+.withTrial {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+}
+
+.editPane,
+.resultPane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+}
+
+.resultPane {
+  padding-left: 20px;
+  border-left: 1px solid var(--color-border-secondary);
+}
+
+.resultPane > :global(h5.ant-typography) {
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.resultPane :global(.ant-space),
+.resultPane :global(.ant-space-item) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.paneSwitch {
+  display: none;
+}
+
+.contract {
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.contractGrid {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.contractGrid section {
+  min-width: 0;
+}
+
+.arrayItem {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 6px;
+}
+
+.arrayItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1000px) {
+  .withTrial {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .paneSwitch {
+    display: inline-flex;
+  }
+
+  .showResult .editPane,
+  .showEdit .resultPane {
+    display: none;
+  }
+
+  .resultPane {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.fieldHelp {
+  margin-inline-start: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  cursor: help;
+  vertical-align: middle;
+}
+
+.fieldHelp:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.fieldLabel > .fieldHelp {
+  margin-inline-start: 0;
 }

@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { evalReferenceLabel } from "./eval-readable-references";
 import {
   Alert,
@@ -280,8 +281,9 @@ export function EvalAgentComparisonResult({
       )}
       <div className={styles.surface} role="region" aria-label={text("summary")}>
         <div className={styles.sectionHeader}>
-          <strong>{text("summary")}</strong>
-          <Typography.Text type="secondary">{text("rateHelp")}</Typography.Text>
+          <strong>
+            {text("summary")} <EvalHelpTooltip label={text("summary")} title={text("rateHelp")} />
+          </strong>
         </div>
         <Table<MetricRow>
           rowKey="key"
@@ -295,7 +297,7 @@ export function EvalAgentComparisonResult({
               width: 220,
               fixed: "left",
               render: (_: unknown, row) => (
-                <Tooltip
+                <EvalHelpTooltip
                   title={
                     row.key === "unique"
                       ? text("uniqueHelp")
@@ -311,7 +313,7 @@ export function EvalAgentComparisonResult({
                       ? text(row.key)
                       : text(row.key === "passed" ? "passedCases" : row.key)}
                   </span>
-                </Tooltip>
+                </EvalHelpTooltip>
               ),
             },
             ...comparison.runs.map((run, index) => ({
@@ -326,12 +328,14 @@ export function EvalAgentComparisonResult({
       <div ref={matrixRef} className={styles.surface} role="region" aria-label={text("matrix")}>
         <div className={styles.sectionHeader}>
           <Space>
-            <strong>{text("matrix")}</strong>
+            <strong>
+              {text("matrix")}{" "}
+              <EvalHelpTooltip label={text("matrix")} title={text("differencesFirst")} />
+            </strong>
             <Tag>
               {rows.length} / {comparison.cases.length}
             </Tag>
           </Space>
-          <Typography.Text type="secondary">{text("differencesFirst")}</Typography.Text>
         </div>
         <div className={styles.filters}>
           <Input.Search

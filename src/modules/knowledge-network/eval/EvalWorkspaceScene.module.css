@@ -477,18 +477,14 @@
   flex: none;
   white-space: nowrap;
 }
-.overviewLoading {
-  display: grid;
-  min-height: 220px;
-  place-items: center;
-}
 .overviewMetrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid var(--color-border-secondary);
   background: var(--color-bg-surface);
 }
-.overviewMetrics > button {
+.overviewMetrics > button,
+.pendingMetric {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -502,7 +498,8 @@
   color: var(--color-text-primary);
   cursor: pointer;
 }
-.overviewMetrics > button:last-child {
+.overviewMetrics > button:last-child,
+.pendingMetric:last-child {
   border-right: 0;
 }
 .overviewMetrics > button:hover {
@@ -713,7 +710,8 @@
   gap: 6px;
 }
 .runWorkspaceTabs .runTabLabel .runTabHelp,
-.tabs .runTabLabel .runTabHelp {
+.tabs .runTabLabel .runTabHelp,
+.runFilterActions .runTabHelp {
   margin-inline: 0;
   color: var(--color-text-secondary);
   font-size: 14px;
@@ -1063,9 +1061,6 @@
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
-.runPlanFormHint {
-  margin-bottom: 24px;
-}
 .runPlanDrawer :global(.ant-form-item-label > label) {
   font-weight: 600;
 }
@@ -1289,7 +1284,8 @@
   .overviewMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .overviewMetrics > button:nth-child(2n) {
+  .overviewMetrics > button:nth-child(2n),
+  .pendingMetric:nth-child(2n) {
     border-right: 0;
   }
   .overviewDetailGrid {
@@ -1317,11 +1313,14 @@
     grid-template-columns: 1fr;
   }
   .overviewMetrics > button,
-  .overviewMetrics > button:nth-child(2n) {
+  .pendingMetric,
+  .overviewMetrics > button:nth-child(2n),
+  .pendingMetric:nth-child(2n) {
     border-right: 0;
     border-bottom: 1px solid var(--color-border-secondary);
   }
-  .overviewMetrics > button:last-child {
+  .overviewMetrics > button:last-child,
+  .pendingMetric:last-child {
     border-bottom: 0;
   }
 }
@@ -1437,4 +1436,22 @@
   min-height: 0;
   overflow: auto;
   padding: 24px;
+}
+
+.pendingMetric {
+  cursor: default;
+}
+
+.overviewRefreshStatus {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  max-width: min(240px, 25vw);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.overviewRefreshStatus > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

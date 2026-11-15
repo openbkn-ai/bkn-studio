@@ -263,7 +263,7 @@ it("filters regression-tagged test sets on the server and keeps the unfiltered t
     expect(listEvalSuites).toHaveBeenLastCalledWith("kn-1", 1, { q: undefined, tag: undefined }),
   );
 });
-it("validates the published capabilities without starting an external client", async () => {
+it("runs a published suite on the platform after preflight and confirmation", async () => {
   const onRunCreated = vi.fn();
   renderPanel(
     <EvalSuitePanel
@@ -276,7 +276,11 @@ it("validates the published capabilities without starting an external client", a
   fireEvent.click(
     await screen.findByLabelText("测试集操作：供应链核心回归集", { selector: "button" }),
   );
-  fireEvent.click(await screen.findByText("校验能力"));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).getAllByRole("menuitem", { name: "运行" })).toHaveLength(1);
+  expect(within(menu).queryByText("校验能力")).toBeNull();
+  expect(within(menu).queryByText("外部运行")).toBeNull();
+  fireEvent.click(within(menu).getByRole("menuitem", { name: "运行" }));
   await waitFor(() =>
     expect(previewM1RunSelection).toHaveBeenCalledWith("kn-1", {
       kind: "suite",
@@ -292,7 +296,11 @@ it("validates the published capabilities without starting an external client", a
     expect(onRunCreated).toHaveBeenCalledWith(expect.objectContaining({ id: "run-2" })),
   );
 });
-it("opens manual MCP instructions pinned to the suite version without creating a platform run", async () => {
+it.each([
+  { case_count: 2, eligible: false, reasons: ["当前用例执行配置不可用"] },
+  { case_count: 0, eligible: true, reasons: [] },
+])("does not start a suite rejected by preflight: %j", async (preview) => {
+  vi.mocked(previewM1RunSelection).mockResolvedValue({ ...preview, execution_mode: "platform" });
   const onRunCreated = vi.fn();
   renderPanel(
     <EvalSuitePanel
@@ -305,16 +313,19 @@ it("opens manual MCP instructions pinned to the suite version without creating a
   fireEvent.click(
     await screen.findByLabelText("测试集操作：供应链核心回归集", { selector: "button" }),
   );
-  fireEvent.click(await screen.findByText("运行"));
-  const drawer = await screen.findByRole("dialog", { name: "外部智能体评测" });
-  expect(within(drawer).getByText(/知识网络 kn-1 的测试集 suite-1（固定版本 1）/)).toBeTruthy();
-  expect(within(drawer).getByText(/\/api\/agent-retrieval\/v1\/mcp\//)).toBeTruthy();
-  expect(createM1Run).not.toHaveBeenCalled();
-  expect(previewM1RunSelection).toHaveBeenCalledWith(
-    "kn-1",
-    { kind: "suite", suite_id: "suite-1", version: 1 },
-    "external",
+  fireEvent.click(await screen.findByRole("menuitem", { name: "运行" }));
+  await waitFor(() =>
+    expect(previewM1RunSelection).toHaveBeenCalledWith("kn-1", {
+      kind: "suite",
+      suite_id: "suite-1",
+      version: 1,
+    }),
   );
+  await screen.findByText(
+    preview.reasons[0] || "测试集没有可运行的已启用用例，请先检查成员用例配置。",
+  );
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(createM1Run).not.toHaveBeenCalled();
   expect(onRunCreated).not.toHaveBeenCalled();
 });
 it("opens test set details from the action menu", async () => {

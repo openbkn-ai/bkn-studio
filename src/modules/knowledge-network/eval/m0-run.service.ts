@@ -4,6 +4,10 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
+import {
+  readEvalOverviewProgress,
+  type EvalOverviewProgressOptions,
+} from "./eval-overview-progress";
 import i18n from "i18next";
 import "./locales";
 
@@ -328,7 +332,11 @@ export type EvalOverviewScope = {
 
 const pendingOverview = createPendingRequest<EvalOverview>();
 
-export function getEvalOverview(networkId: string): Promise<EvalOverview> {
+export function getEvalOverview(
+  networkId: string,
+  progress?: EvalOverviewProgressOptions,
+): Promise<EvalOverview> {
+  if (progress) return readEvalOverviewProgress(networkId, progress);
   return pendingOverview(networkId, async () => {
     const response = await http.get<EvalOverview>(
       `/bkn-backend/v1/knowledge-networks/${encodeURIComponent(networkId)}/evals/overview`,
@@ -406,6 +414,7 @@ export type EvalCaseSummary = {
   };
   execution_setup?:
     | "ready_for_preflight"
+    | "ready_for_external_agent"
     | "review_required"
     | "execution_not_configured"
     | "unsupported_runner"
@@ -1084,11 +1093,13 @@ export type M0CaseDetail = M0CaseRun & {
       read_rows?: number;
       reference_rows?: number;
       program_version?: number;
+      standard?: { version: string; evidence_refs: string[] };
       aggregate_scope?: string;
       aggregate_checks?: number;
       aggregate_results?: {
         function: string;
         field: string;
+        fields?: string[];
         operator: string;
         actual_exact: string;
         expected: unknown;

@@ -537,7 +537,7 @@ describe("ProjectWorkspaceScene", () => {
     expect(container.querySelectorAll('[data-region="stats"] button')).toHaveLength(7);
     expect(container.querySelector(".ant-alert")).toBeNull();
     expect(
-      screen.getByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
+      await screen.findByText('bknProject.overview.tiles.sourcesValue:{"count":2}'),
     ).toBeInTheDocument();
     expect(screen.getByText("bknProject.list.ownerYou")).toBeInTheDocument();
     // The latest release and the running version, in the header and on the cards.

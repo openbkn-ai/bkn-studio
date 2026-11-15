@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
-import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
+import { CodeEditor } from "@/framework/code-editor/CodeEditor";
 import {
   isMarkdownSkillFile,
   resolveSkillFileLanguage,

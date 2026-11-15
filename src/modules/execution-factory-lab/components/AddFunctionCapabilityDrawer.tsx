@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { CodeEditor } from "@/modules/execution-factory/components/CodeEditor";
+import { CodeEditor } from "@/framework/code-editor/CodeEditor";
 import { LabPermissionHint } from "@/modules/execution-factory-lab/components/LabPermissionHint";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 import {

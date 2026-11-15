@@ -44,7 +44,6 @@ import {
 } from "antd";
 import {
   ArrowLeftOutlined,
-  DownOutlined,
   EllipsisOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
@@ -80,8 +79,17 @@ import { EvalTemplatePanel } from "./EvalTemplatePanel";
 import { EvalAssistantDrawer } from "./EvalTemplateGenerationDrawer";
 import { EvalAssistantResizeHandle } from "./EvalAssistantResizeHandle";
 import { EvalOverviewExecutionSummary } from "./EvalOverviewExecutionSummary";
+import { EvalOverviewPending } from "./EvalOverviewPending";
+import { EvalOverviewProgressError } from "./eval-overview-progress";
 import { EvalOverviewResourcesPanel } from "./EvalOverviewResourcesPanel";
 import { buildRunRepairRequest, type EvalRepairRequest } from "./eval-repair.service";
+import { EvalResourceResultsDrawer } from "./EvalResourceResultsDrawer";
+import {
+  buildResourceResultRows,
+  type OverviewResourceCase,
+  type ResourceResultRow,
+} from "./eval-overview-resources";
+import { resourceCoverageActions, type CoverageAction } from "./eval-resource-coverage-actions";
 import { EvalOverviewScopeDrawer } from "./EvalOverviewScopeDrawer";
 import { EvalRunPlansPanel } from "./EvalRunPlansPanel";
 import { caseCanConfigureObjectCheck, caseExecutionSetupLabel } from "./eval-case-execution";
@@ -372,6 +380,10 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
   const [overview, setOverview] = useState<EvalOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [overviewError, setOverviewError] = useState("");
+  const [overviewRulesReady, setOverviewRulesReady] = useState(false);
+  const [overviewRulesError, setOverviewRulesError] = useState(false);
+  const [overviewCaseTotal, setOverviewCaseTotal] = useState<number>();
+  const overviewNetwork = useRef(networkId);
   const [overviewScopeOpen, setOverviewScopeOpen] = useState(false);
   const [overviewRevision, setOverviewRevision] = useState(0);
   const [overviewView, setOverviewView] = useState<"resources" | "execution">(
@@ -383,6 +395,8 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     kind: string;
     filter: OverviewResourceFilter;
   }>();
+  const [coverageResult, setCoverageResult] = useState<{ kind: string; id: string }>();
+  const [coverageRunning, setCoverageRunning] = useState(false);
   const [overviewResourceProblemFocus, setOverviewResourceProblemFocus] = useState(0);
   const [runList, setRunList] = useState<M0RunSearchPage | null>(null);
   const [runListLoading, setRunListLoading] = useState(true);
@@ -451,7 +465,6 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
   const [caseStateFilter, setCaseStateFilter] = useState<"all" | "disabled" | "enabled">(
     linkedCaseFilters.status,
   );
-  const [externalAgentAvailable, setExternalAgentAvailable] = useState(false);
   const [canManageCases, setCanManageCases] = useState(false);
   const [canManageTemplates, setCanManageTemplates] = useState(false);
   const [caseEditorOpen, setCaseEditorOpen] = useState(false);
@@ -852,14 +865,12 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     setCanManageCases(false);
     setCanManageTemplates(false);
     setRunPlansCapability({ networkId, status: "loading" });
-    setExternalAgentAvailable(false);
     setCanManageRunPlans(false);
     setAutomaticRunPlans(false);
     void getEvalCapabilities(networkId)
       .then((capabilities) => {
         if (active) {
           setCanManageCases(capabilities.case_management);
-          setExternalAgentAvailable(capabilities.external_agent === true);
           setCanManageTemplates(Boolean(capabilities.template_management));
           setRunPlansCapability({
             networkId,
@@ -874,7 +885,6 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
           setCanManageCases(false);
           setCanManageTemplates(false);
           setRunPlansCapability({ networkId, status: "failed" });
-          setExternalAgentAvailable(false);
           setCanManageRunPlans(false);
           setAutomaticRunPlans(false);
         }
@@ -1044,18 +1054,58 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     };
   }, [networkId, recentRunsActive, recentRunsRevision]);
 
+  const overviewNeeded = workspaceTab === "overview" || caseLibraryActive || assistantOpen;
   useEffect(() => {
+    if (!overviewNeeded) return;
     let active = true;
-    if (workspaceTab !== "overview" && !caseLibraryActive && !assistantOpen) return;
+    let receivedResources = false;
+    const controller = new AbortController();
+    if (overviewNetwork.current !== networkId) {
+      overviewNetwork.current = networkId;
+      setCoverageResult(undefined);
+      setOverviewResourceDetail(undefined);
+      setOverview(null);
+      setOverviewCaseTotal(undefined);
+      setOverviewRulesReady(false);
+    }
     setOverviewLoading(true);
     setOverviewError("");
-    void getEvalOverview(networkId)
+    setOverviewRulesError(false);
+    void getEvalOverview(networkId, {
+      signal: controller.signal,
+      onProgress: (event) => {
+        if (!active) return;
+        if (event.section === "cases") setOverviewCaseTotal(event.total);
+        if (event.section === "resources") {
+          receivedResources = true;
+          setOverview(event.overview);
+          setOverviewRulesReady(false);
+        }
+      },
+    })
       .then((value) => {
-        if (active) setOverview(value);
-      })
-      .catch(() => {
         if (active) {
+          setOverview(value);
+          setOverviewRulesReady(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        const status =
+          error instanceof EvalOverviewProgressError
+            ? error.event.status
+            : axios.isAxiosError(error)
+              ? error.response?.status
+              : undefined;
+        const authorizationFailed = status === 401 || status === 403;
+        if (authorizationFailed) {
           setOverview(null);
+          setOverviewCaseTotal(undefined);
+          setOverviewRulesReady(false);
+        }
+        if (receivedResources && !authorizationFailed) {
+          setOverviewRulesError(true);
+        } else {
           setOverviewError(workspaceUi("cannotLoadTheKnowledgeNetworkOverviewTryAgainLater"));
         }
       })
@@ -1064,16 +1114,9 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [
-    networkId,
-    workspaceTab,
-    caseLibraryActive,
-    caseListRevision,
-    runListRevision,
-    overviewRevision,
-    assistantOpen,
-  ]);
+  }, [networkId, overviewNeeded, caseListRevision, runListRevision, overviewRevision]);
 
   useEffect(() => {
     if (!assistantOpen) {
@@ -1257,9 +1300,10 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     caseListRevision,
   ]);
 
+  const coverageNeedsRules = Boolean(overviewResourceDetail) && canManageCases;
   useEffect(() => {
     let active = true;
-    if (workspaceTab !== "plan" && !caseLibraryActive) return;
+    if (workspaceTab !== "plan" && !caseLibraryActive && !coverageNeedsRules) return;
     setTemplate(null);
     setTemplateError("");
     setTemplateLoading(true);
@@ -1276,7 +1320,7 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     return () => {
       active = false;
     };
-  }, [networkId, workspaceTab, caseLibraryActive]);
+  }, [networkId, workspaceTab, caseLibraryActive, coverageNeedsRules]);
 
   const visibleCases = casePage?.entries ?? [];
   const caseBatchPages = Math.max(1, Math.ceil(visibleCases.length / caseTablePageSize));
@@ -1375,6 +1419,27 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
       hour12: false,
     }).format(date);
   };
+
+  const coverageResults = useMemo(
+    () => (overview ? buildResourceResultRows(overview) : []),
+    [overview],
+  );
+  const coverageCases = useMemo(() => {
+    const index = new Map<string, OverviewResourceCase[]>();
+    for (const entry of overview?.case_details ?? []) {
+      if (entry.target_kind === "business_scenario") continue;
+      for (const target of entry.targets ?? []) {
+        const key = `${target.kind}:${target.id}`;
+        const entries = index.get(key) ?? [];
+        if (!entries.some((item) => item.id === entry.id)) entries.push(entry);
+        index.set(key, entries);
+      }
+    }
+    return index;
+  }, [overview?.case_details]);
+  const selectedCoverageResult = coverageResults.find(
+    (entry) => entry.kind === coverageResult?.kind && entry.id === coverageResult.id,
+  );
 
   const overviewResourceRows = useMemo(() => {
     if (!overviewResourceDetail) return [];
@@ -1475,20 +1540,117 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
     });
   };
 
-  const openOverviewResourceRun = (resource: OverviewResourceDetail) => {
-    if (!resource.latest_run_id) return;
-    const qualityOutcome = resource.latest_quality_outcome;
+  const coverageText = (key: string, values?: Record<string, unknown>) =>
+    t(`knowledgeNetwork.eval.resourceCoverage.${key}`, values);
+  const coverageRuleIds = (resource: OverviewResourceDetail) =>
+    (template?.rules ?? [])
+      .filter(
+        (rule) =>
+          rule.enabled &&
+          (rule.kind === resource.kind ||
+            (resource.kind === "objectType" && rule.kind === "objectProperty")),
+      )
+      .map((rule) => rule.id);
+  const repairCoverageResource = (resource: ResourceResultRow, cases = resource.failures) => {
+    setCoverageResult(undefined);
     setOverviewResourceDetail(undefined);
-    navigateRunDetail({
-      runId: resource.latest_run_id,
-      outcome:
-        qualityOutcome === "pass" ||
-        qualityOutcome === "fail" ||
-        qualityOutcome === "inconclusive" ||
-        qualityOutcome === "review_required"
-          ? qualityOutcome
-          : "all",
+    setRepairRequest({
+      networkId,
+      id: crypto.randomUUID(),
+      target: { kind: resource.kind, id: resource.id, name: resource.name },
+      cases,
+      ...(!canManageCases
+        ? { analysisOnly: true, analysisOnlyReason: "permission" as const }
+        : cases.some((entry) => entry.status !== "failed")
+          ? { analysisOnly: true, analysisOnlyReason: "outcome" as const }
+          : {}),
     });
+    setAssistantOpen(true);
+  };
+  const runCoverageCases = async (ids: string[]) => {
+    if (!canManageCases || !ids.length || ids.length > 50 || coverageRunning) return;
+    setCoverageRunning(true);
+    const scope = { kind: "cases" as const, case_ids: ids };
+    try {
+      if (!(await getM1RunCapabilities(networkId))) throw new Error("Execution unavailable");
+      const preview = await previewM1RunSelection(networkId, scope);
+      if (!preview.eligible || preview.case_count !== ids.length)
+        throw new Error("Changed selection");
+      if (overviewNetwork.current !== networkId) return;
+      modal.confirm({
+        title: workspaceUi("runTheseCases", { value0: ids.length }),
+        content: workspaceUi("eachCaseWillUseItsCurrentConfigurationResultsAnd"),
+        okText: workspaceUi("run"),
+        cancelText: workspaceUi("knowledgeNetwork.eval.m0.cancel"),
+        onOk: async () => {
+          if (overviewNetwork.current !== networkId) return;
+          setCoverageRunning(true);
+          try {
+            const run = await createM1Run(networkId, scope, crypto.randomUUID());
+            if (overviewNetwork.current !== networkId) return;
+            setOverviewResourceDetail(undefined);
+            showRun(run);
+            void refreshRuns();
+            setOverviewRevision((value) => value + 1);
+          } catch (error) {
+            message.error(workspaceUi("couldNotRunTheSelectedCasesCheckExecutionPermissions"));
+            throw error;
+          } finally {
+            setCoverageRunning(false);
+          }
+        },
+      });
+    } catch {
+      message.error(workspaceUi("someCasesDoNotMeetExecutionRequirementsCheckTheir"));
+    } finally {
+      setCoverageRunning(false);
+    }
+  };
+  const onCoverageAction = (
+    action: CoverageAction,
+    resource: OverviewResourceDetail,
+    runIds: string[],
+  ) => {
+    switch (action) {
+      case "scope":
+        setOverviewResourceDetail(undefined);
+        setOverviewScopeOpen(true);
+        break;
+      case "cases":
+        openOverviewResourceCases(resource);
+        break;
+      case "create":
+        openOverviewResourceCases(resource);
+        openCaseEditor();
+        setCaseInitialResource({
+          id: resource.id,
+          name: resource.name,
+          kind: resource.kind,
+          box_id: resource.box_id,
+          capability_id: resource.capability_id,
+        });
+        break;
+      case "apply":
+        setOverviewResourceDetail(undefined);
+        setRuleApplication({
+          resources: [{ kind: resource.kind, id: resource.id }],
+          ruleIds: coverageRuleIds(resource),
+        });
+        break;
+      case "results":
+        setCoverageResult({ kind: resource.kind, id: resource.id });
+        break;
+      case "repair": {
+        const row = coverageResults.find(
+          (item) => item.kind === resource.kind && item.id === resource.id,
+        );
+        if (row) repairCoverageResource(row);
+        break;
+      }
+      case "run":
+        void runCoverageCases(runIds);
+        break;
+    }
   };
 
   const overviewCountLink = (
@@ -1657,31 +1819,48 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
               label: workspaceUi("overview"),
               children: (
                 <div className={styles.overview}>
-                  {overviewError ? (
-                    <Alert showIcon type="error" message={overviewError} />
-                  ) : overviewLoading || !overview ? (
-                    <div className={styles.overviewLoading}>
-                      <Spin />
-                    </div>
-                  ) : (
-                    <Tabs
-                      className={styles.overviewTabs}
-                      activeKey={overviewView}
-                      onChange={(key) => {
-                        setOverviewView(key as "resources" | "execution");
-                        const params = new URLSearchParams(location.search);
-                        if (key === "execution") params.set("overview_view", "execution");
-                        else params.delete("overview_view");
-                        void navigate(
-                          {
-                            pathname: location.pathname,
-                            search: params.toString() ? `?${params}` : "",
-                          },
-                          { replace: true },
-                        );
-                      }}
-                      tabBarExtraContent={
-                        overviewView === "resources" ? (
+                  {overviewError && (
+                    <Alert
+                      showIcon
+                      type="error"
+                      message={overviewError}
+                      action={
+                        <Button
+                          size="small"
+                          aria-label={t("knowledgeNetwork.eval.overviewLoading.retry")}
+                          onClick={() => setOverviewRevision((n) => n + 1)}
+                        >
+                          {t("knowledgeNetwork.eval.overviewLoading.retry")}
+                        </Button>
+                      }
+                    />
+                  )}
+                  <Tabs
+                    className={styles.overviewTabs}
+                    activeKey={overviewView}
+                    onChange={(key) => {
+                      setOverviewView(key as "resources" | "execution");
+                      const params = new URLSearchParams(location.search);
+                      if (key === "execution") params.set("overview_view", "execution");
+                      else params.delete("overview_view");
+                      void navigate(
+                        {
+                          pathname: location.pathname,
+                          search: params.toString() ? `?${params}` : "",
+                        },
+                        { replace: true },
+                      );
+                    }}
+                    tabBarExtraContent={
+                      <Space>
+                        {overviewLoading && overview && (
+                          <span role="status" className={styles.overviewRefreshStatus}>
+                            <Spin size="small" />
+                            <span>{t("knowledgeNetwork.eval.overviewLoading.refreshing")}</span>
+                          </span>
+                        )}
+
+                        {overviewView === "resources" ? (
                           <Tooltip title={workspaceUi("configureEvaluationScope")}>
                             <Button
                               type="text"
@@ -1690,372 +1869,407 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                               onClick={() => setOverviewScopeOpen(true)}
                             />
                           </Tooltip>
-                        ) : null
-                      }
-                      items={[
-                        {
-                          key: "resources",
-                          label: workspaceUi("resourceCoverage"),
-                          children: (
-                            <div className={styles.overviewPane}>
-                              {Boolean(overview.read_issues?.length) && (
-                                <Alert
-                                  type="warning"
-                                  showIcon
-                                  message={workspaceUi(
-                                    "someResourcesCannotCurrentlyBeReadCountsAndCoverage",
-                                  )}
-                                  description={overview.read_issues
-                                    ?.map((issue) => {
-                                      const name =
-                                        overview.resource_details?.find(
-                                          (resource) =>
-                                            resource.kind === issue.kind &&
-                                            resource.id === issue.id,
-                                        )?.name ||
-                                        t(
-                                          `knowledgeNetwork.eval.resourceOverview.kinds.${issue.kind}`,
-                                          { defaultValue: evalReferenceLabel("unnamedResource") },
-                                        );
-                                      return `${name}：${readableEvalText(issue.reason, issue.id ? [{ id: issue.id, label: name }] : [])}`;
-                                    })
-                                    .join("；")}
-                                />
-                              )}
-                              <section
-                                className={styles.overviewMetrics}
-                                aria-label={workspaceUi(
-                                  "knowledgeNetworkResourceCoverageStatistics",
+                        ) : null}
+                      </Space>
+                    }
+                    items={[
+                      {
+                        key: "resources",
+                        label: workspaceUi("resourceCoverage"),
+                        children: overview ? (
+                          <div className={styles.overviewPane}>
+                            {Boolean(overview.read_issues?.length) && (
+                              <Alert
+                                type="warning"
+                                showIcon
+                                message={workspaceUi(
+                                  "someResourcesCannotCurrentlyBeReadCountsAndCoverage",
                                 )}
-                              >
-                                <button onClick={() => openCaseLibrary()}>
-                                  <Tooltip
-                                    title={
-                                      overview.resource_scope ??
-                                      workspaceUi(
-                                        "resourcesVisibleToThisAccountOnlyPublishedObjectMetrics",
-                                      )
-                                    }
-                                  >
-                                    <span>
-                                      {workspaceUi("totalResources")} <QuestionCircleOutlined />
-                                    </span>
-                                  </Tooltip>
-                                  <strong>{overview.resources.total}</strong>
-                                  <small>
-                                    {workspaceUi("included")} {overview.resources.in_scope}{" "}
-                                    {workspaceUi("resourcesExcluded", {
-                                      count: overview.resources.in_scope,
-                                    })}{" "}
-                                    {overview.resources.excluded}{" "}
-                                    {workspaceUi("resources", {
-                                      count: overview.resources.excluded,
-                                    })}
-                                  </small>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setOverviewResourceProblemFocus((n) => n + 1);
-                                    document
-                                      .getElementById("eval-resource-results")
-                                      ?.scrollIntoView({ block: "start", behavior: "smooth" });
-                                  }}
+                                description={overview.read_issues
+                                  ?.map((issue) => {
+                                    const name =
+                                      overview.resource_details?.find(
+                                        (resource) =>
+                                          resource.kind === issue.kind && resource.id === issue.id,
+                                      )?.name ||
+                                      t(
+                                        `knowledgeNetwork.eval.resourceOverview.kinds.${issue.kind}`,
+                                        { defaultValue: evalReferenceLabel("unnamedResource") },
+                                      );
+                                    return `${name}：${readableEvalText(issue.reason, issue.id ? [{ id: issue.id, label: name }] : [])}`;
+                                  })
+                                  .join("；")}
+                              />
+                            )}
+                            <section
+                              className={styles.overviewMetrics}
+                              aria-label={workspaceUi("knowledgeNetworkResourceCoverageStatistics")}
+                            >
+                              <button onClick={() => openCaseLibrary()}>
+                                <Tooltip
+                                  title={
+                                    overview.resource_scope ??
+                                    workspaceUi(
+                                      "resourcesVisibleToThisAccountOnlyPublishedObjectMetrics",
+                                    )
+                                  }
                                 >
                                   <span>
-                                    {t("knowledgeNetwork.eval.resourceOverview.problemMetric")}
+                                    {workspaceUi("totalResources")} <QuestionCircleOutlined />
                                   </span>
-                                  <strong>{overview.resources.problems}</strong>
-                                  <small>
-                                    {t("knowledgeNetwork.eval.resourceOverview.problemMetricHelp")}
-                                  </small>
-                                </button>
-                                <button onClick={() => openCaseLibrary()}>
-                                  <span>{workspaceUi("resourceCoverage")}</span>
-                                  <strong>{overview.coverage.resource_percent}%</strong>
-                                  <small>
-                                    {overview.resources.covered} / {overview.resources.in_scope}{" "}
-                                    {workspaceUi("includedResources", {
-                                      count: overview.resources.in_scope,
-                                    })}
-                                  </small>
-                                </button>
-                                <button onClick={() => onTabChange("plan")}>
-                                  <span>{workspaceUi("ruleCheckCoverage")}</span>
-                                  <strong>{overview.coverage.rule_percent}%</strong>
-                                  <small>
-                                    {overview.rule_points.covered} /{" "}
-                                    {overview.rule_points.applicable}{" "}
-                                    {workspaceUi("applicableChecks", {
-                                      count: overview.rule_points.applicable,
-                                    })}
-                                  </small>
-                                </button>
-                              </section>
-
-                              <EvalOverviewResourcesPanel
-                                key={networkId}
-                                networkId={networkId}
-                                overview={overview}
-                                canRun={canManageCases}
-                                problemFocus={overviewResourceProblemFocus}
-                                onRefresh={() => setOverviewRevision((n) => n + 1)}
-                                onResource={(resource) => {
-                                  void navigate(overviewResourcePath(networkId, resource), {
-                                    state: buildReturnToState(location),
-                                  });
+                                </Tooltip>
+                                <strong>{overview.resources.total}</strong>
+                                <small>
+                                  {workspaceUi("included")} {overview.resources.in_scope}{" "}
+                                  {workspaceUi("resourcesExcluded", {
+                                    count: overview.resources.in_scope,
+                                  })}{" "}
+                                  {overview.resources.excluded}{" "}
+                                  {workspaceUi("resources", {
+                                    count: overview.resources.excluded,
+                                  })}
+                                </small>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setOverviewResourceProblemFocus((n) => n + 1);
+                                  document
+                                    .getElementById("eval-resource-results")
+                                    ?.scrollIntoView({ block: "start", behavior: "smooth" });
                                 }}
-                                onCases={openOverviewResourceCases}
-                                onRepair={(row) => {
-                                  setRepairRequest({
-                                    networkId,
-                                    id: crypto.randomUUID(),
-                                    target: { kind: row.kind, id: row.id, name: row.name },
-                                    cases: row.failures,
-                                    ...(!canManageCases
-                                      ? {
-                                          analysisOnly: true,
-                                          analysisOnlyReason: "permission" as const,
-                                        }
-                                      : row.failures.some((entry) => entry.status !== "failed")
-                                        ? {
-                                            analysisOnly: true,
-                                            analysisOnlyReason: "outcome" as const,
-                                          }
-                                        : {}),
-                                  });
-                                  setAssistantOpen(true);
-                                }}
-                                onCreateCase={(resource) => {
-                                  openOverviewResourceCases(resource);
-                                  openCaseEditor();
-                                  setCaseInitialResource({
-                                    id: resource.id,
-                                    name: resource.name,
-                                    kind: resource.kind,
-                                    box_id: resource.box_id,
-                                    capability_id: resource.capability_id,
-                                  });
-                                }}
-                                onInspect={(run, caseRunId) => {
-                                  showRun(run, { caseRunId });
-                                }}
-                                onRunCreated={(run) => {
-                                  showRun(run);
-                                  void refreshRuns();
-                                  setOverviewRevision((n) => n + 1);
-                                }}
-                              />
-                              <section className={styles.overviewDetailGrid}>
-                                <Card title={workspaceUi("resourceEvaluationCoverage")}>
-                                  <Table<EvalOverview["by_resource_type"][number]>
-                                    className={styles.overviewCoverageTable}
-                                    rowKey="kind"
-                                    scroll={{ x: 960 }}
-                                    dataSource={overview.by_resource_type.filter(
-                                      (row) => !overview.scope.excluded_kinds.includes(row.kind),
-                                    )}
-                                    pagination={false}
-                                    columns={[
-                                      {
-                                        title: workspaceUi(
-                                          "knowledgeNetwork.eval.filterUi.resourceType",
-                                        ),
-                                        dataIndex: "kind",
-                                        width: "14%",
-                                        render: (kind: string, row) =>
-                                          overviewCountLink(
-                                            kind,
-                                            "all",
-                                            row.resources,
-                                            caseResourceTypeLabel(kind),
-                                          ),
-                                      },
-                                      {
-                                        title: workspaceUi("resourceCount"),
-                                        dataIndex: "resources",
-                                        width: "10%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          overviewCountLink(row.kind, "all", count),
-                                      },
-                                      {
-                                        title: workspaceUi(
-                                          "knowledgeNetwork.eval.caseNavigation.participating",
-                                        ),
-                                        dataIndex: "in_scope_resources",
-                                        width: "12%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          overviewCountLink(row.kind, "in_scope", count),
-                                      },
-                                      {
-                                        title: workspaceUi(
-                                          "knowledgeNetwork.eval.ruleApplication.excluded",
-                                        ),
-                                        dataIndex: "excluded_resources",
-                                        width: "14%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          overviewCountLink(row.kind, "excluded", count),
-                                      },
-                                      {
-                                        title: workspaceUi("caseCoverage"),
-                                        width: "15%",
-                                        align: "right",
-                                        render: (_: unknown, row) =>
-                                          overviewCountLink(
-                                            row.kind,
-                                            "covered",
-                                            row.covered_resources,
-                                            `${row.covered_resources}（${row.coverage_percent}%）`,
-                                          ),
-                                      },
-                                      {
-                                        title: workspaceUi("withResults"),
-                                        dataIndex: "evaluated_resources",
-                                        width: "12%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          overviewCountLink(row.kind, "evaluated", count),
-                                      },
-                                      {
-                                        title: workspaceUi(
-                                          "knowledgeNetwork.eval.agentCompare.differenceOptions.all_pass",
-                                        ),
-                                        dataIndex: "passed_resources",
-                                        width: "12%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          overviewCountLink(row.kind, "passed", count),
-                                      },
-                                      {
-                                        title: workspaceUi(
-                                          "knowledgeNetwork.eval.resourceOverview.problem",
-                                        ),
-                                        dataIndex: "problem_resources",
-                                        width: "11%",
-                                        align: "right",
-                                        render: (count: number, row) =>
-                                          count ? (
-                                            <Button
-                                              type="link"
-                                              className={styles.overviewCountLink}
-                                              onClick={() =>
-                                                openOverviewResourceDetail(row.kind, "problem")
-                                              }
-                                            >
-                                              <Tag color="error">{count}</Tag>
-                                            </Button>
-                                          ) : (
-                                            "—"
-                                          ),
-                                      },
-                                    ]}
-                                  />
-                                </Card>
-                              </section>
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "execution",
-                          label: workspaceUi("casesAndRuns"),
-                          children: (
-                            <div className={styles.overviewPane}>
-                              <section
-                                className={styles.overviewMetrics}
-                                aria-label={workspaceUi("caseAndRunStatistics")}
                               >
-                                <button onClick={() => openCaseLibrary()}>
-                                  <span>{workspaceUi("totalCases")}</span>
-                                  <strong>{overview.cases.total}</strong>
-                                  <small>
-                                    {overview.cases.enabled}{" "}
-                                    {workspaceUi("casesInEvaluationScope", {
-                                      count: overview.cases.enabled,
-                                    })}
-                                  </small>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    openCaseLibrary({
-                                      status: "enabled",
-                                      participation: "participating",
-                                    });
-                                  }}
-                                >
-                                  <span>{workspaceUi("enabledCases")}</span>
-                                  <strong>{overview.cases.enabled}</strong>
-                                  <small>{workspaceUi("casesAvailableForFutureRuns")}</small>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    openCaseLibrary({ view: "suites" });
-                                  }}
-                                >
-                                  <span>
-                                    {workspaceUi("knowledgeNetwork.eval.externalUi.suite")}
-                                  </span>
-                                  <strong>{suiteCount ?? "—"}</strong>
-                                  <small>{workspaceUi("testSuitesInThisKnowledgeNetwork")}</small>
-                                </button>
-                                <button onClick={() => openOverviewCases("evaluated")}>
-                                  <span>{workspaceUi("executionCoverage")}</span>
-                                  <strong>{overview.coverage.execution_percent}%</strong>
-                                  <small>
-                                    {overview.cases.evaluated} / {overview.cases.enabled}{" "}
-                                    {workspaceUi("enabledCasesSuffix", {
-                                      count: overview.cases.enabled,
-                                    })}
-                                  </small>
-                                </button>
-                              </section>
+                                <span>
+                                  {t("knowledgeNetwork.eval.resourceOverview.problemMetric")}
+                                </span>
+                                <strong>{overview.resources.problems}</strong>
+                                <small>
+                                  {t("knowledgeNetwork.eval.resourceOverview.problemMetricHelp")}
+                                </small>
+                              </button>
+                              <button onClick={() => openCaseLibrary()}>
+                                <span>{workspaceUi("resourceCoverage")}</span>
+                                <strong>{overview.coverage.resource_percent}%</strong>
+                                <small>
+                                  {overview.resources.covered} / {overview.resources.in_scope}{" "}
+                                  {workspaceUi("includedResources", {
+                                    count: overview.resources.in_scope,
+                                  })}
+                                </small>
+                              </button>
+                              <button onClick={() => onTabChange("plan")}>
+                                <span>{workspaceUi("ruleCheckCoverage")}</span>
+                                <strong>
+                                  {overviewRulesReady ? `${overview.coverage.rule_percent}%` : "—"}
+                                </strong>
+                                <small>
+                                  {overviewRulesReady ? (
+                                    <>
+                                      {overview.rule_points.covered} /{" "}
+                                      {overview.rule_points.applicable}{" "}
+                                      {workspaceUi("applicableChecks", {
+                                        count: overview.rule_points.applicable,
+                                      })}
+                                    </>
+                                  ) : (
+                                    t(
+                                      `knowledgeNetwork.eval.overviewLoading.${overviewRulesError ? "unavailable" : "rules"}`,
+                                    )
+                                  )}
+                                </small>
+                              </button>
+                            </section>
 
-                              <EvalOverviewExecutionSummary
-                                cases={overview.cases}
-                                onCaseFilter={openOverviewCases}
-                                onScope={() => setOverviewScopeOpen(true)}
-                              />
-
-                              <Card
-                                data-testid="eval-recent-runs"
-                                title={workspaceUi("recentRuns")}
-                                extra={
+                            {overviewRulesError && (
+                              <Alert
+                                showIcon
+                                type="warning"
+                                message={t("knowledgeNetwork.eval.overviewLoading.rulesFailed")}
+                                action={
                                   <Button
-                                    type="link"
-                                    onClick={() => {
-                                      setRunWorkspaceTab("records");
-                                      onTabChange("runs");
-                                    }}
+                                    size="small"
+                                    aria-label={t("knowledgeNetwork.eval.overviewLoading.retry")}
+                                    onClick={() => setOverviewRevision((n) => n + 1)}
                                   >
-                                    {workspaceUi("viewAll")}
+                                    {t("knowledgeNetwork.eval.overviewLoading.retry")}
                                   </Button>
                                 }
-                              >
-                                {runsError ? (
-                                  <Alert showIcon type="error" message={runsError} />
-                                ) : runsLoading ? (
-                                  <Spin />
-                                ) : runs.length ? (
-                                  <Table<M0Run>
-                                    className={styles.runTable}
-                                    rowKey="id"
-                                    size="small"
-                                    dataSource={runs.slice(0, 5)}
-                                    pagination={false}
-                                    scroll={{ x: 1000 }}
-                                    onRow={(run) => ({ onClick: () => openRun(run) })}
-                                    columns={runColumns}
-                                  />
-                                ) : (
-                                  <Empty description={workspaceUi("notYetRun")} />
-                                )}
+                              />
+                            )}
+                            <EvalOverviewResourcesPanel
+                              key={networkId}
+                              networkId={networkId}
+                              overview={overview}
+                              canRun={canManageCases}
+                              problemFocus={overviewResourceProblemFocus}
+                              onRefresh={() => setOverviewRevision((n) => n + 1)}
+                              onResource={(resource) => {
+                                void navigate(overviewResourcePath(networkId, resource), {
+                                  state: buildReturnToState(location),
+                                });
+                              }}
+                              onCases={openOverviewResourceCases}
+                              onRepair={(row) => {
+                                setRepairRequest({
+                                  networkId,
+                                  id: crypto.randomUUID(),
+                                  target: { kind: row.kind, id: row.id, name: row.name },
+                                  cases: row.failures,
+                                  ...(!canManageCases
+                                    ? {
+                                        analysisOnly: true,
+                                        analysisOnlyReason: "permission" as const,
+                                      }
+                                    : row.failures.some((entry) => entry.status !== "failed")
+                                      ? {
+                                          analysisOnly: true,
+                                          analysisOnlyReason: "outcome" as const,
+                                        }
+                                      : {}),
+                                });
+                                setAssistantOpen(true);
+                              }}
+                              onCreateCase={(resource) => {
+                                openOverviewResourceCases(resource);
+                                openCaseEditor();
+                                setCaseInitialResource({
+                                  id: resource.id,
+                                  name: resource.name,
+                                  kind: resource.kind,
+                                  box_id: resource.box_id,
+                                  capability_id: resource.capability_id,
+                                });
+                              }}
+                              onInspect={(run, caseRunId) => {
+                                showRun(run, { caseRunId });
+                              }}
+                              onRunCreated={(run) => {
+                                showRun(run);
+                                void refreshRuns();
+                                setOverviewRevision((n) => n + 1);
+                              }}
+                            />
+                            <section className={styles.overviewDetailGrid}>
+                              <Card title={workspaceUi("resourceEvaluationCoverage")}>
+                                <Table<EvalOverview["by_resource_type"][number]>
+                                  className={styles.overviewCoverageTable}
+                                  rowKey="kind"
+                                  scroll={{ x: 960 }}
+                                  dataSource={overview.by_resource_type.filter(
+                                    (row) => !overview.scope.excluded_kinds.includes(row.kind),
+                                  )}
+                                  pagination={false}
+                                  columns={[
+                                    {
+                                      title: workspaceUi(
+                                        "knowledgeNetwork.eval.filterUi.resourceType",
+                                      ),
+                                      dataIndex: "kind",
+                                      width: "14%",
+                                      render: (kind: string, row) =>
+                                        overviewCountLink(
+                                          kind,
+                                          "all",
+                                          row.resources,
+                                          caseResourceTypeLabel(kind),
+                                        ),
+                                    },
+                                    {
+                                      title: workspaceUi("resourceCount"),
+                                      dataIndex: "resources",
+                                      width: "10%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        overviewCountLink(row.kind, "all", count),
+                                    },
+                                    {
+                                      title: workspaceUi(
+                                        "knowledgeNetwork.eval.caseNavigation.participating",
+                                      ),
+                                      dataIndex: "in_scope_resources",
+                                      width: "12%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        overviewCountLink(row.kind, "in_scope", count),
+                                    },
+                                    {
+                                      title: workspaceUi(
+                                        "knowledgeNetwork.eval.ruleApplication.excluded",
+                                      ),
+                                      dataIndex: "excluded_resources",
+                                      width: "14%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        overviewCountLink(row.kind, "excluded", count),
+                                    },
+                                    {
+                                      title: workspaceUi("caseCoverage"),
+                                      width: "15%",
+                                      align: "right",
+                                      render: (_: unknown, row) =>
+                                        overviewCountLink(
+                                          row.kind,
+                                          "covered",
+                                          row.covered_resources,
+                                          `${row.covered_resources}（${row.coverage_percent}%）`,
+                                        ),
+                                    },
+                                    {
+                                      title: workspaceUi("withResults"),
+                                      dataIndex: "evaluated_resources",
+                                      width: "12%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        overviewCountLink(row.kind, "evaluated", count),
+                                    },
+                                    {
+                                      title: workspaceUi(
+                                        "knowledgeNetwork.eval.agentCompare.differenceOptions.all_pass",
+                                      ),
+                                      dataIndex: "passed_resources",
+                                      width: "12%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        overviewCountLink(row.kind, "passed", count),
+                                    },
+                                    {
+                                      title: workspaceUi(
+                                        "knowledgeNetwork.eval.resourceOverview.problem",
+                                      ),
+                                      dataIndex: "problem_resources",
+                                      width: "11%",
+                                      align: "right",
+                                      render: (count: number, row) =>
+                                        count ? (
+                                          <Button
+                                            type="link"
+                                            className={styles.overviewCountLink}
+                                            onClick={() =>
+                                              openOverviewResourceDetail(row.kind, "problem")
+                                            }
+                                          >
+                                            <Tag color="error">{count}</Tag>
+                                          </Button>
+                                        ) : (
+                                          "—"
+                                        ),
+                                    },
+                                  ]}
+                                />
                               </Card>
-                            </div>
-                          ),
-                        },
-                      ]}
-                    />
+                            </section>
+                          </div>
+                        ) : (
+                          <EvalOverviewPending
+                            view="resources"
+                            loading={overviewLoading}
+                            caseTotal={overviewCaseTotal}
+                            suiteCount={suiteCount}
+                          />
+                        ),
+                      },
+                      {
+                        key: "execution",
+                        label: workspaceUi("casesAndRuns"),
+                        children: overview ? (
+                          <div className={styles.overviewPane}>
+                            <section
+                              className={styles.overviewMetrics}
+                              aria-label={workspaceUi("caseAndRunStatistics")}
+                            >
+                              <button onClick={() => openCaseLibrary()}>
+                                <span>{workspaceUi("totalCases")}</span>
+                                <strong>{overview.cases.total}</strong>
+                                <small>
+                                  {overview.cases.enabled}{" "}
+                                  {workspaceUi("casesInEvaluationScope", {
+                                    count: overview.cases.enabled,
+                                  })}
+                                </small>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  openCaseLibrary({
+                                    status: "enabled",
+                                    participation: "participating",
+                                  });
+                                }}
+                              >
+                                <span>{workspaceUi("enabledCases")}</span>
+                                <strong>{overview.cases.enabled}</strong>
+                                <small>{workspaceUi("casesAvailableForFutureRuns")}</small>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  openCaseLibrary({ view: "suites" });
+                                }}
+                              >
+                                <span>{workspaceUi("knowledgeNetwork.eval.externalUi.suite")}</span>
+                                <strong>{suiteCount ?? "—"}</strong>
+                                <small>{workspaceUi("testSuitesInThisKnowledgeNetwork")}</small>
+                              </button>
+                              <button onClick={() => openOverviewCases("evaluated")}>
+                                <span>{workspaceUi("executionCoverage")}</span>
+                                <strong>{overview.coverage.execution_percent}%</strong>
+                                <small>
+                                  {overview.cases.evaluated} / {overview.cases.enabled}{" "}
+                                  {workspaceUi("enabledCasesSuffix", {
+                                    count: overview.cases.enabled,
+                                  })}
+                                </small>
+                              </button>
+                            </section>
+                            <EvalOverviewExecutionSummary
+                              cases={overview.cases}
+                              onCaseFilter={openOverviewCases}
+                              onScope={() => setOverviewScopeOpen(true)}
+                            />
+                          </div>
+                        ) : (
+                          <EvalOverviewPending
+                            view="execution"
+                            loading={overviewLoading}
+                            caseTotal={overviewCaseTotal}
+                            suiteCount={suiteCount}
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                  {overviewView === "execution" && (
+                    <Card
+                      data-testid="eval-recent-runs"
+                      title={workspaceUi("recentRuns")}
+                      extra={
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            setRunWorkspaceTab("records");
+                            onTabChange("runs");
+                          }}
+                        >
+                          {workspaceUi("viewAll")}
+                        </Button>
+                      }
+                    >
+                      {runsError ? (
+                        <Alert showIcon type="error" message={runsError} />
+                      ) : runsLoading ? (
+                        <Spin />
+                      ) : runs.length ? (
+                        <Table<M0Run>
+                          className={styles.runTable}
+                          rowKey="id"
+                          size="small"
+                          dataSource={runs.slice(0, 5)}
+                          pagination={false}
+                          scroll={{ x: 1000 }}
+                          onRow={(run) => ({ onClick: () => openRun(run) })}
+                          columns={runColumns}
+                        />
+                      ) : (
+                        <Empty description={workspaceUi("notYetRun")} />
+                      )}
+                    </Card>
                   )}
                 </div>
               ),
@@ -2249,51 +2463,19 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                             )}
                           </div>
                           <div className={styles.caseManagerControls}>
-                            <Dropdown
-                              trigger={["click"]}
+                            <Button
+                              type="primary"
+                              aria-label={workspaceUi("create")}
                               disabled={!canManageCases}
-                              menu={{
-                                items: [
-                                  {
-                                    key: "manual",
-                                    label: t("knowledgeNetwork.eval.caseCreation.manual"),
-                                    onClick: () => openCaseEditor(),
-                                  },
-                                  {
-                                    key: "template",
-                                    label: t("knowledgeNetwork.eval.caseCreation.template"),
-                                    disabled:
-                                      templateLoading ||
-                                      !template?.rules.some((rule) => rule.enabled),
-                                    title:
-                                      templateError ||
-                                      (templateLoading
-                                        ? t("knowledgeNetwork.eval.caseCreation.loading")
-                                        : !template?.rules.some((rule) => rule.enabled)
-                                          ? t("knowledgeNetwork.eval.caseCreation.noRules")
-                                          : undefined),
-                                    onClick: () => setRuleApplication({ ruleIds: [] }),
-                                  },
-                                ],
-                              }}
+                              title={
+                                canManageCases
+                                  ? workspaceUi("knowledgeNetwork.eval.resourceOverview.createCase")
+                                  : workspaceUi("caseManagementIsNotAvailableForThisAccountOr")
+                              }
+                              onClick={() => openCaseEditor()}
                             >
-                              <Button
-                                type="primary"
-                                disabled={!canManageCases}
-                                title={
-                                  canManageCases
-                                    ? workspaceUi(
-                                        "knowledgeNetwork.eval.resourceOverview.createCase",
-                                      )
-                                    : workspaceUi("caseManagementIsNotAvailableForThisAccountOr")
-                                }
-                              >
-                                <Space size={6}>
-                                  {workspaceUi("create")}
-                                  <DownOutlined aria-hidden />
-                                </Space>
-                              </Button>
-                            </Dropdown>
+                              {workspaceUi("create")}
+                            </Button>
                           </div>
                         </div>
                         {Object.keys(selectedCases).length > 0 && (
@@ -2691,7 +2873,6 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                     </div>
                   ) : (
                     <EvalSuitePanel
-                      externalAvailable={externalAgentAvailable}
                       networkId={networkId}
                       canManage={canManageCases}
                       onCountChange={setSuiteCount}
@@ -2945,9 +3126,21 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                                     {workspaceUi("knowledgeNetwork.eval.suiteUi.clearFilters")}
                                   </Button>
                                 )}
-                                <Button onClick={() => setAgentComparisonOpen(true)}>
-                                  {workspaceUi("knowledgeNetwork.eval.agentCompare.title")}
-                                </Button>
+                                <span className={styles.runTabLabel}>
+                                  <Button onClick={() => setAgentComparisonOpen(true)}>
+                                    {workspaceUi("knowledgeNetwork.eval.agentCompare.title")}
+                                  </Button>
+                                  <Tooltip
+                                    title={t("knowledgeNetwork.eval.agentCompare.help")}
+                                    trigger={["hover", "focus"]}
+                                  >
+                                    <QuestionCircleOutlined
+                                      className={styles.runTabHelp}
+                                      aria-label={t("knowledgeNetwork.eval.agentCompare.helpLabel")}
+                                      tabIndex={0}
+                                    />
+                                  </Tooltip>
+                                </span>
                                 <Button
                                   aria-label={workspaceUi("refreshRunRecords")}
                                   title={workspaceUi("refreshRunRecords")}
@@ -3213,13 +3406,17 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                       uncovered: overview.resources.uncovered,
                       unresolvedBindings: overview.resources.unresolved_bindings,
                     },
-                    rulePoints: {
-                      enabledRules: overview.rule_points.enabled_rules,
-                      applicable: overview.rule_points.applicable,
-                      covered: overview.rule_points.covered,
-                      missing: overview.rule_points.missing,
-                      notReady: overview.rule_points.not_ready,
-                    },
+                    ...(overviewRulesReady
+                      ? {
+                          rulePoints: {
+                            enabledRules: overview.rule_points.enabled_rules,
+                            applicable: overview.rule_points.applicable,
+                            covered: overview.rule_points.covered,
+                            missing: overview.rule_points.missing,
+                            notReady: overview.rule_points.not_ready,
+                          },
+                        }
+                      : {}),
                     cases: {
                       total: overview.cases.total,
                       excluded: overview.cases.excluded,
@@ -3237,7 +3434,9 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                     },
                     coverage: {
                       resourcePercent: overview.coverage.resource_percent,
-                      rulePercent: overview.coverage.rule_percent,
+                      ...(overviewRulesReady
+                        ? { rulePercent: overview.coverage.rule_percent }
+                        : {}),
                       executionPercent: overview.coverage.execution_percent,
                       passPercent: overview.coverage.pass_percent,
                     },
@@ -3263,170 +3462,191 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
           }}
         />
       ) : null}
-      <Drawer
-        title={
-          overviewResourceDetail
-            ? workspaceUi("evaluationDetails", {
-                value0: caseResourceTypeLabel(overviewResourceDetail.kind),
-              })
-            : workspaceUi("resourceEvaluationDetails")
-        }
-        width="min(1200px, 96vw)"
-        open={Boolean(overviewResourceDetail)}
-        onClose={() => setOverviewResourceDetail(undefined)}
-      >
-        {overviewResourceDetail ? (
-          <div className={styles.overviewResourceDetail}>
-            <div className={styles.overviewResourceDetailToolbar}>
-              <Typography.Text>
-                {workspaceUi("total")} {overviewResourceRows.length}{" "}
-                {workspaceUi("resourceCountSuffix", { count: overviewResourceRows.length })}
-              </Typography.Text>
-              <Select<OverviewResourceFilter>
-                value={overviewResourceDetail.filter}
-                options={Object.entries(overviewResourceFilterLabels).map(([value, label]) => ({
-                  value: value as OverviewResourceFilter,
-                  label,
-                }))}
-                onChange={(filter) =>
-                  setOverviewResourceDetail({ kind: overviewResourceDetail.kind, filter })
-                }
-              />
-            </div>
-            <Table<OverviewResourceDetail>
-              rowKey={(resource) => `${resource.kind}:${resource.id}`}
-              scroll={{ x: 1040 }}
-              dataSource={overviewResourceRows}
-              pagination={{ pageSize: 10 }}
-              locale={{ emptyText: workspaceUi("noResourcesMatchTheCurrentFilters") }}
-              columns={[
-                {
-                  title: workspaceUi("knowledgeNetwork.eval.ruleApplication.resource"),
-                  dataIndex: "name",
-                  render: (name: string, resource) => (
-                    <div className={styles.overviewResourceName}>
-                      <Button
-                        type="link"
-                        className={styles.overviewResourceLink}
-                        title={workspaceUi("openDetails", {
-                          value0: name || evalReferenceLabel("unnamedResource"),
-                        })}
-                        onClick={() => {
-                          void navigate(overviewResourcePath(networkId, resource), {
-                            state: buildReturnToState(location),
-                          });
-                        }}
-                      >
-                        {name || evalReferenceLabel("unnamedResource")}
-                      </Button>
-                    </div>
-                  ),
-                },
-                {
-                  title: evalTerm("assessmentScope"),
-                  dataIndex: "in_scope",
-                  width: 110,
-                  render: (inScope: boolean) =>
-                    inScope ? (
-                      <Tag color="blue">
-                        {workspaceUi("knowledgeNetwork.eval.caseNavigation.participating")}
-                      </Tag>
-                    ) : (
-                      <Tag>{workspaceUi("knowledgeNetwork.eval.ruleApplication.excluded")}</Tag>
-                    ),
-                },
-                {
-                  title: workspaceUi("casesAndResults"),
-                  width: 210,
-                  render: (_: unknown, resource) => (
-                    <div className={styles.overviewResourceCounts}>
-                      <span>
-                        {resource.case_count}{" "}
-                        {workspaceUi("knowledgeNetwork.eval.agentCompare.casesUnit", {
-                          count: resource.case_count,
-                        })}
-                      </span>
-                      {resource.case_count > 0 ? (
-                        <small>
-                          {resource.evaluated_cases}{" "}
-                          {workspaceUi("casesWithResults", { count: resource.evaluated_cases })}
-                          {resource.problem_cases > 0
-                            ? workspaceUi("casesWithIssues", { value0: resource.problem_cases })
-                            : ""}
-                        </small>
-                      ) : null}
-                    </div>
-                  ),
-                },
-                {
-                  title: workspaceUi("currentStatus"),
-                  dataIndex: "status",
-                  width: 120,
-                  render: (status: OverviewResourceDetail["status"]) => {
-                    const meta = overviewResourceStatusMeta[status];
-                    return meta.color ? <Tag color={meta.color}>{meta.label}</Tag> : meta.label;
-                  },
-                },
-                {
-                  title: workspaceUi("knowledgeNetwork.eval.templateUi.columns.actions"),
-                  className: styles.overviewResourceActions,
-                  width: 280,
-                  render: (_: unknown, resource) => (
-                    <Space size={12}>
-                      {resource.in_scope && canManageCases && template && (
+      {selectedCoverageResult ? (
+        <EvalResourceResultsDrawer
+          key={`${networkId}:${selectedCoverageResult.kind}:${selectedCoverageResult.id}`}
+          networkId={networkId}
+          resource={selectedCoverageResult}
+          canRun={canManageCases}
+          onClose={() => {
+            setCoverageResult(undefined);
+            setOverviewResourceDetail(undefined);
+          }}
+          onBack={() => setCoverageResult(undefined)}
+          onResource={() => {
+            void navigate(overviewResourcePath(networkId, selectedCoverageResult), {
+              state: buildReturnToState(location),
+            });
+          }}
+          onCases={() => {
+            setCoverageResult(undefined);
+            openOverviewResourceCases(selectedCoverageResult);
+          }}
+          onRepair={(cases) => repairCoverageResource(selectedCoverageResult, cases)}
+          onInspect={(run, caseRunId) => {
+            setCoverageResult(undefined);
+            setOverviewResourceDetail(undefined);
+            showRun(run, { caseRunId });
+          }}
+          onRunCreated={(run) => {
+            setCoverageResult(undefined);
+            setOverviewResourceDetail(undefined);
+            showRun(run);
+            void refreshRuns();
+            setOverviewRevision((value) => value + 1);
+          }}
+        />
+      ) : (
+        <Drawer
+          title={
+            overviewResourceDetail
+              ? workspaceUi("evaluationDetails", {
+                  value0: caseResourceTypeLabel(overviewResourceDetail.kind),
+                })
+              : workspaceUi("resourceEvaluationDetails")
+          }
+          width="min(1200px, 96vw)"
+          open={Boolean(overviewResourceDetail) && !selectedCoverageResult}
+          onClose={() => setOverviewResourceDetail(undefined)}
+        >
+          {overviewResourceDetail ? (
+            <div className={styles.overviewResourceDetail}>
+              <div className={styles.overviewResourceDetailToolbar}>
+                <Typography.Text>
+                  {workspaceUi("total")} {overviewResourceRows.length}{" "}
+                  {workspaceUi("resourceCountSuffix", { count: overviewResourceRows.length })}
+                </Typography.Text>
+                <Select<OverviewResourceFilter>
+                  value={overviewResourceDetail.filter}
+                  options={Object.entries(overviewResourceFilterLabels).map(([value, label]) => ({
+                    value: value as OverviewResourceFilter,
+                    label,
+                  }))}
+                  onChange={(filter) =>
+                    setOverviewResourceDetail({ kind: overviewResourceDetail.kind, filter })
+                  }
+                />
+              </div>
+              <Table<OverviewResourceDetail>
+                rowKey={(resource) => `${resource.kind}:${resource.id}`}
+                scroll={{ x: 1040 }}
+                dataSource={overviewResourceRows}
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: workspaceUi("noResourcesMatchTheCurrentFilters") }}
+                columns={[
+                  {
+                    title: workspaceUi("knowledgeNetwork.eval.ruleApplication.resource"),
+                    dataIndex: "name",
+                    width: 300,
+                    render: (name: string, resource) => (
+                      <div className={styles.overviewResourceName}>
                         <Button
                           type="link"
+                          className={styles.overviewResourceLink}
+                          title={workspaceUi("openDetails", {
+                            value0: name || evalReferenceLabel("unnamedResource"),
+                          })}
                           onClick={() => {
-                            setOverviewResourceDetail(undefined);
-                            setRuleApplication({
-                              resources: [{ kind: resource.kind, id: resource.id }],
-                              ruleIds: template.rules
-                                .filter(
-                                  (rule) =>
-                                    rule.enabled &&
-                                    (rule.kind === resource.kind ||
-                                      (resource.kind === "objectType" &&
-                                        rule.kind === "objectProperty")),
-                                )
-                                .map((rule) => rule.id),
+                            void navigate(overviewResourcePath(networkId, resource), {
+                              state: buildReturnToState(location),
                             });
                           }}
                         >
-                          {t("knowledgeNetwork.eval.ruleApplication.batchApply")}
+                          {name || evalReferenceLabel("unnamedResource")}
                         </Button>
-                      )}
-                      {resource.in_scope ? (
-                        <Button type="link" onClick={() => openOverviewResourceCases(resource)}>
-                          {resource.case_count > 0
-                            ? workspaceUi(
-                                "knowledgeNetwork.eval.resourceOverview.viewConfiguredCases",
-                              )
-                            : workspaceUi("knowledgeNetwork.eval.resourceOverview.viewCases")}
-                        </Button>
-                      ) : (
-                        <Button
-                          type="link"
-                          onClick={() => {
-                            setOverviewResourceDetail(undefined);
-                            setOverviewScopeOpen(true);
+                      </div>
+                    ),
+                  },
+                  {
+                    title: workspaceUi("knowledgeNetwork.eval.templateUi.columns.actions"),
+                    width: 80,
+                    align: "center",
+                    render: (_: unknown, resource) => {
+                      const { actions, runIds } = resourceCoverageActions(
+                        resource,
+                        coverageCases.get(`${resource.kind}:${resource.id}`) ?? [],
+                        canManageCases,
+                        coverageRuleIds(resource).length > 0,
+                      );
+                      return actions.length ? (
+                        <Dropdown
+                          trigger={["click"]}
+                          menu={{
+                            items: actions.map((key) => ({
+                              key,
+                              label:
+                                key === "results" && resource.status === "problem"
+                                  ? t("knowledgeNetwork.eval.resourceOverview.viewProblems")
+                                  : coverageText(key),
+                              disabled: key === "run" && coverageRunning,
+                            })),
+                            onClick: ({ key }) =>
+                              onCoverageAction(key as CoverageAction, resource, runIds),
                           }}
                         >
-                          {workspaceUi("adjustScope")}
-                        </Button>
-                      )}
-                      {resource.latest_run_id ? (
-                        <Button type="link" onClick={() => openOverviewResourceRun(resource)}>
-                          {workspaceUi("knowledgeNetwork.eval.resourceOverview.viewResult")}
-                        </Button>
-                      ) : null}
-                    </Space>
-                  ),
-                },
-              ]}
-            />
-          </div>
-        ) : null}
-      </Drawer>
+                          <Button
+                            type="text"
+                            size="small"
+                            aria-label={coverageText("actionsFor", { name: resource.name })}
+                            icon={<EllipsisOutlined />}
+                          />
+                        </Dropdown>
+                      ) : (
+                        "—"
+                      );
+                    },
+                  },
+                  {
+                    title: evalTerm("assessmentScope"),
+                    dataIndex: "in_scope",
+                    width: 110,
+                    render: (inScope: boolean) =>
+                      inScope ? (
+                        <Tag color="blue">
+                          {workspaceUi("knowledgeNetwork.eval.caseNavigation.participating")}
+                        </Tag>
+                      ) : (
+                        <Tag>{workspaceUi("knowledgeNetwork.eval.ruleApplication.excluded")}</Tag>
+                      ),
+                  },
+                  {
+                    title: workspaceUi("casesAndResults"),
+                    width: 250,
+                    render: (_: unknown, resource) => (
+                      <div className={styles.overviewResourceCounts}>
+                        <span>
+                          {resource.case_count}{" "}
+                          {workspaceUi("knowledgeNetwork.eval.agentCompare.casesUnit", {
+                            count: resource.case_count,
+                          })}
+                        </span>
+                        {resource.case_count > 0 ? (
+                          <small>
+                            {resource.evaluated_cases}{" "}
+                            {workspaceUi("casesWithResults", { count: resource.evaluated_cases })}
+                            {resource.problem_cases > 0
+                              ? workspaceUi("casesWithIssues", { value0: resource.problem_cases })
+                              : ""}
+                          </small>
+                        ) : null}
+                      </div>
+                    ),
+                  },
+                  {
+                    title: workspaceUi("currentStatus"),
+                    dataIndex: "status",
+                    width: 160,
+                    render: (status: OverviewResourceDetail["status"]) => {
+                      const meta = overviewResourceStatusMeta[status];
+                      return meta.color ? <Tag color={meta.color}>{meta.label}</Tag> : meta.label;
+                    },
+                  },
+                ]}
+              />
+            </div>
+          ) : null}
+        </Drawer>
+      )}
       <EvalOverviewScopeDrawer
         networkId={networkId}
         open={overviewScopeOpen}

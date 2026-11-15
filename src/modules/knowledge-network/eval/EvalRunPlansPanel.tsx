@@ -5,13 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { caseExecutionAdmissionReason } from "./eval-case-execution";
+
 import { useEvalTranslation } from "./useEvalTranslation";
 import { workspaceUi } from "./workspace-ui-text";
 import { definitionText } from "./eval-definition-view";
 import { evalTerm } from "./eval-terminology";
 
 import { EvalPaginatedTable as Table } from "./EvalPaginatedTable";
-import { EllipsisOutlined, PlayCircleOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EllipsisOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -24,7 +26,6 @@ import {
   Space,
   Switch,
   Tag,
-  Typography,
   Tooltip,
 } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -742,7 +743,6 @@ export function EvalRunPlansPanel({
                     {
                       key: "run",
                       label: workspaceUi("run"),
-                      icon: <PlayCircleOutlined />,
                       disabled: actionPlanId === plan.id,
                       onClick: () => void runNow(plan),
                     },
@@ -902,11 +902,13 @@ export function EvalRunPlansPanel({
           </Space>
         }
       >
-        <Typography.Paragraph className={styles.runPlanFormHint} type="secondary">
-          {automaticAvailable
-            ? workspaceUi("automaticRunsUseThePlanCreatorSCurrentPermissions")
-            : t("knowledgeNetwork.eval.access.delegationUnavailable")}
-        </Typography.Paragraph>
+        {!automaticAvailable && (
+          <Alert
+            type="warning"
+            showIcon
+            message={t("knowledgeNetwork.eval.access.delegationUnavailable")}
+          />
+        )}
         {optionsError && (
           <Alert
             type="error"
@@ -936,7 +938,7 @@ export function EvalRunPlansPanel({
             message={
               eligibility.eligible
                 ? workspaceUi("automaticExecutionPreflightPassedRunsWillUseThePlan")
-                : eligibility.reasons.join("；")
+                : eligibility.reasons.map(caseExecutionAdmissionReason).join("；")
             }
           />
         )}
@@ -974,7 +976,7 @@ export function EvalRunPlansPanel({
             <Form.Item
               name="version_policy"
               label={workspaceUi("versionPolicy")}
-              extra={definitionText("membershipVersion")}
+              tooltip={definitionText("membershipVersion")}
               rules={[{ required: true }]}
             >
               <Select
@@ -1022,9 +1024,13 @@ export function EvalRunPlansPanel({
                 name="day_of_month"
                 label={workspaceUi("dayOfMonth")}
                 rules={[{ required: true, message: workspaceUi("selectADayOfMonth") }]}
-                extra={workspaceUi("ifTheMonthDoesNotContainTheSelectedDay")}
+                tooltip={workspaceUi("ifTheMonthDoesNotContainTheSelectedDay")}
               >
-                <Select placeholder={workspaceUi("selectADate")} options={monthDayOptions()} />
+                <Select
+                  aria-label={workspaceUi("dayOfMonth")}
+                  placeholder={workspaceUi("selectADate")}
+                  options={monthDayOptions()}
+                />
               </Form.Item>
             )}
           </div>
@@ -1040,7 +1046,12 @@ export function EvalRunPlansPanel({
               <Select showSearch options={timezoneOptions} />
             </Form.Item>
           </div>
-          <Form.Item name="enabled" label={workspaceUi("stateAfterSaving")} valuePropName="checked">
+          <Form.Item
+            name="enabled"
+            label={workspaceUi("stateAfterSaving")}
+            valuePropName="checked"
+            tooltip={workspaceUi("automaticRunsUseThePlanCreatorSCurrentPermissions")}
+          >
             <Switch
               disabled={!automaticAvailable}
               checkedChildren={workspaceUi("knowledgeNetwork.eval.templateUi.enabled")}
