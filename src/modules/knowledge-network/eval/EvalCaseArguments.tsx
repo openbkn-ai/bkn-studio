@@ -333,14 +333,7 @@ function ArrayArgument({
           <Button
             size="small"
             onClick={() => {
-              const empty =
-                item.type === "object"
-                  ? {}
-                  : item.type === "string"
-                    ? ""
-                    : item.type === "boolean"
-                      ? false
-                      : 0;
+              const empty = item.type === "object" ? {} : null;
               onChange(transformPrecisionSafeJSONRequest([...rows, empty]));
             }}
           >

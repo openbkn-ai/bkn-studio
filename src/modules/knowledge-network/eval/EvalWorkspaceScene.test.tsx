@@ -113,15 +113,18 @@ vi.mock("./m0-run.service", () => ({
 vi.mock("./EvalTemplateGenerationDrawer", () => ({
   EvalAssistantDrawer: ({
     repairRequest,
+    workspace,
     onClose,
   }: {
     repairRequest?: {
       cases: { id: string; latest_run_id?: string; latest_case_run_id?: string }[];
     };
+    workspace?: unknown;
     onClose: () => void;
   }) => (
     <aside aria-label="质量评测 AI 助手">
       <output data-testid="repair-request">{JSON.stringify(repairRequest)}</output>
+      <output data-testid="assistant-workspace">{JSON.stringify(workspace)}</output>
       <button onClick={onClose}>关闭助手</button>
     </aside>
   ),
@@ -2901,11 +2904,18 @@ it("shows overview navigation and recent runs while statistics are pending, then
   fireEvent.click(screen.getByRole("tab", { name: "资源覆盖" }));
   expect(screen.getByText("正在计算规则覆盖")).toBeVisible();
   expect(screen.queryByText("70%")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "AI 助手" }));
+  const workspace = screen.getByTestId("assistant-workspace");
+  expect(workspace).toHaveTextContent('"resources"');
+  expect(workspace).not.toHaveTextContent('"rulePoints"');
+  expect(workspace).not.toHaveTextContent('"rulePercent"');
   await act(async () => {
     finish(full);
     await Promise.resolve();
   });
   expect(screen.getByText("70%")).toBeVisible();
+  expect(workspace).toHaveTextContent('"rulePoints"');
+  expect(workspace).toHaveTextContent('"rulePercent"');
   expect(getEvalOverview).toHaveBeenCalledOnce();
 });
 

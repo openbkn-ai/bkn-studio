@@ -270,6 +270,23 @@ it("keeps exact decimals, zero, false and null across array editor switches", ()
   expect(screen.getByTestId("serialized")).toHaveTextContent(initial);
 });
 
+it.each(["number", "boolean", "string"] as const)(
+  "marks a newly added %s array value as unfilled",
+  (type) => {
+    render(
+      <Editor
+        initial='{"values":[]}'
+        fields={{
+          type: "object",
+          properties: { values: { type: "array", items: { type } } },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "addArrayItem" }));
+    expect(screen.getByTestId("serialized")).toHaveTextContent('{"values":[null]}');
+  },
+);
+
 it("keeps unsupported array contracts editable without inventing rows or filling source defaults", () => {
   render(
     <Editor

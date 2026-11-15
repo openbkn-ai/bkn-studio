@@ -35,12 +35,16 @@ export function EvalDeclarationCheckResult({ value }: { value?: Record<string, u
         <Typography.Text>
           {text("violations")}：{value.violations}
         </Typography.Text>
-        <Typography.Text>
-          {text("candidates")}：{evalScalarText(value.candidates ?? 0)}
-        </Typography.Text>
-        <Typography.Text>
-          {text("unknown")}：{evalScalarText(value.unknown ?? 0)}
-        </Typography.Text>
+        {typeof value.candidates === "number" && (
+          <Typography.Text>
+            {text("candidates")}：{evalScalarText(value.candidates)}
+          </Typography.Text>
+        )}
+        {typeof value.unknown === "number" && (
+          <Typography.Text>
+            {text("unknown")}：{evalScalarText(value.unknown)}
+          </Typography.Text>
+        )}
       </Space>
       {!!findings.length && (
         <Table

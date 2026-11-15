@@ -3406,13 +3406,17 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                       uncovered: overview.resources.uncovered,
                       unresolvedBindings: overview.resources.unresolved_bindings,
                     },
-                    rulePoints: {
-                      enabledRules: overview.rule_points.enabled_rules,
-                      applicable: overview.rule_points.applicable,
-                      covered: overview.rule_points.covered,
-                      missing: overview.rule_points.missing,
-                      notReady: overview.rule_points.not_ready,
-                    },
+                    ...(overviewRulesReady
+                      ? {
+                          rulePoints: {
+                            enabledRules: overview.rule_points.enabled_rules,
+                            applicable: overview.rule_points.applicable,
+                            covered: overview.rule_points.covered,
+                            missing: overview.rule_points.missing,
+                            notReady: overview.rule_points.not_ready,
+                          },
+                        }
+                      : {}),
                     cases: {
                       total: overview.cases.total,
                       excluded: overview.cases.excluded,
@@ -3430,7 +3434,9 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
                     },
                     coverage: {
                       resourcePercent: overview.coverage.resource_percent,
-                      rulePercent: overview.coverage.rule_percent,
+                      ...(overviewRulesReady
+                        ? { rulePercent: overview.coverage.rule_percent }
+                        : {}),
                       executionPercent: overview.coverage.execution_percent,
                       passPercent: overview.coverage.pass_percent,
                     },
