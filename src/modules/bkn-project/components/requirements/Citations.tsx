@@ -6,10 +6,16 @@
  */
 
 import { Alert, Drawer, Spin } from "antd";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
+import {
+  CITED_ATTRIBUTE,
+  citedPassage,
+  isMarkdown,
+} from "@/modules/bkn-project/components/requirements/citedPassage";
 import { Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { getDocument } from "@/modules/bkn-project/services/requirements.service";
 import type {
@@ -59,7 +65,11 @@ export function Citations({
   );
 }
 
-/** A document's text, with the quoted passage marked and scrolled to. */
+/**
+ * A document's text, with the quoted passage marked and scrolled to. Markdown reads rendered, its
+ * tables, code and quotes included; the passage then marks the blocks holding it, such as a table
+ * row. Plain text reads as it is, the passage marked exactly.
+ */
 export function DocumentViewer({
   documentId,
   onClose,
@@ -75,6 +85,7 @@ export function DocumentViewer({
   const [document, setDocument] = useState<RequirementDocumentContent | null>(null);
   const [failed, setFailed] = useState(false);
   const marked = useRef<HTMLElement>(null);
+  const rendered = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -89,11 +100,22 @@ export function DocumentViewer({
   }, [documentId, projectId]);
 
   useEffect(() => {
-    marked.current?.scrollIntoView?.({ block: "center" });
+    (
+      marked.current ?? rendered.current?.querySelector<HTMLElement>(`[${CITED_ATTRIBUTE}]`)
+    )?.scrollIntoView?.({ block: "center" });
   }, [document]);
 
   const content = document?.content ?? "";
   const quoted = range && range.end > range.start && range.end <= content.length ? range : null;
+  const start = quoted?.start;
+  const end = quoted?.end;
+  const plugins = useMemo(
+    () =>
+      start === undefined || end === undefined
+        ? undefined
+        : [citedPassage({ end, start }, styles.cited)],
+    [end, start],
+  );
   return (
     <Drawer
       destroyOnHidden
@@ -106,6 +128,10 @@ export function DocumentViewer({
         <Alert message={t(`${PREFIX}.documentLoadFailed`)} showIcon type="error" />
       ) : !document ? (
         <Spin />
+      ) : isMarkdown(document) ? (
+        <div className={styles.rendered} ref={rendered}>
+          <MarkdownText rehypePlugins={plugins} text={content} variant="document" />
+        </div>
       ) : (
         <p className={styles.content}>
           {quoted ? (

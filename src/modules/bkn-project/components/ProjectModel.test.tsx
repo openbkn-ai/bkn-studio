@@ -261,6 +261,12 @@ describe("ProjectModel", () => {
         const [first] = draft.items.objectTypes;
         draft.items.objectTypes.push(
           { ...first, document: { role: "entity" } as never, id: "invoice", name: "Invoice" },
+          // More business items than a page holds: the source items come after them in the draft.
+          ...Array.from({ length: 25 }, (_, index) => ({
+            ...first,
+            id: `table-${index}`,
+            name: `Table ${index}`,
+          })),
           {
             ...first,
             document: { role: "evidence_block" } as never,
@@ -276,8 +282,19 @@ describe("ProjectModel", () => {
     const inTable = () =>
       screen.queryAllByText("Source block").filter((node) => node.closest("tbody")).length;
     expect(inTable()).toBe(0);
-    fireEvent.click(screen.getByText(/bknProject.model.showSystem/));
+    fireEvent.click(screen.getByText(/bknProject.model.showSystemObjects/));
+    // Shown, they are on the first page, not past the business items.
     await waitFor(() => expect(inTable()).toBe(1));
+    fireEvent.click(screen.getByText(/bknProject.model.showSystemObjects/));
+    await waitFor(() => expect(inTable()).toBe(0));
+  });
+
+  it("offers no source-item switch when the draft has none", async () => {
+    getDraftMock.mockResolvedValue(edited(() => undefined));
+    renderModel();
+
+    expect(await screen.findByText(/bknProject.model.countObjects/)).toBeInTheDocument();
+    expect(screen.queryByText(/bknProject.model.showSystem/)).not.toBeInTheDocument();
   });
 
   it("offers to draft before the first draft, unless the project has no catalogs", async () => {

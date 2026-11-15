@@ -68,6 +68,7 @@ import {
   unmatched,
 } from "./conceptView";
 import { DataConcepts, type DataFilters } from "./DataConcepts";
+import ask from "../ai/RequirementAsk.module.css";
 import styles from "./ProjectConcepts.module.css";
 import { RequirementConcepts } from "./RequirementConcepts";
 import {
@@ -922,7 +923,7 @@ export function ProjectConcepts({
         </section>
       </div>
       {asking && askReady ? (
-        <div className={styles.side}>
+        <div className={ask.side} data-ask-side>
           <AskAiSidebar<ConceptRevision>
             adopt={adoptRevision}
             askWith={(request) =>

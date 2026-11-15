@@ -19,6 +19,11 @@
   position: relative;
 }
 
+/* Ask AI open beside a page covers the content area's right: the page scrolls in what is left. */
+.content:has([data-ask-side]) > div {
+  width: calc(100% - 380px);
+}
+
 /* The step a project goes on to, at the end of a page. */
 .nextStep {
   display: flex;

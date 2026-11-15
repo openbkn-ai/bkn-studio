@@ -982,7 +982,7 @@ export function ProjectKinetic({
           ) : null}
         </div>
         {asking && canAsk ? (
-          <div className={ask.side}>
+          <div className={ask.side} data-ask-side>
             <RequirementAskPanel
               names={{
                 logicNeed: (id) => spec?.logicNeeds.find((need) => need.id === id)?.name ?? "",
