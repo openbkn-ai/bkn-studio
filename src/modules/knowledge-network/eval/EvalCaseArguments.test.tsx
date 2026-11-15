@@ -261,7 +261,7 @@ it("keeps exact decimals, zero, false and null across array editor switches", ()
   expect(screen.getByRole("spinbutton", { name: "values[1]" })).toHaveValue(
     "0.1234567890123456789",
   );
-  expect(screen.getByRole("textbox", { name: "values[2]" })).toHaveValue("null");
+  expect(screen.getByRole("spinbutton", { name: "values[2]" })).toHaveValue("");
   fireEvent.click(screen.getAllByRole("button", { name: "advancedJson" })[1]);
   expect(screen.getByRole("textbox", { name: "values" })).toHaveValue(
     "[0,0.1234567890123456789,null]",
@@ -284,6 +284,9 @@ it.each(["number", "boolean", "string"] as const)(
     );
     fireEvent.click(screen.getByRole("button", { name: "addArrayItem" }));
     expect(screen.getByTestId("serialized")).toHaveTextContent('{"values":[null]}');
+    if (type === "number") {
+      expect(screen.getByRole("spinbutton", { name: "values[0]" })).toBeVisible();
+    }
   },
 );
 

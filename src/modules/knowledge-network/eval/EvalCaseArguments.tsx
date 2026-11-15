@@ -312,7 +312,7 @@ function ArrayArgument({
                 <SchemaScalarInput
                   name={`${name}[${index}]`}
                   schema={item}
-                  value={row}
+                  value={row === null ? undefined : row}
                   labels={{
                     boolean: l("argumentBoolean"),
                     enum: l("argumentEnum"),
