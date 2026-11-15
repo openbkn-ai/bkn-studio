@@ -6,6 +6,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -165,5 +166,54 @@ describe("ObjectTypeResourceSelectModal search", () => {
 
     expect(await screen.findByText("Supply_DEMO")).toBeTruthy();
     expect(queryObjectTypeResources).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ObjectTypeResourceSelectModal lifecycle", () => {
+  it("keeps its Portal unmounted while closed and resets selection when reopened", async () => {
+    const resource = createResource("resource-1", "Supply_DEMO");
+    const onOk = vi.fn();
+    queryObjectTypeResources.mockResolvedValue({ items: [resource], total: 1 });
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)} type="button">
+            Open resource picker
+          </button>
+          <ObjectTypeResourceSelectModal
+            networkId="kn-1"
+            onCancel={() => setOpen(false)}
+            onOk={(selected) => {
+              onOk(selected);
+              setOpen(false);
+            }}
+            open={open}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(queryObjectTypeResources).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open resource picker" }));
+    expect(await screen.findByText(resource.name)).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("checkbox")).toBeChecked();
+    expect(screen.getByRole("button", { name: "common.ok" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: "Open resource picker" }));
+    expect(await screen.findByText(resource.name)).toBeTruthy();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "common.ok" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "common.ok" }));
+    expect(onOk).toHaveBeenCalledWith(resource);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
