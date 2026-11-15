@@ -185,3 +185,12 @@
 .slot {
   color: var(--color-text-link);
 }
+
+/* Above the list: its tabs, and what is ticked to bring into the AI assistant. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

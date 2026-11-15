@@ -260,6 +260,9 @@ function renderPage(owner = true) {
   );
 }
 
+/** The list's tabs, apart from the same words in the summary of what AI reads. */
+const tabs = () => within(document.querySelector(".ant-segmented") as HTMLElement);
+
 describe("ProjectRequirements", () => {
   beforeAll(() => {
     // Ant Design reads breakpoints, which jsdom lacks.
@@ -350,11 +353,16 @@ describe("ProjectRequirements", () => {
     });
     renderPage();
 
-    expect(await screen.findByText("AI 参考的资料")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "AI 参考的资料" })).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("checkbox", { name: "选择「某个客户哪些订单晚了？」用来问 AI" }),
     );
     expect(await screen.findByRole("button", { name: "问 AI（已选 1 条）" })).toBeInTheDocument();
+    // Ticking alone opens nothing: the toolbar above the list says how many and brings them in.
+    expect(screen.queryByRole("complementary", { name: "AI 助手" })).toBeNull();
+    expect(screen.getByText("已选 1 条")).toBeInTheDocument();
+    expect(screen.queryByText(/勾选场景或问题后点/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "带入 AI 讨论" }));
     const panel = within(await screen.findByRole("complementary", { name: "AI 助手" }));
     expect(panel.getByText("某个客户哪些订单晚了？")).toBeInTheDocument();
     expect(listConversationsMock).toHaveBeenCalledWith("p1", "scenarios");
@@ -412,7 +420,7 @@ describe("ProjectRequirements", () => {
       "业务规则 3",
     ]);
 
-    fireEvent.click(screen.getByText(/^业务规则/));
+    fireEvent.click(tabs().getByText(/^业务规则/));
     expect(screen.getByText("需求冲突：什么算晚")).toBeInTheDocument();
     expect(screen.getByText("待裁决")).toBeInTheDocument();
     expect(screen.getByText("按文档类型，建议以这一方为准")).toBeInTheDocument();
@@ -739,8 +747,15 @@ describe("ProjectRequirements", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("概念模型有变化，部分场景可能过期")).toBeInTheDocument();
-    expect(screen.getByText("还有 1 个对象类没有场景覆盖：病区")).toBeInTheDocument();
+    expect(
+      await screen.findByText("概念模型有变化，1 个问题可能过期，重新生成会保留已采纳的部分。"),
+    ).toBeInTheDocument();
+    // One quiet line each, not colored alerts; the names open from the count.
+    expect(document.querySelector(".ant-alert")).toBeNull();
+    const uncovered = screen.getByText("还有 1 个对象类没有场景覆盖").closest("li")!;
+    expect(screen.queryByText("病区")).toBeNull();
+    fireEvent.click(within(uncovered).getByRole("button", { name: "展开" }));
+    expect(screen.getByText("病区")).toBeInTheDocument();
     expect(screen.getByText("可能过期")).toBeInTheDocument();
     // Accepted: nothing waits for review.
     expect(screen.queryByText("AI 生成，待审核")).toBeNull();
@@ -804,7 +819,7 @@ describe("ProjectRequirements", () => {
       resolveConflictMock.mockResolvedValue(edited);
       renderPage();
       await screen.findByText("某个客户哪些订单晚了？");
-      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(tabs().getByText(/^业务规则/));
 
       fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
       const dialog = within(await screen.findByRole("dialog"));
@@ -833,7 +848,7 @@ describe("ProjectRequirements", () => {
       renderPage();
       await screen.findByText("某个客户哪些订单晚了？");
 
-      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(tabs().getByText(/^业务规则/));
       fireEvent.click(screen.getByRole("button", { name: /^选\s*择$/ }));
       const dialog = within(await screen.findByRole("dialog"));
       fireEvent.click(dialog.getByText("分开"));
@@ -860,7 +875,7 @@ describe("ProjectRequirements", () => {
       );
       renderPage();
       await screen.findByText("某个客户哪些订单晚了？");
-      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(tabs().getByText(/^业务规则/));
 
       fireEvent.click(screen.getByRole("button", { name: "删除「晚于承诺日期发货即为延误。」" }));
       const [{ onOk, title }] = confirmMock.mock.calls[0] as [
@@ -889,7 +904,7 @@ describe("ProjectRequirements", () => {
       renderPage();
       await screen.findByText("某个客户哪些订单晚了？");
 
-      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(tabs().getByText(/^业务规则/));
       fireEvent.click(screen.getByRole("button", { name: /^裁\s*决$/ }));
       const dialog = within(await screen.findByRole("dialog"));
       fireEvent.click(dialog.getAllByRole("radio")[1]);
@@ -914,7 +929,7 @@ describe("ProjectRequirements", () => {
       await screen.findByText("某个客户哪些订单晚了？");
       expect(screen.queryByRole("button", { name: "新增问题" })).toBeNull();
       expect(screen.queryByRole("button", { name: /^编辑/ })).toBeNull();
-      fireEvent.click(screen.getByText(/^业务规则/));
+      fireEvent.click(tabs().getByText(/^业务规则/));
       expect(screen.queryByRole("button", { name: /^裁\s*决$/ })).toBeNull();
       expect(screen.queryByRole("button", { name: /^选\s*择$/ })).toBeNull();
     });
@@ -1238,7 +1253,7 @@ describe("ProjectRequirements", () => {
       ];
       getRequirementsMock.mockResolvedValue(spec);
       renderPage();
-      await screen.findByText("AI 参考的资料");
+      await screen.findByRole("region", { name: "AI 参考的资料" });
       expect(screen.queryByText(/起草时去掉了/)).toBeNull();
     });
 

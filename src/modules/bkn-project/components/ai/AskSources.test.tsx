@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, within, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
@@ -59,11 +59,59 @@ const base = {
   rules: 2,
 };
 
+/** Renders the sources opened to their list, as one sees them after clicking the summary open. */
+function renderOpen(ui: React.ReactElement) {
+  const result = renderWithoutAntdStyles(ui);
+  fireEvent.click(screen.getByRole("button", { name: `${S}.summary.expand` }));
+  return result;
+}
+
 describe("AskSources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getSupplement.mockResolvedValue({ by: null, text: "", time: 0 });
     mocks.getKnowledge.mockResolvedValue({ concepts: [], files: 0, rules: [] });
+  });
+
+  it("sums up what AI reads in one line, marks what is missing, and opens to the list", async () => {
+    mocks.getKnowledge.mockResolvedValue({
+      concepts: [],
+      files: 6,
+      rules: [{ adopted: false, description: "", kind: "kinetic", name: "Terms" }],
+    });
+    mocks.getSupplement.mockResolvedValue({ by: null, text: "Focus", time: 1 });
+    renderWithoutAntdStyles(
+      <AskSources {...base} hasBackground model={{ confirmed: true, network: 11, project: 3 }} />,
+    );
+
+    const region = screen.getByRole("region", { name: `${S}.title` });
+    expect(within(region).getByText(`${S}.summary.label`)).toBeInTheDocument();
+    // No documents is said too, not left out.
+    expect(
+      within(region).getByText(`${S}.documents:${JSON.stringify({ count: 0 })}`),
+    ).toBeInTheDocument();
+    expect(
+      within(region).getByText(`${S}.summary.objectTypes:${JSON.stringify({ count: 14 })}`),
+    ).toBeInTheDocument();
+    expect(
+      within(region).getByText(`${S}.rules:${JSON.stringify({ count: 2 })}`),
+    ).toBeInTheDocument();
+    expect(
+      await within(region).findByText(`${S}.summary.knowledge:${JSON.stringify({ count: 6 })}`),
+    ).toBeInTheDocument();
+    expect(within(region).getByText(`${S}.background`)).toBeInTheDocument();
+    // A written supplement note is named among them.
+    expect(await within(region).findByText(`${N}.title`)).toBeInTheDocument();
+    // The list and the note's text show only once opened.
+    expect(screen.queryByText(`${S}.noDocuments.kinetic`)).toBeNull();
+    expect(screen.queryByText("Focus")).toBeNull();
+    const toggle = screen.getByRole("button", { name: `${S}.summary.expand` });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByText(`${S}.noDocuments.kinetic`)).toBeInTheDocument();
+    expect(screen.getByText("Focus")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `${S}.summary.collapse` }));
+    expect(screen.queryByText("Focus")).toBeNull();
   });
 
   it("lists what the knowledge base holds, with its rules by name, on both pages", async () => {
@@ -76,7 +124,7 @@ describe("AskSources", () => {
       ],
     });
     for (const page of ["kinetic", "scenarios"] as const) {
-      const { unmount } = renderWithoutAntdStyles(<AskSources {...base} page={page} />);
+      const { unmount } = renderOpen(<AskSources {...base} page={page} />);
       expect(
         await screen.findByText(
           `${S}.knowledge:${JSON.stringify({
@@ -99,13 +147,13 @@ describe("AskSources", () => {
   });
 
   it("lists no knowledge base without one, as in the open edition", async () => {
-    renderWithoutAntdStyles(<AskSources {...base} />);
+    renderOpen(<AskSources {...base} />);
     await screen.findByText(`${N}.empty`);
     expect(screen.queryByText(new RegExp(`^${S}\\.knowledge:`))).toBeNull();
   });
 
   it("says what is missing without documents and offers to upload them", async () => {
-    renderWithoutAntdStyles(<AskSources {...base} />);
+    renderOpen(<AskSources {...base} />);
 
     expect(screen.getByText(`${S}.noDocuments.kinetic`)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: `${S}.uploadDocuments` }));
@@ -118,7 +166,7 @@ describe("AskSources", () => {
 
   it("counts the network's object types apart and says when the project confirmed none", async () => {
     const onGoToModel = vi.fn();
-    renderWithoutAntdStyles(
+    renderOpen(
       <AskSources
         {...base}
         model={{ confirmed: false, network: 41, project: 0 }}
@@ -129,7 +177,8 @@ describe("AskSources", () => {
     expect(
       screen.getByText(`${S}.networkObjectTypes:${JSON.stringify({ count: 41 })}`),
     ).toBeInTheDocument();
-    expect(screen.getByText(`${S}.notConfirmed`)).toBeInTheDocument();
+    // Said in the summary line and in the list.
+    expect(screen.getAllByText(`${S}.notConfirmed`)).toHaveLength(2);
     // The network's object types are never counted as the project's confirmed model.
     expect(screen.queryByText(new RegExp(`^${S}\\.model:`))).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: `${S}.confirmModel` }));
@@ -138,9 +187,7 @@ describe("AskSources", () => {
   });
 
   it("counts the project's confirmed object types beside the network's", async () => {
-    renderWithoutAntdStyles(
-      <AskSources {...base} model={{ confirmed: true, network: 41, project: 2 }} />,
-    );
+    renderOpen(<AskSources {...base} model={{ confirmed: true, network: 41, project: 2 }} />);
 
     expect(
       screen.getByText(`${S}.networkObjectTypes:${JSON.stringify({ count: 41 })}`),
@@ -151,7 +198,7 @@ describe("AskSources", () => {
   });
 
   it("names the documents, and marks what the network already has", async () => {
-    renderWithoutAntdStyles(
+    renderOpen(
       <AskSources
         {...base}
         documents={[
@@ -186,7 +233,7 @@ describe("AskSources", () => {
     expect(
       screen.getByText(`${S}.names:${JSON.stringify({ names: "plan.md" })}`),
     ).toBeInTheDocument();
-    expect(screen.getByText(`${S}.background`)).toBeInTheDocument();
+    expect(screen.getAllByText(`${S}.background`)).toHaveLength(2);
     expect(screen.getByText(`${S}.backgroundNew`)).toBeInTheDocument();
     expect(screen.getAllByRole("img", { name: "bknProject.kinetic.panel.inNetwork" })).toHaveLength(
       2,
@@ -200,7 +247,7 @@ describe("AskSources", () => {
       text: "Focus on stock",
       time: Date.parse("2026-11-13T10:20:00"),
     });
-    renderWithoutAntdStyles(<AskSources {...base} />);
+    renderOpen(<AskSources {...base} />);
 
     fireEvent.click(await screen.findByRole("button", { name: `${N}.write` }));
     fireEvent.change(screen.getByRole("textbox", { name: `${N}.title` }), {
@@ -222,7 +269,7 @@ describe("AskSources", () => {
   it("never shows a note it could not read as none, nor lets it be written over", async () => {
     mocks.getSupplement.mockRejectedValueOnce(new Error("timeout"));
     mocks.getSupplement.mockResolvedValueOnce({ by: null, text: "Kept", time: 1 });
-    renderWithoutAntdStyles(<AskSources {...base} />);
+    renderOpen(<AskSources {...base} />);
 
     // While it is being read, it is not said to be empty.
     expect(screen.queryByText(`${N}.empty`)).toBeNull();
@@ -236,7 +283,7 @@ describe("AskSources", () => {
 
   it("only shows the note to others", async () => {
     mocks.getSupplement.mockResolvedValue({ by: null, text: "Focus", time: 1 });
-    renderWithoutAntdStyles(<AskSources {...base} canEdit={false} />);
+    renderOpen(<AskSources {...base} canEdit={false} />);
     expect(await screen.findByText("Focus")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: `${N}.edit` })).toBeNull();
   });

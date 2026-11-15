@@ -17,7 +17,9 @@ import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
 import { requirementConceptCount } from "@/modules/bkn-project/components/stepCounts";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
+import { SelectionBar } from "@/modules/bkn-project/components/ai/SelectionBar";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
+import { type Notice, NoticeList } from "@/modules/bkn-project/components/NoticeList";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import {
@@ -458,13 +460,58 @@ export function ProjectRequirements({
           setSelected(
             ticked ? [...selected, { id, kind }] : selected.filter((item) => item.id !== id),
           );
-          // Ticking is for asking: the panel opens to ask about them.
-          if (ticked) {
-            setAsking(true);
-          }
         },
       }
     : null;
+  // What waits on the reader, one line each above the list.
+  const notices: Notice[] = [];
+  if (requirements?.stale) {
+    notices.push({ key: "stale", text: t(`${PREFIX}.stale`), tone: "warning" });
+  }
+  if (ready && outdated) {
+    notices.push({
+      action: canEdit
+        ? { disabled: drafting, label: t(`${PREFIX}.redraft`), onClick: () => void draft(false) }
+        : undefined,
+      key: "outdated",
+      text: t(`${PREFIX}.review.outdated`, { count: outdated }),
+      tone: "warning",
+    });
+  }
+  if (ready && (requirements.unresolvedConflicts || requirements.undecidedChoices)) {
+    notices.push({
+      action: { label: t(`${PREFIX}.goDecide`), onClick: () => setTab("rules") },
+      key: "decide",
+      // Only what waits is named.
+      text:
+        requirements.unresolvedConflicts && requirements.undecidedChoices
+          ? t(`${PREFIX}.waiting.both`, {
+              choices: requirements.undecidedChoices,
+              conflicts: requirements.unresolvedConflicts,
+            })
+          : requirements.unresolvedConflicts
+            ? t(`${PREFIX}.waiting.conflicts`, { count: requirements.unresolvedConflicts })
+            : t(`${PREFIX}.waiting.choices`, { count: requirements.undecidedChoices }),
+      tone: "warning",
+    });
+  }
+  if (ready && requirements.ontologyUncovered.length) {
+    notices.push({
+      detail: requirements.ontologyUncovered
+        .map((item) => item.name)
+        .join(t("bknProject.listSeparator")),
+      key: "uncovered",
+      text: t(`${PREFIX}.review.uncovered`, { count: requirements.ontologyUncovered.length }),
+      tone: "info",
+    });
+  }
+  if (ready && waiting.length) {
+    notices.push({
+      key: "waiting",
+      text: t(`${PREFIX}.review.waiting`, { count: waiting.length }),
+      tone: "info",
+    });
+  }
   /** Shows the tab of what was changed from a conversation, the first of them. */
   const showChanged = (changed: { id: string; kind: AskItemKind }[]) => {
     const first = changed[0]?.kind;
@@ -601,65 +648,7 @@ export function ProjectRequirements({
                   type="warning"
                 />
               ) : null}
-              {requirements?.stale ? (
-                <Alert message={t(`${PREFIX}.stale`)} showIcon type="warning" />
-              ) : null}
-              {ready && outdated ? (
-                <Alert
-                  action={
-                    canEdit ? (
-                      <AppButton disabled={drafting} onClick={() => void draft(false)} size="small">
-                        {t(`${PREFIX}.redraft`)}
-                      </AppButton>
-                    ) : undefined
-                  }
-                  description={t(`${PREFIX}.review.outdatedDetail`, { count: outdated })}
-                  message={t(`${PREFIX}.review.outdated`)}
-                  showIcon
-                  type="warning"
-                />
-              ) : null}
-              {ready && requirements.ontologyUncovered.length ? (
-                <Alert
-                  message={t(`${PREFIX}.review.uncovered`, {
-                    count: requirements.ontologyUncovered.length,
-                    names: requirements.ontologyUncovered
-                      .map((item) => item.name)
-                      .join(t("bknProject.listSeparator")),
-                  })}
-                  showIcon
-                  type="info"
-                />
-              ) : null}
-              {ready && waiting.length ? (
-                <p className={styles.muted}>
-                  {t(`${PREFIX}.review.waiting`, { count: waiting.length })}
-                </p>
-              ) : null}
-              {ready && (requirements.unresolvedConflicts || requirements.undecidedChoices) ? (
-                <Alert
-                  action={
-                    <AppButton onClick={() => setTab("rules")} size="small">
-                      {t(`${PREFIX}.goDecide`)}
-                    </AppButton>
-                  }
-                  message={
-                    // Only what waits is named.
-                    requirements.unresolvedConflicts && requirements.undecidedChoices
-                      ? t(`${PREFIX}.waiting.both`, {
-                          choices: requirements.undecidedChoices,
-                          conflicts: requirements.unresolvedConflicts,
-                        })
-                      : requirements.unresolvedConflicts
-                        ? t(`${PREFIX}.waiting.conflicts`, {
-                            count: requirements.unresolvedConflicts,
-                          })
-                        : t(`${PREFIX}.waiting.choices`, { count: requirements.undecidedChoices })
-                  }
-                  showIcon
-                  type="warning"
-                />
-              ) : null}
+              <NoticeList items={notices} />
               {spec && (spec.tablesOmitted || spec.catalogsUnlisted.length) ? (
                 <p className={styles.muted}>
                   {spec.catalogsUnlisted.length
@@ -669,20 +658,25 @@ export function ProjectRequirements({
               ) : null}
               {spec ? (
                 <>
-                  <Segmented<Tab>
-                    onChange={setTab}
-                    options={TABS.map((value) => ({
-                      label: t(`${PREFIX}.tabs.${value}`, {
-                        count: {
-                          questions: spec.questions.length,
-                          rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
-                          scenarios: spec.scenarios.length,
-                        }[value],
-                      }),
-                      value,
-                    }))}
-                    value={activeTab}
-                  />
+                  <div className={styles.toolbar}>
+                    <Segmented<Tab>
+                      onChange={setTab}
+                      options={TABS.map((value) => ({
+                        label: t(`${PREFIX}.tabs.${value}`, {
+                          count: {
+                            questions: spec.questions.length,
+                            rules: spec.rules.length + spec.conflicts.length + spec.choices.length,
+                            scenarios: spec.scenarios.length,
+                          }[value],
+                        }),
+                        value,
+                      }))}
+                      value={activeTab}
+                    />
+                    {canAsk ? (
+                      <SelectionBar count={refs.length} onBring={() => setAsking(true)} />
+                    ) : null}
+                  </div>
                   {activeTab === "questions" ? (
                     <QuestionsView
                       drafted={drafted}
@@ -696,9 +690,6 @@ export function ProjectRequirements({
                   ) : (
                     <RulesView spec={spec} />
                   )}
-                  {canAsk ? (
-                    <p className={styles.muted}>{t("bknProject.ask.select.hint.scenarios")}</p>
-                  ) : null}
                   <RejectedNote spec={spec} />
                 </>
               ) : null}

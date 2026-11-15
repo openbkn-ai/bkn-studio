@@ -319,7 +319,12 @@ describe("ProjectKinetic", () => {
   it("says what AI reads, and that without documents it can only guess", async () => {
     renderPage();
 
-    expect(await screen.findByText("AI 参考的资料")).toBeInTheDocument();
+    const sources = await screen.findByRole("region", { name: "AI 参考的资料" });
+    expect(within(sources).getByText("需求文档 0 份")).toBeInTheDocument();
+    expect(await within(sources).findByText("对象类 2 个")).toBeInTheDocument();
+    // The list, and the supplement note in it, open from the one summary line.
+    fireEvent.click(within(sources).getByRole("button", { name: "展开" }));
+    expect(within(sources).getByText("补充说明")).toBeInTheDocument();
     expect(
       screen.getByText("没有需求文档：AI 只能根据模型推测需要哪些指标和操作，建议先补充。"),
     ).toBeInTheDocument();
@@ -344,6 +349,11 @@ describe("ProjectKinetic", () => {
     fireEvent.click(within(metric).getByRole("checkbox"));
 
     expect(await screen.findByRole("button", { name: "问 AI（已选 1 条）" })).toBeInTheDocument();
+    // Ticking alone opens nothing: the toolbar above the list says how many and brings them in.
+    expect(screen.queryByRole("complementary", { name: "AI 助手" })).toBeNull();
+    expect(screen.getByText("已选 1 条")).toBeInTheDocument();
+    expect(screen.queryByText(/勾选条目后点/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "带入 AI 讨论" }));
     // The panel opens with the ticked need as a reference of the next question.
     const panel = within(await screen.findByRole("complementary", { name: "AI 助手" }));
     expect(panel.getByText("延误率")).toBeInTheDocument();
@@ -582,24 +592,42 @@ describe("ProjectKinetic", () => {
   it("says implementations wait for the first release only while the network runs no version", async () => {
     mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), live: false, released: false });
     const { unmount } = renderPage();
-    expect(await screen.findByText(/首次发布后再实现/)).toBeInTheDocument();
+    // One line says it, not two notices that overlap.
     expect(
-      screen.queryByText("在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。"),
-    ).toBeNull();
+      await screen.findByText("项目首次发布后才能连接实现；现在可以先分析和记录动力需求。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/首次发布后再实现/)).toBeNull();
+    expect(document.querySelectorAll(".ant-alert-info")).toHaveLength(0);
     unmount();
 
     // Running, after a release or on a network the project started on: no waiting is said.
     for (const released of [true, false]) {
       mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), live: true, released });
       const page = renderPage();
-      expect(
-        await screen.findByText(
-          "在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。",
-        ),
-      ).toBeInTheDocument();
-      expect(screen.queryByText(/首次发布后再实现/)).toBeNull();
+      await screen.findByText("延误率");
+      expect(screen.queryByText(/首次发布后才能连接实现/)).toBeNull();
       page.unmount();
     }
+  });
+
+  it("sums up where the needs stand in one line, each count filtering the list", async () => {
+    renderPage();
+    await screen.findByText("延误率");
+
+    expect(screen.getByRole("button", { name: "已实现 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "待首次发布后实现 1" })).toBeInTheDocument();
+    const broken = screen.getByRole("button", { name: "实现已失效 1" });
+    fireEvent.click(broken);
+    expect(broken).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("查物流")).toBeInTheDocument();
+    expect(screen.queryByText("延误率")).toBeNull();
+    // The state filter says the same.
+    expect(screen.getAllByRole("combobox")[1].closest(".ant-select")).toHaveTextContent(
+      "实现已失效",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^共 \d+ 条/ }));
+    expect(screen.getByText("延误率")).toBeInTheDocument();
   });
 
   it("filters by kind and by state", async () => {
@@ -642,7 +670,7 @@ describe("ProjectKinetic", () => {
     renderPage();
 
     expect(
-      await screen.findByText("首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。"),
+      await screen.findByText("项目首次发布后才能连接实现；现在可以先分析和记录动力需求。"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/线上知识网络暂时读不到/)).toBeNull();
   });
@@ -669,7 +697,7 @@ describe("ProjectKinetic", () => {
     expect(
       await screen.findByText("知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。"),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/首次发布后才能查看和连接实现/)).toBeNull();
+    expect(screen.queryByText(/首次发布后才能连接实现/)).toBeNull();
 
     const panel = await openNeed("催单排序", "匹配或实现");
     expect(await panel.findByText("订单分诊")).toBeInTheDocument();
@@ -710,7 +738,7 @@ describe("ProjectKinetic", () => {
     });
     renderPage();
 
-    expect(await screen.findByText(/首次发布后才能查看和连接实现/)).toBeInTheDocument();
+    expect(await screen.findByText(/首次发布后才能连接实现/)).toBeInTheDocument();
     expect(screen.getByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
   });
 
@@ -719,7 +747,7 @@ describe("ProjectKinetic", () => {
     renderPage();
 
     expect(await screen.findByText(/线上知识网络暂时读不到/)).toBeInTheDocument();
-    expect(screen.queryByText(/首次发布后才能查看和连接实现/)).toBeNull();
+    expect(screen.queryByText(/首次发布后才能连接实现/)).toBeNull();
   });
 
   it("shows the empty list, not an error, before there is a specification", async () => {
@@ -805,8 +833,13 @@ describe("ProjectKinetic", () => {
     });
     renderPage();
 
+    fireEvent.click(
+      within(await screen.findByRole("region", { name: "AI 参考的资料" })).getByRole("button", {
+        name: "展开",
+      }),
+    );
     expect(await screen.findByText("网络已有 2 个对象类")).toBeInTheDocument();
-    expect(screen.getByText("本项目还没确认概念模型")).toBeInTheDocument();
+    expect(screen.getAllByText("本项目还没确认概念模型")).toHaveLength(2);
     expect(screen.queryByText(/本项目已确认/)).toBeNull();
   });
 
