@@ -958,7 +958,7 @@ export const bknTraceZhCN = {
       targetUserPlaceholder: "被操作用户 ID（精确匹配）",
       targetUserLabel: "被操作用户",
       targetUserHint:
-        "查询该用户的开户、修改、删除等管理记录。按用户 ID 区分同账号重建的不同用户；旧记录未保存账号时，无法按账号查询。",
+        "仅支持用户 ID 精确匹配，不支持输入账号。可先在用户列表按账号找到当前用户，再查看账号管理记录；已删除用户需使用原用户 ID。同账号重建后按不同 ID 查询，未采集的历史记录无法补回。",
       columns: {
         action: "操作",
         actor: "操作者",

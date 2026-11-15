@@ -1020,7 +1020,7 @@ export const bknTraceEnUS = {
       targetUserPlaceholder: "Target user ID (exact match)",
       targetUserLabel: "Target user",
       targetUserHint:
-        "Find account creation, changes and deletion affecting this user. User IDs distinguish recreated accounts. Historical records without account snapshots cannot be searched by account name.",
+        "Exact user ID only; account names are not supported. Find a current user by account name in the user list, then open account management history. Deleted users require their original user ID. Recreated accounts have different IDs; events that were never collected cannot be recovered.",
       columns: {
         action: "Action",
         actor: "Actor",
