@@ -20,7 +20,7 @@ import {
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
-import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
+import { ClampedText, DescriptionTooltip } from "@/modules/bkn-project/components/ClampedText";
 import {
   joinCountPhrase,
   keyCountPhrase,
@@ -370,9 +370,9 @@ export function DraftObjectsTable({
       key: "source",
       render: (_value, record) =>
         sourceEditor?.appliesTo(record) ? (
-          <Tooltip title={record.document?.reason}>
+          <DescriptionTooltip title={record.document?.reason}>
             <span>{sourceEditor.describe(t, record).source}</span>
-          </Tooltip>
+          </DescriptionTooltip>
         ) : (
           <TableSource catalogNames={catalogNames} table={record.table} />
         ),

@@ -5,10 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Tooltip } from "antd";
+import { Tooltip, type TooltipProps } from "antd";
 import { useRef, useState } from "react";
 
+import { MarkdownText } from "@/framework/ui/common/MarkdownText";
+
 import styles from "./ClampedText.module.css";
+
+/**
+ * A hover for a long description or reason, styled like the knowledge network cards' description
+ * hover: a wide, light surface in the current theme that scrolls when the text is very long.
+ */
+export function DescriptionTooltip({ classNames, ...props }: TooltipProps) {
+  return <Tooltip {...props} classNames={{ ...classNames, root: styles.descriptionTooltip }} />;
+}
 
 /**
  * Text kept to two lines in a table cell, such as a long description an existing object type
@@ -18,7 +28,10 @@ export function ClampedText({ className, text }: { className?: string; text: str
   const ref = useRef<HTMLSpanElement>(null);
   const [clamped, setClamped] = useState(false);
   return (
-    <Tooltip placement="topLeft" title={clamped ? text : undefined}>
+    <DescriptionTooltip
+      placement="topLeft"
+      title={clamped ? <MarkdownText text={text} /> : undefined}
+    >
       <span
         className={className ? `${styles.clamp} ${className}` : styles.clamp}
         data-testid="clamped-text"
@@ -30,6 +43,6 @@ export function ClampedText({ className, text }: { className?: string; text: str
       >
         {text}
       </span>
-    </Tooltip>
+    </DescriptionTooltip>
   );
 }
