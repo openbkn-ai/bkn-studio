@@ -29,18 +29,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ message: mocks.message, modal: mocks.modal }),
 }));
 
-vi.mock("./ObjectTypeDataAttributeFormDrawer", () => ({
-  ObjectTypeDataAttributeFormDrawer: () => null,
-}));
-
-vi.mock("./ObjectTypeResourceDescriptionFillModal", () => ({
-  ObjectTypeResourceDescriptionFillModal: () => null,
-}));
-
-vi.mock("./ObjectTypeResourceSelectModal", () => ({
-  ObjectTypeResourceSelectModal: () => null,
-}));
-
 const originalMatchMedia = window.matchMedia;
 const fields = Array.from({ length: 13 }, (_, index) => ({
   displayName: `Field ${index + 1}`,
@@ -65,8 +53,8 @@ afterAll(() => {
   window.matchMedia = originalMatchMedia;
 });
 
-describe("ObjectTypeDataAttributeEditor with its real pick modal", () => {
-  it("keeps mapped connections updating through repeated native canvas drags while the modal is closed", async () => {
+describe("ObjectTypeDataAttributeEditor with its real dialogs", () => {
+  it("keeps mapped connections updating through repeated native canvas drags while dialogs are closed", async () => {
     const rect = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function (this: HTMLElement) {

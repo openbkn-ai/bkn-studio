@@ -340,6 +340,11 @@ export function ObjectTypeResourceSelectModal({
     </div>
   );
 
+  // Keep the closed Portal out of the canvas's synchronous connection updates.
+  if (!open) {
+    return null;
+  }
+
   return (
     <Modal
       className={styles.modal}
