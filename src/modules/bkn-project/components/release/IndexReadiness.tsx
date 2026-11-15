@@ -242,7 +242,7 @@ export function IndexReadiness({
       ) : (
         <>
           {index?.tasksVisible === false ? (
-            <Alert message={t("bknProject.release.index.tasksInvisible")} showIcon type="info" />
+            <p className={styles.muted}>{t("bknProject.release.index.tasksInvisible")}</p>
           ) : null}
           <AppTable<IndexItem>
             columns={columns}

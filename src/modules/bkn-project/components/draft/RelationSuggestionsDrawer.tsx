@@ -274,12 +274,10 @@ export function RelationSuggestionsEntry({
                 <Alert message={t(`${PREFIX}.askFailed`)} showIcon type="warning" />
               ) : null}
               {suggestions.answer ? (
-                <Alert
-                  description={suggestions.answer}
-                  message={t(`${PREFIX}.answerTitle`)}
-                  showIcon
-                  type="info"
-                />
+                <section className={styles.card}>
+                  <span className={styles.muted}>{t(`${PREFIX}.answerTitle`)}</span>
+                  <span className={styles.reason}>{suggestions.answer}</span>
+                </section>
               ) : null}
               {suggestions.candidates.length ? null : (
                 <p className={styles.muted}>{t(`${PREFIX}.none`)}</p>

@@ -134,7 +134,7 @@ describe("UnderstandingBar", () => {
       ],
     });
     renderBar({ ownerIsCaller: false });
-    expect(await screen.findByText("只有项目负责人可以发起语义理解")).toBeInTheDocument();
+    expect(await screen.findByText(/只有项目负责人可以发起语义理解。/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "开始语义理解" })).toBeNull();
   });
 

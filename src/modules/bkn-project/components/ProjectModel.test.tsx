@@ -336,7 +336,7 @@ describe("ProjectModel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "bknProject.model.generate" }));
 
-    expect(await screen.findByText("bknProject.model.generateFailed")).toBeInTheDocument();
+    expect(await screen.findByText(/"what":"bknProject.model.generateFailed"/)).toBeInTheDocument();
     expect(screen.getByText(/Data Catalog Not Found/)).toBeInTheDocument();
     expect(generateDraftMock).toHaveBeenCalledWith("p1");
   });
@@ -398,14 +398,14 @@ describe("ProjectModel", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
     });
-    expect(await screen.findByText("bknProject.model.loadFailed")).toBeInTheDocument();
+    expect(await screen.findByText(/"what":"bknProject.model.loadFailed"/)).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
     });
     expect(await screen.findByText(/bknProject.model.summary/)).toBeInTheDocument();
     expect(getDraftMock).toHaveBeenCalledTimes(3);
-    expect(screen.queryByText("bknProject.model.loadFailed")).not.toBeInTheDocument();
+    expect(screen.queryByText(/"what":"bknProject.model.loadFailed"/)).not.toBeInTheDocument();
   });
 
   it("explains a failed draft; only a data source's reply goes to the details", async () => {
@@ -857,7 +857,7 @@ describe("ProjectModel", () => {
     getDraftMock.mockResolvedValue(mapDraft(mockDraft("p1", "old-catalog")));
     renderModel({ catalogIds: ["old-catalog"] }, false);
 
-    expect(await screen.findByText("bknProject.model.notice.askOwner")).toBeInTheDocument();
+    expect(await screen.findByText(/bknProject.model.notice.askOwner/)).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "bknProject.model.catalogs.change" }),
     ).not.toBeInTheDocument();

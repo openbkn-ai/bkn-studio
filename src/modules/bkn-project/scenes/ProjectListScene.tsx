@@ -260,8 +260,10 @@ export function ProjectListScene() {
             </AppButton>
           }
           className={styles.alert}
-          description={loadError}
-          message={t("bknProject.list.loadFailed")}
+          message={t("bknProject.failedWithReason", {
+            reason: loadError,
+            what: t("bknProject.list.loadFailed"),
+          })}
           showIcon
           type="error"
         />

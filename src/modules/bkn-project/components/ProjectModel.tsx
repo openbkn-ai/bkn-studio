@@ -447,8 +447,10 @@ export function ProjectModel({
             {t("common.retry")}
           </AppButton>
         }
-        description={loadError}
-        message={t("bknProject.model.loadFailed")}
+        message={t("bknProject.failedWithReason", {
+          reason: loadError,
+          what: t("bknProject.model.loadFailed"),
+        })}
         showIcon
         type="error"
       />
@@ -497,20 +499,23 @@ export function ProjectModel({
   );
 
   const preparation = draft?.datasetPreparation;
+  // Where preparing the knowledge-base objects stands is a quiet line; only what needs a new
+  // confirmation is a notice.
+  const preparationText = preparation
+    ? t(`bknProject.model.preparation.${preparation.state}`, {
+        ready: preparation.ready,
+        total: preparation.total,
+      })
+    : "";
   const notices = (
     <>
-      {preparation && (
-        <Alert
-          message={t(`bknProject.model.preparation.${preparation.state}`, {
-            ready: preparation.ready,
-            total: preparation.total,
-          })}
-          showIcon
-          type={
-            preparation.state === "failed" || preparation.state === "stale" ? "warning" : "info"
-          }
-        />
-      )}
+      {preparation ? (
+        preparation.state === "failed" || preparation.state === "stale" ? (
+          <Alert message={preparationText} showIcon type="warning" />
+        ) : (
+          <p className={styles.muted}>{preparationText}</p>
+        )
+      ) : null}
       {ownerIsCaller && catalogsFailed ? (
         <Alert
           action={
@@ -525,8 +530,10 @@ export function ProjectModel({
       ) : null}
       {loadError ? (
         <Alert
-          description={loadError}
-          message={t("bknProject.model.loadFailed")}
+          message={t("bknProject.failedWithReason", {
+            reason: loadError,
+            what: t("bknProject.model.loadFailed"),
+          })}
           showIcon
           type="warning"
         />
@@ -534,8 +541,10 @@ export function ProjectModel({
       {generateError ? (
         <Alert
           closable
-          description={generateError}
-          message={t("bknProject.model.generateFailed")}
+          message={t("bknProject.failedWithReason", {
+            reason: generateError,
+            what: t("bknProject.model.generateFailed"),
+          })}
           onClose={() => setGenerateError(null)}
           showIcon
           type="error"
@@ -544,8 +553,14 @@ export function ProjectModel({
       {projectMissing.length ? (
         <Alert
           action={catalogsLink("bknProject.model.catalogs.change")}
-          description={ownerIsCaller ? undefined : t("bknProject.model.notice.askOwner")}
-          message={catalogNotice("bknProject.model.notice.missingCatalogs", projectMissing)}
+          message={
+            ownerIsCaller
+              ? catalogNotice("bknProject.model.notice.missingCatalogs", projectMissing)
+              : [
+                  catalogNotice("bknProject.model.notice.missingCatalogs", projectMissing),
+                  t("bknProject.model.notice.askOwner"),
+                ].join(t("bknProject.sentenceSeparator"))
+          }
           showIcon
           type="error"
         />
@@ -798,13 +813,11 @@ export function ProjectModel({
       </div>
       {notices}
       {draft.items.adding ? (
-        <Alert
-          message={t("bknProject.model.catalogs.adding", {
+        <p className={styles.muted}>
+          {t("bknProject.model.catalogs.adding", {
             count: draft.items.adding.catalogIds.length,
           })}
-          showIcon
-          type="info"
-        />
+        </p>
       ) : null}
       {understanding}
       {holdsExisting ? (
@@ -830,7 +843,7 @@ export function ProjectModel({
         />
       ) : draft.status === "failed" ? (
         <Alert
-          description={
+          message={
             <>
               {t(failureKey(draft.error))}
               {failureKey(draft.error).endsWith("source") && draft.error ? (
@@ -841,7 +854,6 @@ export function ProjectModel({
               ) : null}
             </>
           }
-          message={t("bknProject.model.failed.title")}
           showIcon
           type="error"
         />

@@ -181,8 +181,11 @@ describe("RollbackDialog", () => {
     getRollbackPlanMock.mockResolvedValue(plan());
     renderDialog(false);
     const dialog = within(await screen.findByRole("dialog"));
-    expect(await dialog.findByText("只有项目负责人可以切换运行版本。")).toBeInTheDocument();
-    expect(confirmButton()).toBeDisabled();
+    await waitFor(() => expect(confirmButton()).toBeDisabled());
+    // Who may switch is said when hovering the greyed button.
+    expect(dialog.queryByText("只有项目负责人可以切换运行版本。")).toBeNull();
+    fireEvent.mouseEnter(confirmButton().parentElement!);
+    expect(await screen.findByText("只有项目负责人可以切换运行版本。")).toBeInTheDocument();
   });
 
   it("says it in English", async () => {

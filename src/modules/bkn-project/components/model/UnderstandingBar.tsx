@@ -221,19 +221,18 @@ export function UnderstandingBar({
               </AppButton>
             ) : null
           }
-          description={
-            understandAction?.reason === "not_owner"
-              ? t("bknProject.understand.hint.ownerOnly")
-              : undefined
-          }
-          message={
+          message={[
             unnamed.count !== undefined && unnamed.total !== undefined
               ? t(`bknProject.understand.hint.${onNetwork ? "unnamedNew" : "unnamed"}`, {
                   count: unnamed.count,
                   total: unnamed.total,
                 })
-              : t("bknProject.understand.hint.unnamedUncounted")
-          }
+              : t("bknProject.understand.hint.unnamedUncounted"),
+            // Who may start it, in the same line, when the person cannot.
+            ...(understandAction?.reason === "not_owner"
+              ? [t("bknProject.understand.hint.ownerOnly")]
+              : []),
+          ].join(t("bknProject.sentenceSeparator"))}
           showIcon
           type="info"
         />

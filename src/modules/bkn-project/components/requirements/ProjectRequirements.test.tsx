@@ -519,8 +519,10 @@ describe("ProjectRequirements", () => {
         "还没有业务场景。确认概念模型后，AI 会基于概念模型和动力模型生成场景和问题，再由你审核。",
       ),
     ).toBeInTheDocument();
+    // How documents are used is said on hover beside the line.
+    fireEvent.mouseEnter(screen.getByRole("img", { name: "说明" }));
     expect(
-      screen.getByText("需求文档是可选的；上传后，生成时会参考并引用原文。"),
+      await screen.findByText("需求文档是可选的；上传后，生成时会参考并引用原文。"),
     ).toBeInTheDocument();
     // The documents are managed on the requirements and resources page, not here.
     fireEvent.click(screen.getByRole("button", { name: "管理需求文档" }));
@@ -583,11 +585,8 @@ describe("ProjectRequirements", () => {
     renderPage();
 
     expect(
-      await screen.findByText("这次重新生成没有完成，下面仍是上一版，可以继续编辑和采纳。"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "要生成的内容超出了 AI 一次能写的长度，重试后仍没写完。可以精简需求文档后重新生成。",
+      await screen.findByText(
+        "这次重新生成没有完成，下面仍是上一版，可以继续编辑和采纳。要生成的内容超出了 AI 一次能写的长度，重试后仍没写完。可以精简需求文档后重新生成。",
       ),
     ).toBeInTheDocument();
   });
@@ -637,8 +636,9 @@ describe("ProjectRequirements", () => {
         "还没有业务场景。确认概念模型后，AI 会基于概念模型和动力模型生成场景和问题，再由你审核。",
       ),
     ).toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole("img", { name: "说明" }));
     expect(
-      screen.getByText(
+      await screen.findByText(
         "生成时也会参考需求文档并引用原文；有需求文档时，要先在概念抽取中抽取需求概念。",
       ),
     ).toBeInTheDocument();

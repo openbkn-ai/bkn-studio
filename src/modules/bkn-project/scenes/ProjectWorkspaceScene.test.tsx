@@ -708,7 +708,9 @@ describe("ProjectWorkspaceScene", () => {
     getDraftMock.mockRejectedValueOnce(new Error("down")).mockResolvedValue(draftWithDecisions());
     renderScene();
 
-    expect(await screen.findByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/"what":"bknProject.overview.model.loadFailed"/),
+    ).toBeInTheDocument();
     expect(screen.getByText("Orders network")).toBeInTheDocument();
     fireEvent.click(screen.getByText("common.retry"));
     expect(await screen.findByText("concept graph")).toBeInTheDocument();
@@ -749,14 +751,16 @@ describe("ProjectWorkspaceScene", () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
       });
-      expect(await screen.findByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
+      expect(
+        await screen.findByText(/"what":"bknProject.overview.model.loadFailed"/),
+      ).toBeInTheDocument();
 
       // The next read is under way: the warning stays rather than flashing back to "drafting".
       await act(async () => {
         await vi.advanceTimersByTimeAsync(DRAFT_POLL_MS);
       });
       expect(getDraftMock).toHaveBeenCalledTimes(4);
-      expect(screen.getByText("bknProject.overview.model.loadFailed")).toBeInTheDocument();
+      expect(screen.getByText(/"what":"bknProject.overview.model.loadFailed"/)).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

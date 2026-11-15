@@ -404,7 +404,7 @@ describe("ProjectListScene", () => {
     expect(await screen.findByText('common.total:{"total":7}')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "bknProject.list.refresh" }));
-    expect(await screen.findByText("bknProject.list.loadFailed")).toBeInTheDocument();
+    expect(await screen.findByText(/"what":"bknProject.list.loadFailed"/)).toBeInTheDocument();
     expect(screen.queryByText(/common\.total/)).toBeNull();
 
     fireEvent.click(screen.getByText("common.retry"));

@@ -89,8 +89,10 @@ export function ProjectTargetFields({
           {networksError ? (
             <Alert
               className={styles.alert}
-              description={networksError}
-              message={t("bknProject.create.networksLoadFailed")}
+              message={t("bknProject.failedWithReason", {
+                reason: networksError,
+                what: t("bknProject.create.networksLoadFailed"),
+              })}
               showIcon
               type="error"
             />
@@ -367,8 +369,10 @@ export function NewProjectModal({
         {catalogsError ? (
           <Alert
             className={styles.alert}
-            description={catalogsError}
-            message={t("bknProject.create.catalogsLoadFailed")}
+            message={t("bknProject.failedWithReason", {
+              reason: catalogsError,
+              what: t("bknProject.create.catalogsLoadFailed"),
+            })}
             showIcon
             type="error"
           />

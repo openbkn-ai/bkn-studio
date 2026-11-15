@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { LoadingOutlined } from "@ant-design/icons";
 import { Alert, Select, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -748,7 +749,11 @@ export function ProjectKinetic({
             />
           ) : null}
           {stalled ? <ReadStalledNotice onRefresh={() => void load()} /> : null}
-          {running ? <Alert message={t(`${KINETIC}.running`)} showIcon type="info" /> : null}
+          {running ? (
+            <p className={styles.muted}>
+              <LoadingOutlined /> {t(`${KINETIC}.running`)}
+            </p>
+          ) : null}
           {run?.status === "failed" ? (
             <Alert
               message={t(`${KINETIC}.failed`, { reason: runErrorText(t, run.error) })}

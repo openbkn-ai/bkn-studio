@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Modal } from "antd";
+import { Checkbox, Modal } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -75,13 +75,11 @@ export function IdentityDialog({
       <div className={styles.stack}>
         <p className={styles.muted}>{t("bknProject.model.identity.intro")}</p>
         {suggested ? (
-          <Alert
-            message={t("bknProject.model.identity.suggested", {
+          <span>
+            {t("bknProject.model.identity.suggested", {
               properties: suggested.map(label).join(t("bknProject.listSeparator")),
             })}
-            showIcon
-            type="success"
-          />
+          </span>
         ) : objectType.needsIdentity && candidates.length ? (
           <span className={styles.muted}>{t("bknProject.model.identity.noSuggestion")}</span>
         ) : null}
@@ -105,7 +103,7 @@ export function IdentityDialog({
             value={selected}
           />
         ) : (
-          <Alert message={t("bknProject.model.identity.none")} showIcon type="info" />
+          <span className={styles.muted}>{t("bknProject.model.identity.none")}</span>
         )}
         {/* The suggestion was counted; only another combination goes uncounted. */}
         {selected.length > 1 && !isSuggested ? (

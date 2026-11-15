@@ -925,6 +925,12 @@ describe("ProjectConcepts", () => {
   it("is read only for others", async () => {
     renderConcepts(false);
 
+    // Others see the extract button greyed, who may extract said on hover.
+    const extract = await screen.findByRole("button", {
+      name: /^bknProject\.concepts\.(re)?extract$/,
+    });
+    expect(extract).toBeDisabled();
+    fireEvent.mouseEnter(extract.parentElement!);
     expect(await screen.findByText("bknProject.concepts.readOnly")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /confirmOf/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /runOne/ })).toBeNull();

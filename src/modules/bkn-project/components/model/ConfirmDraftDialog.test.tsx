@@ -99,6 +99,12 @@ function renderConfirm(shown = draft) {
 const okButton = () =>
   within(screen.getByRole("dialog")).getByRole("button", { name: /^确\s*认$/ });
 
+/** Why a greyed button waits, read from the hover it says it in. */
+async function hoverReason(button: HTMLElement) {
+  fireEvent.mouseEnter(button.parentElement!);
+  return screen.findByRole("tooltip");
+}
+
 describe("ConfirmDraft", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -152,16 +158,17 @@ describe("ConfirmDraft", () => {
     expect(dialog.getByText(/确认后会自动校验数据/)).toBeInTheDocument();
 
     expect(okButton()).toBeDisabled();
-    // The button that cannot be pressed says what to do first.
-    expect(
-      dialog.getByText("先决定上面这些项：去采纳，或勾选“暂不纳入这些项”"),
-    ).toBeInTheDocument();
+    // The button that cannot be pressed says what to do first, on hover.
+    expect(await hoverReason(okButton())).toHaveTextContent(
+      "先决定上面这些项：去采纳，或勾选“暂不纳入这些项”",
+    );
     fireEvent.click(dialog.getByText("暂不纳入这些项"));
     expect(okButton()).toBeDisabled();
-    expect(dialog.queryByText("先决定上面这些项：去采纳，或勾选“暂不纳入这些项”")).toBeNull();
-    expect(dialog.getByText("勾选上面的选项后才能确认")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("tooltip")).toHaveTextContent("勾选上面的选项后才能确认"),
+    );
     fireEvent.click(dialog.getByText("知道这些表没有参与起草，仍然确认"));
-    expect(dialog.queryByText("勾选上面的选项后才能确认")).toBeNull();
+    expect(okButton()).toBeEnabled();
     fireEvent.click(okButton());
 
     await waitFor(() =>
@@ -264,9 +271,8 @@ describe("ConfirmDraft", () => {
 
     const button = await screen.findByRole("button", { name: "确认模型" });
     expect(button).toBeDisabled();
-    // Said on the page, without hovering the button.
-    expect(screen.getByRole("status")).toHaveTextContent("2 个已采纳的对象类还需要选定唯一标识");
-    expect(button).toHaveAttribute("aria-describedby", "confirm-blocked-reason");
+    // Said when hovering the greyed button.
+    expect(await hoverReason(button)).toHaveTextContent("2 个已采纳的对象类还需要选定唯一标识");
   });
 
   /** A draft whose first relation links a long-text field to an integer identity. */
@@ -308,13 +314,15 @@ describe("ConfirmDraft", () => {
     });
     renderConfirm(linked);
 
-    expect(await screen.findByRole("button", { name: "确认模型" })).toBeDisabled();
+    const button = await screen.findByRole("button", { name: "确认模型" });
+    expect(button).toBeDisabled();
+    const reason = await hoverReason(button);
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(reason).toHaveTextContent(
         `关系类“${relation.name}”连不上记录：知识库对象的字段“关联行号”是文本，而“${target.name}”用来对应的“行号”是整数`,
       ),
     );
-    expect(screen.getByRole("status")).toHaveTextContent("请把“关联行号”的数据类型改为整数");
+    expect(reason).toHaveTextContent("请把“关联行号”的数据类型改为整数");
   });
 
   it("counts the relations whose linking fields cannot match when it cannot name them", async () => {
@@ -327,9 +335,9 @@ describe("ConfirmDraft", () => {
     getProjectPendingMock.mockRejectedValue(new Error("offline"));
     renderConfirm();
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "2 个已采纳的关系类，用来对应的两个字段类型对不上",
-    );
+    expect(
+      await hoverReason(await screen.findByRole("button", { name: "确认模型" })),
+    ).toHaveTextContent("2 个已采纳的关系类，用来对应的两个字段类型对不上");
   });
 
   it("says which relation a confirmation was refused for when its fields cannot match", async () => {

@@ -1373,7 +1373,8 @@ describe("ProjectKinetic", () => {
         buttons: panel
           .getAllByRole("button")
           .map((button) => button.textContent || button.getAttribute("aria-label")),
-        guide: panel.getAllByRole("alert").map((alert) => alert.textContent),
+        // The guide is one quiet line, with the upgrade link when the edition locks metrics.
+        guide: panel.getByText(/先记录需求|指标助手/, { selector: "p" }).textContent,
       };
       unmount();
     }
@@ -1386,9 +1387,7 @@ describe("ProjectKinetic", () => {
             "去实现指标",
             "关 闭",
           ],
-          "guide": [
-            "打开知识网络的指标助手，已带入名称、业务定义和关联对象。保存后回到这里，会自动连上。",
-          ],
+          "guide": "打开知识网络的指标助手，已带入名称、业务定义和关联对象。保存后回到这里，会自动连上。",
         },
         "hidden": {
           "badge": false,
@@ -1396,9 +1395,7 @@ describe("ProjectKinetic", () => {
             "Close",
             "关 闭",
           ],
-          "guide": [
-            "当前版本没有指标功能，可以先记录需求。",
-          ],
+          "guide": "当前版本没有指标功能，可以先记录需求。",
         },
         "locked": {
           "badge": true,
@@ -1407,9 +1404,7 @@ describe("ProjectKinetic", () => {
             "了解升级",
             "关 闭",
           ],
-          "guide": [
-            "指标是专业版功能，升级后可以实现。可以先记录需求。了解升级",
-          ],
+          "guide": "指标是专业版功能，升级后可以实现。可以先记录需求。了解升级",
         },
       }
     `);

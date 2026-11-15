@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { LoadingOutlined } from "@ant-design/icons";
 import { Alert, Input, Select, Spin } from "antd";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -169,7 +170,11 @@ export function QuestionDevPanel({
         <span className={styles.spacer} />
         {generate}
       </div>
-      {generating ? <Alert message={t(`${PREFIX}.generating`)} showIcon type="info" /> : null}
+      {generating ? (
+        <p className={styles.muted}>
+          <LoadingOutlined /> {t(`${PREFIX}.generating`)}
+        </p>
+      ) : null}
       {dev.status === "failed" ? (
         <Alert message={draftErrorText(t, dev.error)} showIcon type="error" />
       ) : null}
@@ -179,7 +184,7 @@ export function QuestionDevPanel({
         <Alert message={t(`${PREFIX}.ontologyChanged`)} showIcon type="warning" />
       ) : null}
       {dev.status === "ready" && dev.testsNote ? (
-        <Alert message={testsNoteText(t, dev.testsNote)} showIcon type="info" />
+        <p className={styles.muted}>{testsNoteText(t, dev.testsNote)}</p>
       ) : null}
       {dev.status === "ready" && !dev.tests.length && dev.noTestsReason ? (
         <p className={styles.muted}>{t(`${PREFIX}.noTests`, { reason: dev.noTestsReason })}</p>
