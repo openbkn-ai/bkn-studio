@@ -399,17 +399,39 @@ describe("ProjectConcepts", () => {
     expect(row.textContent).not.toContain("bknProject.concepts.run.partial");
   });
 
-  it("counts four figures over the data side and lists it grouped by its data", async () => {
+  it("sums up the data side on one line that filters by status, with no source filter", async () => {
     renderConcepts();
 
-    const stats = (await screen.findByText("bknProject.concepts.stats.total")).closest("dl")!;
-    const figure = (key: string) =>
-      within(stats).getByText(`bknProject.concepts.stats.${key}`).nextElementSibling?.textContent;
-    expect(figure("total")).toBe("5");
-    expect(figure("pending")).toBe("2");
-    expect(figure("confirmed")).toBe("2");
-    expect(figure("excluded")).toBe("1");
-    expect(within(stats).getByText('bknProject.concepts.stats.network:{"count":1}')).toBeTruthy();
+    const summary = within(
+      await screen.findByRole("group", { name: "bknProject.concepts.filter.status" }),
+    );
+    const figure = (label: RegExp) => summary.getByRole("button", { name: label });
+    expect(figure(/summary\.total/).textContent).toBe(
+      'bknProject.concepts.summary.total:{"count":5}',
+    );
+    expect(figure(/status\.pending/).textContent).toBe("bknProject.concepts.status.pending2");
+    expect(figure(/status\.pending/).getAttribute("aria-pressed")).toBe("true");
+    expect(figure(/status\.confirmed/).textContent).toBe("bknProject.concepts.status.confirmed2");
+    expect(figure(/summary\.network/).textContent).toBe(
+      'bknProject.concepts.summary.network:{"count":1}',
+    );
+    expect(figure(/status\.excluded/).textContent).toBe("bknProject.concepts.status.excluded1");
+    // The source shows on each row and its group; there is no filter for it.
+    expect(screen.queryByText("bknProject.concepts.filter.origin")).toBeNull();
+    expect(screen.queryByText("bknProject.concepts.origin.knowledgeBase")).toBeNull();
+
+    // What is confirmed counts the network's too.
+    fireEvent.click(figure(/status\.confirmed/));
+    expect(await screen.findByText("Supplier")).toBeTruthy();
+    expect(screen.getByText("Order")).toBeTruthy();
+    expect(screen.queryByText("Customer")).toBeNull();
+    fireEvent.click(figure(/summary\.network/));
+    await waitFor(() => expect(screen.queryByText("Order")).toBeNull());
+    expect(screen.getByText("Supplier")).toBeTruthy();
+    fireEvent.click(figure(/status\.excluded/));
+    expect(await screen.findByText("Sample meta")).toBeTruthy();
+    fireEvent.click(figure(/status\.pending/));
+    await screen.findByText("Customer");
 
     // At first only what waits for a person: the structured group, then the unstructured one.
     const groups = screen.getAllByText(/bknProject.concepts.group\./);
@@ -421,12 +443,55 @@ describe("ProjectConcepts", () => {
     expect(screen.queryByText("Order")).toBeNull();
 
     // All of them: the network's comes last of its group, with the blue dot.
-    fireEvent.click(screen.getAllByText("bknProject.concepts.filter.all")[1]);
+    fireEvent.click(screen.getByRole("button", { name: /summary\.total/ }));
     const names = (await screen.findAllByText(/^(Customer|Order|Supplier|Sample meta)$/)).map(
       (node) => node.textContent,
     );
     expect(names.at(-1)).toBe("Supplier");
     expect((await row("Supplier")).getAllByRole("img").length).toBeGreaterThan(0);
+  });
+
+  it("shows one source's concepts from its row, and lets the person show them all again", async () => {
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    fireEvent.click(tables.getByRole("button", { name: "bknProject.concepts.sources.view" }));
+    expect(
+      await screen.findByText(
+        'bknProject.concepts.filter.onlyOrigin:{"origin":"bknProject.concepts.origin.table"}',
+      ),
+    ).toBeTruthy();
+    expect(await screen.findByText("Order")).toBeTruthy();
+    expect(screen.queryByText("Supplier")).toBeNull();
+    expect(screen.queryByText("Certificate")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("bknProject.concepts.filter.clearOrigin"));
+    expect(await screen.findByText("Supplier")).toBeTruthy();
+    expect(screen.getByText("Certificate")).toBeTruthy();
+    expect(screen.queryByText(/filter\.onlyOrigin/)).toBeNull();
+  });
+
+  it("links a source's concepts still to confirm from its row", async () => {
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    const tables = within(sources.querySelector('[data-source="table"]') as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: /summary\.total/ }));
+    await screen.findByText("Order");
+    fireEvent.click(
+      tables.getByRole("button", { name: 'bknProject.concepts.sources.pending:{"count":1}' }),
+    );
+    expect(await screen.findByText("Customer")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Order")).toBeNull());
+    expect(screen.queryByText("Certificate")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /status\.pending/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("confirms and leaves out a concept", async () => {

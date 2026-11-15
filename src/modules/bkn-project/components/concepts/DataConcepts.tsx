@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Checkbox, Input, Modal, Segmented, Select, Tooltip } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
+import { Checkbox, Input, Modal, Select, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { DescriptionTooltip } from "@/modules/bkn-project/components/ClampedText";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import type { Concept, ConceptVerdict } from "@/modules/bkn-project/types/concepts";
@@ -156,7 +158,10 @@ export function DataConcepts({
           const status = statusOf(concept);
           return (
             (filters.origin === "all" || originOf(concept) === filters.origin) &&
-            (filters.status === "all" || status === filters.status) &&
+            (filters.status === "all" ||
+              status === filters.status ||
+              // What is confirmed counts the network's too, as the summary does.
+              (filters.status === "confirmed" && status === "network")) &&
             (filters.verdict === "all" || concept.verdict === filters.verdict) &&
             (!filters.query ||
               [concept.name, ...concept.aliases].some((name) =>
@@ -445,11 +450,11 @@ export function DataConcepts({
         const { concept } = row;
         return (
           <span className={styles.actions}>
-            <Tooltip title={reasonOf(concept)}>
+            <DescriptionTooltip placement="topLeft" title={reasonOf(concept)}>
               <span className={styles.as} tabIndex={0}>
                 {asLabel(concept)}
               </span>
-            </Tooltip>
+            </DescriptionTooltip>
             {concept.verdict === "kinetic" && statusOf(concept) === "confirmed" ? (
               <AppButton onClick={onGoToKinetic} size="small" type="link">
                 {t(`${PREFIX}.goToKinetic`)}
@@ -493,7 +498,28 @@ export function DataConcepts({
       : []),
   ];
 
-  const options = (pairs: [string, string][]) => pairs.map(([value, label]) => ({ label, value }));
+  // The summary line is the status filter: each figure shows its concepts, the one shown stands out.
+  const summaryItem = (status: DataFilters["status"], label: string, count?: number) => (
+    <button
+      aria-pressed={filters.status === status}
+      className={
+        status === "pending" && count
+          ? `${styles.summaryItem} ${styles.pending}`
+          : styles.summaryItem
+      }
+      key={status}
+      onClick={() => setFilter({ status })}
+      type="button"
+    >
+      <span>{label}</span>
+      {count === undefined ? null : <span className={styles.summaryCount}>{count}</span>}
+    </button>
+  );
+  const separator = (
+    <span aria-hidden className={styles.summarySeparator}>
+      {t(`${PREFIX}.summary.separator`)}
+    </span>
+  );
 
   const mergeTargetList = merging
     ? mergeTargets(merging.concept, concepts).filter(
@@ -503,64 +529,33 @@ export function DataConcepts({
 
   return (
     <div className={styles.tab}>
-      <dl className={styles.stats} data-region="stats">
-        <div className={styles.stat}>
-          <dt>{t(`${PREFIX}.stats.total`)}</dt>
-          <dd>{stats.total}</dd>
-        </div>
-        {(
-          [
-            ["pending", stats.pending],
-            ["confirmed", stats.confirmed],
-            ["excluded", stats.excluded],
-          ] as const
-        ).map(([status, count]) => (
-          <button
-            className={styles.stat}
-            key={status}
-            onClick={() => setFilter({ status })}
-            type="button"
-          >
-            <dt>{t(`${PREFIX}.stats.${status}`)}</dt>
-            <dd>{count}</dd>
-            {status === "confirmed" && stats.network ? (
-              <span className={styles.muted}>
-                {t(`${PREFIX}.stats.network`, { count: stats.network })}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </dl>
       <div className={styles.filters}>
-        <span className={styles.muted}>{t(`${PREFIX}.filter.origin`)}</span>
-        <Segmented<DataFilters["origin"]>
-          onChange={(origin) => setFilter({ origin })}
-          options={
-            options([
-              ["all", t(`${PREFIX}.filter.all`)],
-              ["network", t(`${PREFIX}.origin.network`)],
-              ["table", t(`${PREFIX}.origin.table`)],
-              ["knowledgeBase", t(`${PREFIX}.origin.knowledgeBase`)],
-            ]) as { label: string; value: DataFilters["origin"] }[]
-          }
-          size="small"
-          value={filters.origin}
-        />
-        <span className={styles.muted}>{t(`${PREFIX}.filter.status`)}</span>
-        <Segmented<DataFilters["status"]>
-          onChange={(status) => setFilter({ status })}
-          options={
-            options([
-              ["pending", t(`${PREFIX}.status.pending`)],
-              ["confirmed", t(`${PREFIX}.status.confirmed`)],
-              ["network", t(`${PREFIX}.status.network`)],
-              ["excluded", t(`${PREFIX}.status.excluded`)],
-              ["all", t(`${PREFIX}.filter.all`)],
-            ]) as { label: string; value: DataFilters["status"] }[]
-          }
-          size="small"
-          value={filters.status}
-        />
+        <div
+          aria-label={t(`${PREFIX}.filter.status`)}
+          className={styles.summary}
+          data-region="summary"
+          role="group"
+        >
+          {summaryItem("all", t(`${PREFIX}.summary.total`, { count: stats.total }))}
+          {separator}
+          {summaryItem("pending", t(`${PREFIX}.status.pending`), stats.pending)}
+          {separator}
+          {summaryItem("confirmed", t(`${PREFIX}.status.confirmed`), stats.confirmed)}
+          {stats.network
+            ? summaryItem("network", t(`${PREFIX}.summary.network`, { count: stats.network }))
+            : null}
+          {separator}
+          {summaryItem("excluded", t(`${PREFIX}.status.excluded`), stats.excluded)}
+        </div>
+        {filters.origin !== "all" ? (
+          <Tag
+            closable
+            closeIcon={<CloseOutlined aria-label={t(`${PREFIX}.filter.clearOrigin`)} />}
+            onClose={() => setFilter({ origin: "all" })}
+          >
+            {t(`${PREFIX}.filter.onlyOrigin`, { origin: t(`${PREFIX}.origin.${filters.origin}`) })}
+          </Tag>
+        ) : null}
         <Select<DataFilters["verdict"]>
           aria-label={t(`${PREFIX}.filter.verdict`)}
           className={styles.verdictFilter}

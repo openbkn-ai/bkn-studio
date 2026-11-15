@@ -334,6 +334,9 @@ export const bknProjectEnUS = {
           },
         },
         view: "View concepts",
+        pending: "{{count}} to confirm",
+        pending_one: "{{count}} to confirm",
+        pending_other: "{{count}} to confirm",
         runOne: {
           first: "Extract only this",
           again: "Extract only this again",
@@ -347,14 +350,14 @@ export const bknProjectEnUS = {
         network_other:
           "The network already has {{count}} concepts ({{structured}} bound to data tables, {{unstructured}} to knowledge-base extraction data); they need no extraction and are listed below.",
       },
-      stats: {
-        total: "Concepts",
-        pending: "To confirm",
-        confirmed: "Confirmed",
-        excluded: "Excluded",
-        network: "Includes {{count}} the network has",
-        network_one: "Includes {{count}} the network has",
-        network_other: "Includes {{count}} the network has",
+      summary: {
+        total: "{{count}} concepts",
+        total_one: "{{count}} concept",
+        total_other: "{{count}} concepts",
+        network: "(incl. {{count}} already in the network)",
+        network_one: "(incl. {{count}} already in the network)",
+        network_other: "(incl. {{count}} already in the network)",
+        separator: "·",
       },
       verdict: {
         object: "Object",
@@ -405,9 +408,9 @@ export const bknProjectEnUS = {
         blocked: "{{verdict}} · {{blocked}}",
       },
       filter: {
-        all: "All",
-        origin: "Source",
-        status: "Status",
+        status: "Filter by status",
+        onlyOrigin: "Showing only: {{origin}}",
+        clearOrigin: "Show all sources",
         verdict: "Type",
         allVerdicts: "All types",
         search: "Search concepts",
@@ -1619,6 +1622,10 @@ export const bknProjectEnUS = {
         InvalidIncrementalKey: "The update-time field needs to be a date or time property.",
       },
     },
+    notices: {
+      expand: "Show",
+      collapse: "Hide",
+    },
     collapsedList: {
       showAll: "Show all ({{count}})",
       showAll_one: "Show all ({{count}})",
@@ -1872,17 +1879,26 @@ export const bknProjectEnUS = {
         confirmModel: "Confirm the concept model first",
       },
       select: {
-        column: "Select",
         item: "Select “{{name}}” to ask AI about",
-        hint: {
-          kinetic:
-            "Tick items, then click Ask AI: the ticked items go with your question, as in “merge these two”.",
-          scenarios:
-            "Tick scenarios or questions, then click Ask AI: the ticked items go with your question, as in “split this scenario in two”.",
-        },
+        selected: "{{count}} selected",
+        selected_one: "{{count}} selected",
+        selected_other: "{{count}} selected",
+        bring: "Discuss with AI",
       },
       sources: {
         title: "What AI reads",
+        summary: {
+          label: "What AI reads: ",
+          separator: " · ",
+          expand: "Show",
+          collapse: "Hide",
+          objectTypes: "{{count}} object types",
+          objectTypes_one: "{{count}} object type",
+          objectTypes_other: "{{count}} object types",
+          knowledge: "{{count}} knowledge base files",
+          knowledge_one: "{{count}} knowledge base file",
+          knowledge_other: "{{count}} knowledge base files",
+        },
         view: "View",
         uploadDocuments: "Upload requirement documents",
         goToModel: "Go to concept modeling",
@@ -2110,10 +2126,6 @@ export const bknProjectEnUS = {
     kinetic: {
       intro:
         "Find what the concept model needs computed or done beyond what it stores: metrics, functions, Skills, and action types with the APIs and MCP tools they run. Link what the knowledge network already has; metrics and action types can be built in the knowledge network and are linked when you come back.",
-      liveNoteRunning:
-        "After creating or changing metrics or action types in the knowledge network, commit those changes before the next release.",
-      liveNote:
-        "Metrics and action types can be created once their object types are in the live knowledge network: a new project records them first and implements them after its first release. After creating something live, commit the live changes before the next release.",
       analyze: "Analyze kinetic needs",
       reanalyze: "Analyze again",
       startOver: "Start over",
@@ -2140,7 +2152,7 @@ export const bknProjectEnUS = {
       liveUnavailable:
         "The live knowledge network cannot be read right now; what is implemented may be incomplete.",
       beforeRelease:
-        "Implementations can be seen and linked after the first release. You can analyse and record kinetic needs now.",
+        "Implementations can be linked after the project's first release; you can analyze and record kinetic needs now.",
       liveBeforeRelease:
         "The knowledge network is already running: implementations it has, marked with a blue dot, can be linked directly.",
       none: "No kinetic needs yet. Analyzing lists the metrics, functions and Skills needed; you can also add them.",
@@ -2184,9 +2196,15 @@ export const bknProjectEnUS = {
         openNeed: "View need “{{name}}”",
       },
       stats: {
-        implemented: "Implemented",
-        pending: "To implement",
-        waitingRelease: "After the first release",
+        total: "{{count}} needs: ",
+        total_one: "{{count}} need: ",
+        total_other: "{{count}} needs: ",
+        separator: " · ",
+        implemented: "{{count}} implemented",
+        broken: "{{count}} broken",
+        pending: "{{count}} to implement",
+        waitingRelease: "{{count}} after the first release",
+        recordOnly: "{{count}} recorded only",
       },
       filter: {
         kind: "Kind",
@@ -2421,16 +2439,15 @@ export const bknProjectEnUS = {
           "{{count}} item AI generated waits for your review: accept it if it looks right; edit it if it needs changes, which accepts it.",
         waiting_other:
           "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
-        outdated: "The concept model changed; some scenarios may be outdated",
-        outdatedDetail:
-          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
-        outdatedDetail_one:
-          "The concept model {{count}} question uses changed in structure. Generating again keeps what was accepted.",
-        outdatedDetail_other:
-          "The concept model {{count}} questions use changed in structure. Generating again keeps what was accepted.",
-        uncovered: "{{count}} object types have no scenario yet: {{names}}",
-        uncovered_one: "{{count}} object type has no scenario yet: {{names}}",
-        uncovered_other: "{{count}} object types have no scenario yet: {{names}}",
+        outdated:
+          "The concept model changed, so {{count}} questions may be outdated; generating again keeps what was accepted.",
+        outdated_one:
+          "The concept model changed, so {{count}} question may be outdated; generating again keeps what was accepted.",
+        outdated_other:
+          "The concept model changed, so {{count}} questions may be outdated; generating again keeps what was accepted.",
+        uncovered: "{{count}} object types have no scenario yet",
+        uncovered_one: "{{count}} object type has no scenario yet",
+        uncovered_other: "{{count}} object types have no scenario yet",
       },
       drafting:
         "Generating the business scenarios and questions from the concept model and the kinetic model; this usually takes a minute or two.",
@@ -3474,6 +3491,10 @@ export const bknProjectEnUS = {
         outdated: "These are the results for the last confirmation.",
         coverage: "{{counted}} of {{total}} checked",
         orphansHint: "Records without a match are reported only; they do not fail the check.",
+        tab: "{{title}} {{count}}",
+        tabProblems: "{{count}} issues",
+        tabProblems_one: "{{count}} issue",
+        tabProblems_other: "{{count}} issues",
         run: "Check again",
         started: "Checking again",
         failed: "The check could not start. Try again later.",

@@ -305,6 +305,9 @@ export const bknProjectZhCN = {
           knowledgeBase: { reading: "读取文件", analyzing: "抽取概念", writing: "写入数据" },
         },
         view: "看概念",
+        pending: "待确认 {{count}} 个",
+        pending_one: "待确认 {{count}} 个",
+        pending_other: "待确认 {{count}} 个",
         runOne: {
           first: "只抽这一类",
           again: "只重抽这一类",
@@ -318,14 +321,14 @@ export const bknProjectZhCN = {
         network_other:
           "网络已有 {{count}} 个概念（{{structured}} 个绑定数据表，{{unstructured}} 个绑定知识库抽取数据），不用抽取，直接列在下面。",
       },
-      stats: {
-        total: "概念总数",
-        pending: "待确认",
-        confirmed: "已确认",
-        excluded: "不纳入",
-        network: "含网络已有 {{count}} 个",
-        network_one: "含网络已有 {{count}} 个",
-        network_other: "含网络已有 {{count}} 个",
+      summary: {
+        total: "共 {{count}} 个概念",
+        total_one: "共 {{count}} 个概念",
+        total_other: "共 {{count}} 个概念",
+        network: "（含网络已有 {{count}}）",
+        network_one: "（含网络已有 {{count}}）",
+        network_other: "（含网络已有 {{count}}）",
+        separator: "·",
       },
       verdict: {
         object: "对象",
@@ -374,9 +377,9 @@ export const bknProjectZhCN = {
         blocked: "{{verdict}} · {{blocked}}",
       },
       filter: {
-        all: "全部",
-        origin: "来源",
-        status: "状态",
+        status: "按状态筛选",
+        onlyOrigin: "只看{{origin}}",
+        clearOrigin: "看全部来源",
         verdict: "类型",
         allVerdicts: "全部类型",
         search: "搜索概念",
@@ -1513,6 +1516,10 @@ export const bknProjectZhCN = {
         InvalidIncrementalKey: "更新时间字段需要是日期或时间类型的属性。",
       },
     },
+    notices: {
+      expand: "展开",
+      collapse: "收起",
+    },
     collapsedList: {
       showAll: "展开全部（共 {{count}} 条）",
       showAll_one: "展开全部（共 {{count}} 条）",
@@ -1745,15 +1752,26 @@ export const bknProjectZhCN = {
         confirmModel: "先确认概念模型",
       },
       select: {
-        column: "选择",
         item: "选择「{{name}}」用来问 AI",
-        hint: {
-          kinetic: "勾选条目后点“问 AI”，所选条目会带进问题，比如“这两个合并”。",
-          scenarios: "勾选场景或问题后点“问 AI”，所选内容会带进问题，比如“这个场景拆成两个”。",
-        },
+        selected: "已选 {{count}} 条",
+        selected_one: "已选 {{count}} 条",
+        selected_other: "已选 {{count}} 条",
+        bring: "带入 AI 讨论",
       },
       sources: {
         title: "AI 参考的资料",
+        summary: {
+          label: "AI 参考的资料：",
+          separator: " · ",
+          expand: "展开",
+          collapse: "收起",
+          objectTypes: "对象类 {{count}} 个",
+          objectTypes_one: "对象类 {{count}} 个",
+          objectTypes_other: "对象类 {{count}} 个",
+          knowledge: "知识库 {{count}} 份",
+          knowledge_one: "知识库 {{count}} 份",
+          knowledge_other: "知识库 {{count}} 份",
+        },
         view: "查看",
         uploadDocuments: "去上传需求文档",
         goToModel: "去概念建模",
@@ -1973,9 +1991,6 @@ export const bknProjectZhCN = {
     kinetic: {
       intro:
         "分析概念模型之外还需要哪些计算和操作能力：指标、函数、Skill，以及行动类和它绑定的 API、MCP 工具。知识网络里已有的直接连接；指标和行动类可以去知识网络实现，保存后回到这里连上。",
-      liveNoteRunning: "在知识网络里新建或修改指标、行动类之后，下次发布前要先提交线上的修改。",
-      liveNote:
-        "指标和行动类要等关联对象进入线上知识网络才能创建：新项目可以先记录，首次发布后再实现。在线上新建之后，下次发布前要先提交线上的修改。",
       analyze: "分析动力需求",
       reanalyze: "重新分析",
       startOver: "全部重来",
@@ -1998,7 +2013,7 @@ export const bknProjectZhCN = {
       runStale: "需求文档或文档类型在上次分析之后有变化，建议重新分析。",
       loadFailed: "动力需求暂时读取不到",
       liveUnavailable: "线上知识网络暂时读不到，实现情况可能不完整。",
-      beforeRelease: "首次发布后才能查看和连接实现。现在可以先分析和记录动力需求。",
+      beforeRelease: "项目首次发布后才能连接实现；现在可以先分析和记录动力需求。",
       liveBeforeRelease: "知识网络已在运行，网络里已有的实现（标有蓝点）可以直接连接。",
       none: "还没有动力需求。分析后会列出需要的指标、函数和 Skill，也可以手工添加。",
       analyzedCovered:
@@ -2037,9 +2052,15 @@ export const bknProjectZhCN = {
         openNeed: "查看需求「{{name}}」",
       },
       stats: {
-        implemented: "已实现",
-        pending: "待实现",
-        waitingRelease: "待首次发布后实现",
+        total: "共 {{count}} 条：",
+        total_one: "共 {{count}} 条：",
+        total_other: "共 {{count}} 条：",
+        separator: " · ",
+        implemented: "已实现 {{count}}",
+        broken: "实现已失效 {{count}}",
+        pending: "待实现 {{count}}",
+        waitingRelease: "待首次发布后实现 {{count}}",
+        recordOnly: "仅记录 {{count}}",
       },
       filter: {
         kind: "类型",
@@ -2258,14 +2279,12 @@ export const bknProjectZhCN = {
           "还有 {{count}} 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
         waiting_other:
           "还有 {{count}} 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
-        outdated: "概念模型有变化，部分场景可能过期",
-        outdatedDetail: "{{count}} 个问题用到的概念模型结构变了。重新生成会保留已采纳的部分。",
-        outdatedDetail_one: "{{count}} 个问题用到的概念模型结构变了。重新生成会保留已采纳的部分。",
-        outdatedDetail_other:
-          "{{count}} 个问题用到的概念模型结构变了。重新生成会保留已采纳的部分。",
-        uncovered: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
-        uncovered_one: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
-        uncovered_other: "还有 {{count}} 个对象类没有场景覆盖：{{names}}",
+        outdated: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
+        outdated_one: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
+        outdated_other: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
+        uncovered: "还有 {{count}} 个对象类没有场景覆盖",
+        uncovered_one: "还有 {{count}} 个对象类没有场景覆盖",
+        uncovered_other: "还有 {{count}} 个对象类没有场景覆盖",
       },
       drafting: "正在基于概念模型和动力模型生成业务场景和问题，通常需要一两分钟。",
       draftingLarge:
@@ -3230,6 +3249,10 @@ export const bknProjectZhCN = {
         outdated: "这是上次确认时的校验结果。",
         coverage: "已核对 {{counted}} / {{total}} 项",
         orphansHint: "找不到对应记录只作提示，不影响校验结果。",
+        tab: "{{title}} {{count}}",
+        tabProblems: "{{count}} 项有问题",
+        tabProblems_one: "{{count}} 项有问题",
+        tabProblems_other: "{{count}} 项有问题",
         run: "重新校验",
         started: "已开始重新校验",
         failed: "没能开始校验，请稍后重试",
