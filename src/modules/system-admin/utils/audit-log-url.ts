@@ -14,3 +14,8 @@ export function buildAuditLogHref(actorId: string) {
   params.set(AUDIT_ACTOR_MATCH_PARAM, "exact");
   return `/system/audit?${params.toString()}`;
 }
+
+export function buildUserManagementAuditHref(userId: string) {
+  const params = new URLSearchParams({ target_type: "user", target_id: userId });
+  return `/system/audit?${params.toString()}`;
+}

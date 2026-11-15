@@ -955,6 +955,10 @@ export const bknTraceZhCN = {
       businessConversationSuffix: " 的业务会话",
       conversationId: "Conversation ID",
       actorPlaceholder: "操作者",
+      targetUserPlaceholder: "被操作用户 ID（精确匹配）",
+      targetUserLabel: "被操作用户",
+      targetUserHint:
+        "查询该用户的开户、修改、删除等管理记录。按用户 ID 区分同账号重建的不同用户；旧记录未保存账号时，无法按账号查询。",
       columns: {
         action: "操作",
         actor: "操作者",
@@ -968,6 +972,7 @@ export const bknTraceZhCN = {
         "查看用户和管理者对 OpenBKN 平台执行的操作，并通过真实关联进入 Trace 或业务溯源。",
       emptyAssociated: "未查询到匹配关联标识和当前条件的已记录日志。",
       emptyRange: "未查询到匹配条件的已记录日志。",
+      emptyAuditRange: "在所选时间及可用审计范围内未找到记录。",
       endTime: "结束时间",
       modulePlaceholder: "全部业务模块",
       outcomePlaceholder: "结果",

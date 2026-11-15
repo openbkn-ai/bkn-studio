@@ -1017,6 +1017,10 @@ export const bknTraceEnUS = {
       businessConversationSuffix: "'s business conversation",
       conversationId: "Conversation ID",
       actorPlaceholder: "Actor",
+      targetUserPlaceholder: "Target user ID (exact match)",
+      targetUserLabel: "Target user",
+      targetUserHint:
+        "Find account creation, changes and deletion affecting this user. User IDs distinguish recreated accounts. Historical records without account snapshots cannot be searched by account name.",
       columns: {
         action: "Action",
         actor: "Actor",
@@ -1030,6 +1034,8 @@ export const bknTraceEnUS = {
         "Review user and administrator operations on OpenBKN, with exact links to related traces and business provenance.",
       emptyAssociated: "No recorded logs match the associated identifier and current filters.",
       emptyRange: "No recorded logs match the current filters.",
+      emptyAuditRange:
+        "No records were found within the selected time and available audit coverage.",
       endTime: "End time",
       modulePlaceholder: "All business modules",
       outcomePlaceholder: "Outcome",

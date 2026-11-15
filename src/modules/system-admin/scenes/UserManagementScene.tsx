@@ -47,7 +47,10 @@ import {
 } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment, AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
 import { departmentInputFrom } from "@/modules/system-admin/utils/admin-helpers";
-import { buildAuditLogHref } from "@/modules/system-admin/utils/audit-log-url";
+import {
+  buildAuditLogHref,
+  buildUserManagementAuditHref,
+} from "@/modules/system-admin/utils/audit-log-url";
 import { extractSystemAdminErrorMessage } from "@/modules/system-admin/utils/system-admin-error-message";
 import {
   applyUserManagementFilters,
@@ -407,6 +410,10 @@ export function UserManagementScene() {
       }
       if (canViewAudit) {
         items.push({
+          key: "managementAudit",
+          label: t("systemAdmin.users.actions.viewManagementAudit"),
+        });
+        items.push({
           key: "auditLogs",
           label: t("systemAdmin.users.actions.viewAuditLogs"),
         });
@@ -438,6 +445,9 @@ export function UserManagementScene() {
           }
           if (key === "auditLogs") {
             void navigate(buildAuditLogHref(user.id));
+          }
+          if (key === "managementAudit") {
+            void navigate(buildUserManagementAuditHref(user.id));
           }
         },
       };
