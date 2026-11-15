@@ -16,8 +16,10 @@ import type { ColumnsType } from "antd/es/table";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { definitionDetailPath } from "@/modules/knowledge-network/components/definition-declarations/definition-path";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
@@ -351,7 +353,12 @@ export function OverviewOntologyBlock({
         render: (_, entity) => (
           <span className={styles.tblName}>
             <span className={styles.dot} style={{ background: entity.color || DEFAULT_COLOR }} />
-            <span>{entity.name}</span>
+            <Link
+              className={styles.detailLink}
+              to={definitionDetailPath(networkId, { id: entity.id, kind: "object_type" })}
+            >
+              {entity.name}
+            </Link>
             {hubIds.has(entity.id) ? (
               <span className={styles.hubTag}>{t("knowledgeNetwork.previewHub")}</span>
             ) : null}
@@ -390,14 +397,21 @@ export function OverviewOntologyBlock({
         },
       },
     ],
-    [detailById, hubIds, renderResourceIndexState, t],
+    [detailById, hubIds, networkId, renderResourceIndexState, t],
   );
 
   const relationColumns: ColumnsType<KnowledgeNetworkRelationTypeRecord> = [
     {
       title: t("knowledgeNetwork.previewColRelation"),
       key: "name",
-      render: (_, relation) => relation.name,
+      render: (_, relation) => (
+        <Link
+          className={styles.detailLink}
+          to={definitionDetailPath(networkId, { id: relation.id, kind: "relation_type" })}
+        >
+          {relation.name}
+        </Link>
+      ),
     },
     {
       title: t("knowledgeNetwork.previewColPath"),
@@ -410,7 +424,15 @@ export function OverviewOntologyBlock({
               { "--nc": colorById.get(relation.sourceObjectTypeId) ?? "#999" } as CSSProperties
             }
           >
-            {relation.sourceObjectTypeName}
+            <Link
+              className={styles.detailLink}
+              to={definitionDetailPath(networkId, {
+                id: relation.sourceObjectTypeId,
+                kind: "object_type",
+              })}
+            >
+              {relation.sourceObjectTypeName}
+            </Link>
           </span>
           <span className={styles.relArrow}>→</span>
           <span
@@ -419,7 +441,15 @@ export function OverviewOntologyBlock({
               { "--nc": colorById.get(relation.targetObjectTypeId) ?? "#999" } as CSSProperties
             }
           >
-            {relation.targetObjectTypeName}
+            <Link
+              className={styles.detailLink}
+              to={definitionDetailPath(networkId, {
+                id: relation.targetObjectTypeId,
+                kind: "object_type",
+              })}
+            >
+              {relation.targetObjectTypeName}
+            </Link>
           </span>
         </span>
       ),
