@@ -310,7 +310,7 @@ describe("observability workspace scenes", () => {
     });
     expect(query).not.toHaveProperty("businessModule");
     expect(query).not.toHaveProperty("sourceId");
-    expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
+    expect(await screen.findByText("bknTrace.logs.actorPlaceholder")).not.toBeNull();
     expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
     expect(screen.queryByText(/safe-audit|source_query_failed/)).toBeNull();
@@ -697,6 +697,139 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("bknTrace.logs.auditTitle")).not.toBeNull();
   });
 
+  it("按被操作用户精确查询，可同时限定操作者、时间和结果", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/system/audit?time_from=2026-10-01T00:00:00Z&time_to=2026-10-31T00:00:00Z&outcome=failure",
+    );
+    renderWithoutAntdStyles(<AuditLogPage />);
+    const target = await screen.findByPlaceholderText("bknTrace.logs.targetUserPlaceholder");
+    fireEvent.change(target, { target: { value: " deleted-user-1 " } });
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.logs.actorPlaceholder"), {
+      target: { value: "管理员甲" },
+    });
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() =>
+      expect(listLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          targetId: "deleted-user-1",
+          targetType: "user",
+          actorQuery: "管理员甲",
+          categories: ["audit.admin"],
+          outcomes: ["failure"],
+          timeFrom: "2026-10-01T00:00:00.000Z",
+          timeTo: "2026-10-31T00:00:00.000Z",
+        }),
+      ),
+    );
+    expect(vi.mocked(listLogs).mock.lastCall?.[0]).not.toHaveProperty("actorId");
+    expect(new URLSearchParams(window.location.search).get("target_id")).toBe("deleted-user-1");
+  });
+
+  it("用户管理记录下钻可改查另一个用户，重置不会残留原用户限制", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/system/audit?target_type=user&target_id=deleted-user-old",
+    );
+    renderWithoutAntdStyles(<AuditLogPage />);
+    const target = await screen.findByPlaceholderText("bknTrace.logs.targetUserPlaceholder");
+    expect(target).toHaveValue("deleted-user-old");
+    fireEvent.change(target, { target: { value: "recreated-user-new" } });
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() =>
+      expect(listLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          targetId: "recreated-user-new",
+          targetType: "user",
+        }),
+      ),
+    );
+    expect(screen.queryByText(/deleted-user-old/)).toBeNull();
+    fireEvent.click(screen.getByText("bknTrace.actions.reset"));
+    await waitFor(() => expect(target).toHaveValue(""));
+    expect(vi.mocked(listLogs).mock.lastCall?.[0]).not.toHaveProperty("targetId");
+    expect(vi.mocked(listLogs).mock.lastCall?.[0]).not.toHaveProperty("targetType");
+    expect(new URLSearchParams(window.location.search).has("target_id")).toBe(false);
+  });
+
+  it("被操作用户查询的分页和刷新只使用已提交条件", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs).mockResolvedValue({ ...base, nextCursor: "user-page-2" });
+    window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=old-user");
+    renderWithoutAntdStyles(<AuditLogPage />);
+    const target = await screen.findByPlaceholderText("bknTrace.logs.targetUserPlaceholder");
+    await screen.findByText("bknTrace.logs.resultCountUnknown");
+    fireEvent.change(target, { target: { value: "new-user" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.logs.nextPage" }));
+    await waitFor(() =>
+      expect(listLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          targetId: "old-user",
+          targetType: "user",
+          page: 2,
+          cursor: "user-page-2",
+        }),
+      ),
+    );
+    fireEvent.click(screen.getByText("bknTrace.actions.query"));
+    await waitFor(() =>
+      expect(listLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({ targetId: "new-user", page: 1 }),
+      ),
+    );
+    expect(vi.mocked(listLogs).mock.lastCall?.[0]).not.toHaveProperty("cursor");
+    fireEvent.change(target, { target: { value: "unsubmitted-user" } });
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+    await waitFor(() =>
+      expect(listLogs).toHaveBeenLastCalledWith(expect.objectContaining({ targetId: "new-user" })),
+    );
+  });
+
+  it("非用户对象下钻和普通日志不显示被操作用户筛选", async () => {
+    window.history.replaceState({}, "", "/system/audit?target_type=role&target_id=role-1");
+    const view = renderWithoutAntdStyles(<AuditLogPage />);
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    expect(vi.mocked(listLogs).mock.lastCall?.[0]).toMatchObject({
+      targetId: "role-1",
+      targetType: "role",
+    });
+    expect(screen.queryByPlaceholderText("bknTrace.logs.targetUserPlaceholder")).toBeNull();
+    view.unmount();
+    window.history.replaceState({}, "", "/observability/logs");
+    renderWithoutAntdStyles(<ObservabilityLogsScene />);
+    await screen.findByText("bknTrace.logs.title");
+    expect(screen.queryByPlaceholderText("bknTrace.logs.targetUserPlaceholder")).toBeNull();
+  });
+
+  it("无全局查询权限不能使用用户目标筛选扩大范围", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      globalLogSearch: false,
+      businessProvenanceOwn: false,
+    });
+    window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=someone");
+    renderWithoutAntdStyles(<AuditLogPage />);
+    await screen.findByText("bknTrace.errors.accessDenied");
+    expect(listLogs).not.toHaveBeenCalled();
+    expect(screen.queryByPlaceholderText("bknTrace.logs.targetUserPlaceholder")).toBeNull();
+  });
+
+  it("用户管理审计零命中说明查询范围，并保留查询不完整提示", async () => {
+    const base = await vi.mocked(listLogs)({});
+    vi.mocked(listLogs).mockClear();
+    vi.mocked(listLogs).mockResolvedValue({
+      ...base,
+      data: [],
+      count: { accuracy: "partial", value: 0 },
+    });
+    renderWithoutAntdStyles(<AuditLogPage />);
+    expect(await screen.findByText("bknTrace.logs.emptyAuditRange")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
+  });
+
   it("审计查询失败时仅展示错误，不伪装成零条结果", async () => {
     window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=user-a");
     vi.mocked(listLogs).mockRejectedValueOnce(
@@ -710,6 +843,7 @@ describe("observability workspace scenes", () => {
     ).not.toBeNull();
     expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
     expect(screen.queryByText("bknTrace.logs.emptyAssociated")).toBeNull();
+    expect(screen.queryByText("bknTrace.logs.emptyAuditRange")).toBeNull();
   });
 
   it("刷新查询时保留已有结果并展示加载反馈", async () => {
