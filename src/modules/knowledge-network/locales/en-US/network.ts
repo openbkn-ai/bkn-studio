@@ -268,6 +268,7 @@ export const networkPart = {
   updatedBy: "Updated by: {{name}}",
   workspaceActionTypes: "Action types",
   workspaceAbilityVerification: "Capability verification",
+  evalNav: "Evaluation",
   workspaceRiskControl: "Risk control",
   workspaceAnalysis: "Analysis",
   workspaceExperienceAgent: "Q&A verification",

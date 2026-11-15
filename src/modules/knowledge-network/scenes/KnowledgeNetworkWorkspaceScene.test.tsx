@@ -64,6 +64,8 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
           "knowledgeNetwork.eval.title": "质量评测",
+          "knowledgeNetwork.evalNav": "评测",
+          "knowledgeNetwork.versions.nav": "版本管理",
           "knowledgeNetwork.workspaceActionTypes": "行动类",
           "knowledgeNetwork.workspaceFunctions": "函数",
           "knowledgeNetwork.workspaceApis": "API",
@@ -160,7 +162,6 @@ function renderScene(snapshot: Entitlement, expandGroups = true) {
       "knowledgeNetwork.workspaceAbilityVerification",
       "knowledgeNetwork.workspaceConceptModel",
       "knowledgeNetwork.workspaceDynamicModel",
-      "knowledgeNetwork.workspaceRiskControl",
     ]) {
       const group = screen.queryByRole("button", { name });
       if (group) fireEvent.click(group);
@@ -181,9 +182,6 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
     const dynamic = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceDynamicModel",
     });
-    const governance = screen.getByRole("button", {
-      name: "knowledgeNetwork.workspaceRiskControl",
-    });
     expect(
       Array.from(
         screen.getByRole("complementary").querySelectorAll("button[aria-expanded]"),
@@ -193,22 +191,21 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
       "knowledgeNetwork.workspaceConceptModel",
       "knowledgeNetwork.workspaceDynamicModel",
       "knowledgeNetwork.workspaceAbilityVerification",
-      "knowledgeNetwork.workspaceRiskControl",
     ]);
-    for (const group of [verification, concept, dynamic, governance]) {
+    for (const group of [verification, concept, dynamic]) {
       expect(group).toHaveAttribute("aria-expanded", "false");
     }
     expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /行动类/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /knowledgeNetwork.versions.nav/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /评测/ })).toBeNull();
+    expect(screen.getByTitle("版本管理").previousElementSibling).toBe(
+      screen.getByTitle("knowledgeNetwork.workspaceOverviewShort"),
+    );
     expect(screen.queryByTitle("knowledgeNetwork.appDevelopment.nav")).toBeNull();
 
     fireEvent.click(verification);
-    expect(verification.nextElementSibling?.lastElementChild).toBe(
-      screen.getByTitle("knowledgeNetwork.appDevelopment.nav"),
-    );
+    expect(verification.nextElementSibling?.lastElementChild).toBe(screen.getByTitle("评测"));
     fireEvent.click(verification);
 
     fireEvent.click(concept);
@@ -219,20 +216,21 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
     expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
   });
 
-  it("places version changes and Eval under risk control in that order", () => {
+  it("places Eval under ability verification and version management below overview", () => {
     renderScene(entitlement(), false);
 
-    const governance = screen.getByRole("button", {
-      name: "knowledgeNetwork.workspaceRiskControl",
+    const verification = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceAbilityVerification",
     });
-    fireEvent.click(governance);
-    const entries = governance.nextElementSibling?.querySelectorAll("button");
+    fireEvent.click(verification);
+    const entries = verification.nextElementSibling?.querySelectorAll("button");
     expect(Array.from(entries ?? [], (entry) => entry.title)).toEqual([
-      "knowledgeNetwork.versions.nav",
-      "质量评测",
+      "智能问答",
+      "数据查询",
+      "knowledgeNetwork.appDevelopment.nav",
+      "评测",
     ]);
-    expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
-    fireEvent.click(screen.getByTitle("knowledgeNetwork.versions.nav"));
+    fireEvent.click(screen.getByTitle("版本管理"));
     expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/versions");
   });
 
@@ -241,8 +239,7 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
     ["develop", "workspaceAbilityVerification", /knowledgeNetwork.appDevelopment.nav/],
     ["object-types", "workspaceConceptModel", /workspaceObjectTypes/],
     ["action-types", "workspaceDynamicModel", /行动类/],
-    ["versions", "workspaceRiskControl", /knowledgeNetwork.versions.nav/],
-    ["evals", "workspaceRiskControl", /质量评测/],
+    ["evals", "workspaceAbilityVerification", /评测/],
   ] as const)("expands the active %s group", (section, groupName, entryName) => {
     render(
       <EntitlementContext.Provider
@@ -256,6 +253,20 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
       "true",
     );
     expect(screen.getByRole("button", { name: entryName })).toBeTruthy();
+  });
+
+  it("highlights version management without expanding a group", () => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section="versions" />
+      </EntitlementContext.Provider>,
+    );
+    expect(screen.getByTitle("版本管理").className).toMatch(/sideItemActive/);
+    expect(
+      screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 });
 
@@ -324,7 +335,7 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
     mocks.evalAccessStatus = "failed";
     renderScene(entitlement(overrides));
 
-    const entry = screen.getByRole("button", { name: /质量评测/ });
+    const entry = screen.getByRole("button", { name: /评测/ });
     expect(within(entry).getByText("专业版")).toBeTruthy();
     expect(mocks.evalAccess).not.toHaveBeenCalled();
 
@@ -340,7 +351,7 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
     (edition) => {
       renderScene(entitlement({ edition, licensed: true, state: "valid" }));
 
-      const entry = screen.getByRole("button", { name: /质量评测/ });
+      const entry = screen.getByRole("button", { name: /评测/ });
       expect(within(entry).queryByText("专业版")).toBeNull();
       expect(mocks.evalAccess).not.toHaveBeenCalled();
 
@@ -361,7 +372,7 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
     mocks.evalAccessStatus = status;
     renderScene(entitlement({ edition, licensed: true, state: "valid" }));
 
-    const entry = screen.getByRole("button", { name: /质量评测/ });
+    const entry = screen.getByRole("button", { name: /评测/ });
     expect(within(entry).queryByText("专业版")).toBeNull();
     expect(mocks.evalAccess).not.toHaveBeenCalled();
     fireEvent.click(entry);
@@ -372,7 +383,7 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
     mocks.hiddenNavigation = ["evals"];
     renderScene(entitlement());
 
-    expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /评测/ })).toBeNull();
   });
 
   it.each([
@@ -394,7 +405,7 @@ describe("KnowledgeNetworkWorkspaceScene Eval navigation", () => {
         }),
       );
 
-      const entry = screen.getByRole("button", { name: /质量评测/ });
+      const entry = screen.getByRole("button", { name: /评测/ });
       expect(Boolean(within(entry).queryByText("专业版"))).toBe(!available);
       fireEvent.click(entry);
 
@@ -482,7 +493,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     renderScene(entitlement());
 
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /质量评测/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /评测/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
   });
 
@@ -505,18 +516,18 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
   });
 
-  it("drops governance when both of its entries are hidden", () => {
-    mocks.hiddenNavigation = ["versions", "evals"];
+  it("hides the verification group when all its entries are hidden", () => {
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop", "evals"];
     renderScene(entitlement());
 
     expect(
-      screen.queryByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+      screen.queryByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
     ).toBeNull();
-    expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+    expect(screen.getByTitle("版本管理")).toBeTruthy();
   });
 
   it("keeps the ability verification title while an extension entry is still shown", () => {
-    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop"];
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop", "evals"];
     mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };
     renderScene(entitlement());
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
@@ -605,10 +616,7 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
   );
   expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
   expect(
-    screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
-  ).toHaveAttribute("aria-expanded", "true");
-  expect(
     screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
-  ).toHaveAttribute("aria-expanded", "false");
-  expect(screen.getByTitle("质量评测")).toBeTruthy();
+  ).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByTitle("评测")).toBeTruthy();
 });
