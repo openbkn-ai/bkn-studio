@@ -50,7 +50,16 @@ export type DraftSourceCitation = {
   end: number;
   quote?: string;
 };
-export type DraftExtractionField = { instruction: string; examples: DraftSourceCitation[] };
+/**
+ * How a property's value is taken from the text: verbatim copies it as the text states it,
+ * inferred judges or normalizes it as the instruction says. Absent reads verbatim.
+ */
+export type DraftExtractionMethod = "verbatim" | "inferred";
+export type DraftExtractionField = {
+  method?: DraftExtractionMethod;
+  instruction: string;
+  examples: DraftSourceCitation[];
+};
 export type SourceFieldRule = {
   name: string;
   category: "system_only" | "both" | "text_only" | "temporal";
@@ -486,6 +495,7 @@ export type AskRevision = { reason: string } & (
         displayName?: string;
         name: string;
         extractionInstruction?: string;
+        extractionMethod?: DraftExtractionMethod;
       };
     }
   | { field: "ends"; value: AskEnds }
