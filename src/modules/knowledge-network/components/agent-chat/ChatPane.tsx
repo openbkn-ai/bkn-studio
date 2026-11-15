@@ -40,6 +40,7 @@ import {
   terminalError,
   type ExecutionEvent,
 } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
+import { knVersionAgentContext } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import type { ContextLoaderEnv } from "@/modules/knowledge-network/services/context-loader.service";
 
 import styles from "./AgentChat.module.css";
@@ -734,6 +735,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           knId,
           message: question,
           clientRequestId: newClientRequestId(),
+          // The version on screen at this turn, so a draft view runs against the draft.
+          context: knVersionAgentContext(knId),
           threadId: thread,
           signal: controller.signal,
           onEvent: (event) => {

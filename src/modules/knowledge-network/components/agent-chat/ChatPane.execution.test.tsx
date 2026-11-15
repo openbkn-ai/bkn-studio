@@ -21,6 +21,12 @@ import {
   type ExecutionEvent,
 } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
 
+import {
+  recordKnVersioning,
+  resetKnVersionContextForTests,
+  setKnVersionView,
+} from "@/modules/knowledge-network/services/shared/kn-version-context";
+
 import { ChatPane, type ChatPaneHandle } from "./ChatPane";
 
 type ExecutionModule =
@@ -103,6 +109,8 @@ function saved(): { threadId?: string; messages?: unknown[] } {
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   localStorage.clear();
+  sessionStorage.clear();
+  resetKnVersionContextForTests();
   vi.resetAllMocks();
 });
 
@@ -129,6 +137,53 @@ describe("ChatPane BKN Agent execution", () => {
     expect(startExecution.mock.calls[1][0].clientRequestId).not.toBe(
       startExecution.mock.calls[0][0].clientRequestId,
     );
+  });
+
+  it("sends the version on screen with every turn, so a draft view runs against the draft", async () => {
+    streams([meta("run-1", "thread-1")]);
+    streams([meta("run-2", "thread-1")]);
+    streams([meta("run-3", "thread-1")]);
+    recordKnVersioning(
+      KN,
+      {
+        enabled: true,
+        running_version: 1,
+        previous_version: 0,
+        full_history: true,
+        draft: { base_version: 1, has_changes: true, outdated: false, revision: 7 },
+      },
+      ["modify"],
+    );
+    const ref = renderPane();
+
+    // The draft is the default view of a user who can modify the network.
+    await send(ref, "第一问");
+    expect(startExecution.mock.calls[0][0].context).toEqual({
+      draft_revision: 7,
+      kn_version: "draft",
+    });
+
+    // Switching inside the conversation changes the next turn, not the thread.
+    setKnVersionView(KN, "running");
+    await send(ref, "第二问");
+    expect(startExecution.mock.calls[1][0].context).toEqual({ kn_version: "running" });
+    expect(startExecution.mock.calls[1][0].threadId).toBe("thread-1");
+
+    setKnVersionView(KN, 1);
+    await send(ref, "第三问");
+    expect(startExecution.mock.calls[2][0].context).toEqual({ kn_version: "1" });
+  });
+
+  it("sends no version for a network without versioning", async () => {
+    streams([meta("run-1", "thread-1")]);
+    recordKnVersioning(KN, { enabled: false } as Parameters<typeof recordKnVersioning>[1], [
+      "modify",
+    ]);
+    const ref = renderPane();
+
+    await send(ref, "问");
+
+    expect(startExecution.mock.calls[0][0].context).toEqual({});
   });
 
   it("restores the thread after reload and drops it on clear", async () => {
