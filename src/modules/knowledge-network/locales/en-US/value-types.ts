@@ -24,6 +24,7 @@ export const valueTypesPart = {
     edit: "Edit",
     empty: "This network has no value types yet",
     enumColumn: {
+      active: "Active",
       deprecated: "Deprecated",
       description: "Description",
       display: "Display name",
