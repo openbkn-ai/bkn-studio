@@ -70,6 +70,7 @@ type ObservabilityLogsSceneProps = {
 
 type Filters = {
   actorId: string;
+  targetUserId: string;
   businessModule?: BusinessModule;
   outcome?: AuditOutcome;
   timeRange: [Dayjs, Dayjs];
@@ -107,6 +108,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       setAuditNotConfigured(false);
       setCursorStale(false);
       try {
+        const scope = userTargetScope(associatedScope, nextFilters, access, mode);
         const query: LogListQuery = {
           page: nextPage,
           pageSize: nextPageSize,
@@ -124,8 +126,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
             ? { conversationId: associatedScope.conversationId }
             : {}),
           ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
-          ...(associatedScope.targetId ? { targetId: associatedScope.targetId } : {}),
-          ...(associatedScope.targetType ? { targetType: associatedScope.targetType } : {}),
+          ...(scope.targetId ? { targetId: scope.targetId } : {}),
+          ...(scope.targetType ? { targetType: scope.targetType } : {}),
           ...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
         };
         const response = await listLogs(query);
@@ -256,9 +258,9 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     if (!profile) return;
     appliedFilters.current = filters;
     pageCursors.current = {};
-    syncFiltersToUrl(filters, associatedScope);
+    syncFiltersToUrl(filters, userTargetScope(associatedScope, filters, profile, mode));
     void load(profile, filters, 1, pagination.pageSize);
-  }, [associatedScope, filters, load, pagination.pageSize, profile]);
+  }, [associatedScope, filters, load, mode, pagination.pageSize, profile]);
 
   const reset = useCallback(() => {
     if (!profile) return;
@@ -266,7 +268,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     setFilters(next);
     appliedFilters.current = next;
     pageCursors.current = {};
-    syncFiltersToUrl(next, associatedScope);
+    syncFiltersToUrl(next, userTargetScope(associatedScope, next, profile, mode));
     void load(profile, next, 1, pagination.pageSize);
   }, [associatedScope, load, mode, pagination.pageSize, profile]);
 
@@ -291,13 +293,16 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   }
 
   const exactCount = result?.count.accuracy === "exact" && result.count.value !== null;
+  const appliedScope = profile
+    ? userTargetScope(associatedScope, appliedFilters.current, profile, mode)
+    : associatedScope;
 
   const associated =
     associatedScope.actorId ||
     associatedScope.conversationId ||
     associatedScope.traceId ||
     associatedScope.requestId ||
-    associatedScope.targetId;
+    appliedScope.targetId;
   return (
     <div className={styles.workspace}>
       <header className={styles.header}>
@@ -364,11 +369,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       ) : null}
       {associated ? (
         <div className={styles.sourceStrip}>
-          <AssociatedScopeTag
-            currentUser={runtimeConfig.currentUser}
-            scope={associatedScope}
-            t={t}
-          />
+          <AssociatedScopeTag currentUser={runtimeConfig.currentUser} scope={appliedScope} t={t} />
         </div>
       ) : null}
 
@@ -417,6 +418,20 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               placeholder={t("bknTrace.logs.actorPlaceholder")}
               value={filters.actorId}
             />
+            {canEditUserTarget(associatedScope, profile, mode) ? (
+              <Tooltip title={t("bknTrace.logs.targetUserHint")}>
+                <Input
+                  allowClear
+                  aria-label={t("bknTrace.logs.targetUserPlaceholder")}
+                  onChange={(event) =>
+                    setFilters((value) => ({ ...value, targetUserId: event.target.value }))
+                  }
+                  onPressEnter={submit}
+                  placeholder={t("bknTrace.logs.targetUserPlaceholder")}
+                  value={filters.targetUserId}
+                />
+              </Tooltip>
+            ) : null}
             <Space>
               <Button icon={<SearchOutlined />} onClick={submit} type="primary">
                 {t("bknTrace.actions.query")}
@@ -445,7 +460,11 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               dataSource={result.data}
               locale={{
                 emptyText: t(
-                  associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange",
+                  mode === "audit"
+                    ? "bknTrace.logs.emptyAuditRange"
+                    : associated
+                      ? "bknTrace.logs.emptyAssociated"
+                      : "bknTrace.logs.emptyRange",
                 ),
               }}
               onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })}
@@ -520,7 +539,11 @@ function ClampedText({ secondary, value }: { secondary?: string; value: string }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
   const end = dayjs();
-  return { actorId: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
+  return {
+    actorId: "",
+    targetUserId: "",
+    timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end],
+  };
 }
 
 function readInitialFilters(mode: "audit" | "logs"): Filters {
@@ -532,10 +555,12 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const timeTo = dayjs(parameters.get("time_to"));
   const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
   const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
+  const target = readAuditLogDrilldown(parameters);
   return {
     ...defaults,
     actorId:
       parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
+    targetUserId: mode === "audit" && target.apiResourceType === "user" ? target.targetId : "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule)
       ? { businessModule: businessModule as BusinessModule }
       : {}),
@@ -554,6 +579,30 @@ type AssociatedLogScope = {
   targetType: string;
   traceId: string;
 };
+
+function canEditUserTarget(scope: AssociatedLogScope, access: TraceAccessProfile, mode: string) {
+  return (
+    mode === "audit" &&
+    access.globalLogSearch &&
+    (!scope.targetType || scope.targetType === "user") &&
+    (!scope.targetId || scope.targetType === "user")
+  );
+}
+
+function userTargetScope(
+  scope: AssociatedLogScope,
+  filters: Filters,
+  access: TraceAccessProfile,
+  mode: string,
+) {
+  if (!canEditUserTarget(scope, access, mode)) return scope;
+  const targetId = filters.targetUserId.trim();
+  return {
+    ...scope,
+    targetId,
+    targetType: targetId ? "user" : scope.targetId ? "" : scope.targetType,
+  };
+}
 
 function readAssociatedLogScope(): AssociatedLogScope {
   const parameters = new URLSearchParams(window.location.search);
@@ -603,20 +652,34 @@ function AssociatedScopeTag({
   if (scope.targetId) {
     const displayType = scope.targetType === "user" ? "user" : "resource";
     return (
-      <Tag color="blue">
-        <span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span>{" "}
-        <span>
-          {scope.targetType === "user"
-            ? formatAuditUserDisplay({ currentUser, id: scope.targetId })
-            : scope.targetId}
-        </span>
-      </Tag>
+      <>
+        <Tag color="blue">
+          <span>
+            {t(
+              displayType === "user"
+                ? "bknTrace.logs.targetUserLabel"
+                : "bknTrace.logs.associatedTarget.resource",
+            )}
+          </span>{" "}
+          <span>
+            {scope.targetType === "user"
+              ? formatAuditUserDisplay({ currentUser, id: scope.targetId })
+              : scope.targetId}
+          </span>
+        </Tag>
+        {scope.actorId ? (
+          <Tag color="blue">
+            <span>{t("bknTrace.logs.actorPlaceholder")}</span>{" "}
+            <span>{formatAuditUserDisplay({ currentUser, id: scope.actorId })}</span>
+          </Tag>
+        ) : null}
+      </>
     );
   }
   if (scope.actorId) {
     return (
       <Tag color="blue">
-        <span>{t("bknTrace.logs.associatedTarget.user")}</span>{" "}
+        <span>{t("bknTrace.logs.actorPlaceholder")}</span>{" "}
         <span>{formatAuditUserDisplay({ currentUser, id: scope.actorId })}</span>
       </Tag>
     );

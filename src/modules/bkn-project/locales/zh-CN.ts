@@ -2270,6 +2270,12 @@ export const bknProjectZhCN = {
       review: {
         pending: "AI 生成，待审核",
         stale: "可能过期",
+        staleChanged:
+          "它依赖的对象类或关系类在概念模型中有变化。重新生成会按当前模型重新核对；确认仍然适用后，这个标记会消失。",
+        staleGone:
+          "概念模型里已经没有它依赖的{{names}}，请编辑这个问题；确认仍然适用后，这个标记会消失。",
+        stillApplies: "仍然适用",
+        stillAppliesItem: "确认「{{name}}」仍然适用",
         accept: "采纳",
         acceptItem: "采纳「{{name}}」",
         unaccept: "取消采纳",
@@ -2283,9 +2289,12 @@ export const bknProjectZhCN = {
           "还有 {{count}} 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
         waiting_other:
           "还有 {{count}} 条由 AI 生成，等你审核：看过没问题就采纳；需要调整的可以编辑，编辑后自动算采纳。",
-        outdated: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
-        outdated_one: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
-        outdated_other: "概念模型有变化，{{count}} 个问题可能过期，重新生成会保留已采纳的部分。",
+        outdated:
+          "概念模型有变化，{{count}} 个问题可能过期。重新生成会按当前模型核对已采纳的问题，仍然适用的不再标记；也可以逐个确认仍然适用。",
+        outdated_one:
+          "概念模型有变化，{{count}} 个问题可能过期。重新生成会按当前模型核对已采纳的问题，仍然适用的不再标记；也可以逐个确认仍然适用。",
+        outdated_other:
+          "概念模型有变化，{{count}} 个问题可能过期。重新生成会按当前模型核对已采纳的问题，仍然适用的不再标记；也可以逐个确认仍然适用。",
         uncovered: "还有 {{count}} 个对象类没有场景覆盖",
         uncovered_one: "还有 {{count}} 个对象类没有场景覆盖",
         uncovered_other: "还有 {{count}} 个对象类没有场景覆盖",

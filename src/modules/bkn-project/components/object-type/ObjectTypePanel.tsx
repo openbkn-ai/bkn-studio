@@ -461,28 +461,28 @@ export function ObjectTypePanel({
             </Form>
             <div className={[styles.canvas, sourceValue ? styles.sourceCanvas : ""].join(" ")}>
               {sourceValue && sourceEditor ? (
-                <>
-                  {sourceEditor.Derive ? (
-                    <sourceEditor.Derive
-                      draft={base.draft}
-                      item={base.objectType}
-                      projectId={project.id}
-                      disabled={changed || saving || asking || Boolean(project.archived)}
-                      onDerived={(next) => {
-                        reset(next);
-                        onSaved(next);
-                      }}
-                    />
-                  ) : null}
-                  <sourceEditor.Editor
-                    key={`${objectTypeId}-${base.draft.updateTime}`}
-                    item={base.objectType}
-                    draft={base.draft}
-                    projectId={project.id}
-                    value={sourceValue}
-                    onChange={setSourceValue}
-                  />
-                </>
+                <sourceEditor.Editor
+                  key={`${objectTypeId}-${base.draft.updateTime}`}
+                  item={base.objectType}
+                  draft={base.draft}
+                  projectId={project.id}
+                  value={sourceValue}
+                  onChange={setSourceValue}
+                  aside={
+                    sourceEditor.Derive ? (
+                      <sourceEditor.Derive
+                        draft={base.draft}
+                        item={base.objectType}
+                        projectId={project.id}
+                        disabled={changed || saving || asking || Boolean(project.archived)}
+                        onDerived={(next) => {
+                          reset(next);
+                          onSaved(next);
+                        }}
+                      />
+                    ) : null
+                  }
+                />
               ) : (
                 <ObjectTypeDataAttributeEditor
                   basicValue={{ color: DEFAULT_RESOURCE_COLOR, name: basic.name }}

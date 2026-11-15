@@ -158,17 +158,20 @@ it("opens a direct Eval URL with workspace navigation and can switch to overview
   // The current shell owns the network heading; the workspace no longer repeats it.
   expect(screen.getByRole("banner").textContent).toBe("Studio");
   expect(screen.getByTitle("knowledgeNetwork.eval.title").className).toMatch(/sideItemActive/);
+  expect(
+    screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+  ).toHaveAttribute("aria-expanded", "true");
   fireEvent.click(screen.getByRole("button", { name: "shell.collapseSidenav" }));
   expect(screen.getByTitle("knowledgeNetwork.eval.title").textContent).toBe("");
   fireEvent.click(screen.getByRole("button", { name: "shell.expandSidenav" }));
   fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.workspaceOverviewShort/ }));
   expect(screen.getByText("Network overview")).toBeTruthy();
   expect(screen.queryByText("Eval content: supply")).toBeNull();
-  const verificationGroup = screen.getByRole("button", {
-    name: "knowledgeNetwork.workspaceAbilityVerification",
+  const governanceGroup = screen.getByRole("button", {
+    name: "knowledgeNetwork.workspaceRiskControl",
   });
-  expect(verificationGroup).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(verificationGroup);
+  expect(governanceGroup).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(governanceGroup);
   fireEvent.click(screen.getByTitle("knowledgeNetwork.eval.title"));
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
 });

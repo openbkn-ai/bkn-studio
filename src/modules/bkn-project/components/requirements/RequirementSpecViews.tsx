@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Collapse } from "antd";
+import { Alert, Checkbox, Collapse, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
@@ -115,16 +115,36 @@ function AddItem({ kind }: { kind: RequirementItemKind }) {
 
 /**
  * What a person still has to look at: an item AI generated and nobody accepted, and one whose
- * ontology changed since. The owner accepts it here, or takes an accepted one back.
+ * ontology changed since, with what the model no longer has when that is what changed. The owner
+ * accepts it here, or takes an accepted one back.
  */
-function ReviewTags({ accepted, stale }: { accepted: boolean; stale: boolean }) {
+function ReviewTags({
+  accepted,
+  gone,
+  stale,
+}: {
+  accepted: boolean;
+  gone?: string[];
+  stale: boolean;
+}) {
   const { t } = useTranslation();
+  const staleTag = <LightStatusTag tone="error">{t(`${PREFIX}.review.stale`)}</LightStatusTag>;
   return (
     <>
       {accepted ? null : (
         <LightStatusTag tone="warning">{t(`${PREFIX}.review.pending`)}</LightStatusTag>
       )}
-      {stale ? <LightStatusTag tone="error">{t(`${PREFIX}.review.stale`)}</LightStatusTag> : null}
+      {stale ? (
+        <Tooltip
+          title={
+            gone?.length
+              ? t(`${PREFIX}.review.staleGone`, { names: gone.join(t("bknProject.listSeparator")) })
+              : t(`${PREFIX}.review.staleChanged`)
+          }
+        >
+          <span>{staleTag}</span>
+        </Tooltip>
+      ) : null}
     </>
   );
 }
@@ -134,27 +154,44 @@ function ReviewAction({
   itemId,
   kind,
   label,
+  stale = false,
 }: {
   accepted: boolean;
   itemId: string;
   kind: ReviewedKind;
   label: string;
+  /** An accepted question the model changed under: the owner can say it still applies. */
+  stale?: boolean;
 }) {
   const { t } = useTranslation();
   const editing = useContext(Editing);
   if (!editing) {
     return null;
   }
-  return accepted ? (
+  const stillApplies = stale ? (
     <AppButton
-      aria-label={t(`${PREFIX}.review.unacceptItem`, { name: label })}
+      aria-label={t(`${PREFIX}.review.stillAppliesItem`, { name: label })}
       disabled={editing.saving}
-      onClick={() => editing.review(kind, itemId, false)}
+      onClick={() => editing.review(kind, itemId, true)}
       size="small"
       type="link"
     >
-      {t(`${PREFIX}.review.unaccept`)}
+      {t(`${PREFIX}.review.stillApplies`)}
     </AppButton>
+  ) : null;
+  return accepted ? (
+    <>
+      {stillApplies}
+      <AppButton
+        aria-label={t(`${PREFIX}.review.unacceptItem`, { name: label })}
+        disabled={editing.saving}
+        onClick={() => editing.review(kind, itemId, false)}
+        size="small"
+        type="link"
+      >
+        {t(`${PREFIX}.review.unaccept`)}
+      </AppButton>
+    </>
   ) : (
     <AppButton
       aria-label={t(`${PREFIX}.review.acceptItem`, { name: label })}
@@ -317,6 +354,7 @@ export function QuestionsView({
             itemId={question.id}
             kind="questions"
             label={question.text}
+            stale={question.ontologyChanged}
           />
         </span>
       ),
@@ -339,7 +377,11 @@ export function QuestionsView({
           ) : null}
           <EditedTag item={question} />
           <AskTag source={question.source} />
-          <ReviewTags accepted={question.accepted} stale={question.ontologyChanged} />
+          <ReviewTags
+            accepted={question.accepted}
+            gone={question.ontologyGone}
+            stale={question.ontologyChanged}
+          />
         </span>
       ),
     };

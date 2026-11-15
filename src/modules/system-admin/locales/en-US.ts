@@ -938,7 +938,8 @@ export const systemAdminEnUS = {
         more: "More",
         addChild: "New Sub-department",
         members: "Members",
-        viewAuditLogs: "View audit log",
+        viewAuditLogs: "Actions performed by this user",
+        viewManagementAudit: "Account management history",
       },
       deleteUserTitle: "Delete user",
       deleteUserConfirm:

@@ -83,7 +83,7 @@ type WorkspaceNavItem = {
   path?: string;
 };
 
-type WorkspaceNavGroup = "verification" | "analysis" | "concept" | "dynamic";
+type WorkspaceNavGroup = "verification" | "analysis" | "concept" | "dynamic" | "governance";
 
 function formatNavCount(count?: number) {
   if (count === undefined) {
@@ -282,12 +282,10 @@ export function KnowledgeNetworkWorkspaceScene({
     t,
   ]);
 
-  const primaryNavItems = navigationItems.filter(
-    (item) => item.key === "overview" || item.key === "develop" || item.key === "versions",
-  );
+  const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
+  const developmentNavItems = navigationItems.filter((item) => item.key === "develop");
   const experienceNavItems = navigationItems.filter(
-    (item) =>
-      item.key === "experience-agent" || item.key === "experience-cypher" || item.key === "evals",
+    (item) => item.key === "experience-agent" || item.key === "experience-cypher",
   );
   const resourceNavItems = navigationItems.filter(
     (item) =>
@@ -305,6 +303,9 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "skills" ||
       item.key === "knowledge-bases",
   );
+  const governanceNavItems = navigationItems.filter(
+    (item) => item.key === "versions" || item.key === "evals",
+  );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
   const activeExtensionKey = section === "extension" ? extensionKey : undefined;
@@ -312,28 +313,34 @@ export function KnowledgeNetworkWorkspaceScene({
   // A group whose entries are all hidden loses its divider and title too.
   const hasAbilityVerification =
     experienceNavItems.length > 0 ||
+    developmentNavItems.length > 0 ||
     extensionEntries.items.length > 0 ||
     extensionEntries.upgrades.length > 0;
   const activeGroup: WorkspaceNavGroup | undefined =
     section === "extension"
       ? analysisEntries.items.some((item) => item.key === activeExtensionKey)
         ? "analysis"
-        : "verification"
+        : governanceNavItems.some((item) => item.path === location.pathname)
+          ? "governance"
+          : "verification"
       : section === "experience-agent" ||
           section === "experience-mcp" ||
           section === "experience-cypher" ||
-          section === "evals"
+          section === "develop"
         ? "verification"
         : resourceNavItems.some((item) => item.key === section)
           ? "concept"
           : dynamicNavItems.some((item) => item.key === section)
             ? "dynamic"
-            : undefined;
+            : governanceNavItems.some((item) => item.key === section)
+              ? "governance"
+              : undefined;
   const [expandedGroups, setExpandedGroups] = useState<Record<WorkspaceNavGroup, boolean>>({
     verification: activeGroup === "verification",
     analysis: activeGroup === "analysis",
     concept: activeGroup === "concept",
     dynamic: activeGroup === "dynamic",
+    governance: activeGroup === "governance",
   });
 
   useEffect(() => {
@@ -499,6 +506,28 @@ export function KnowledgeNetworkWorkspaceScene({
         >
           <div className={styles.workspaceSideScroll}>
             {primaryNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
+            {resourceNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {renderGroupTitle("concept", t("knowledgeNetwork.workspaceConceptModel"))}
+                {sideCollapsed || expandedGroups.concept ? (
+                  <div id="workspace-nav-concept">
+                    {resourceNavItems.map((item) => renderSideNavItem(item))}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            {dynamicNavItems.length > 0 ? (
+              <>
+                <div className={styles.sideDivider} />
+                {renderGroupTitle("dynamic", t("knowledgeNetwork.workspaceDynamicModel"))}
+                {sideCollapsed || expandedGroups.dynamic ? (
+                  <div id="workspace-nav-dynamic">
+                    {dynamicNavItems.map((item) => renderSideNavItem(item))}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
             {hasAbilityVerification ? (
               <>
                 <div className={styles.sideDivider} />
@@ -508,18 +537,18 @@ export function KnowledgeNetworkWorkspaceScene({
                 )}
                 {sideCollapsed || expandedGroups.verification ? (
                   <div id="workspace-nav-verification">
-                    {experienceNavItems
-                      .filter((item) => item.key !== "evals")
-                      .map((item) => renderSideNavItem(item, { showCount: false }))}
+                    {experienceNavItems.map((item) =>
+                      renderSideNavItem(item, { showCount: false }),
+                    )}
                     <WorkspaceExtensionNavItems
                       activeKey={activeExtensionKey}
                       collapsed={sideCollapsed}
                       hiddenKeys={hiddenNavigation}
                       networkId={activeNetworkId}
                     />
-                    {experienceNavItems
-                      .filter((item) => item.key === "evals")
-                      .map((item) => renderSideNavItem(item, { showCount: false }))}
+                    {developmentNavItems.map((item) =>
+                      renderSideNavItem(item, { showCount: false }),
+                    )}
                   </div>
                 ) : null}
               </>
@@ -542,24 +571,15 @@ export function KnowledgeNetworkWorkspaceScene({
                 ) : null}
               </>
             ) : null}
-            {resourceNavItems.length > 0 ? (
+            {governanceNavItems.length > 0 ? (
               <>
                 <div className={styles.sideDivider} />
-                {renderGroupTitle("concept", t("knowledgeNetwork.workspaceConceptModel"))}
-                {sideCollapsed || expandedGroups.concept ? (
-                  <div id="workspace-nav-concept">
-                    {resourceNavItems.map((item) => renderSideNavItem(item))}
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            {dynamicNavItems.length > 0 ? (
-              <>
-                <div className={styles.sideDivider} />
-                {renderGroupTitle("dynamic", t("knowledgeNetwork.workspaceDynamicModel"))}
-                {sideCollapsed || expandedGroups.dynamic ? (
-                  <div id="workspace-nav-dynamic">
-                    {dynamicNavItems.map((item) => renderSideNavItem(item))}
+                {renderGroupTitle("governance", t("knowledgeNetwork.workspaceRiskControl"))}
+                {sideCollapsed || expandedGroups.governance ? (
+                  <div id="workspace-nav-governance">
+                    {governanceNavItems.map((item) =>
+                      renderSideNavItem(item, { showCount: false }),
+                    )}
                   </div>
                 ) : null}
               </>
