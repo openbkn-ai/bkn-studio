@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
   hiddenNavigation: [] as string[],
   navigate: vi.fn(),
+  pathname: "/knowledge-network/workspace/network-1/overview",
 }));
 
 vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
@@ -47,6 +48,7 @@ beforeEach(() => {
   mocks.evalReportedByEndpoint = false;
   mocks.hiddenNavigation = [];
   mocks.navigate.mockReset();
+  mocks.pathname = "/knowledge-network/workspace/network-1/overview";
 });
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
@@ -79,7 +81,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
   return {
     ...actual,
-    useLocation: () => ({ pathname: "/knowledge-network/workspace/network-1/overview" }),
+    useLocation: () => ({ pathname: mocks.pathname }),
     useNavigate: () => mocks.navigate,
     useParams: () => ({ networkId: "network-1" }),
   };
@@ -158,6 +160,7 @@ function renderScene(snapshot: Entitlement, expandGroups = true) {
       "knowledgeNetwork.workspaceAbilityVerification",
       "knowledgeNetwork.workspaceConceptModel",
       "knowledgeNetwork.workspaceDynamicModel",
+      "knowledgeNetwork.workspaceRiskControl",
     ]) {
       const group = screen.queryByRole("button", { name });
       if (group) fireEvent.click(group);
@@ -178,12 +181,35 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
     const dynamic = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceDynamicModel",
     });
-    for (const group of [verification, concept, dynamic]) {
+    const governance = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceRiskControl",
+    });
+    expect(
+      Array.from(
+        screen.getByRole("complementary").querySelectorAll("button[aria-expanded]"),
+        (button) => button.textContent?.trim(),
+      ),
+    ).toEqual([
+      "knowledgeNetwork.workspaceConceptModel",
+      "knowledgeNetwork.workspaceDynamicModel",
+      "knowledgeNetwork.workspaceAbilityVerification",
+      "knowledgeNetwork.workspaceRiskControl",
+    ]);
+    for (const group of [verification, concept, dynamic, governance]) {
       expect(group).toHaveAttribute("aria-expanded", "false");
     }
     expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /行动类/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /质量评测/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /knowledgeNetwork.versions.nav/ })).toBeNull();
+    expect(screen.queryByTitle("knowledgeNetwork.appDevelopment.nav")).toBeNull();
+
+    fireEvent.click(verification);
+    expect(verification.nextElementSibling?.lastElementChild).toBe(
+      screen.getByTitle("knowledgeNetwork.appDevelopment.nav"),
+    );
+    fireEvent.click(verification);
 
     fireEvent.click(concept);
     expect(concept).toHaveAttribute("aria-expanded", "true");
@@ -193,10 +219,30 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
     expect(screen.queryByRole("button", { name: /workspaceObjectTypes/ })).toBeNull();
   });
 
+  it("places version changes and Eval under risk control in that order", () => {
+    renderScene(entitlement(), false);
+
+    const governance = screen.getByRole("button", {
+      name: "knowledgeNetwork.workspaceRiskControl",
+    });
+    fireEvent.click(governance);
+    const entries = governance.nextElementSibling?.querySelectorAll("button");
+    expect(Array.from(entries ?? [], (entry) => entry.title)).toEqual([
+      "knowledgeNetwork.versions.nav",
+      "质量评测",
+    ]);
+    expect(screen.queryByRole("button", { name: /智能问答/ })).toBeNull();
+    fireEvent.click(screen.getByTitle("knowledgeNetwork.versions.nav"));
+    expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/versions");
+  });
+
   it.each([
     ["experience-agent", "workspaceAbilityVerification", /智能问答/],
+    ["develop", "workspaceAbilityVerification", /knowledgeNetwork.appDevelopment.nav/],
     ["object-types", "workspaceConceptModel", /workspaceObjectTypes/],
     ["action-types", "workspaceDynamicModel", /行动类/],
+    ["versions", "workspaceRiskControl", /knowledgeNetwork.versions.nav/],
+    ["evals", "workspaceRiskControl", /质量评测/],
   ] as const)("expands the active %s group", (section, groupName, entryName) => {
     render(
       <EntitlementContext.Provider
@@ -459,8 +505,18 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
   });
 
+  it("drops governance when both of its entries are hidden", () => {
+    mocks.hiddenNavigation = ["versions", "evals"];
+    renderScene(entitlement());
+
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+  });
+
   it("keeps the ability verification title while an extension entry is still shown", () => {
-    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "evals"];
+    mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop"];
     mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };
     renderScene(entitlement());
     expect(screen.getByText("knowledgeNetwork.workspaceAbilityVerification")).toBeTruthy();
@@ -537,6 +593,7 @@ it.each(["object-types", "experience-agent"] as const)(
 
 it("lets embedded Eval content own its layout while retaining workspace navigation", () => {
   mocks.hiddenNavigation = [];
+  mocks.pathname = "/knowledge-network/workspace/network-1/evals";
   render(
     <EntitlementContext.Provider
       value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
@@ -548,7 +605,10 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
   );
   expect(screen.getByTestId("embedded-eval").parentElement?.tagName).toBe("MAIN");
   expect(
-    screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
+    screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
   ).toHaveAttribute("aria-expanded", "true");
+  expect(
+    screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
+  ).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByTitle("质量评测")).toBeTruthy();
 });

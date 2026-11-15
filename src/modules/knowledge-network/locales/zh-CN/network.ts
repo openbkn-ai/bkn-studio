@@ -248,6 +248,7 @@ export const networkPart = {
   updatedBy: "更新人：{{name}}",
   workspaceActionTypes: "行动类",
   workspaceAbilityVerification: "能力验证",
+  workspaceRiskControl: "风险管控",
   workspaceAnalysis: "分析",
   workspaceExperienceAgent: "智能问答",
   workspaceExperienceMcp: "MCP 调试",
