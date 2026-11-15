@@ -329,6 +329,27 @@ export function knVersionQuery(knId: string): Record<string, string> {
   return kn_version === undefined ? {} : { kn_version };
 }
 
+/**
+ * The version on screen, as request context for an Agent execution: `kn_version` (`draft`,
+ * `running` or a number) and, for the draft, the `draft_revision` last seen. Without them the
+ * Agent pins the running version whatever the page shows. Empty for a network without versioning,
+ * or when its state is not known yet. Read it at send time, not at render time: the view can
+ * change between turns of one conversation.
+ */
+export function knVersionAgentContext(knId: string): Record<string, string | number> {
+  const context = contexts.get(knId);
+  const kn_version = context ? knVersionParam(context) : undefined;
+  if (kn_version === undefined) {
+    return {};
+  }
+  return {
+    kn_version,
+    ...(context?.view === "draft" && context.draftRevision !== undefined
+      ? { draft_revision: context.draftRevision }
+      : {}),
+  };
+}
+
 function etagKey(knId: string, rest: string) {
   return `${knId}\u0000${rest}`;
 }
