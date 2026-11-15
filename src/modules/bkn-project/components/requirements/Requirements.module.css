@@ -121,6 +121,19 @@
   color: var(--color-text-primary);
 }
 
+/* A rendered Markdown document; the blocks holding a quoted passage are marked. */
+.rendered .cited,
+.rendered .cited > td,
+.rendered .cited > th {
+  background: var(--color-warning-bg);
+  color: var(--color-text-primary);
+}
+
+.rendered .cited,
+.rendered .cited > td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-warning-border);
+}
+
 .warning {
   color: var(--color-warning-text);
   font-size: 12px;

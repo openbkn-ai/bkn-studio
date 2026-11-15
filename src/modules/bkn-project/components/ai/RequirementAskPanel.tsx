@@ -409,7 +409,7 @@ export function RequirementAskPanel({
   };
 
   return (
-    <aside aria-label={t(`${PREFIX}.title`)} className={`${sidebar.panel} ${styles.panel}`}>
+    <aside aria-label={t(`${PREFIX}.title`)} className={sidebar.panel}>
       <div className={sidebar.header}>
         <div className={sidebar.title}>
           <span aria-hidden="true" className={sidebar.titleIcon}>

@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { formatDateTime } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   describeDecision,
   itemNames,
@@ -22,6 +23,7 @@ import {
   COLLAPSED_ITEMS,
   useCollapsedList,
 } from "@/modules/bkn-project/components/useCollapsedList";
+import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import type { Draft, DraftObjectType, DraftRelationType } from "@/modules/bkn-project/types/draft";
 import type { PendingItem, PendingQuestion } from "@/modules/bkn-project/types/publish";
 import { updateFieldFocus } from "@/modules/bkn-project/types/workspace";
@@ -30,7 +32,7 @@ import styles from "./DraftTables.module.css";
 
 /**
  * What changed on the draft. What still waits for people comes first, each with the action that
- * settles it; then the decisions, newest first. Nothing here undoes a decision: making the
+ * settles it, never paged; then the decisions, newest first, a page at a time. Nothing here undoes a decision: making the
  * opposite change records it too.
  */
 export function DraftChangesPanel({
@@ -125,6 +127,7 @@ export function DraftChangesPanel({
     COLLAPSED_ITEMS,
     focusedAt >= 0 && waiting.length + unadoptedEnds.length + focusedAt >= COLLAPSED_ITEMS,
   );
+  const decisionPage = useListPage(decisions.length);
 
   if (!waiting.length && !unadoptedEnds.length && !suggested.length && !decisions.length) {
     return (
@@ -148,7 +151,7 @@ export function DraftChangesPanel({
         <section>
           <h3 className={styles.sectionTitle}>{t("bknProject.model.changes.doneTitle")}</h3>
           <ul className={styles.changes}>
-            {decisions.map((decision) => {
+            {decisionPage.slice(decisions).map((decision) => {
               const described = describeDecision(t, decision, names);
               return (
                 <li
@@ -177,6 +180,7 @@ export function DraftChangesPanel({
               );
             })}
           </ul>
+          {decisionPage.pagination ? <TablePaginationBar {...decisionPage.pagination} /> : null}
         </section>
       ) : null}
     </div>

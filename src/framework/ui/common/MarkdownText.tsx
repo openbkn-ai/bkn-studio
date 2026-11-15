@@ -6,7 +6,7 @@
  */
 
 import { memo, useMemo } from "react";
-import Markdown, { type Components } from "react-markdown";
+import Markdown, { type Components, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
@@ -47,6 +47,8 @@ type MarkdownTextProps = {
    * so each token reparses only the last block.
    */
   streaming?: boolean;
+  /** Transforms of the rendered tree, such as marking a passage; complete text only. */
+  rehypePlugins?: Options["rehypePlugins"];
 };
 
 /**
@@ -72,6 +74,7 @@ export const MarkdownText = memo(function MarkdownText({
   tone = "light",
   variant = "compact",
   streaming = false,
+  rehypePlugins,
 }: MarkdownTextProps) {
   const blocks = useMemo(() => {
     // Complete text is parsed whole, keeping what spans blocks (reference links, footnotes).
@@ -91,7 +94,7 @@ export const MarkdownText = memo(function MarkdownText({
   return (
     <div className={classes}>
       {blocks === null ? (
-        <Markdown remarkPlugins={[remarkGfm]} components={DIAGRAMS}>
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={DIAGRAMS}>
           {text}
         </Markdown>
       ) : (

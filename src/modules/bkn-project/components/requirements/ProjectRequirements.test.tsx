@@ -402,7 +402,10 @@ describe("ProjectRequirements", () => {
     fireEvent.click(await screen.findByRole("button", { name: "查看原文" }));
     const drawer = within(await screen.findByRole("dialog"));
     await waitFor(() => expect(getDocumentMock).toHaveBeenCalledWith("p1", "d1"));
-    expect((await drawer.findByText("哪些订单晚了")).tagName).toBe("MARK");
+    // A Markdown document reads rendered: the paragraph holding the quote is marked.
+    const paragraph = await drawer.findByText("销售部门需要知道：哪些订单晚了，并尽快跟进。");
+    expect(paragraph.tagName).toBe("P");
+    expect(paragraph).toHaveAttribute("data-cited");
   });
 
   it("shows scenarios, and the conflicts and choices with the rules, but no concepts", async () => {

@@ -20,17 +20,22 @@
   min-width: 0;
 }
 
+/*
+ * Ask AI covers the right of the content area, top to bottom, out of the page's scroll: the page
+ * scrolls beside it (ProjectWorkspaceScene narrows it), the header lines up with the page's top
+ * and the question box stays at the bottom.
+ */
 .side {
-  position: sticky;
+  position: absolute;
   top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
   display: flex;
-  height: calc(100vh - 160px);
-  min-height: 420px;
 }
 
-.panel {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+.side > aside {
+  padding-top: 24px;
 }
 
 /* An item just changed from the conversation: marked for a moment. */

@@ -276,8 +276,8 @@ function UploadDialog({
             }
           >
             <p>{t(`${PREFIX}.drop`)}</p>
+            <p className={styles.muted}>{t(`${PREFIX}.limits`)}</p>
           </Upload.Dragger>
-          <p className={styles.muted}>{t(`${PREFIX}.limits`)}</p>
         </div>
       )}
     </Modal>

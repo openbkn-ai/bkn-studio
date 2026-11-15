@@ -688,9 +688,13 @@ export const bknProjectEnUS = {
       summary: "Drafted: {{objects}}, {{relations}}.",
       objectsBySource:
         "object types: {{tables}} from data tables + {{documents}} from the knowledge base",
-      showSystem: "Show {{count}} system items that locate source text",
-      showSystem_one: "Show {{count}} system item that locates source text",
-      showSystem_other: "Show {{count}} system items that locate source text",
+      showSystemObjects: "Show {{count}} source items (source documents, text blocks, images)",
+      showSystemObjects_one: "Show {{count}} source item (a source document, text block or image)",
+      showSystemObjects_other:
+        "Show {{count}} source items (source documents, text blocks, images)",
+      showSystemRelations: "Show {{count}} links to source documents, text blocks and images",
+      showSystemRelations_one: "Show {{count}} link to source documents, text blocks and images",
+      showSystemRelations_other: "Show {{count}} links to source documents, text blocks and images",
       summaryWithExisting:
         "The network already has {{objects}} and {{relations}}; this draft adds {{newObjects}} and {{newRelations}}.",
       countObjects: "{{count}} object types",
@@ -2795,7 +2799,8 @@ export const bknProjectEnUS = {
         uploadSelected: "Upload selected",
         done: "Done",
         drop: "Drop files here, or click to choose",
-        limits: "Markdown and plain text (UTF-8), up to 1 MB each and 20 per project.",
+        limits:
+          "Markdown (.md, .markdown) and plain text (.txt) in UTF-8, up to 1 MB each and 20 per project.",
         size: "{{size}} KB",
         typeOf: "Type of {{name}}",
         remove: "Remove",

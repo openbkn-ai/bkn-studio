@@ -99,9 +99,21 @@ function failureKey(error: string) {
   return "bknProject.model.failed.source";
 }
 
-/** What a knowledge-base extraction keeps for locating the source text, not a business item. */
+/**
+ * What a knowledge-base extraction keeps to point back at the source: the source documents, their
+ * text blocks and images, and the relations linking business objects to them. Not a business item.
+ */
 function systemItem(item: { document?: { role: string } }) {
   return Boolean(item.document?.role.startsWith("evidence_"));
+}
+
+/**
+ * The list with the source items or without. Shown, they come first: they sit after the business
+ * items in the draft, past the first page, where showing them changed nothing in sight.
+ */
+function withSystem<T extends { document?: { role: string } }>(items: T[], shown: boolean) {
+  const business = items.filter((item) => !systemItem(item));
+  return shown ? [...items.filter(systemItem), ...business] : business;
 }
 
 /**
@@ -873,20 +885,18 @@ export function ProjectModel({
               checked={showSystem}
               onChange={(event) => setShowSystem(event.target.checked)}
             >
-              {t("bknProject.model.showSystem", {
-                count: activeTab === "objects" ? systemObjects : systemRelations,
-              })}
+              {activeTab === "objects"
+                ? t("bknProject.model.showSystemObjects", { count: systemObjects })
+                : t("bknProject.model.showSystemRelations", { count: systemRelations })}
             </Checkbox>
           ) : null}
           {activeTab === "objects" ? (
             <DraftObjectsTable
               actions={actions}
               catalogNames={catalogNames}
-              items={
-                showSystem
-                  ? items.objectTypes
-                  : items.objectTypes.filter((item) => !systemItem(item))
-              }
+              items={withSystem(items.objectTypes, showSystem)}
+              // Showing or hiding them starts over from the first page, where they are.
+              key={`objects-${showSystem}`}
               onOpen={editable ? openEditor : setOpenId}
             />
           ) : activeTab === "relations" ? (
@@ -914,11 +924,8 @@ export function ProjectModel({
               ) : null}
               <DraftRelationsTable
                 actions={actions}
-                items={
-                  showSystem
-                    ? items.relationTypes
-                    : items.relationTypes.filter((item) => !systemItem(item))
-                }
+                items={withSystem(items.relationTypes, showSystem)}
+                key={`relations-${showSystem}`}
                 objectNames={objectNames}
                 onOpen={editable ? openRelation : undefined}
                 projectId={project.id}

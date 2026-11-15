@@ -181,4 +181,24 @@ describe("DraftChangesPanel update field", () => {
     renderPanel([updateField()], vi.fn(), next);
     expect(screen.queryByText("选择更新时间字段")).toBeNull();
   });
+
+  it("keeps what waits on top and pages the changes made, 20 at a time", () => {
+    const of = draft();
+    of.items.decisions = Array.from({ length: 25 }, (_, index) => ({
+      action: "adopt",
+      after: true,
+      before: false,
+      by: { id: "me", type: "user" },
+      itemId: "customers",
+      kind: "object_types",
+      time: 1_700_000_000_000 + index,
+    }));
+    renderPanel([updateField()], vi.fn(), of);
+
+    expect(screen.getByText("待你决定")).toBeInTheDocument();
+    expect(screen.getAllByTestId("draft-change")).toHaveLength(20);
+    fireEvent.click(screen.getByTitle("2"));
+    expect(screen.getAllByTestId("draft-change")).toHaveLength(5);
+    expect(screen.getByText("待你决定")).toBeInTheDocument();
+  });
 });
