@@ -124,6 +124,8 @@ export type RequirementQuestion = Cited &
      * longer fit; renaming does not count.
      */
     ontologyChanged: boolean;
+    /** The items it rests on that the concept model no longer has, when that is what changed. */
+    ontologyGone?: string[];
     /** The question counts the latest period up to its reference time. */
     relativeWindow: boolean;
     scenarioIds: string[];

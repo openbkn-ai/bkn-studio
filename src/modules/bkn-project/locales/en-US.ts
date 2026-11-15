@@ -2431,6 +2431,12 @@ export const bknProjectEnUS = {
       review: {
         pending: "AI-generated, to review",
         stale: "May be outdated",
+        staleChanged:
+          "Object types or relations it rests on changed in the concept model. Generating again checks it against the current model; confirming it still applies clears this.",
+        staleGone:
+          "The concept model no longer has {{names}}, which it rests on. Edit the question, or confirm it still applies to clear this.",
+        stillApplies: "Still applies",
+        stillAppliesItem: "Confirm \u201c{{name}}\u201d still applies",
         accept: "Accept",
         acceptItem: "Accept \u201c{{name}}\u201d",
         unaccept: "Take back",
@@ -2445,11 +2451,11 @@ export const bknProjectEnUS = {
         waiting_other:
           "{{count}} items AI generated wait for your review: accept those that look right; edit those that need changes, which accepts them.",
         outdated:
-          "The concept model changed, so {{count}} questions may be outdated; generating again keeps what was accepted.",
+          "The concept model changed, so {{count}} questions may be outdated. Generating again checks the accepted ones against the current model and clears those that still apply; you can also confirm them one by one.",
         outdated_one:
-          "The concept model changed, so {{count}} question may be outdated; generating again keeps what was accepted.",
+          "The concept model changed, so {{count}} question may be outdated. Generating again checks it against the current model and clears it if it still applies; you can also confirm it still applies.",
         outdated_other:
-          "The concept model changed, so {{count}} questions may be outdated; generating again keeps what was accepted.",
+          "The concept model changed, so {{count}} questions may be outdated. Generating again checks the accepted ones against the current model and clears those that still apply; you can also confirm them one by one.",
         uncovered: "{{count}} object types have no scenario yet",
         uncovered_one: "{{count}} object type has no scenario yet",
         uncovered_other: "{{count}} object types have no scenario yet",
