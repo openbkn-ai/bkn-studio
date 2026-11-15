@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
+import { caseExecutionAdmissionReason } from "./eval-case-execution";
+
 import { evalOutcomeLabel } from "./eval-terminology";
 
 import { EvalPaginatedTable as Table } from "./EvalPaginatedTable";
@@ -51,7 +54,6 @@ import { definitionText } from "./eval-definition-view";
 type Props = {
   networkId: string;
   canManage: boolean;
-  externalAvailable?: boolean;
   onCountChange: (count: number) => void;
   onRunCreated: (run: M0Run) => void;
 };
@@ -60,13 +62,7 @@ const pageSize = 20;
 
 const outcomeText = evalOutcomeLabel;
 
-export function EvalSuitePanel({
-  networkId,
-  canManage,
-  externalAvailable = true,
-  onCountChange,
-  onRunCreated,
-}: Props) {
+export function EvalSuitePanel({ networkId, canManage, onCountChange, onRunCreated }: Props) {
   const { t } = useEvalTranslation();
   const { message, modal } = useEvalFeedback();
   const loadRequest = useRef(0);
@@ -113,15 +109,6 @@ export function EvalSuitePanel({
   const [caseTitles, setCaseTitles] = useState<Record<string, string>>({});
   const [caseTitlesLoading, setCaseTitlesLoading] = useState(false);
   const [runningSuiteId, setRunningSuiteId] = useState<string>();
-  const [externalSuite, setExternalSuite] = useState<EvalSuiteVersion>();
-  const externalInstruction = externalSuite
-    ? t("knowledgeNetwork.eval.externalUi.instruction", {
-        knId: networkId,
-        suiteId: externalSuite.suite_id,
-        version: externalSuite.version,
-      })
-    : "";
-
   const load = useCallback(async () => {
     const request = ++loadRequest.current;
     setLoading(true);
@@ -254,6 +241,13 @@ export function EvalSuitePanel({
       const preview = await previewM1RunSelection(networkId, scope);
       if (preview.case_count < 1) {
         message.error(workspaceUi("thisTestSuiteHasNoRunnableEnabledCasesCheck"));
+        return;
+      }
+      if (!preview.eligible) {
+        message.error(
+          preview.reasons?.map(caseExecutionAdmissionReason).join("；") ||
+            workspaceUi("thisTestSuiteDoesNotMeetExecutionRequirementsCheck"),
+        );
         return;
       }
       modal.confirm({
@@ -410,48 +404,7 @@ export function EvalSuitePanel({
                     },
                     {
                       key: "run",
-                      label: externalAvailable
-                        ? workspaceUi("run")
-                        : workspaceUi("externalEvaluationIsNotEnabled"),
-                      disabled:
-                        !externalAvailable ||
-                        suite.status !== "published" ||
-                        !suite.members.length ||
-                        runningSuiteId === suite.suite_id,
-                      onClick: () => {
-                        void (async () => {
-                          setRunningSuiteId(suite.suite_id);
-                          try {
-                            const result = await previewM1RunSelection(
-                              networkId,
-                              { kind: "suite", suite_id: suite.suite_id, version: suite.version },
-                              "external",
-                            );
-                            if (!result.eligible) {
-                              message.error(
-                                result.reasons?.join("；") ||
-                                  workspaceUi(
-                                    "externalEvaluationSupportsOnlyAuthorizedReadOnlyFunctionCases",
-                                  ),
-                              );
-                              return;
-                            }
-                            setExternalSuite(suite);
-                          } catch {
-                            message.error(
-                              workspaceUi(
-                                "cannotCheckExternalEvaluationRequirementsCheckCaseStatesAnd",
-                              ),
-                            );
-                          } finally {
-                            setRunningSuiteId(undefined);
-                          }
-                        })();
-                      },
-                    },
-                    {
-                      key: "capability-check",
-                      label: t("knowledgeNetwork.eval.externalUi.capabilityCheck"),
+                      label: workspaceUi("run"),
                       disabled:
                         suite.status !== "published" ||
                         !suite.members.length ||
@@ -656,7 +609,6 @@ export function EvalSuitePanel({
             style={{ display: detailCaseId ? "none" : undefined }}
           >
             <Space direction="vertical" size="large" style={{ width: "100%" }}>
-              <Alert type="info" showIcon message={definitionText("membershipVersion")} />
               {versionsError && (
                 <Alert
                   type="error"
@@ -711,7 +663,12 @@ export function EvalSuitePanel({
                   },
                   {
                     key: "version",
-                    label: workspaceUi("version"),
+                    label: (
+                      <>
+                        {workspaceUi("version")}
+                        <EvalHelpTooltip title={definitionText("membershipVersion")} />
+                      </>
+                    ),
                     children: (
                       <Select
                         aria-label={suiteText("versionSelector")}
@@ -825,57 +782,6 @@ export function EvalSuitePanel({
             />
           </div>
         )}
-      </Drawer>
-      <Drawer
-        title={t("knowledgeNetwork.eval.externalUi.title")}
-        open={Boolean(externalSuite)}
-        width="min(640px, 92vw)"
-        destroyOnHidden
-        onClose={() => setExternalSuite(undefined)}
-        footer={
-          <Space style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button onClick={() => setExternalSuite(undefined)}>
-              {t("knowledgeNetwork.eval.externalUi.close")}
-            </Button>
-          </Space>
-        }
-      >
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <Alert type="info" showIcon message={t("knowledgeNetwork.eval.externalUi.manualHint")} />
-          <Descriptions
-            className={styles.detailDescriptions}
-            bordered
-            size="small"
-            column={1}
-            items={[
-              {
-                key: "suite",
-                label: t("knowledgeNetwork.eval.externalUi.suite"),
-                children: externalSuite?.name,
-              },
-              {
-                key: "version",
-                label: t("knowledgeNetwork.eval.externalUi.version"),
-                children: `v${externalSuite?.version ?? ""} · ${externalSuite?.members.length ?? 0} Case`,
-              },
-            ]}
-          />
-          <Typography.Title level={5}>
-            {t("knowledgeNetwork.eval.externalUi.copyInstruction")}
-          </Typography.Title>
-          <Typography.Paragraph
-            copyable={{ text: externalInstruction }}
-            style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-          >
-            {externalInstruction}
-          </Typography.Paragraph>
-          <Typography.Text type="secondary">
-            {t("knowledgeNetwork.eval.externalUi.connectionHint")}
-          </Typography.Text>
-          <Typography.Paragraph
-            copyable
-          >{`${window.location.origin}/api/agent-retrieval/v1/mcp/`}</Typography.Paragraph>
-        </Space>
       </Drawer>
     </section>
   );

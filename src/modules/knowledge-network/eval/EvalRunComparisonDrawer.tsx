@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { useEvalTranslation } from "./useEvalTranslation";
 import { workspaceUi } from "./workspace-ui-text";
 import { evalOutcomeLabel } from "./eval-terminology";
@@ -413,7 +414,15 @@ export function EvalRunComparisonPanel({
       ) : (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           <Space wrap>
-            <Typography.Text>{workspaceUi("baselineRun")}</Typography.Text>
+            <Typography.Text>
+              {workspaceUi("baselineRun")}{" "}
+              <EvalHelpTooltip
+                label={workspaceUi("baselineRun")}
+                title={workspaceUi(
+                  "comparingTheCurrentlySelectedRunsDifferencesDoNotAutomatically",
+                )}
+              />
+            </Typography.Text>
             <Select
               aria-label={workspaceUi("selectABaselineRun")}
               value={baselineId}
@@ -509,9 +518,6 @@ export function EvalRunComparisonPanel({
               )}
             </Space>
           )}
-          <Typography.Text type="secondary">
-            {workspaceUi("comparingTheCurrentlySelectedRunsDifferencesDoNotAutomatically")}
-          </Typography.Text>
           {(loading || revisionsLoading) && <Spin />}
           {error && <Alert type="error" showIcon message={error} />}
           {comparison && (

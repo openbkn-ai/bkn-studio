@@ -5,17 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
+import { JsonTextBlock } from "@/framework/json/JsonTextBlock";
 import { caseUiText } from "./case-ui-text";
 import { useEvalTranslation } from "./useEvalTranslation";
-import { Alert, Input, InputNumber, Select, Space, Typography } from "antd";
+import { Alert, InputNumber, Select, Space } from "antd";
 import { useState } from "react";
 import { EvalRuleProgramFields } from "./EvalRuleProgramFields";
-import { newRuleProgram } from "./rule-check-model";
+import { JsonInput } from "@/framework/json/JsonInput";
+import { newDeclarationProgram, newRuleProgram } from "./rule-check-model";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
 import { compileCriteria, newCriterion, type CaseCriterion } from "./case-form-model";
 import {
   ruleCheckAllowsAll,
   ruleCheckCriteria,
+  type DeclarationProgram,
   type EvalRuleCheck,
   type RuleCheckCapability,
 } from "./rule-check-model";
@@ -29,7 +33,7 @@ type Props = {
   onChange: (value?: EvalRuleCheck) => void;
 };
 export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onChange }: Props) {
-  useEvalTranslation();
+  const { t } = useEvalTranslation();
   const [criteria, setCriteria] = useState<CaseCriterion[]>(
     value?.type === "result_compare" ? ruleCheckCriteria(value) : [newCriterion()],
   );
@@ -42,6 +46,10 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
         : "string";
   });
   const [enumError, setEnumError] = useState("");
+  const [declarationText, setDeclarationText] = useState(() =>
+    JSON.stringify(value?.declaration ?? newDeclarationProgram(kind), null, 2),
+  );
+  const [declarationError, setDeclarationError] = useState("");
   const options = capabilities.filter((item) => item.kinds.includes(kind));
   const selected = options.find((item) => item.type === value?.type);
   const bindings =
@@ -77,6 +85,7 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
     <Space direction="vertical" style={{ width: "100%" }} size={12}>
       <label>
         {caseUiText("checkMethod")}
+        {selected && <EvalHelpTooltip title={selected.help} label={caseUiText("checkMethod")} />}
         <Select
           aria-label={caseUiText("checkMethod")}
           style={{ width: "100%" }}
@@ -100,19 +109,23 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
                     type,
                     binding,
                     ...(type === "program" ? { program: newRuleProgram(kind) } : {}),
+                    ...(type === "declaration" ? { declaration: newDeclarationProgram(kind) } : {}),
                     scope:
-                      kind === "objectType" || kind === "objectProperty"
-                        ? { mode: "sample", limit: 100 }
-                        : { mode: "invocation" },
+                      type === "declaration"
+                        ? undefined
+                        : kind === "objectType" || kind === "objectProperty"
+                          ? { mode: "sample", limit: 100 }
+                          : { mode: "invocation" },
                   }
                 : undefined,
             );
+            if (type === "declaration")
+              setDeclarationText(JSON.stringify(newDeclarationProgram(kind), null, 2));
             setCriteria([newCriterion()]);
             setEnumError("");
           }}
         />
       </label>
-      {selected && <Typography.Text type="secondary">{selected.help}</Typography.Text>}
       {value && !!bindings.length && (
         <label>
           {caseUiText("checkField")}
@@ -135,7 +148,7 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
           />
         </label>
       )}
-      {value && ["objectType", "objectProperty"].includes(kind) && (
+      {value && value.type !== "declaration" && ["objectType", "objectProperty"].includes(kind) && (
         <Space>
           <span>{caseUiText("defaultCheckScope")}</span>
           <Select
@@ -164,6 +177,28 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
             />
           )}
         </Space>
+      )}
+      {value?.type === "declaration" && (
+        <>
+          <JsonInput
+            ariaLabel={t("knowledgeNetwork.eval.declaration.program")}
+            readOnly={disabled}
+            height={360}
+            value={declarationText}
+            onChange={(text) => {
+              setDeclarationText(text);
+              try {
+                const declaration = parsePrecisionPreservingJSON(text);
+                update({ declaration: declaration as DeclarationProgram });
+                setDeclarationError("");
+              } catch {
+                update({ declaration: undefined });
+                setDeclarationError(t("knowledgeNetwork.eval.declaration.invalidJson"));
+              }
+            }}
+          />
+          {declarationError && <Alert type="error" message={declarationError} />}
+        </>
       )}
       {value?.type === "program" && (
         <EvalRuleProgramFields
@@ -250,7 +285,7 @@ export function EvalRuleCheckFields({ kind, value, capabilities, disabled, onCha
       )}
       {value?.type === "result_compare" &&
         (disabled ? (
-          <Input.TextArea readOnly rows={4} value={JSON.stringify(value.assertions, null, 2)} />
+          <JsonTextBlock maxHeight={360} text={JSON.stringify(value.assertions, null, 2)} />
         ) : (
           <EvalCaseCriteria
             value={criteria}

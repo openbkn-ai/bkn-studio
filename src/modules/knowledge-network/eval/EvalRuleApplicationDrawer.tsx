@@ -5,7 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalDeclarationCaseFields } from "./EvalDeclarationCaseFields";
 import { EvalDefinitionOnlyFields } from "./EvalDefinitionOnlyFields";
+import { EvalLogicalPropertyCaseFields } from "./EvalLogicalPropertyCaseFields";
 import { EvalResourceCaseFields } from "./EvalResourceCaseFields";
 import { resourceCaseKinds, resourceCaseChecks } from "./rule-check-model";
 import { EvalRelationCaseFields } from "./EvalRelationCaseFields";
@@ -141,6 +143,16 @@ function SampleEditor({
       />
     );
   }
+  if (row.check?.type === "declaration")
+    return (
+      <EvalDeclarationCaseFields
+        networkId={networkId}
+        row={row}
+        onPrepared={() => undefined}
+        onSamplePrepared={(sample, definition) => onChange(sample, definition)}
+        onDirty={onDirty}
+      />
+    );
   if (row.check?.type === "relation_check" && row.input_contract?.relation) {
     return (
       <RelationSampleEditor
@@ -152,6 +164,10 @@ function SampleEditor({
       />
     );
   }
+  if (row.check?.type === "logical_property")
+    return (
+      <LogicalSampleEditor networkId={networkId} row={row} onChange={onChange} onDirty={onDirty} />
+    );
   if (
     resourceCaseKinds.includes(row.resource.kind) &&
     row.input_contract?.rule_based &&
@@ -454,8 +470,14 @@ function ResourceSampleEditor({
         expected: definition.expected_spec,
         source_kind: definition.expected_source.kind,
         evidence_refs: definition.expected_source.evidence_refs,
-        ...(row.check?.type === "resource_result"
-          ? { assertions: definition.assertions.filter((a) => a.type !== "evidence_complete") }
+        ...(["resource_result", "resource_error", "resource_request", "metric_lineage"].includes(
+          row.check?.type ?? "",
+        )
+          ? {
+              assertions: definition.assertions.filter(
+                (a) => a.type !== "evidence_complete" && a.id !== "observation-evidence",
+              ),
+            }
           : {}),
       },
       definition,
@@ -1216,5 +1238,76 @@ export function EvalRuleApplicationDrawer({
         </>
       )}
     </Drawer>
+  );
+}
+
+function LogicalSampleEditor({
+  networkId,
+  row,
+  onChange,
+  onDirty,
+}: {
+  networkId: string;
+  row: RuleApplicationRow;
+  onChange: (sample: RuleApplicationSample, prepared?: EvalCaseDefinition) => void;
+  onDirty: (dirty: boolean) => void;
+}) {
+  const { t } = useEvalTranslation();
+  const [definition, setDefinition] = useState<EvalCaseDefinition>();
+  const initial = useRef<EvalCaseDefinition>(
+    row.prepared_definition ?? {
+      title: row.sample.title,
+      category: "calculation",
+      risk_level: "medium",
+      execution_spec: {},
+      diagnostic_spec: {},
+      expected_source: {
+        kind: row.sample.source_kind ?? "business_expert",
+        evidence_refs: row.sample.evidence_refs ?? [],
+      },
+      input_spec: {
+        question: row.sample.question,
+        arguments: row.sample.arguments ?? { dynamic_params: {} },
+      },
+      expected_spec: row.sample.expected ?? {},
+      assertions: row.sample.assertions ?? [],
+    },
+  );
+  return (
+    <div className={styles.editor}>
+      <EvalLogicalPropertyCaseFields
+        networkId={networkId}
+        row={row}
+        initialDefinition={initial.current}
+        onPrepared={(value) => {
+          setDefinition(value);
+          onDirty(true);
+        }}
+      />
+      <Button
+        type="primary"
+        disabled={!definition}
+        onClick={() => {
+          if (!definition) return;
+          onChange(
+            {
+              ...row.sample,
+              arguments: definition.input_spec.arguments as Record<string, unknown>,
+              expected: definition.expected_spec,
+              assertions:
+                row.check?.binding === "result"
+                  ? definition.assertions.filter((a) => a.id !== "execution-evidence")
+                  : undefined,
+              source_kind: definition.expected_source.kind,
+              evidence_refs: definition.expected_source.evidence_refs,
+            },
+            definition,
+          );
+          onDirty(false);
+        }}
+      >
+        {t("knowledgeNetwork.eval.ruleApplication.applyConfiguration")}
+      </Button>
+    </div>
   );
 }

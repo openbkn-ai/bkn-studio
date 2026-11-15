@@ -10,7 +10,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { EvalResourceCaseFields } from "./EvalResourceCaseFields";
 import { resourceCaseKinds } from "./rule-check-model";
 import { getEvalTemplateConfig, type EvalCaseDefinition } from "./m0-run.service";
-import { previewRuleApplication } from "./rule-application.service";
+import { previewRuleApplication, type RuleApplicationSample } from "./rule-application.service";
 import { compileCriteria } from "./case-form-model";
 
 vi.mock("./m0-run.service", () => ({ getEvalTemplateConfig: vi.fn() }));
@@ -151,6 +151,48 @@ it.each(resourceCaseKinds)(
   },
 );
 
+it.each([false, true])(
+  "shows execution groups only when unsupported checks exist (unsupported=%s)",
+  async (includeUnsupported) => {
+    const config = await getEvalTemplateConfig("kn");
+    if (includeUnsupported) {
+      config.rules.push({
+        ...config.rules[0],
+        id: "not-ready",
+        title: "暂不能执行的检查",
+        check: undefined,
+      });
+      config.execution_support = {
+        ...config.execution_support,
+        "not-ready": { status: "unsupported", reason: "尚未接入自动执行" },
+      };
+      vi.mocked(getEvalTemplateConfig).mockResolvedValue(config);
+    }
+    render(
+      <EvalResourceCaseFields
+        networkId="kn"
+        resource={{ kind, id: "resource", name: "业务资源" }}
+        contract={{ available: true, input: { type: "object", properties: {} } }}
+        initialDefinition={{
+          ...prepared(),
+          diagnostic_spec: { resource_case_form: true, template_rule_id: "rule" },
+        }}
+        onPrepared={vi.fn()}
+      />,
+    );
+    fireEvent.mouseEnter(await screen.findByRole("button", { name: "检查项 ?" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("按当前身份查询");
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "检查项" }));
+    if (includeUnsupported) {
+      expect(await screen.findByText("可保存定义，暂不支持自动执行")).toBeInTheDocument();
+      expect(screen.getByText("可自动执行")).toBeInTheDocument();
+    } else {
+      expect(screen.queryByText("可保存定义，暂不支持自动执行")).not.toBeInTheDocument();
+      expect(screen.queryByText("可自动执行")).not.toBeInTheDocument();
+    }
+  },
+);
+
 it("starts an unconfigured application row with one criterion and a readable independent source", async () => {
   mode = "resource_result";
   render(
@@ -223,36 +265,41 @@ it("keeps zero, false and independent criteria while changing real source parame
   expect(onPrepared).toHaveBeenCalledWith(undefined);
 });
 
-it("does not prepare a business value comparison without an independent reference", async () => {
-  mode = "resource_result";
-  const initial: EvalCaseDefinition = {
-    ...prepared(),
-    ...compileCriteria([
-      { id: "value", type: "equals", path: "$", value: "5", valueType: "number" },
-    ]),
-    expected_source: { kind: "business_expert", evidence_refs: [] },
-  };
-  const onPrepared = vi.fn();
-  render(
-    <EvalResourceCaseFields
-      networkId="kn"
-      resource={{ kind, id: "resource", name: "业务资源" }}
-      contract={{ available: true, input: { type: "object", properties: {} } }}
-      ruleId="rule"
-      initialDefinition={initial}
-      onPrepared={onPrepared}
-    />,
-  );
-  await screen.findByRole("textbox", { name: "预期依据" });
-  await waitFor(() => expect(previewRuleApplication).toHaveBeenCalledTimes(1));
-  expect(onPrepared.mock.calls.every(([d]) => d === undefined)).toBe(true);
-  fireEvent.change(screen.getByRole("textbox", { name: "预期依据" }), {
-    target: { value: "独立核算为5" },
-  });
-  await waitFor(() =>
-    expect(onPrepared).toHaveBeenCalledWith(expect.objectContaining({ title: "检查" })),
-  );
-});
+it.each(["function", "metric", "api", "mcp", "action", "skill"])(
+  "prepares %s business values without optional supporting notes",
+  async (resourceKind) => {
+    kind = resourceKind;
+    mode = "resource_result";
+    const initial: EvalCaseDefinition = {
+      ...prepared(),
+      ...compileCriteria([
+        { id: "value", type: "equals", path: "$", value: "5", valueType: "number" },
+      ]),
+      expected_source: { kind: "business_expert", evidence_refs: [] },
+    };
+    const onPrepared = vi.fn();
+    render(
+      <EvalResourceCaseFields
+        networkId="kn"
+        resource={{ kind, id: "resource", name: "业务资源" }}
+        contract={{ available: true, input: { type: "object", properties: {} } }}
+        ruleId="rule"
+        initialDefinition={initial}
+        onPrepared={onPrepared}
+      />,
+    );
+    await screen.findByRole("textbox", { name: "预期依据" });
+    await waitFor(() => expect(previewRuleApplication).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(previewRuleApplication).mock.calls.at(-1)![1].samples![0]).toMatchObject({
+      source_kind: "business_expert",
+      evidence_refs: [],
+      expected: initial.expected_spec,
+    });
+    await waitFor(() =>
+      expect(onPrepared).toHaveBeenCalledWith(expect.objectContaining({ title: "检查" })),
+    );
+  },
+);
 
 it("blocks preparation and hides inputs when the resource execution contract is unavailable", async () => {
   const onPrepared = vi.fn();
@@ -328,7 +375,11 @@ it.each(resourceCaseKinds)(
     );
     expect(previewRuleApplication).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole("textbox", { name: "预期依据" }), { target: { value: "" } });
-    await waitFor(() => expect(onPrepared.mock.calls.at(-1)?.[0]).toBeUndefined());
+    await waitFor(() =>
+      expect(onPrepared.mock.calls.at(-1)?.[0]).toMatchObject({
+        expected_source: { kind: "business_expert", evidence_refs: [] },
+      }),
+    );
   },
 );
 
@@ -393,10 +444,14 @@ it.each(["function", "metric"])(
     ).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "预期依据" })).toBeTruthy();
     expect(
-      screen.getByText(
+      screen.queryByText(
         resourceKind === "function" ? /本项当前执行合法输入样本/ : /独立明细或依赖结果核算正确值/,
       ),
-    ).toBeTruthy();
+    ).toBeNull();
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "测试参数 ?" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      resourceKind === "function" ? "本项当前执行合法输入样本" : "独立明细或依赖结果核算正确值",
+    );
     expect(onPrepared.mock.calls.every(([definition]) => definition === undefined)).toBe(true);
     expect(
       vi.mocked(previewRuleApplication).mock.calls.every(([, request]) => !request.samples),
@@ -427,9 +482,87 @@ it("explains source input validation without claiming target rejection or busine
       expect.objectContaining({ diagnostic_spec: { resource_case_form: true } }),
     ),
   );
-  expect(screen.getByText(/非法参数会在调用前拦截/)).toBeTruthy();
+  expect(screen.queryByText(/非法参数会在调用前拦截/)).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "判定标准 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("非法参数会在调用前拦截");
   expect(screen.queryByRole("button", { name: "添加判定标准" })).toBeNull();
   expect(
     vi.mocked(previewRuleApplication).mock.calls.at(-1)![1].samples?.[0].assertions,
   ).toBeUndefined();
 });
+
+it.each([
+  {
+    resourceKind: "api",
+    check: "resource_error",
+    path: "$.execution.status_code",
+    value: "404",
+    valueType: "number" as const,
+  },
+  {
+    resourceKind: "mcp",
+    check: "resource_error",
+    path: "$.execution.is_error",
+    value: "true",
+    valueType: "boolean" as const,
+  },
+  {
+    resourceKind: "api",
+    check: "resource_request",
+    path: "$.execution.request.method",
+    value: "GET",
+    valueType: "string" as const,
+  },
+  {
+    resourceKind: "metric",
+    check: "metric_lineage",
+    path: "$.result.entries[0].value",
+    value: "0",
+    valueType: "number" as const,
+  },
+])(
+  "configures $resourceKind $check with independent criteria and optional notes",
+  async ({ resourceKind, check, path, value, valueType }) => {
+    kind = resourceKind;
+    mode = check;
+    independentValue = true;
+    const compiled = compileCriteria([
+      { id: "expected", type: "equals", path, value, valueType, valueProvided: true },
+    ]);
+    const onPrepared = vi.fn();
+    render(
+      <EvalResourceCaseFields
+        networkId="kn"
+        resource={{ kind, id: "resource", name: "业务资源" }}
+        contract={{ rule_based: true, available: true, input: { type: "object", properties: {} } }}
+        initialDefinition={{
+          ...prepared(),
+          ...compiled,
+          expected_source: { kind: "business_expert", evidence_refs: [] },
+        }}
+        ruleId="rule"
+        onPrepared={onPrepared}
+      />,
+    );
+    await waitFor(() => {
+      const definitions: unknown[] = onPrepared.mock.calls.map(([definition]) => {
+        const value: unknown = definition;
+        return value;
+      });
+      expect(
+        definitions.some(
+          (definition) =>
+            typeof definition === "object" && definition !== null && "execution_spec" in definition,
+        ),
+      ).toBe(true);
+    });
+    const samples = vi
+      .mocked(previewRuleApplication)
+      .mock.calls.map((c) => c[1].samples?.[0])
+      .filter((sample): sample is RuleApplicationSample => sample !== undefined);
+    expect(samples.at(-1)?.assertions).toEqual(compiled.assertions);
+    expect(samples.at(-1)?.expected).toEqual(compiled.expected_spec);
+    expect(samples.at(-1)?.source_kind).toBe("business_expert");
+    expect(samples.at(-1)?.evidence_refs).toEqual([]);
+  },
+);

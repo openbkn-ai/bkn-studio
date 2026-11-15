@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeAll, beforeEach, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -91,7 +91,9 @@ it("shows the same complete current definition in library and Suite details", as
       onClose={vi.fn()}
     />,
   );
-  await screen.findByText(/此处展示用例当前内容/);
+  expect(screen.queryByText(/此处展示用例当前内容/)).toBeNull();
+  fireEvent.mouseEnter(await screen.findByRole("button", { name: "用例名称 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("此处展示用例当前内容");
   expect(await screen.findByText("[0, 100)")).toBeTruthy();
   expect(getEvalSuiteCaseDetail).toHaveBeenCalledWith("kn", "suite", 2, "case-1");
 });
@@ -119,4 +121,34 @@ it("resolves associated rules from diagnostic provenance and renders missing sam
   expect(await screen.findByText("诊断中的规则")).toBeTruthy();
   expect(screen.getByText("采样检查")).toBeTruthy();
   expect(screen.queryByText(/NaN/)).toBeNull();
+});
+
+it("shows the complete public scenario task without presenting a fixed execution entry", async () => {
+  const detail = fixture();
+  detail.definition.execution_spec = {
+    runner: "agent_task",
+    target_kind: "business_scenario",
+    kn_id: "kn",
+  };
+  detail.definition.input_spec = {
+    question: "订单能否发货",
+    context: "仅成品仓50套需求",
+    constraints: "只读不扣库存",
+    output_requirements: "返回是否可发货和剩余量",
+  };
+  detail.definition.diagnostic_spec = { case_type: "scenario", form_version: 2 };
+  vi.mocked(getEvalCaseDefinition).mockResolvedValue(detail);
+  render(<EvalSuiteCaseDetailDrawer networkId="kn" caseId="case-1" onClose={vi.fn()} />);
+  expect(await screen.findByText("订单能否发货")).toBeTruthy();
+  for (const text of [
+    "业务目标",
+    "业务条件",
+    "执行边界",
+    "输出要求",
+    "仅成品仓50套需求",
+    "只读不扣库存",
+    "返回是否可发货和剩余量",
+  ])
+    expect(screen.getByText(text)).toBeTruthy();
+  expect(screen.queryByText("执行入口")).toBeNull();
 });

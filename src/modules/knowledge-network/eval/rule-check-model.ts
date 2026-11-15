@@ -23,18 +23,24 @@ const ruleText = (key: string, values?: Record<string, unknown>): string =>
 
 export const resourceCaseKinds = ["function", "api", "mcp", "metric", "action", "skill"];
 export const resourceCaseChecks = [
+  "action_execution",
   "resource_available",
   "input_contract",
   "output_contract",
   "resource_result",
+  "resource_error",
+  "resource_request",
+  "metric_lineage",
   "result_compare",
 ];
 
 export type EvalRuleCheck = {
   type: string;
+  declaration?: DeclarationProgram;
   independent_value?: boolean;
   binding?: string;
   program?: EvalRuleProgram;
+  program_input?: boolean;
   scope?: { mode: "sample" | "all" | "invocation"; limit?: number };
   minimum?: string;
   maximum?: string;
@@ -57,6 +63,7 @@ export const ruleCheckAllowsAll = (check?: EvalRuleCheck) =>
       !check.program.expect &&
       !check.program.where &&
       !check.program.reference &&
+      !check.program.aggregates.some((a) => a.function === "duplicate_count") &&
       check.program.aggregate_scope !== "sample"));
 export function ruleCheckCriteria(check: EvalRuleCheck) {
   return (
@@ -81,7 +88,25 @@ export function validateRuleCheck(
     (!check.binding || !capability.bindings.includes(check.binding))
   )
     throw Error(ruleText("fieldRequired"));
-  if (check.type === "program") validateRuleProgram(check.program);
+  if (check.type === "declaration") {
+    const p = check.declaration;
+    if (
+      !p ||
+      p.version !== 1 ||
+      !Array.isArray(p.assertions) ||
+      !p.assertions.length ||
+      p.assertions.length > 32 ||
+      !["resource", "property", "dataProperty", "logicProperty"].includes(p.target) ||
+      new TextEncoder().encode(transformPrecisionSafeJSONRequest(p)).length > 32768
+    )
+      throw Error(ruleText("conditionRequired"));
+  }
+  if (check.type === "program") {
+    if (check.program_input) {
+      if (kind !== "objectType" || check.binding !== "fields" || check.program)
+        throw Error(ruleText("unsupported"));
+    } else validateRuleProgram(check.program);
+  }
   if (check.type === "numeric_range") {
     if (!check.minimum && !check.maximum) throw Error(ruleText("boundaryRequired"));
     for (const v of [check.minimum, check.maximum])
@@ -102,8 +127,15 @@ export type RuleValueCondition = {
   value?: unknown;
 };
 export type RuleConditionGroup = { mode: "all" | "any"; conditions: RuleValueCondition[] };
-export type RuleAggregate = { function: string; field?: string; operator: string; value: unknown };
+export type RuleAggregate = {
+  function: string;
+  field?: string;
+  fields?: string[];
+  operator: string;
+  value: unknown;
+};
 export type EvalRuleProgram = {
+  standard?: { version: string; evidence_refs: string[] };
   query_filter?: RuleValueCondition;
   version: 1;
   where?: RuleConditionGroup;
@@ -112,7 +144,7 @@ export type EvalRuleProgram = {
     matches_field?: string;
     keys: { field: string; reference_field: string }[];
     rows: Record<string, unknown>[];
-    evidence_refs: string[];
+    evidence_refs?: string[];
   };
   aggregates?: RuleAggregate[];
   aggregate_scope?: "complete" | "sample";
@@ -173,7 +205,17 @@ export function validateRuleProgram(program?: EvalRuleProgram) {
   }
   if ((program.aggregates?.length ?? 0) > 10) throw Error(ruleText("aggregateLimit"));
   program.aggregates?.forEach((a) => {
-    if (a.function !== "count" && !a.field?.trim()) throw Error(ruleText("aggregateField"));
+    if (a.function === "duplicate_count") {
+      if (
+        a.field ||
+        !a.fields?.length ||
+        a.fields.length > 16 ||
+        new Set(a.fields).size !== a.fields.length ||
+        a.fields.some((f) => !f.trim())
+      )
+        throw Error(ruleText("aggregateField"));
+    } else if (a.fields?.length || (a.function !== "count" && !a.field?.trim()))
+      throw Error(ruleText("aggregateField"));
     if (a.value === undefined || !new BigNumber(evalScalarText(a.value)).isFinite())
       throw Error(ruleText("aggregateExpected"));
   });
@@ -197,6 +239,52 @@ export function validateRuleProgram(program?: EvalRuleProgram) {
       ref.rows.some((row) => ![0, 1].includes(row[ref.matches_field!] as number))
     )
       throw Error(ruleText("referenceMatches"));
-    if (!ref.evidence_refs.some((r) => r.trim())) throw Error(ruleText("referenceEvidence"));
+    const refs = ref.evidence_refs ?? [];
+    if (refs.length > 20 || refs.some((r) => !r.trim() || Array.from(r).length > 512))
+      throw Error(ruleText("referenceEvidence"));
   }
+}
+
+export type DeclarationProgram = {
+  version: 1;
+  target: "resource" | "property" | "dataProperty" | "logicProperty";
+  parameters?: Record<
+    string,
+    { title: string; required: boolean; schema: Record<string, unknown>; example?: unknown }
+  >;
+  assertions: {
+    id: string;
+    operator: string;
+    select: Record<string, unknown>;
+    message: string;
+    [key: string]: unknown;
+  }[];
+};
+export function newDeclarationProgram(kind: string): DeclarationProgram {
+  return {
+    version: 1,
+    target: kind === "objectProperty" ? "property" : "resource",
+    assertions: [
+      {
+        id: "definition",
+        operator: "schema",
+        select: { source: "target", paths: ["$"] },
+        value: {
+          type: "object",
+          required: ["name"],
+          properties: { name: { type: "string", minLength: 1 } },
+        },
+        message: "名称声明缺失或为空。",
+      },
+    ],
+  };
+}
+export function declarationParametersSchema(program?: DeclarationProgram): Record<string, unknown> {
+  const entries = Object.entries(program?.parameters ?? {});
+  return {
+    type: "object",
+    properties: Object.fromEntries(entries.map(([name, p]) => [name, p.schema])),
+    required: entries.filter(([, p]) => p.required).map(([name]) => name),
+    additionalProperties: false,
+  };
 }

@@ -272,10 +272,16 @@ it("creates a paused daily plan until user delegation is connected", async () =>
   );
   const drawer = screen.getByRole("dialog", { name: "新建运行计划" });
   expect(
-    within(drawer).getByText(
+    within(drawer).queryByText(
       "测试集版本固定成员集合和标签；成员用例使用运行开始时的当前内容，每次运行保存独立快照。",
     ),
-  ).toBeTruthy();
+  ).toBeNull();
+  const versionHelp = within(drawer)
+    .getByText("版本策略")
+    .closest(".ant-form-item")!
+    .querySelector(".ant-form-item-tooltip")!;
+  fireEvent.mouseEnter(versionHelp);
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("测试集版本固定成员集合和标签");
   const confirm = screen.getByRole("button", { name: /确\s*定/ });
   expect(drawer.querySelector(".ant-drawer-footer")?.contains(confirm)).toBe(true);
   expect(drawer.querySelector(".ant-drawer-extra")).toBeNull();
@@ -520,7 +526,15 @@ it("requires a monthly date and creates a month-end plan without a weekly day", 
   );
   fireEvent.mouseDown(within(drawer).getByRole("combobox", { name: "执行周期" }));
   fireEvent.click(await screen.findByText("每月", { selector: ".ant-select-item-option-content" }));
-  expect(within(drawer).getByText("当月没有所选日期时，将在当月最后一天执行。")).toBeTruthy();
+  expect(within(drawer).queryByText("当月没有所选日期时，将在当月最后一天执行。")).toBeNull();
+  const dateHelp = within(drawer)
+    .getByText("每月日期")
+    .closest(".ant-form-item")!
+    .querySelector(".ant-form-item-tooltip")!;
+  fireEvent.mouseEnter(dateHelp);
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "当月没有所选日期时，将在当月最后一天执行。",
+  );
   expect(within(drawer).queryByRole("combobox", { name: "星期" })).toBeNull();
   const dateSelect = within(drawer).getByRole("combobox", { name: "每月日期" });
   expect(dateSelect).toHaveAttribute("aria-required", "true");

@@ -41,7 +41,7 @@ describe("Eval theme contract", () => {
     for (const selector of [
       ".root",
       ".tabs > :global(.ant-tabs-nav)",
-      ".overviewMetrics > button",
+      ".overviewMetrics > button,\n.pendingMetric",
     ]) {
       const rule = css.split(`${selector} {`)[1].split("}")[0];
       expect(rule).toContain("background: var(--color-bg-surface)");

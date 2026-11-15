@@ -660,11 +660,147 @@ it("drills resource coverage down to resources and opens their cases", async () 
       },
     },
   );
-  fireEvent.click(
-    within(detail).getByText("查看用例", { selector: "button > span" }).closest("button")!,
-  );
+  expect(within(detail).getAllByRole("columnheader")[1].textContent).toBe("操作");
+  fireEvent.click(within(detail).getByRole("button", { name: "物料操作" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "查看用例" }));
   expect(onTabChange).toHaveBeenCalledWith("cases", expect.any(Object));
 }, 15_000);
+it("replaces coverage with current results across runs and returns to the same resource list", async () => {
+  const overview = await vi.mocked(getEvalOverview)("kn-1");
+  vi.mocked(getEvalOverview).mockResolvedValue({
+    ...overview,
+    resource_details: overview.resource_details?.map((resource) =>
+      resource.id === "material"
+        ? {
+            ...resource,
+            status: "problem",
+            latest_run_id: "run-b",
+            problem_cases: 2,
+          }
+        : resource,
+    ),
+    case_details: ["a", "b"].map((id) => ({
+      id,
+      title: `失败检查 ${id}`,
+      target_names: ["物料"],
+      enabled: true,
+      runnable: true,
+      excluded: false,
+      status: "failed",
+      targets: [{ kind: "objectType", id: "material" }],
+      latest_run_id: `run-${id}`,
+      latest_case_run_id: `cr-${id}`,
+      latest_result_revision: 1,
+    })),
+  });
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  fireEvent.click(
+    (await screen.findByText("对象类", { selector: "button > span" })).closest("button")!,
+  );
+  const coverage = (await screen.findByText("对象类评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
+  fireEvent.click(within(coverage).getByRole("button", { name: "物料操作" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "查看问题" }));
+  const results = await screen.findByRole("dialog", { name: "物料 · 资源评测明细" });
+  expect(within(results).getByText("失败检查 a")).toBeTruthy();
+  expect(within(results).getByText("失败检查 b")).toBeTruthy();
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(routerMocks.navigate).not.toHaveBeenCalled();
+  fireEvent.click(within(results).getByRole("button", { name: "返回" }));
+  expect(await screen.findByText("对象类评测明细")).toBeTruthy();
+}, 15_000);
+
+it("runs only pending resource cases after preview and confirmation", async () => {
+  vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
+  vi.mocked(getM1RunCapabilities).mockResolvedValue(true);
+  vi.mocked(previewM1RunSelection).mockResolvedValue({
+    case_count: 1,
+    eligible: true,
+    execution_mode: "platform",
+    reasons: [],
+  });
+  vi.mocked(createM1Run).mockResolvedValue({ id: "coverage-run" } as Awaited<
+    ReturnType<typeof createM1Run>
+  >);
+  const overview = await vi.mocked(getEvalOverview)("kn-1");
+  vi.mocked(getEvalOverview).mockResolvedValue({
+    ...overview,
+    case_details: ["passed", "not_run"].map((status) => ({
+      id: status,
+      title: status,
+      status: status as "passed" | "not_run",
+      enabled: true,
+      excluded: false,
+      runnable: true,
+      target_names: ["物料"],
+      targets: [{ kind: "objectType", id: "material" }],
+    })),
+  });
+  const confirm = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() });
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  fireEvent.click(
+    (await screen.findByText("对象类", { selector: "button > span" })).closest("button")!,
+  );
+  const drawer = (await screen.findByText("对象类评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
+  fireEvent.click(within(drawer).getByRole("button", { name: "物料操作" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "运行" }));
+  await waitFor(() => expect(confirm).toHaveBeenCalled());
+  expect(previewM1RunSelection).toHaveBeenCalledWith("kn-1", {
+    kind: "cases",
+    case_ids: ["not_run"],
+  });
+  expect(createM1Run).not.toHaveBeenCalled();
+  await act(async () => {
+    await confirm.mock.calls[0][0].onOk?.();
+  });
+  expect(createM1Run).toHaveBeenCalledWith(
+    "kn-1",
+    { kind: "cases", case_ids: ["not_run"] },
+    expect.any(String),
+  );
+  confirm.mockRestore();
+}, 15_000);
+
+it("offers New case rather than nonexistent results for uncovered resources", async () => {
+  vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
+  const overview = await vi.mocked(getEvalOverview)("kn-1");
+  vi.mocked(getEvalOverview).mockResolvedValue({
+    ...overview,
+    resource_details: overview.resource_details?.map((resource) =>
+      resource.id === "supplier"
+        ? {
+            ...resource,
+            in_scope: true,
+            status: "uncovered",
+          }
+        : resource,
+    ),
+  });
+  const onTabChange = vi.fn();
+  const view = render(
+    <EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={onTabChange} />,
+  );
+  fireEvent.click(
+    (await screen.findByText("对象类", { selector: "button > span" })).closest("button")!,
+  );
+  const drawer = (await screen.findByText("对象类评测明细")).closest<HTMLElement>(
+    '[role="dialog"]',
+  )!;
+  fireEvent.click(within(drawer).getByRole("button", { name: "供应商操作" }));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).queryByRole("menuitem", { name: "查看结果" })).toBeNull();
+  expect(within(menu).queryByRole("menuitem", { name: "查看用例" })).toBeNull();
+  fireEvent.click(within(menu).getByRole("menuitem", { name: "新建用例" }));
+  view.rerender(
+    <EvalWorkspaceScene networkId="kn-1" activeTab="cases" onTabChange={onTabChange} />,
+  );
+  expect(await screen.findByTestId("initial-resource")).toHaveTextContent('"id":"supplier"');
+  expect(onTabChange).toHaveBeenCalledWith("cases", expect.any(Object));
+}, 15_000);
+
 it.each([
   ["failed", "未通过"],
   ["passed", "通过"],
@@ -751,58 +887,20 @@ it("routes overview totals to the correct Case or Suite view with fresh filters"
   );
   expect(screen.queryByRole("dialog")).toBeNull();
 }, 15_000);
-it("offers manual and template creation from the Case library New menu", async () => {
+it("opens the new Case form directly from the Case library New button", async () => {
   vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
   render(
     <EvalWorkspaceScene networkId="supply_ontology_hand" activeTab="cases" onTabChange={vi.fn()} />,
   );
-  await waitFor(() => expect(screen.getByRole("button", { name: "新建" })).toBeEnabled());
-  fireEvent.click(screen.getByRole("button", { name: "新建" }));
-  expect(await screen.findByRole("menuitem", { name: "手动新建" })).toBeTruthy();
-  expect(screen.getByRole("menuitem", { name: "从模板新建" })).toBeTruthy();
-  expect(screen.queryByRole("dialog")).toBeNull();
-  fireEvent.click(screen.getByRole("menuitem", { name: "手动新建" }));
+  const create = screen.getByRole("button", { name: "新建" });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
   expect(await screen.findByRole("dialog")).toHaveTextContent("编辑用例");
+  expect(screen.queryByRole("menuitem", { name: "手动新建" })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: "从模板新建" })).toBeNull();
   expect(screen.queryByText("从模板新建用例")).toBeNull();
-}, 30000);
-it("opens the shared rule application flow from template creation with enabled library rules", async () => {
-  vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
-  vi.mocked(listEvalCaseResourcesPage).mockResolvedValue({ entries: [], total: 0 });
-  vi.mocked(getEvalTemplateConfig).mockResolvedValue({
-    revision: 1,
-    checksum: "rule-sha",
-    rules: [rules[0], { ...rules[1], enabled: false }],
-  });
-  render(
-    <EvalWorkspaceScene networkId="supply_ontology_hand" activeTab="cases" onTabChange={vi.fn()} />,
-  );
-  await waitFor(() => expect(screen.getByRole("button", { name: "新建" })).toBeEnabled());
-  fireEvent.click(screen.getByRole("button", { name: "新建" }));
-  const templateItem = await screen.findByRole("menuitem", { name: "从模板新建" });
-  await waitFor(() => expect(templateItem).not.toHaveAttribute("aria-disabled", "true"));
-  fireEvent.click(templateItem);
-  const drawer = await screen.findByRole("dialog", { name: "从模板新建用例" });
-  expect(within(drawer).getByText("选择范围")).toBeTruthy();
-  fireEvent.mouseDown(within(drawer).getByLabelText("选择规则", { selector: '[role="combobox"]' }));
-  fireEvent.click(
-    await screen.findByText("对象定义完整性", { selector: ".ant-select-item-option-content" }),
-  );
-  expect(
-    screen.queryByText("实例可查询性", { selector: ".ant-select-item-option-content" }),
-  ).toBeNull();
-  await waitFor(() =>
-    expect(listEvalCaseResourcesPage).toHaveBeenLastCalledWith(
-      "supply_ontology_hand",
-      "objectType",
-      "",
-      1,
-      10,
-      true,
-    ),
-  );
-  expect(within(drawer).getByRole("button", { name: "下一步" })).toBeDisabled();
-}, 30000);
-it("keeps manual creation available when evaluation templates fail to load", async () => {
+});
+it("keeps direct creation available when evaluation templates fail to load", async () => {
   vi.mocked(getEvalCapabilities).mockResolvedValue({ case_management: true });
   vi.mocked(getEvalTemplateConfig).mockRejectedValue(new Error("template unavailable"));
   render(
@@ -810,13 +908,9 @@ it("keeps manual creation available when evaluation templates fail to load", asy
   );
   await waitFor(() => expect(screen.getByRole("button", { name: "新建" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "新建" }));
-  expect(await screen.findByRole("menuitem", { name: "从模板新建" })).toHaveAttribute(
-    "aria-disabled",
-    "true",
-  );
-  fireEvent.click(screen.getByRole("menuitem", { name: "手动新建" }));
   expect(await screen.findByRole("dialog")).toHaveTextContent("编辑用例");
-}, 30000);
+  expect(screen.queryByRole("menu")).toBeNull();
+});
 it("runs a ready Case from its action menu without opening the launch drawer", async () => {
   vi.mocked(getM1RunCapabilities).mockResolvedValue(true);
   vi.mocked(previewM1RunSelection).mockResolvedValue({
@@ -2254,7 +2348,14 @@ it("opens Agent comparison and inspects an off-page run in the full run page", a
   render(
     <EvalWorkspaceScene networkId="supply_ontology_hand" activeTab="runs" onTabChange={vi.fn()} />,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "智能体对比" }));
+  const help = await screen.findByLabelText("关于评测对比");
+  fireEvent.focus(help);
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "对比外部智能体通过 MCP 完成并提交的评测结果。支持在同一测试集版本下，对比不同智能体或同一智能体的多次运行，不包含平台直接运行的结果。",
+  );
+  expect(screen.queryByRole("region", { name: "Comparison workspace" })).toBeNull();
+  fireEvent.blur(help);
+  fireEvent.click(await screen.findByRole("button", { name: "评测对比" }));
   expect(screen.getByRole("region", { name: "Comparison workspace" })).toBeTruthy();
   expect(screen.queryByRole("complementary", { name: "运行记录" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Inspect comparison cell" }));
@@ -2763,4 +2864,156 @@ it("prevents clearing the selected Cases while their bulk operation is pending",
     Promise.resolve(finish([{ id: "batch-draft", title: "批量草稿", success: true }])),
   );
   await waitFor(() => expect(screen.queryByRole("region", { name: "用例批量操作" })).toBeNull());
+});
+
+it("shows overview navigation and recent runs while statistics are pending, then renders each ready section", async () => {
+  const full = await vi.mocked(getEvalOverview)("kn-1");
+  let finish!: (value: typeof full) => void;
+  let progress!: NonNullable<Parameters<typeof getEvalOverview>[1]>["onProgress"];
+  vi.mocked(getEvalOverview)
+    .mockClear()
+    .mockImplementation((_kn, options) => {
+      progress = options!.onProgress;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  expect(screen.getByRole("tab", { name: "资源覆盖" })).toBeVisible();
+  expect(screen.getByRole("tab", { name: "用例与运行" })).toBeVisible();
+  expect(screen.queryByText("70%")).toBeNull();
+  fireEvent.click(screen.getByRole("tab", { name: "用例与运行" }));
+  expect(screen.getByTestId("eval-recent-runs")).toBeVisible();
+  act(() => progress({ section: "cases", total: full.cases.total }));
+  expect(screen.getByRole("region", { name: "用例与运行统计" })).toHaveTextContent(
+    String(full.cases.total),
+  );
+  act(() =>
+    progress({
+      section: "resources",
+      overview: {
+        ...full,
+        rule_points: { enabled_rules: 0, applicable: 0, covered: 0, missing: 0, not_ready: 0 },
+        coverage: { ...full.coverage, rule_percent: 0 },
+      },
+    }),
+  );
+  fireEvent.click(screen.getByRole("tab", { name: "资源覆盖" }));
+  expect(screen.getByText("正在计算规则覆盖")).toBeVisible();
+  expect(screen.queryByText("70%")).toBeNull();
+  await act(async () => {
+    finish(full);
+    await Promise.resolve();
+  });
+  expect(screen.getByText("70%")).toBeVisible();
+  expect(getEvalOverview).toHaveBeenCalledOnce();
+});
+
+it("retains loaded resources after a rule-stage failure and retries without hiding them", async () => {
+  const full = await vi.mocked(getEvalOverview)("kn-1");
+  let retry!: (value: typeof full) => void;
+  vi.mocked(getEvalOverview)
+    .mockClear()
+    .mockImplementationOnce((_kn, options) => {
+      options!.onProgress({ section: "resources", overview: full });
+      return Promise.reject(new Error("rule read failed"));
+    })
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          retry = resolve;
+        }),
+    );
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  expect(await screen.findByText("规则覆盖暂时无法计算，资源统计仍可查看。")).toBeVisible();
+  expect(screen.getByRole("region", { name: "知识网络资源覆盖统计" })).toHaveTextContent(
+    String(full.resources.total),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "重试" }));
+  expect(screen.getByRole("region", { name: "知识网络资源覆盖统计" })).toHaveTextContent(
+    String(full.resources.total),
+  );
+  expect(screen.getByText("正在刷新，已加载内容仍可查看")).toBeVisible();
+  await act(async () => {
+    retry(full);
+    await Promise.resolve();
+  });
+  expect(screen.getByText("70%")).toBeVisible();
+});
+
+it("aborts the old network load and ignores late resource frames after switching networks", async () => {
+  const full = await vi.mocked(getEvalOverview)("kn-1");
+  const loads: NonNullable<Parameters<typeof getEvalOverview>[1]>[] = [];
+  const finishes: ((value: typeof full) => void)[] = [];
+  vi.mocked(getEvalOverview)
+    .mockClear()
+    .mockImplementation((_kn, options) => {
+      loads.push(options!);
+      return new Promise((resolve) => finishes.push(resolve));
+    });
+  const view = render(
+    <EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />,
+  );
+  view.rerender(<EvalWorkspaceScene networkId="kn-2" activeTab="overview" onTabChange={vi.fn()} />);
+  expect(loads[0].signal?.aborted).toBe(true);
+  act(() => loads[0].onProgress({ section: "resources", overview: full }));
+  const metrics = screen.getByRole("region", { name: "知识网络资源覆盖统计" });
+  expect(metrics.querySelector("strong")).toHaveTextContent("—");
+  await act(async () => {
+    finishes[1]({ ...full, resources: { ...full.resources, total: 7 } });
+    await Promise.resolve();
+  });
+  expect(
+    screen.getByRole("region", { name: "知识网络资源覆盖统计" }).querySelector("strong"),
+  ).toHaveTextContent("7");
+  await act(async () => {
+    finishes[0](full);
+    await Promise.resolve();
+  });
+  expect(
+    screen.getByRole("region", { name: "知识网络资源覆盖统计" }).querySelector("strong"),
+  ).toHaveTextContent("7");
+});
+
+it("clears previously loaded statistics when refresh reports changed permissions", async () => {
+  const full = await vi.mocked(getEvalOverview)("kn-1");
+  vi.mocked(getEvalOverview)
+    .mockReset()
+    .mockResolvedValueOnce(full)
+    .mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } });
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  await screen.findByText("70%");
+  const panel = screen.getByRole("region", { name: "资源与场景评测结果" });
+  fireEvent.click(within(panel).getByRole("button", { name: "刷新资源评测结果" }));
+  await screen.findByText("无法读取知识网络概览，请稍后重试。");
+  expect(screen.queryByText("70%")).toBeNull();
+  expect(
+    screen.getByRole("region", { name: "知识网络资源覆盖统计" }).querySelector("strong"),
+  ).toHaveTextContent("—");
+});
+
+it("restores the three original blocks in each overview tab without mixing resource results into execution", async () => {
+  routerMocks.search =
+    "?overview_view=execution&case_status=enabled&case_result=failed&case_scope=participating";
+  render(<EvalWorkspaceScene networkId="kn-1" activeTab="overview" onTabChange={vi.fn()} />);
+  expect(await screen.findByTestId("eval-overview-results")).toBeVisible();
+  expect(screen.getByRole("region", { name: "用例与运行统计" })).toBeVisible();
+  expect(screen.getByTestId("eval-recent-runs")).toBeVisible();
+  expect(screen.queryByRole("region", { name: "资源与场景评测结果" })).toBeNull();
+  fireEvent.click(screen.getByRole("tab", { name: "资源覆盖" }));
+  expect(screen.getByRole("region", { name: "知识网络资源覆盖统计" })).toBeVisible();
+  const resources = screen.getByRole("region", { name: "资源与场景评测结果" });
+  expect(resources).toBeVisible();
+  expect(screen.getByText("资源评测覆盖", { exact: true })).toBeVisible();
+  expect(screen.queryByTestId("eval-recent-runs")).toBeNull();
+  fireEvent.change(within(resources).getByLabelText("搜索资源、场景名称或问题字段"), {
+    target: { value: "物料" },
+  });
+  fireEvent.click(screen.getByRole("tab", { name: "用例与运行" }));
+  expect(screen.getByTestId("eval-overview-results")).toBeVisible();
+  expect(resources).not.toBeVisible();
+  expect(screen.getByTestId("eval-recent-runs")).toBeVisible();
+  fireEvent.click(screen.getByRole("tab", { name: "资源覆盖" }));
+  expect(within(resources).getByLabelText("搜索资源、场景名称或问题字段")).toHaveValue("物料");
+  expect(getEvalOverview).toHaveBeenCalledOnce();
 });

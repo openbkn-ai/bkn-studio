@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CodeEditor } from "./CodeEditor";
+import { CodeEditor } from "@/framework/code-editor/CodeEditor";
 
 type JsonEditorProps = {
   value?: string;

@@ -7,8 +7,11 @@
 
 import { evalScalarText } from "./eval-scalar-text";
 
-import { Alert, Button, Input, Select, Space, Spin, Typography } from "antd";
+import { Alert, Button, Input, Select, Space, Spin, type SelectProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EvalActionCheckFields } from "./EvalActionCheckFields";
+import { actionCheckArgumentsSchema, defaultActionCheck } from "./action-check-model";
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { EvalResourceArguments } from "./EvalResourceArguments";
 import { EvalCaseArguments } from "./EvalCaseArguments";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
@@ -29,7 +32,7 @@ import {
 import { previewRuleApplication, type RuleApplicationRow } from "./rule-application.service";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { useEvalTranslation } from "./useEvalTranslation";
-import styles from "./EvalCaseEditorDrawer.module.css";
+import { EvalFieldLabel } from "./EvalFieldLabel";
 import { EvalDefinitionOnlyFields } from "./EvalDefinitionOnlyFields";
 import { resourceCaseChecks } from "./rule-check-model";
 const predicates = [
@@ -123,7 +126,12 @@ export function EvalResourceCaseFields({
     modeCallback.current?.(definitionOnly);
     return () => modeCallback.current?.(false);
   }, [definitionOnly]);
-  const business = check?.type === "resource_result";
+  const business = [
+    "resource_result",
+    "resource_error",
+    "resource_request",
+    "metric_lineage",
+  ].includes(check?.type ?? "");
   const needsReference =
     business &&
     (check?.independent_value ||
@@ -190,7 +198,12 @@ export function EvalResourceCaseFields({
     if (!base || !selected || base.match !== "applicable" || contract.available === false) return;
     let sample;
     try {
-      const argumentsValue = validateCaseArguments(args || "{}", contract.input);
+      const argumentsValue = validateCaseArguments(
+        args || "{}",
+        check?.type === "action_execution"
+          ? actionCheckArgumentsSchema(contract, check.binding ?? "")
+          : contract.input,
+      );
       if (
         check?.independent_value &&
         !criteria.some((c) =>
@@ -199,7 +212,6 @@ export function EvalResourceCaseFields({
       )
         throw Error(text("independentValueRequired"));
       const compiled = business ? compileCriteria(criteria) : undefined;
-      if (needsReference && !evidence.trim()) return;
       sample = {
         ...base.sample,
         arguments: argumentsValue,
@@ -275,10 +287,28 @@ export function EvalResourceCaseFields({
     contract,
     retry,
   ]);
+  const checkOptions: SelectProps["options"] = unsupported.length
+    ? [
+        ...(supported.length
+          ? [
+              {
+                label: definitionText("executionReady"),
+                options: supported.map((item) => ({ value: item.id, label: item.title })),
+              },
+            ]
+          : []),
+        {
+          label: definitionText("recordable"),
+          options: unsupported.map((item) => ({ value: item.id, label: item.title })),
+        },
+      ]
+    : supported.map((item) => ({ value: item.id, label: item.title }));
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <div>
-        <div className={styles.fieldLabel}>{text("check")} *</div>
+        <EvalFieldLabel required hint={selected?.description}>
+          {text("check")}
+        </EvalFieldLabel>
         <Select
           aria-label={text("check")}
           style={{ width: "100%" }}
@@ -288,17 +318,32 @@ export function EvalResourceCaseFields({
           disabled={!!lockedRule}
           loading={!config && !error}
           placeholder={text("chooseCheck")}
-          options={[
-            {
-              label: definitionText("executionReady"),
-              options: supported.map((r) => ({ value: r.id, label: r.title })),
-            },
-            {
-              label: definitionText("recordable"),
-              options: unsupported.map((r) => ({ value: r.id, label: r.title })),
-            },
-          ]}
+          options={checkOptions}
           onChange={(id) => {
+            const nextCheck =
+              rules.find((rule) => rule.id === id)?.check ?? config?.execution_support?.[id]?.check;
+            if (check?.type === "action_execution" || nextCheck?.type === "action_execution") {
+              try {
+                const previous = parsePrecisionPreservingJSON(args || "{}") as Record<
+                  string,
+                  unknown
+                >;
+                const actionInput =
+                  check?.type === "action_execution" ? (previous.action_input ?? {}) : previous;
+                changeArguments(
+                  transformPrecisionSafeJSONRequest(
+                    nextCheck?.type === "action_execution"
+                      ? {
+                          action_input: actionInput,
+                          check: defaultActionCheck(nextCheck.binding ?? ""),
+                        }
+                      : actionInput,
+                  ),
+                );
+              } catch {
+                changeArguments("{}");
+              }
+            }
             setRuleId(id);
             setRecordDefinition(false);
             setBase(undefined);
@@ -308,7 +353,6 @@ export function EvalResourceCaseFields({
           }}
         />
       </div>
-      {selected && <Typography.Text type="secondary">{selected.description}</Typography.Text>}
       {!definitionOnly && contract.available === false && (
         <Alert
           type="warning"
@@ -349,16 +393,32 @@ export function EvalResourceCaseFields({
         )}
       {ruleId && !definitionOnly && contract.available !== false && (
         <>
-          {check?.independent_value && (
-            <Typography.Paragraph type="secondary">
-              {text(
-                resource.kind === "function" ? "validInputSamples" : "independentMetricSamples",
-              )}
-            </Typography.Paragraph>
-          )}
           <div>
-            <div className={styles.fieldLabel}>{text("arguments")}</div>
-            {resource.kind === "function" ? (
+            <EvalFieldLabel
+              hint={
+                check?.independent_value
+                  ? text(
+                      resource.kind === "function"
+                        ? "validInputSamples"
+                        : resource.kind === "metric"
+                          ? "independentMetricSamples"
+                          : "independentInvocationSamples",
+                    )
+                  : undefined
+              }
+            >
+              {text("arguments")}
+            </EvalFieldLabel>
+            {check?.type === "action_execution" ? (
+              <EvalActionCheckFields
+                key={check.binding}
+                networkId={networkId}
+                contract={contract}
+                binding={check.binding ?? ""}
+                value={args}
+                onChange={changeArguments}
+              />
+            ) : resource.kind === "function" ? (
               <EvalCaseArguments
                 value={args}
                 onChange={changeArguments}
@@ -379,7 +439,7 @@ export function EvalResourceCaseFields({
           {business ? (
             <>
               <div>
-                <div className={styles.fieldLabel}>{text("criteria")} *</div>
+                <EvalFieldLabel required>{text("criteria")}</EvalFieldLabel>
                 <EvalCaseCriteria
                   value={criteria}
                   onChange={setCriteria}
@@ -390,7 +450,7 @@ export function EvalResourceCaseFields({
               {needsReference && (
                 <>
                   <div>
-                    <div className={styles.fieldLabel}>{text("source")} *</div>
+                    <EvalFieldLabel required>{text("source")}</EvalFieldLabel>
                     <Select
                       aria-label={text("source")}
                       style={{ width: "100%" }}
@@ -403,7 +463,7 @@ export function EvalResourceCaseFields({
                     />
                   </div>
                   <div>
-                    <div className={styles.fieldLabel}>{text("evidence")} *</div>
+                    <EvalFieldLabel>{text("evidence")}</EvalFieldLabel>
                     <Input.TextArea
                       aria-label={text("evidence")}
                       rows={2}
@@ -416,17 +476,21 @@ export function EvalResourceCaseFields({
               )}
             </>
           ) : (
-            <Typography.Text type="secondary">
-              {text(
+            <EvalFieldLabel
+              hint={text(
                 check?.type === "output_contract"
                   ? "schemaStandard"
-                  : check?.type === "input_contract"
-                    ? "inputStandard"
-                    : check?.type === "result_compare"
-                      ? "fixedStandard"
-                      : "availabilityStandard",
+                  : check?.type === "action_execution"
+                    ? "actionStandard"
+                    : check?.type === "input_contract"
+                      ? "inputStandard"
+                      : check?.type === "result_compare"
+                        ? "fixedStandard"
+                        : "availabilityStandard",
               )}
-            </Typography.Text>
+            >
+              {text("criteria")}
+            </EvalFieldLabel>
           )}
         </>
       )}

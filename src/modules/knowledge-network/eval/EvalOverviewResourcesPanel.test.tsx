@@ -6,7 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { Modal } from "antd";
+import { App, Modal } from "antd";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { beforeAll, beforeEach, expect, it, vi } from "vitest";
@@ -658,4 +658,24 @@ it("explains missing readonly authorization instead of only asking for a new cas
   render(<EvalOverviewResourcesPanel {...p} />);
   fireEvent.click(screen.getByRole("button", { name: /未完成评测\s*1/ }));
   expect(screen.getByText("未获得只读执行授权；请先配置隔离接收方。")).toBeTruthy();
+});
+
+it("does not confirm a resource rerun rejected by execution preflight", async () => {
+  vi.mocked(previewM1RunSelection).mockResolvedValue({
+    case_count: 2,
+    eligible: false,
+    execution_mode: "platform",
+    reasons: ["unavailable"],
+  });
+  render(
+    <App>
+      <EvalOverviewResourcesPanel {...props()} />
+    </App>,
+  );
+  await chooseAction("物料", "查看问题");
+  const drawer = await screen.findByRole("dialog", { name: "物料 · 资源评测明细" });
+  fireEvent.click(within(drawer).getByRole("button", { name: /重新评测（2）/ }));
+  await screen.findByText("当前无法复测，请核对执行权限、用例状态与只读执行配置。");
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(createM1Run).not.toHaveBeenCalled();
 });

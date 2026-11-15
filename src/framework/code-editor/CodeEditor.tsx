@@ -6,11 +6,12 @@
  */
 
 import type { Monaco, OnMount } from "@monaco-editor/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { MonacoEditor } from "@/framework/monaco/MonacoEditor";
 
-import styles from "./JsonEditor.module.css";
+import { registerJsonSchema } from "./json-schema-registry";
+import styles from "./CodeEditor.module.css";
 
 const MONO_STACK =
   'ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace';
@@ -60,9 +61,6 @@ export type CodeEditorLanguage =
   | "xml"
   | "yaml";
 
-/** JSON documents at this URI use the schema registered below for completion and validation. */
-const EVENT_MODEL_PATH = "bkn-function-event.json";
-
 // Python indentation is part of its syntax; two spaces produces code that does not follow community convention.
 const TAB_SIZE_BY_LANGUAGE: Partial<Record<CodeEditorLanguage, number>> = {
   python: 4,
@@ -70,7 +68,11 @@ const TAB_SIZE_BY_LANGUAGE: Partial<Record<CodeEditorLanguage, number>> = {
 
 const DEFAULT_TAB_SIZE = 2;
 
-type CodeEditorProps = {
+export type CodeEditorProps = {
+  ariaLabel?: string;
+  editableWhileLoading?: boolean;
+  id?: string;
+  placeholder?: string;
   /** Follow the last line while streaming content is appended; otherwise each setValue jumps back to the top. */
   followTail?: boolean;
   /** "fill" uses the parent container's full height, as determined by the outer flex layout. */
@@ -84,6 +86,10 @@ type CodeEditorProps = {
 };
 
 export function CodeEditor({
+  ariaLabel,
+  editableWhileLoading = false,
+  id,
+  placeholder,
   followTail = false,
   height = 260,
   jsonSchema,
@@ -92,38 +98,15 @@ export function CodeEditor({
   readOnly = false,
   value = "",
 }: CodeEditorProps) {
-  const monacoRef = useRef<Monaco | null>(null);
+  const [monaco, setMonaco] = useState<Monaco | null>(null);
+  const instanceId = useId();
+  const modelPath = `inmemory://bkn-code/${encodeURIComponent(instanceId)}.json`;
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
-  const applyJsonSchema = useCallback(
-    (monaco: Monaco | null) => {
-      // setDiagnosticsOptions configures JSON globally. An editor without a schema, such as a
-      // parameter preview, AI result, or JsonEditor, would clear schemas registered by the contract
-      // editor and not restore them on unmount. Update global configuration only with a schema;
-      // fileMatch limits it by path, so a retained schema is harmless elsewhere.
-      if (!monaco || language !== "json" || !jsonSchema) {
-        return;
-      }
-
-      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-        validate: true,
-        allowComments: false,
-        schemas: [
-          {
-            uri: `inmemory://schema/${EVENT_MODEL_PATH}`,
-            fileMatch: [`*${EVENT_MODEL_PATH}`],
-            schema: jsonSchema,
-          },
-        ],
-      });
-    },
-    [jsonSchema, language],
-  );
-
-  // Reattach the schema when parameters change, or completion remains on the old contract.
   useEffect(() => {
-    applyJsonSchema(monacoRef.current);
-  }, [applyJsonSchema]);
+    if (monaco && language === "json" && jsonSchema)
+      return registerJsonSchema(monaco, modelPath, jsonSchema);
+  }, [monaco, modelPath, language, jsonSchema]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -137,11 +120,23 @@ export function CodeEditor({
   return (
     <div className={`${styles.editorBorder} ${height === "fill" ? styles.editorFill : ""}`}>
       <MonacoEditor
-        beforeMount={(monaco) => {
-          monacoRef.current = monaco;
-          applyJsonSchema(monaco);
-        }}
-        fallback={<div style={{ height: height === "fill" ? "100%" : height }} />}
+        beforeMount={setMonaco}
+        fallback={
+          editableWhileLoading ? (
+            <textarea
+              id={id}
+              aria-label={ariaLabel}
+              className={styles.fallback}
+              style={{ height: height === "fill" ? "100%" : height }}
+              placeholder={placeholder}
+              readOnly={readOnly}
+              value={value}
+              onChange={(event) => onChange?.(event.target.value)}
+            />
+          ) : (
+            <div style={{ height: height === "fill" ? "100%" : height }} />
+          )
+        }
         height={height === "fill" ? "100%" : height}
         language={language}
         onChange={(next) => onChange?.(next ?? "")}
@@ -150,6 +145,7 @@ export function CodeEditor({
         }}
         options={{
           ...EDITOR_OPTIONS,
+          ariaLabel,
           // In read-only mode, the cursor and active-line highlight are noise: users cannot edit,
           // and a blinking caret suggests otherwise.
           domReadOnly: readOnly,
@@ -157,7 +153,7 @@ export function CodeEditor({
           readOnly,
           tabSize: TAB_SIZE_BY_LANGUAGE[language] ?? DEFAULT_TAB_SIZE,
         }}
-        path={language === "json" && jsonSchema ? EVENT_MODEL_PATH : undefined}
+        path={modelPath}
         value={value}
       />
     </div>

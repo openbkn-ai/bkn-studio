@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalDeclarationCaseFields } from "./EvalDeclarationCaseFields";
+import { EvalRuleProgramFields } from "./EvalRuleProgramFields";
+import { newRuleProgram, validateRuleProgram, type EvalRuleProgram } from "./rule-check-model";
 import { caseUiText } from "./case-ui-text";
 import { evalScalarText } from "./eval-scalar-text";
 
@@ -18,9 +21,20 @@ import {
 } from "./m0-run.service";
 import { previewRuleApplication, type RuleApplicationRow } from "./rule-application.service";
 import styles from "./EvalCaseEditorDrawer.module.css";
+import { EvalFieldLabel } from "./EvalFieldLabel";
 import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
+import { EvalLogicalPropertyCaseFields } from "./EvalLogicalPropertyCaseFields";
 import { EvalDefinitionOnlyFields } from "./EvalDefinitionOnlyFields";
 import { useEvalTranslation } from "./useEvalTranslation";
+import { getKnowledgeNetworkObjectTypeDetail } from "../services/object-type.service";
+import type { ObjectTypeDetail } from "../types/object-type";
+
+function propertyFieldName(row: RuleApplicationRow) {
+  const prefix = `${row.resource_name} / `;
+  return row.target_name.startsWith(prefix)
+    ? row.target_name.slice(prefix.length)
+    : row.target_name;
+}
 
 type Props = {
   networkId: string;
@@ -60,7 +74,16 @@ export function EvalObjectCaseFields({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [propertyDetails, setPropertyDetails] = useState<{
+    networkId: string;
+    resourceId: string;
+    detail: ObjectTypeDetail;
+  }>();
   const [sampleRows, setSampleRows] = useState("");
+  const [businessProgram, setBusinessProgram] = useState<EvalRuleProgram>(() =>
+    newRuleProgram("objectType"),
+  );
+  const [standardVersion, setStandardVersion] = useState("");
   const [recordDefinition, setRecordDefinition] = useState(
     !!initialDefinition?.diagnostic_spec.definition_only,
   );
@@ -78,6 +101,8 @@ export function EvalObjectCaseFields({
   }, [networkId, resource.kind, resource.id, ruleId, target, invalidate]);
   useEffect(() => {
     setSampleRows("");
+    setBusinessProgram(newRuleProgram("objectType"));
+    setStandardVersion("");
     setSampleRefs("");
     setSampleFields("");
     setFilterValue("");
@@ -101,6 +126,41 @@ export function EvalObjectCaseFields({
     [config, kind],
   );
   useEffect(() => {
+    setPropertyDetails(undefined);
+    if (kind !== "objectProperty") return;
+    let active = true;
+    void getKnowledgeNetworkObjectTypeDetail(networkId, resource.id, { skipErrorToast: true })
+      .then((detail) => {
+        if (active && detail) setPropertyDetails({ networkId, resourceId: resource.id, detail });
+      })
+      // A display-name lookup must not block an otherwise valid check. Fall
+      // back to the field names already supplied by the authorized preview.
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [kind, networkId, resource.id, retry]);
+  const propertyNames = useMemo(() => {
+    if (propertyDetails?.networkId !== networkId || propertyDetails.resourceId !== resource.id)
+      return new Map<string, string>();
+    const logical = ruleId === "object-logic-property" || ruleId?.startsWith("logic-property-");
+    const properties = logical
+      ? propertyDetails.detail.logicProperties
+      : propertyDetails.detail.dataProperties;
+    return new Map(properties.map((p) => [p.name, p.displayName.trim() || p.name]));
+  }, [propertyDetails, networkId, resource.id, ruleId]);
+  const propertySearch = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (kind !== "objectProperty" || !needle) return undefined;
+    const matches = [...propertyNames].filter(([name, label]) =>
+      `${name}\n${label}`.toLocaleLowerCase().includes(needle),
+    );
+    // Keep ordinary field-name searches server-paginated. Only translate when
+    // a business name matches that the server's technical-name filter misses.
+    if (!matches.some(([name]) => !name.toLocaleLowerCase().includes(needle))) return undefined;
+    return new Set(matches.map(([name]) => name));
+  }, [query, kind, propertyNames]);
+  useEffect(() => {
     onPrepared(undefined);
     setBusy(false);
     setRows([]);
@@ -112,13 +172,37 @@ export function EvalObjectCaseFields({
     setError("");
     const timer = window.setTimeout(
       () => {
-        void previewRuleApplication(networkId, {
+        const request = {
           resources: [{ kind: resource.kind, id: resource.id }],
           rule_ids: [ruleId],
-          page,
+          page: propertySearch ? 1 : page,
           limit: 100,
-          ...(query ? { q: query } : {}),
-        })
+          ...(propertySearch
+            ? propertySearch.size === 1
+              ? { q: [...propertySearch][0] }
+              : {}
+            : query
+              ? { q: query }
+              : {}),
+        };
+        void previewRuleApplication(networkId, request)
+          .then(async (value) => {
+            if (!active || !propertySearch) return value;
+            const matches = value.entries.filter((r) => propertySearch.has(propertyFieldName(r)));
+            // Business-name matches can span server pages (including several
+            // fields sharing a display name). Keep only actual preview targets.
+            for (let next = 2; (next - 1) * value.limit < value.total; next++) {
+              if (!active) return value;
+              const more = await previewRuleApplication(networkId, { ...request, page: next });
+              matches.push(...more.entries.filter((r) => propertySearch.has(propertyFieldName(r))));
+            }
+            return {
+              ...value,
+              page,
+              total: matches.length,
+              entries: matches.slice((page - 1) * value.limit, page * value.limit),
+            };
+          })
           .then((value) => {
             if (!active) return;
             setRows(value.entries);
@@ -130,7 +214,7 @@ export function EvalObjectCaseFields({
             if (kind === "objectType" && value.entries.length === 1) {
               const row = value.entries[0];
               setTarget(row.target_key);
-              if (row.prepared_definition && row.ready_for_save) {
+              if (row.match === "applicable" && row.prepared_definition && row.ready_for_save) {
                 onPrepared(row.prepared_definition);
               }
             }
@@ -155,6 +239,7 @@ export function EvalObjectCaseFields({
     ruleId,
     kind,
     query,
+    propertySearch,
     page,
     retry,
     onPrepared,
@@ -172,13 +257,20 @@ export function EvalObjectCaseFields({
     modeCallback.current?.(definitionOnly);
     return () => modeCallback.current?.(false);
   }, [definitionOnly]);
-  const selectedTarget = useMemo(() => {
-    const row = rows.find((r) => r.target_key === target);
-    return row ? { id: row.target_id, name: row.target_name } : undefined;
-  }, [rows, target]);
-  const needsSamples = ["instance_lookup", "mapped_values", "property_filter"].includes(
-    checkType ?? "",
+  const selectedRow = rows.find((r) => r.target_key === target);
+  const selectedTarget = useMemo(
+    () => (selectedRow ? { id: selectedRow.target_id, name: selectedRow.target_name } : undefined),
+    [selectedRow],
   );
+  const selectedReason =
+    selectedRow?.match_reason ||
+    selectedRow?.missing.join("；") ||
+    selectedRow?.execution_reason ||
+    definitionText("runtimeMissing");
+  const needsProgram = !!selectedRule?.check?.program_input;
+  const needsSamples =
+    needsProgram ||
+    ["instance_lookup", "mapped_values", "property_filter"].includes(checkType ?? "");
   const editSample = (set: (value: string) => void, value: string) => {
     generation.current++;
     setBusy(false);
@@ -194,13 +286,25 @@ export function EvalObjectCaseFields({
     setError("");
     setBusy(true);
     try {
-      const args: Record<string, unknown> = {
-        rows: parsePrecisionPreservingJSON(sampleRows),
-        evidence_refs: sampleRefs
-          .split("\n")
-          .map((value) => value.trim())
-          .filter(Boolean),
-      };
+      const evidenceRefs = sampleRefs
+        .split("\n")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      if (needsProgram) validateRuleProgram(businessProgram);
+      const args: Record<string, unknown> = needsProgram
+        ? {
+            program: {
+              ...businessProgram,
+              standard: { version: standardVersion.trim(), evidence_refs: evidenceRefs },
+            },
+          }
+        : {
+            rows: parsePrecisionPreservingJSON(sampleRows),
+            evidence_refs: sampleRefs
+              .split("\n")
+              .map((value) => value.trim())
+              .filter(Boolean),
+          };
       if (checkType === "mapped_values")
         args.fields = sampleFields
           .split(/[,，]/)
@@ -221,17 +325,24 @@ export function EvalObjectCaseFields({
       if (current !== generation.current) return;
       const prepared = preview.entries.find((item) => item.target_key === target);
       if (!prepared?.ready_for_save || !prepared.prepared_definition) {
-        setError(prepared?.missing.join("；") || prepared?.save_error || text("sampleInvalid"));
+        setError(
+          prepared?.missing.join("；") ||
+            prepared?.save_error ||
+            text(needsProgram ? "businessInvalid" : "sampleInvalid"),
+        );
         return;
       }
+      setRows((currentRows) =>
+        currentRows.map((item) => (item.target_key === target ? prepared : item)),
+      );
       onPrepared(prepared.prepared_definition);
     } catch {
-      if (current === generation.current) setError(text("sampleInvalid"));
+      if (current === generation.current)
+        setError(text(needsProgram ? "businessInvalid" : "sampleInvalid"));
     } finally {
       if (current === generation.current) setBusy(false);
     }
   };
-  const unavailable = rows.find((r) => !r.prepared_definition);
   return (
     <Space direction="vertical" size={12} style={{ width: "100%" }}>
       <div className={styles.criteriaValues}>
@@ -259,7 +370,17 @@ export function EvalObjectCaseFields({
           />
         </div>
         <div>
-          <div className={styles.fieldLabel}>{caseUiText("checkRequired")}</div>
+          <EvalFieldLabel
+            required
+            hint={
+              selectedRule &&
+              (config?.check_capabilities?.find((capability) => capability.type === checkType)
+                ?.help ??
+                selectedRule.description)
+            }
+          >
+            {caseUiText("checkRequired")}
+          </EvalFieldLabel>
           <Select
             aria-label={caseUiText("knowledgeNetwork.eval.relationChecks.check")}
             showSearch
@@ -285,17 +406,11 @@ export function EvalObjectCaseFields({
           />
         </div>
       </div>
-      {selectedRule && (
-        <Typography.Text type="secondary">
-          {config?.check_capabilities?.find((capability) => capability.type === checkType)?.help ??
-            selectedRule.description}
-        </Typography.Text>
-      )}
       {busy && <Spin size="small" />}
       {kind === "objectProperty" && ruleId && (
         <>
           <div>
-            <div className={styles.fieldLabel}>{caseUiText("propertyToCheckRequired")}</div>
+            <EvalFieldLabel required>{caseUiText("propertyToCheckRequired")}</EvalFieldLabel>
             <Select
               aria-label={caseUiText("knowledgeNetwork.eval.relationChecks.property")}
               style={{ width: "100%" }}
@@ -310,18 +425,20 @@ export function EvalObjectCaseFields({
               }}
               options={rows.map((r) => ({
                 value: r.target_key,
-                label: r.target_name,
-                disabled: definitionOnly
-                  ? !["applicable", "not_applicable"].includes(r.match)
-                  : needsSamples
-                    ? r.match !== "applicable"
-                    : !r.ready_for_save || !r.prepared_definition,
+                label: propertyNames.get(propertyFieldName(r)) || propertyFieldName(r),
+                // Users must be able to select a visible target to inspect why
+                // it is not executable. Selection never grants execution.
+                disabled: r.match === "excluded" || r.match === "disabled",
                 title: r.match_reason || r.execution_reason,
               }))}
               onChange={(key) => {
                 const row = rows.find((r) => r.target_key === key);
                 setTarget(key);
-                onPrepared(row?.prepared_definition);
+                onPrepared(
+                  !definitionOnly && row?.match === "applicable" && row.ready_for_save
+                    ? row.prepared_definition
+                    : undefined,
+                );
               }}
             />
           </div>
@@ -352,6 +469,27 @@ export function EvalObjectCaseFields({
           )}
         </>
       )}
+      {!definitionOnly && checkType === "declaration" && selectedRow?.match === "applicable" && (
+        <EvalDeclarationCaseFields
+          key={selectedRow.target_key}
+          networkId={networkId}
+          row={selectedRow}
+          initialDefinition={initialDefinition}
+          onPrepared={onPrepared}
+        />
+      )}
+      {!definitionOnly &&
+        checkType === "logical_property" &&
+        selectedRow &&
+        selectedRow.match === "applicable" && (
+          <EvalLogicalPropertyCaseFields
+            key={selectedRow.target_key}
+            networkId={networkId}
+            row={selectedRow}
+            initialDefinition={initialDefinition}
+            onPrepared={onPrepared}
+          />
+        )}
       {definitionOnly && selectedRule && selectedTarget && (
         <EvalDefinitionOnlyFields
           key={`${selectedRule.id}:${selectedTarget.id}`}
@@ -361,9 +499,7 @@ export function EvalObjectCaseFields({
           target={selectedTarget}
           reason={
             recordDefinition
-              ? rows.find((r) => r.target_key === target)?.match_reason ||
-                rows.find((r) => r.target_key === target)?.missing.join("；") ||
-                definitionText("runtimeMissing")
+              ? selectedReason
               : config?.execution_support?.[selectedRule.id]?.reason ||
                 definitionText("notSupported")
           }
@@ -375,10 +511,10 @@ export function EvalObjectCaseFields({
       {recordDefinition &&
         selectedRule &&
         config?.execution_support?.[selectedRule.id]?.status === "supported" &&
-        rows.some((r) => r.match === "applicable") && (
+        selectedRow?.match === "applicable" && (
           <Button
             onClick={() => {
-              onPrepared(undefined);
+              onPrepared(selectedRow.ready_for_save ? selectedRow.prepared_definition : undefined);
               setRecordDefinition(false);
             }}
           >
@@ -387,13 +523,32 @@ export function EvalObjectCaseFields({
         )}
       {!definitionOnly &&
         selectedRule &&
-        rows.length > 0 &&
-        rows.every((r) => !r.ready_for_save) && (
+        selectedRow &&
+        !busy &&
+        !error &&
+        !selectedRow.ready_for_save &&
+        checkType !== "logical_property" &&
+        checkType !== "declaration" && (
           <Alert
             type="info"
-            message={definitionText("conditionsMissing")}
+            message={t("knowledgeNetwork.eval.objectRuleUi.targetNotReady", {
+              target:
+                kind === "objectProperty"
+                  ? propertyNames.get(propertyFieldName(selectedRow)) ||
+                    propertyFieldName(selectedRow)
+                  : resource.name,
+            })}
             description={
-              rows[0].match_reason || rows[0].missing.join("；") || rows[0].execution_reason
+              <>
+                <div>{selectedReason}</div>
+                {selectedRow.match === "not_applicable" && selectedRule.appliesWhen && (
+                  <div>
+                    {t("knowledgeNetwork.eval.objectRuleUi.applicability", {
+                      condition: selectedRule.appliesWhen,
+                    })}
+                  </div>
+                )}
+              </>
             }
             action={
               <Button
@@ -408,11 +563,8 @@ export function EvalObjectCaseFields({
             }
           />
         )}
-      {!definitionOnly && needsSamples && ruleId && (
+      {!definitionOnly && needsSamples && ruleId && selectedRow?.match === "applicable" && (
         <Space direction="vertical" style={{ width: "100%" }}>
-          <Typography.Text type="secondary">
-            {text(checkType === "mapped_values" ? "mappingHelp" : "sampleHelp")}
-          </Typography.Text>
           {checkType === "mapped_values" && (
             <label style={{ display: "block", width: "100%" }}>
               {text("fields")}
@@ -448,19 +600,49 @@ export function EvalObjectCaseFields({
               </label>
             </div>
           )}
+          {needsProgram ? (
+            <>
+              <label style={{ display: "block", width: "100%" }}>
+                <EvalFieldLabel hint={text("businessHelp")}>
+                  {text("standardVersion")}
+                </EvalFieldLabel>
+                <Input
+                  aria-label={text("standardVersion")}
+                  value={standardVersion}
+                  onChange={(e) => editSample(setStandardVersion, e.target.value)}
+                />
+              </label>
+              <EvalRuleProgramFields
+                kind="objectType"
+                value={businessProgram}
+                onChange={(value) => {
+                  generation.current++;
+                  setBusy(false);
+                  setBusinessProgram(value);
+                  setError("");
+                  onPrepared(undefined);
+                }}
+              />
+            </>
+          ) : (
+            <label style={{ display: "block", width: "100%" }}>
+              <EvalFieldLabel
+                hint={text(checkType === "mapped_values" ? "mappingHelp" : "sampleHelp")}
+              >
+                {text("rows")}
+              </EvalFieldLabel>
+              <Input.TextArea
+                aria-label={text("rows")}
+                rows={5}
+                value={sampleRows}
+                onChange={(e) => editSample(setSampleRows, e.target.value)}
+              />
+            </label>
+          )}
           <label style={{ display: "block", width: "100%" }}>
-            {text("rows")}
+            {text(needsProgram ? "standardRefs" : "refs")}
             <Input.TextArea
-              aria-label={text("rows")}
-              rows={5}
-              value={sampleRows}
-              onChange={(e) => editSample(setSampleRows, e.target.value)}
-            />
-          </label>
-          <label style={{ display: "block", width: "100%" }}>
-            {text("refs")}
-            <Input.TextArea
-              aria-label={text("refs")}
+              aria-label={text(needsProgram ? "standardRefs" : "refs")}
               rows={2}
               value={sampleRefs}
               onChange={(e) => editSample(setSampleRefs, e.target.value)}
@@ -468,10 +650,13 @@ export function EvalObjectCaseFields({
           </label>
           <Button
             loading={busy}
-            disabled={!target || !sampleRows.trim() || !sampleRefs.trim()}
+            disabled={
+              !target ||
+              (needsProgram ? !standardVersion.trim() || !sampleRefs.trim() : !sampleRows.trim())
+            }
             onClick={() => void prepareSample()}
           >
-            {text("prepare")}
+            {text(needsProgram ? "prepareBusiness" : "prepare")}
           </Button>
         </Space>
       )}
@@ -479,14 +664,6 @@ export function EvalObjectCaseFields({
         <Typography.Text type="secondary">
           {caseUiText("noMatchingCheckTargetsAreAvailableForThis")}
         </Typography.Text>
-      )}
-      {!busy && !definitionOnly && !needsSamples && kind === "objectType" && unavailable && (
-        <Alert
-          type="warning"
-          showIcon
-          message={unavailable.match_reason || unavailable.execution_reason}
-          description={unavailable.missing.join("；")}
-        />
       )}
       {error && (
         <Alert

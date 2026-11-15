@@ -6,6 +6,10 @@
  */
 
 import { useState } from "react";
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
+}));
+
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { EvalResourceArguments } from "./EvalResourceArguments";
@@ -68,6 +72,71 @@ it("selects one authorized action instance and creates its identity without expo
   fireEvent.change(screen.getByRole("spinbutton", { name: "count" }), { target: { value: "2" } });
   expect(screen.getByTestId("args")).toHaveTextContent('"dynamic_params":{"count":2}');
 });
+it.each([
+  {
+    operation: "object creation",
+    field: "object_input",
+    properties: { code: { type: "string", title: "新对象编码" } },
+    edits: [{ label: "code", value: "new-order" }],
+    expected: { code: "new-order" },
+  },
+  {
+    operation: "relation operation",
+    field: "relation_target",
+    properties: {
+      source_identity: {
+        type: "object",
+        properties: { order_id: { type: "string", title: "订单主键" } },
+      },
+      target_identity: {
+        type: "object",
+        properties: { supplier_id: { type: "string", title: "供应商主键" } },
+      },
+    },
+    edits: [
+      { label: "order_id", value: "order-1" },
+      { label: "supplier_id", value: "supplier-2" },
+    ],
+    expected: {
+      source_identity: { order_id: "order-1" },
+      target_identity: { supplier_id: "supplier-2" },
+    },
+  },
+  {
+    operation: "standalone tool",
+    field: "dynamic_params",
+    properties: {
+      body: {
+        type: "object",
+        properties: { message: { type: "string", title: "消息内容" } },
+      },
+    },
+    edits: [{ label: "message", value: "controlled test" }],
+    expected: { body: { message: "controlled test" } },
+  },
+])(
+  "renders $operation from the action schema without an existing-instance picker",
+  ({ field, properties, edits, expected }) => {
+    render(
+      <Editor
+        contract={{
+          available: true,
+          input: { type: "object", properties: { [field]: { type: "object", properties } } },
+        }}
+      />,
+    );
+    expect(screen.queryByRole("combobox", { name: "执行实例" })).toBeNull();
+    expect(listCaseActionInstances).not.toHaveBeenCalled();
+    for (const edit of edits)
+      fireEvent.change(screen.getByRole("textbox", { name: edit.label }), {
+        target: { value: edit.value },
+      });
+    expect(JSON.parse(screen.getByTestId("args").textContent ?? "{}")).toEqual({
+      [field]: expected,
+    });
+  },
+);
+
 it.each(["skill", "relationType"])(
   "does not ask for meaningless empty arguments for %s",
   (kind) => {

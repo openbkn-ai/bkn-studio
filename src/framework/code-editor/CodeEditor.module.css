@@ -21,3 +21,18 @@
   border-color: var(--color-focus-ring);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 12%, transparent);
 }
+
+.fallback {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  resize: none;
+  outline: none;
+  background: inherit;
+  color: var(--color-text-primary);
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}

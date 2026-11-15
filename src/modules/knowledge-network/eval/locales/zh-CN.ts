@@ -7,6 +7,46 @@
 
 export const evalPart = {
   eval: {
+    helpLabel: "说明",
+    declaration: {
+      findings: "声明检查明细",
+      checked: "已检查",
+      violations: "确定不符合",
+      candidates: "待确认候选",
+      unknown: "无法判定",
+      findingType: "结论类型",
+      findingMessage: "检查说明",
+      findingResources: "资源与声明路径",
+      violation: "不符合",
+      candidate: "待确认",
+
+      graphReadLimit: "实例边读取上限",
+      program: "声明检查配置",
+      invalidJson: "请输入有效的 JSON 配置",
+      policyVersion: "无环业务策略版本",
+      policyEvidence: "策略依据（每行一条）",
+      graphLimit: "完整读取当前关系的可见实例边。超过读取上限、读取变化或截断时无法判定全图无环。",
+
+      scope: "检查当前用户可见的资源声明。疑似重复或冗余只生成待确认候选。",
+      parameters: "检查标准参数",
+      required: "必填",
+      example: "查看参数示例",
+      exampleHelp: "示例仅展示结构，请替换为业务方确认的标准、版本和依据；系统不会自动采用示例。",
+      noParameters: "本规则无需额外标准参数。",
+      prepare: "校验配置",
+      invalid: "请补全检查标准参数。",
+    },
+    overviewLoading: {
+      resultsTitle: "评测结果",
+      resources: "正在读取资源",
+      results: "正在读取结果",
+      rules: "正在计算规则覆盖",
+      unavailable: "暂未获取",
+      loadingSection: "正在加载此区块",
+      retry: "重试",
+      refreshing: "正在刷新，已加载内容仍可查看",
+      rulesFailed: "规则覆盖暂时无法计算，资源统计仍可查看。",
+    },
     foundation: {
       caseModel: {
         criteriaCount: "请配置 1 至 20 项判定标准",
@@ -72,7 +112,7 @@ export const evalPart = {
         keyMapping: "请填写完整主键与对照键的对应关系",
         referenceRows: "请填写 1 至 100 条独立对照记录，字段值使用文本、数值、布尔值或空值",
         referenceMatches: "对照表的预期命中条数只能填数值 0 或 1",
-        referenceEvidence: "请填写对照样本的独立依据",
+        referenceEvidence: "预期依据最多20条，每条不超过512个字符",
         conditionCount: "{{label}}需要 1 至 20 条条件",
         conditionField: "{{label}}第 {{index}} 条：请填写字段",
         conditionValue: "{{label}}第 {{index}} 条：请填写比较值",
@@ -190,11 +230,11 @@ export const evalPart = {
       sample: "已核对的独立样本",
       evidence: "预期依据",
       evidencePlaceholder:
-        "填写可核对的业务文档、独立样本或确认记录，每行一条；不要把待测系统的输出作为正确答案。",
+        "选填：可核对的业务文档、独立样本或确认记录，每行一条；不要把待测系统的输出作为正确答案。",
       hint: "保存后为未启用用例；满足上方说明的运行条件后，可重新配置自动执行。",
       incomplete: "请核对配置",
       stepsRequired: "请填写测试步骤与验证目标",
-      referencesRequired: "请提供1至20条独立依据，每条不超过512个字符",
+      referencesRequired: "预期依据最多20条，每条不超过512个字符",
       executionReady: "可自动执行",
       recordable: "可保存定义，暂不支持自动执行",
       configure: "先配置用例定义",
@@ -209,11 +249,40 @@ export const evalPart = {
       enableHint: "当前检查尚未配置自动执行能力，保存后为未启用用例。",
       chooseCheck: "选择检查项",
     },
+    actionChecks: {
+      negativeInputHelp:
+        "目标拒绝场景只修改待验证的目标，其他必填参数仍需补全；若因缺少参数或权限被拒绝，不能证明目标检查正确。准入异常场景可有意提供无效输入。",
+      unavailable: "行动服务尚未提供本项执行观测，请先启动对应的行动运行时。",
+      inspectionHelp: "本项只检查真实执行准入，不创建执行任务，不调用行动来源。",
+      duplicateHelp:
+        "发起一次受控行动，在其仍运行时检查相同输入能否被正确拒绝；执行过快时返回无法判定。",
+      executionHelp:
+        "本项会实际执行行动，请使用专用测试样本；完成后核对运行时记录和明确范围内的数据。",
+      decision: "预期准入结果",
+      accepted: "允许执行",
+      rejected: "拒绝执行",
+      authorizationPhase: "权限检查阶段",
+      submission: "提交前准入检查",
+      invocation: "实际调用阶段",
+      failurePhase: "异常检查阶段",
+      source: "行动来源调用",
+      admission: "执行前拒绝",
+      scenario: "异常场景",
+      failure: "失败或部分失败",
+      cancellation: "取消执行",
+      cancelAfter: "发起后等待毫秒再取消",
+      actionInput: "行动输入",
+      effectsHelp:
+        "默认核对本次对象或关系目标。新建对象或独立工具行动需补充明确范围；仅对该范围下结论，不证明范围外无变化。",
+    },
     resourceCases: {
+      actionStandard: "依据真实行动观测检查，违反数应为 0；证据不足时返回无法判定。",
       independentValueRequired:
         "本项必须至少比较一个独立确认的结果值；仅检查存在或返回结构不足以判断结果正确。",
       validInputSamples:
         "填写符合源输入合同的具体参数，并独立确认正确返回值。本项当前执行合法输入样本；非法输入被平台拦截，不算函数已正确拒绝。每种输入或边界可分别新建用例。",
+      independentInvocationSamples:
+        "请独立填写本次调用的预期状态、错误内容或请求信息；不会从实际输出生成预期。",
       independentMetricSamples:
         "按指标固定版本的计算定义，用独立明细或依赖结果核算正确值，填写判定标准和核算依据。不要直接把该指标的实际输出作为预期；每种关系或公式边界可分别新建用例。",
       unsupportedReason: "该规则尚未接入自动执行能力，可先保存完整的未启用用例。",
@@ -240,8 +309,6 @@ export const evalPart = {
     relationChecks: {
       noExtraDeclarations: "未声明额外关联约束，可配置基础查询和关联结果检查。",
       declared: "当前关系声明",
-      configure: "配置关联约束",
-      refreshContract: "刷新关系配置",
       countLimit: "关联数量限制",
       requiredAssociation: "必须有关联",
       notDeclared: "未声明",
@@ -252,8 +319,7 @@ export const evalPart = {
       inapplicable: "不适用的检查项（{{count}}）",
       inapplicable_one: "不适用的检查项（{{count}}）",
       inapplicable_other: "不适用的检查项（{{count}}）",
-      inapplicableHelp:
-        "这些检查需要相应的关系声明。不适用不代表用例不完整或测评失败；按业务要求配置后刷新即可。",
+      inapplicableHelp: "这些检查需要相应的关系声明。不适用不代表用例不完整或测评失败。",
 
       check: "检查项",
       chooseCheck: "选择关系检查项",
@@ -281,7 +347,8 @@ export const evalPart = {
       expectedHelp: "请选择独立确认的预期；试运行结果不会自动填为预期。",
       reference: "预期依据",
       referencePlaceholder: "例如：业务已确认的采购单及供应商对应关系，或独立样本记录。",
-      referenceHelp: "填写业务确认说明或独立样本依据，不使用实际输出作为正确答案。",
+      referenceHelp:
+        "选填：补充业务确认说明或核对记录；预期关联由你明确指定，不使用实际输出作为正确答案。",
       property: "检查属性",
       allProperties: "全部已声明关系属性",
       characteristic: "检查特性",
@@ -290,7 +357,7 @@ export const evalPart = {
       featureHelp: "按声明展开所选对象对或两跳路径；不要求源数据保存反向或传递派生边。",
       scopeHelp: "按关系声明判断；缺少约束时显示不适用，不自动推断业务要求。",
       previewError: "检查配置读取失败，请重试。",
-      incomplete: "请补齐真实对象实例、预期及依据，或明确检查范围。",
+      incomplete: "请选择真实对象实例及预期关联，或明确检查范围。",
       preparing: "正在校验检查配置…",
       standard: "判定标准",
       fixedStandard: "所选范围内违反声明约束的数量为 0；无数据、查询失败或权限不足时不能判为通过。",
@@ -320,6 +387,17 @@ export const evalPart = {
       count_failed: "读取失败",
       count_unavailable: "未启用",
       retryCount: "重试读取运行计划总数",
+    },
+    resourceCoverage: {
+      create: "新建用例",
+      apply: "应用规则",
+      cases: "查看用例",
+      results: "查看结果",
+      run: "运行",
+      repair: "AI 修复",
+      scope: "调整范围",
+      back: "返回",
+      actionsFor: "{{name}}操作",
     },
     resourceOverview: {
       allCases: "全部用例",
@@ -565,18 +643,33 @@ export const evalPart = {
       receiptRecord: "执行回执",
       interactionRecord: "交互记录",
     },
+    logicalPropertyUi: {
+      help: "选择真实实例，填写全部动态参数以便复现；不会让 AI 猜测缺失参数。",
+      callStandard: "判定标准：调用成功，返回所选实例，实际动态参数与本次输入一致。",
+      unavailable: "当前逻辑属性没有可读取的执行来源，请核对绑定及查看权限。",
+    },
     objectRuleUi: {
+      businessHelp:
+        "按业务标准组合适用条件、必填字段、状态及字段比较。联合业务键在聚合检查中选择联合键重复条数，并为各键字段配置非空检查。采样结论仅适用于该样本；单位、币种及例外须由业务标准明确。",
+      standardVersion: "业务标准版本",
+      standardRefs: "业务标准依据（必填，每行一条）",
+      prepareBusiness: "校验标准并配置检查",
+      businessInvalid: "业务检查配置不完整或校验失败，请核对标准版本、依据、字段及条件。",
+      duplicateCount: "联合键重复条数",
+      businessKeyFields: "联合业务键字段（逗号分隔）",
+      targetNotReady: "{{target}}：暂不能自动检查",
+      applicability: "适用条件：{{condition}}",
       sampleHelp:
         "每条样本需包含完整对象主键及 __matches（1表示应命中，0表示不应命中），至少各一条。样本必须独立确认，不从本次查询生成。",
       mappingHelp:
-        "填入独立来源样本，使用对象字段名，包含完整主键及全部对照字段；填写来源记录或业务核对依据。",
+        "填入独立来源样本，使用对象字段名，包含完整主键及全部对照字段；可补充来源记录或业务核对依据（选填）。",
       fields: "对照字段（逗号分隔）",
       operator: "筛选操作",
       filterValue: "筛选值（JSON）",
       rows: "独立样本（JSON数组）",
-      refs: "独立依据（每行一条）",
+      refs: "独立依据（选填，每行一条）",
       prepare: "校验样本并配置检查",
-      sampleInvalid: "样本配置不完整或校验失败，请检查主键、字段、预期命中条数和独立依据。",
+      sampleInvalid: "样本配置不完整或校验失败，请检查主键、字段和预期命中条数。",
     },
     executionUi: {
       yes: "是",
@@ -822,6 +915,7 @@ export const evalPart = {
       checkExists: "必要字段检查",
       checkResource: "目标资源使用",
       checkEvidence: "执行证据完整性",
+      checkDeclaration: "声明规则检查",
       checkManual: "业务判断",
       checkOther: "用例检查项",
       uniqueKeys: "主键唯一性检查",
@@ -912,6 +1006,8 @@ export const evalPart = {
       evidenceFailed: "无法读取执行证据，请核对查看权限或稍后重试。",
     },
     caseEditor: {
+      argumentTemplateHelp:
+        "已列出必填参数，请将 null 替换为实际值；选填参数按需添加。已有值保持不变，模板不会自动提交。",
       advancedJsonHelp: "按当前字段合同填写 JSON；可切回表单继续编辑，不会丢弃已有参数。",
       argumentArray: "填写 JSON 数组；每一项须符合声明的结构，空列表写 []",
       argumentArrayNumber: "填写数值列表，例如 [1,2]；每项须符合声明的范围",
@@ -959,9 +1055,7 @@ export const evalPart = {
       },
       sourceLabel: "正确值从哪里来",
       evidenceLabel: "依据说明",
-      evidenceHelp:
-        "说明正确值为什么成立，可附文档名称及位置、样本或工单引用。每行一条，每条最多512个字符。",
-      evidenceRequired: "请说明正确值的依据，例如业务规则、计算过程或已核对的样本。",
+      evidenceHelp: "选填：可补充文档位置、样本或业务确认记录。每行一条，每条最多512个字符。",
       evidenceTooLong: "第 {{line}} 条依据超过512个字符，请精简或分行。",
       sourceExpert: "人工确认（业务规则、公式或专家）",
       sourceSample: "已核对的对照样本",
@@ -973,8 +1067,7 @@ export const evalPart = {
       functionalDescription: "测试说明（选填）",
       functionalDescriptionHint:
         "实际调用使用上方参数。这里可补充测试目的；留空按用例名称记录，不会自动转换为参数。",
-      functionalDescriptionPlaceholder:
-        "例如：验证物料A001的标准交期；实际物料编号请填在上方参数中。",
+      functionalDescriptionPlaceholder: "描述本次要验证的行为或结果；实际调用输入请填写在参数中。",
       scenarioInputHint: "写清业务前提、操作或提问、关键输入；使用函数时仍需按实际合同填写参数。",
       scenarioInputPlaceholder:
         "例如：前提：库存可用量10件。操作：查询订单A所需8件物料能否齐套。输入：订单A、禁止使用替代料。",
@@ -993,12 +1086,25 @@ export const evalPart = {
       fixedStandard: "规则已固定判定标准：检查范围内的违反数量应为 0。此处不需要重新填写预期答案。",
       contextChangeTitle: "切换后重新配置测试内容？",
       contextChangeBody:
-        "标题与描述保留；原目标的调用参数、判定标准和预期依据将清除，避免使用旧配置测试新目标。",
+        "手工填写的名称与描述保留；自动生成的名称、原目标的调用参数、判定标准和预期依据将清除，避免使用旧配置测试新目标。",
       continue: "继续切换",
       cancel: "取消",
 
       structuredInput: "表单输入",
+      chooseResourceFirst: "先选择评测对象，再配置对应的检查内容。",
+      loadingContract: "正在读取当前评测对象的检查配置…",
       advancedJson: "高级 JSON",
+      contractTitle: "输入与输出定义",
+      inputContract: "输入参数定义",
+      outputContract: "输出结果定义",
+      contractField: "字段",
+      contractType: "类型",
+      contractDescription: "说明",
+      contractUndeclared: "当前资源未声明此结构。",
+      trialEmpty: "完成用例配置后，点击试运行查看本次结果。",
+      addArrayItem: "添加一项",
+      removeArrayItem: "移除第 {{index}} 项",
+      arrayItem: "第 {{index}} 项",
       argumentsJson: "$t(knowledgeNetwork.eval.terms.arguments)",
       noArguments: "此处无需填写参数。",
       removeArgument: "清除",
@@ -1044,11 +1150,7 @@ export const evalPart = {
       },
     },
     caseCreation: {
-      manual: "手动新建",
-      template: "从模板新建",
       templateTitle: "从模板新建用例",
-      loading: "正在读取模板…",
-      noRules: "暂无已启用规则，请先在模板管理中配置。",
     },
     caseBatch: {
       selected: "已选 {{count}} 条",
@@ -1155,6 +1257,20 @@ export const evalPart = {
       apply: "应用",
       batchApply: "应用规则",
     },
+    scenarioCase: {
+      executionHelp: "场景用例由参评智能体通过 MCP 领取并执行，暂不支持页面直接运行或定时运行。",
+      goal: "业务目标",
+      goalPlaceholder: "例如：客户要50套382-000005，现有成品能否发货？发货后还能承诺多少套？",
+      context: "业务条件",
+      contextPlaceholder:
+        "选填：业务日期、数据范围、库存口径及已知事实。例：业务日期2026-08-25，仅统计三个成品仓的可用库存。",
+      constraints: "执行边界",
+      constraintsPlaceholder: "选填：例：只读核算，不创建订单或修改库存；不允许使用替代料。",
+      output: "输出要求",
+      outputPlaceholder:
+        "选填：说明需要回答的字段、单位和解释，不填写正确答案。例：输出能否发货、剩余可承诺数量（套）及依据。",
+      execution: "由外部智能体执行",
+    },
     agentCompare: {
       baseline: "对比基准",
       chooseBaseline: "选择对比基准",
@@ -1247,8 +1363,10 @@ export const evalPart = {
       },
       revisionChanged:
         "运行详情已有新结果（v{{current}}），与矩阵固定的 v{{compared}} 不同，请返回重新生成对比。",
-      title: "智能体对比",
-      back: "返回运行记录",
+      title: "评测对比",
+      helpLabel: "关于评测对比",
+      help: "对比外部智能体通过 MCP 完成并提交的评测结果。支持在同一测试集版本下，对比不同智能体或同一智能体的多次运行，不包含平台直接运行的结果。",
+      back: "返回",
       reselect: "重新选择运行",
       declaration:
         "参评名称、模型和客户端版本由客户端声明，平台不认证其身份；比较时请保持数据、权限和工具配置一致。",
@@ -1318,16 +1436,8 @@ export const evalPart = {
     assistantUi: { resize: "调整 AI 助手宽度" },
     externalUi: {
       finalAnswer: "智能体最终回答",
-      title: "外部智能体评测",
-      capabilityCheck: "校验能力",
-      close: "关闭",
       suite: "测试集",
       version: "固定版本",
-      copyInstruction: "复制评测指令",
-      manualHint:
-        "在 Codex、DSH 或 WorkBuddy 中手动发送下方指令。智能体执行后，平台会自动记录并判分。",
-      connectionHint:
-        "客户端复用同一个 OpenBKN MCP 连接；需要配置可访问的平台地址及当前账号凭据。平台需启用评测工具扩展。",
       instruction:
         "请通过 OpenBKN MCP 对知识网络 {{knId}} 的测试集 {{suiteId}}（固定版本 {{version}}）发起外部智能体评测。\n调用 bkn_eval_start_run，以 UUID 作为本次 idempotency_key，并如实填写 agent.name、可获取的模型和客户端版本。保存 run_id/run_token。\n逐题调用 bkn_eval_next_case，独立解答问题，使用返回的 bkn_context 调用知识网络工具。调用 bkn_eval_submit_result 提交最终回答原文 answer，以及与回答一致的业务字段 JSON structured_output。提交成功后继续下一题，直到 done=true。\n网络重试复用相同参数。不要自行判分，不读取标准答案或其他参评者结果，不自行结束题目 Interaction；run_token/task_token 仅用于工具调用，不展示在最终总结中。完成后报告运行进度。",
     },

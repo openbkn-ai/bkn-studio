@@ -111,7 +111,7 @@ vi.mock("@/modules/execution-factory/scenes/function-workbench/use-cypher-networ
   }),
 }));
 
-vi.mock("@/modules/execution-factory/components/CodeEditor", () => ({
+vi.mock("@/framework/code-editor/CodeEditor", () => ({
   CodeEditor: ({ value }: { value?: string }) => <textarea readOnly value={value ?? ""} />,
 }));
 

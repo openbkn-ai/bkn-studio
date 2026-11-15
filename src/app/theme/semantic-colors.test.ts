@@ -99,7 +99,7 @@ describe("semantic colors", () => {
     const objectMetricForm = readStyle(
       "src/modules/knowledge-network/scenes/ObjectMetricFormScene.tsx",
     );
-    const jsonEditor = readStyle("src/modules/execution-factory/components/JsonEditor.module.css");
+    const jsonEditor = readStyle("src/framework/code-editor/CodeEditor.module.css");
     const resourceDetail = readStyle(
       "src/modules/data-catalog/components/ResourceDetailPanel.module.css",
     );

@@ -151,13 +151,17 @@ it("preserves selections across pages, compares same-name agents with different 
     expect.any(AbortSignal),
   );
   expect(screen.getByText("评测条件存在差异")).toBeTruthy();
-  expect(screen.getByText(/参评名称、模型和客户端版本由客户端声明/)).toBeTruthy();
+  expect(screen.queryByText(/参评名称、模型和客户端版本由客户端声明/)).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "评测对比 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "参评名称、模型和客户端版本由客户端声明",
+  );
   const cells = screen.getAllByRole("button", { name: "查看 Same Agent 的 Case title 结果" });
   fireEvent.click(cells[1]);
   expect(inspect).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }), "cr-b");
   fireEvent.click(screen.getByRole("button", { name: "重新选择运行" }));
   expect(screen.getByText("已选 2 / 6 次运行")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "返回运行记录" }));
+  fireEvent.click(screen.getByRole("button", { name: "返回" }));
   expect(back).toHaveBeenCalled();
 }, 30000);
 it("limits selection to six completed external runs and clears it when the Suite version changes", async () => {

@@ -36,6 +36,34 @@ afterEach(async () => {
   await i18n.changeLanguage("zh-CN");
 });
 
+it("shows the frozen business standard and composite key instead of all rows", () => {
+  const detail = fixture();
+  detail.observation!.query_summary = {
+    scope: { mode: "sample", limit: 100 },
+    checked_rows: 3,
+    violations: 1,
+    program_version: 1,
+    standard: { version: "customer-policy-v1", evidence_refs: ["policy://customer/v1"] },
+    aggregate_results: [
+      {
+        function: "duplicate_count",
+        field: "",
+        fields: ["tenant_id", "customer_code"],
+        operator: "eq",
+        actual_exact: "1",
+        expected: 0,
+        passed: false,
+      },
+    ],
+  };
+  render(<EvalCaseResult detail={detail} onEvidence={vi.fn()} />);
+  expect(screen.getByText(/业务标准版本：customer-policy-v1/)).toHaveTextContent(
+    "policy://customer/v1",
+  );
+  expect(screen.getByText("联合键重复条数")).toBeTruthy();
+  expect(screen.getByText("tenant_id + customer_code")).toBeTruthy();
+});
+
 it("pairs each frozen criterion with its own actual field and expected condition", async () => {
   const definition: definitionService.EvalSuiteCaseDetail = {
     case_id: "case",
@@ -128,7 +156,7 @@ function fixture(): M0CaseDetail {
   };
 }
 
-it("keeps resource availability separate from business correctness and row sampling", () => {
+it("keeps resource availability separate from business correctness and row sampling", async () => {
   const detail = fixture();
   detail.target_snapshot = {
     runner: "resource_query",
@@ -151,8 +179,12 @@ it("keeps resource availability separate from business correctness and row sampl
   ];
   render(<EvalCaseResult detail={detail} onEvidence={vi.fn()} />);
   expect(
-    screen.getByText("此用例检查本次调用是否可用；业务结果正确性需通过独立样本另行验证。"),
-  ).toBeTruthy();
+    screen.queryByText("此用例检查本次调用是否可用；业务结果正确性需通过独立样本另行验证。"),
+  ).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "通过 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "业务结果正确性需通过独立样本另行验证",
+  );
   expect(screen.queryByText(/检查统计不完整/)).toBeNull();
   expect(screen.queryByText(/采样检查通过/)).toBeNull();
 });
@@ -516,4 +548,34 @@ it("keeps schema and structured output side by side in bounded, foldable value v
   fireEvent.click(within(standard).getByRole("button", { name: "展开全部" }));
   expect(within(standard).getByText('"minItems":')).toBeTruthy();
   expect(screen.getByRole("separator", { name: "调整判定标准与实际结果宽度" })).toBeTruthy();
+});
+
+it("shows the frozen business goal, conditions and execution boundaries for an agent scenario", () => {
+  const detail = fixture();
+  detail.target_snapshot = { runner: "external_agent" };
+  detail.observation = {
+    source_kind: "external_submission",
+    source_verified: true,
+    normalized_output: { can_ship: true },
+    evidence_status: "complete",
+  };
+  detail.assessment_target = { kind: "business_scenario", resources: [] };
+  detail.input_spec = {
+    question: "判断订单能否发货",
+    context: "成品需求50套",
+    constraints: "只读，不扣库存",
+    output_requirements: "返回是否可发货与剩余量",
+  };
+  render(<EvalCaseResult networkId="kn" runId="run" detail={detail} onEvidence={vi.fn()} />);
+  for (const text of [
+    "业务目标",
+    "业务条件",
+    "执行边界",
+    "输出要求",
+    "判断订单能否发货",
+    "成品需求50套",
+    "只读，不扣库存",
+    "返回是否可发货与剩余量",
+  ])
+    expect(screen.getByText(text)).toBeTruthy();
 });

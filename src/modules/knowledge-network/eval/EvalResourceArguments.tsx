@@ -6,6 +6,7 @@
  */
 
 import { caseUiText } from "./case-ui-text";
+import { EvalFieldLabel, EvalHelpTooltip } from "./EvalFieldLabel";
 import { useEvalTranslation } from "./useEvalTranslation";
 import { Alert, Button, Collapse, DatePicker, Select, Space, Typography } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
@@ -131,7 +132,7 @@ export function EvalResourceArguments({
         <Typography.Text type="secondary">
           {caseUiText("publishedVersionV")}
           {contract.metric_version}
-          {caseUiText("theActualVersionIsFixedDuringRun")}
+          <EvalHelpTooltip title={caseUiText("theActualVersionIsFixedDuringRun")} />
         </Typography.Text>
       )}
       {kind === "metric" && (contract.metric_time_available || hasTime) && (
@@ -176,7 +177,7 @@ export function EvalResourceArguments({
       )}
       {contract.object_type_id && (
         <div>
-          <Typography.Text strong>{caseUiText("executionInstanceRequired")}</Typography.Text>
+          <EvalFieldLabel required>{caseUiText("executionInstanceRequired")}</EvalFieldLabel>
           <Select
             aria-label={caseUiText("executionInstance")}
             style={{ width: "100%" }}

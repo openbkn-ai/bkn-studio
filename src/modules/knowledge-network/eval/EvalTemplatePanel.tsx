@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { caseUiText } from "./case-ui-text";
 import { EvalRuleCheckFields } from "./EvalRuleCheckFields";
 import { validateRuleCheck } from "./rule-check-model";
@@ -797,15 +798,16 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
               <div className={styles.templateApplicability}>
                 <Typography.Text strong>
                   {caseUiText("automaticMatchingConditionsAllRequired")}
+                  <EvalHelpTooltip
+                    label={caseUiText("automaticMatchingConditionsAllRequired")}
+                    title={
+                      <>
+                        <div>{caseUiText("onlyResourceDeclarationsAreReadExistsMeansThat")}</div>
+                        <div>{caseUiText("matchingConditionsSelectResourcesForTheRuleThe")}</div>
+                      </>
+                    }
+                  />
                 </Typography.Text>
-                <Typography.Paragraph type="secondary">
-                  {caseUiText("onlyResourceDeclarationsAreReadExistsMeansThat")}
-                </Typography.Paragraph>
-                <Alert
-                  type="info"
-                  showIcon
-                  message={caseUiText("matchingConditionsSelectResourcesForTheRuleThe")}
-                />
                 <Checkbox
                   checked={editing.applicability?.all.length === 0}
                   onChange={(event) =>
@@ -997,6 +999,10 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
             )}
             <label>
               {caseUiText("knowledgeNetwork.eval.templateUi.evidence")}
+              <EvalHelpTooltip
+                label={caseUiText("knowledgeNetwork.eval.templateUi.evidence")}
+                title={caseUiText("describeTheMaterialsNeededToVerifyTheCriteria")}
+              />
               <Input.TextArea
                 aria-label={caseUiText("knowledgeNetwork.eval.templateUi.evidence")}
                 rows={2}
@@ -1005,9 +1011,6 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
                 placeholder={caseUiText("forExampleAnObjectDeclarationSnapshotInstanceQuery")}
                 onChange={(event) => setEditing({ ...editing, evidence: event.target.value })}
               />
-              <Typography.Text type="secondary">
-                {caseUiText("describeTheMaterialsNeededToVerifyTheCriteria")}
-              </Typography.Text>
             </label>
             <label>
               {label("columns.preset")}
@@ -1039,7 +1042,15 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
         )}
       </Drawer>
       <Drawer
-        title={detail?.title}
+        title={
+          <>
+            {detail?.title}
+            <EvalHelpTooltip
+              label={definitionText("capabilityHelp")}
+              title={definitionText("capabilityHelp")}
+            />
+          </>
+        }
         width="min(600px, 96vw)"
         open={!!detail}
         onClose={() => setDetail(null)}
@@ -1104,8 +1115,7 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
             <Alert
               type="info"
               showIcon
-              message={definitionText("capabilityHelp")}
-              description={generationDetail(detail, config.execution_support?.[detail.id])}
+              message={generationDetail(detail, config.execution_support?.[detail.id])}
             />
           </Space>
         )}

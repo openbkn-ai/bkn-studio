@@ -6,6 +6,10 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+vi.mock("@/framework/monaco/MonacoEditor", () => ({
+  MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
+}));
+
 import { Modal } from "antd";
 import { beforeAll, expect, it, vi } from "vitest";
 import i18n from "i18next";
@@ -97,7 +101,8 @@ it("describes all-resource matching consistently and puts capability guidance ou
   expect(within(drawer).getByText("全部同类资源")).toBeTruthy();
   expect(within(drawer).queryByText("未配置")).toBeNull();
   expect(within(drawer).queryByText("用例生成能力")).toBeNull();
-  expect(within(drawer).getByRole("alert")).toHaveTextContent("规则能力说明");
+  fireEvent.mouseEnter(within(drawer).getByRole("button", { name: "规则能力说明 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("规则能力说明");
 });
 
 it("shows the rule list without demo or integration-stage markers", () => {
@@ -113,6 +118,44 @@ it("shows the rule list without demo or integration-stage markers", () => {
   expect(
     screen.queryByRole("button", { name: "knowledgeNetwork.eval.templateUi.addButton" }),
   ).toBeNull();
+});
+
+it("groups action rules under dynamic models and keeps them selectable", () => {
+  const actionRule: EvalTemplateRule = {
+    ...rules[0],
+    id: "action-availability",
+    kind: "action",
+    title: "行动调用可用",
+  };
+  render(
+    <EvalTemplatePanel
+      networkId="kn-1"
+      config={{ ...config, rules: [...rules, actionRule] }}
+      canManage={false}
+      onChanged={vi.fn()}
+    />,
+  );
+  const navigation = screen.getByRole("navigation");
+  const groupFor = (button: HTMLElement) => {
+    let previous = button.previousElementSibling;
+    while (previous?.tagName === "BUTTON") previous = previous.previousElementSibling;
+    return previous?.textContent;
+  };
+  expect(groupFor(within(navigation).getByRole("button", { name: /kinds.objectType2/ }))).toBe(
+    "knowledgeNetwork.eval.templateUi.conceptGroup",
+  );
+  expect(groupFor(within(navigation).getByRole("button", { name: /kinds.relationType0/ }))).toBe(
+    "knowledgeNetwork.eval.templateUi.conceptGroup",
+  );
+  const action = within(navigation).getByRole("button", { name: /kinds.action1/ });
+  expect(groupFor(action)).toBe("knowledgeNetwork.eval.templateUi.modelGroup");
+  expect(groupFor(within(navigation).getByRole("button", { name: /kinds.metric0/ }))).toBe(
+    "knowledgeNetwork.eval.templateUi.modelGroup",
+  );
+  fireEvent.click(action);
+  expect(action).toHaveAttribute("aria-current", "page");
+  expect(screen.getByText("行动调用可用")).toBeTruthy();
+  expect(screen.queryByText("对象定义完整性")).toBeNull();
 });
 
 it("does not offer whole-rule publishing or template grants", () => {
@@ -175,9 +218,20 @@ it("creates a rule directly from the drawer", async () => {
       name: /确\s*定/,
     }),
   ).toBeNull();
-  expect(within(drawer).getByRole("alert")).toHaveTextContent("检查方式决定如何执行");
+  expect(within(drawer).queryByRole("alert")).toBeNull();
+  fireEvent.mouseEnter(within(drawer).getByRole("button", { name: "自动匹配条件（全部满足） ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("检查方式决定如何执行");
   expect(within(drawer).queryByText("Case 生成方式")).toBeNull();
-  expect(within(drawer).getByText(/此处不会自动采集或校验/)).toBeTruthy();
+  expect(within(drawer).queryByText(/此处不会自动采集或校验/)).toBeNull();
+  fireEvent.mouseLeave(within(drawer).getByRole("button", { name: "自动匹配条件（全部满足） ?" }));
+  fireEvent.mouseEnter(within(drawer).getByRole("button", { name: "所需证据 ?" }));
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("tooltip")
+        .some((tip) => tip.textContent?.includes("此处不会自动采集或校验")),
+    ).toBe(true),
+  );
   expect(screen.queryByRole("button", { name: "保存修改" })).toBeNull();
   fireEvent.change(within(drawer).getByLabelText("规则名称"), {
     target: { value: "自定义对象检查" },
@@ -268,7 +322,9 @@ it("opens a copied rule as a new rule", async () => {
   expect(within(drawer).getByText("非空检查")).toBeTruthy();
   expect(within(drawer).getByText("对象主键（完整组合）")).toBeTruthy();
   expect(within(drawer).getByRole("button", { name: /确\s*定/ })).toBeTruthy();
-  expect(within(drawer).getByRole("alert")).toHaveTextContent("检查方式决定如何执行");
+  expect(within(drawer).queryByRole("alert")).toBeNull();
+  fireEvent.mouseEnter(within(drawer).getByRole("button", { name: "自动匹配条件（全部满足） ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("检查方式决定如何执行");
 });
 
 it("saves rule settings without a default case quota", async () => {

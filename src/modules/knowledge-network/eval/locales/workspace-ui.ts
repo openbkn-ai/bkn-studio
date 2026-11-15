@@ -386,11 +386,6 @@ export const workspaceUiResources = {
     testSuiteList: "测试集列表",
     searchTestSuites: "搜索测试集",
     searchTestSuiteNamesDescriptionsOrIDs: "搜索测试集名称、描述或 ID",
-    externalEvaluationIsNotEnabled: "外部评测未启用",
-    externalEvaluationSupportsOnlyAuthorizedReadOnlyFunctionCases:
-      "外部评测仅支持已审核的只读 Function 用例。",
-    cannotCheckExternalEvaluationRequirementsCheckCaseStatesAnd:
-      "无法校验外部评测条件，请检查用例状态和执行配置后重试。",
     testSuiteActions: "测试集操作：{{value0}}",
     currentVersion: "当前版本",
     caseCountLabel: "{{value0}} 条",
@@ -908,11 +903,6 @@ export const workspaceUiResources = {
     testSuiteList: "Test suite list",
     searchTestSuites: "Search test suites",
     searchTestSuiteNamesDescriptionsOrIDs: "Search test suite names, descriptions, or IDs",
-    externalEvaluationIsNotEnabled: "External evaluation is not enabled",
-    externalEvaluationSupportsOnlyAuthorizedReadOnlyFunctionCases:
-      "External evaluation supports only authorized read-only Function cases.",
-    cannotCheckExternalEvaluationRequirementsCheckCaseStatesAnd:
-      "Cannot check external evaluation requirements. Check case states and execution configurations, then try again.",
     testSuiteActions: "Test suite actions: {{value0}}",
     currentVersion: "Current version",
     caseCountLabel: "Cases: {{value0}}",
@@ -1188,8 +1178,8 @@ export const workspaceUiSharedFallbacks = {
     en: "Clear filters",
   },
   "knowledgeNetwork.eval.agentCompare.title": {
-    zh: "智能体对比",
-    en: "Agent comparison",
+    zh: "评测对比",
+    en: "Evaluation comparison",
   },
   "knowledgeNetwork.eval.agentCompare.casesUnit": {
     zh: "条用例",

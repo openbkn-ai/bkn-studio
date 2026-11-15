@@ -45,9 +45,19 @@ it("preserves an independently specified expectation and cannot carry a runnable
   });
   expect(result.execution_spec.target).toMatchObject({ kn_id: "kn", resource_id: "resource" });
 });
-it.each([{ question: " " }, { argumentsJson: "[]" }, { evidence: " " }, { criteria: [] }])(
+it.each([{ question: " " }, { argumentsJson: "[]" }, { criteria: [] }])(
   "cannot prepare an incomplete or ambiguous definition: %j",
   (change) => {
     expect(() => definitionOnlyCase({ ...input, ...change })).toThrow();
+  },
+);
+
+it.each(["business_expert", "independent_sample"] as const)(
+  "allows omitted supporting notes for %s",
+  (source) => {
+    expect(definitionOnlyCase({ ...input, source, evidence: "" }).expected_source).toEqual({
+      kind: source,
+      evidence_refs: [],
+    });
   },
 );

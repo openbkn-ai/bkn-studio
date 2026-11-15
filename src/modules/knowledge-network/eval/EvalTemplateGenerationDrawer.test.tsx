@@ -379,7 +379,8 @@ it("uses the common rule application contract for AI recommendations", async () 
       onApplyRules={onApplyRules}
     />,
   );
-  await screen.findByText(/可以咨询和使用整个质量评测模块/);
+  fireEvent.mouseEnter(await screen.findByRole("button", { name: "质量评测 AI 助手 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("可以咨询和使用整个质量评测模块");
   const input = screen.getByLabelText("向质量评测 AI 助手提问");
   fireEvent.change(input, { target: { value: "验证物料对象类" } });
   fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
@@ -444,7 +445,8 @@ it("loads bounded real run details for an evidence question without loading raw 
     threadId: "thread-1",
   });
   render(<EvalAssistantDrawer networkId="kn-1" onAdopted={vi.fn()} onClose={vi.fn()} open />);
-  await screen.findByText(/可以咨询和使用整个质量评测模块/);
+  fireEvent.mouseEnter(await screen.findByRole("button", { name: "质量评测 AI 助手 ?" }));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("可以咨询和使用整个质量评测模块");
   await waitFor(() => expect(listEvalCaseResourcesPage).toHaveBeenCalled());
   fireEvent.change(screen.getByLabelText("向质量评测 AI 助手提问"), {
     target: { value: `请分析运行 ${id} 的采样证据` },

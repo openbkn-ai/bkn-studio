@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Alert, Button, Drawer, Empty, Select, Spin, Tag, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
@@ -36,6 +37,7 @@ type Props = {
   resource: ResourceResultRow;
   canRun: boolean;
   onClose: () => void;
+  onBack?: () => void;
   onResource: () => void;
   onCases: () => void;
   onRepair: (cases: OverviewResourceCase[]) => void;
@@ -48,6 +50,7 @@ export function EvalResourceResultsDrawer({
   resource,
   canRun,
   onClose,
+  onBack,
   onResource,
   onCases,
   onRepair,
@@ -131,7 +134,8 @@ export function EvalResourceResultsDrawer({
       if (!(await getM1RunCapabilities(networkId))) throw new Error("Unavailable execution");
       const scope = { kind: "cases" as const, case_ids: ids };
       const preview = await previewM1RunSelection(networkId, scope);
-      if (preview.case_count !== ids.length) throw new Error("Changed selection");
+      if (!preview.eligible || preview.case_count !== ids.length)
+        throw new Error("Changed selection");
       if (!alive.current) return;
       confirmation.current = modal.confirm({
         title: text("rerunTitle", { name: resource.name }),
@@ -161,6 +165,15 @@ export function EvalResourceResultsDrawer({
       (filter === "problem" ? c.status === "failed" : resourceCaseNeedsReview(c)),
   );
   const status = (entry: OverviewResourceCase) => {
+    if (entry.status === "in_progress" || entry.status === "cancelled") {
+      return (
+        <Tag color={entry.status === "in_progress" ? "processing" : undefined}>
+          {t(
+            `knowledgeNetwork.eval.terms.${entry.status === "in_progress" ? "running" : "cancelled"}`,
+          )}
+        </Tag>
+      );
+    }
     const key =
       entry.status === "failed"
         ? "problem"
@@ -203,7 +216,11 @@ export function EvalResourceResultsDrawer({
               setResult(undefined);
             }}
           >
-            {text("backProblems")}
+            {onBack ? t("knowledgeNetwork.eval.resourceCoverage.back") : text("backProblems")}
+          </Button>
+        ) : onBack ? (
+          <Button type="text" icon={<ArrowLeftOutlined aria-hidden />} onClick={onBack}>
+            {t("knowledgeNetwork.eval.resourceCoverage.back")}
           </Button>
         ) : undefined
       }
@@ -225,7 +242,9 @@ export function EvalResourceResultsDrawer({
               disabled={!selectedIds.length}
               onClick={() => void rerun()}
             >
-              {text("rerunSelected", { count: selectedIds.length })}
+              {onBack
+                ? `${t("knowledgeNetwork.eval.resourceCoverage.run")}（${selectedIds.length}）`
+                : text("rerunSelected", { count: selectedIds.length })}
             </Button>
           )}
         </div>
@@ -270,6 +289,12 @@ export function EvalResourceResultsDrawer({
             <Typography.Text strong title={resource.name}>
               {resource.name}
             </Typography.Text>
+            <EvalHelpTooltip
+              label={resource.name}
+              title={text(
+                resource.kind === "scenario" ? "scenarioResultsHelp" : "currentResultsHelp",
+              )}
+            />
           </div>
           <Alert
             className={styles.notice}
@@ -280,12 +305,12 @@ export function EvalResourceResultsDrawer({
               review: resource.review_cases ?? resource.reviews.length,
               total: resource.case_count,
             })}
-            description={text(
-              resource.kind === "scenario" ? "scenarioResultsHelp" : "currentResultsHelp",
-            )}
           />
           <div className={styles.drawerToolbar}>
-            <Typography.Text strong>{text("caseResults")}</Typography.Text>
+            <Typography.Text strong>
+              {text("caseResults")}{" "}
+              <EvalHelpTooltip label={text("caseResults")} title={text("selectionHelp")} />
+            </Typography.Text>
             <Select
               aria-label={text("caseFilter")}
               value={filter}
@@ -354,9 +379,6 @@ export function EvalResourceResultsDrawer({
               },
             ]}
           />
-          <Typography.Paragraph type="secondary" className={styles.note}>
-            {text("selectionHelp")}
-          </Typography.Paragraph>
         </>
       )}
     </Drawer>

@@ -11,10 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  CodeEditor,
-  type CodeEditorLanguage,
-} from "@/modules/execution-factory/components/CodeEditor";
+import { CodeEditor, type CodeEditorLanguage } from "@/framework/code-editor/CodeEditor";
 import {
   generateFunction,
   generateFunctionStream,

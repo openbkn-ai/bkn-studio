@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { EvalHelpTooltip } from "./EvalFieldLabel";
+import { EvalDeclarationCheckResult } from "./EvalDeclarationCheckResult";
 import { resultUiText } from "./result-ui-text";
 
 import { evalScalarText } from "./eval-scalar-text";
@@ -69,6 +71,7 @@ const assertionNames: Record<string, string> = {
   resource_used: "checkResource",
   evidence_complete: "checkEvidence",
   manual_review: "checkManual",
+  declaration_result: "checkDeclaration",
   numeric_range: "checkRange",
   approx: "checkApprox",
   contains: "checkContains",
@@ -491,11 +494,11 @@ export function EvalCaseResult({
           <section className={styles.caseConclusion} aria-label={text("conclusion")}>
             <div className={styles.conclusionTitle}>
               <Tag color={color}>{resultTitle}</Tag>
+              {availabilityOnly && (
+                <EvalHelpTooltip label={resultTitle} title={text("availabilityBoundary")} />
+              )}
               <span>{resultSummary}</span>
             </div>
-            {availabilityOnly && (
-              <Typography.Text type="secondary">{text("availabilityBoundary")}</Typography.Text>
-            )}
             {query && (
               <Typography.Text type="secondary">
                 {text(query.scope.mode === "sample" ? "sampleBoundary" : "allBoundary")}
@@ -513,9 +516,20 @@ export function EvalCaseResult({
               </Button>
             )}
           </section>
+          {verified && obs?.source_kind === "declaration_preflight" && (
+            <EvalDeclarationCheckResult value={actualOutput} />
+          )}
           <EvalRelationCheckResult summary={obs?.resource_query_summary} />
           {query?.program_version && (
             <section aria-label={resultUiText("programStatistics")}>
+              {query.standard && (
+                <Typography.Paragraph>
+                  {t("knowledgeNetwork.eval.objectRuleUi.standardVersion")}：
+                  {query.standard.version}
+                  {" · "}
+                  {query.standard.evidence_refs.join("、")}
+                </Typography.Paragraph>
+              )}
               <Space wrap style={{ margin: "12px 0" }}>
                 {query.read_rows !== undefined && (
                   <Typography.Text>
@@ -545,6 +559,7 @@ export function EvalCaseResult({
                           count: resultUiText("count"),
                           non_null_count: resultUiText("nonNullCount"),
                           distinct_count: resultUiText("distinctCount"),
+                          duplicate_count: t("knowledgeNetwork.eval.objectRuleUi.duplicateCount"),
                           sum: resultUiText("sum"),
                           min: resultUiText("min"),
                           max: resultUiText("max"),
@@ -553,7 +568,8 @@ export function EvalCaseResult({
                     {
                       title: resultUiText("field"),
                       dataIndex: "field",
-                      render: (v: string) => v || resultUiText("allRows"),
+                      render: (v: string, row) =>
+                        row.fields?.length ? row.fields.join(" + ") : v || resultUiText("allRows"),
                     },
                     { title: resultUiText("actual"), dataIndex: "actual_exact" },
                     {
@@ -687,11 +703,38 @@ export function EvalCaseResult({
 
               {typeof detail.input_spec?.question === "string" &&
                 (!keyRule || run?.runner_type === "external_agent") && (
-                  <Descriptions.Item label={text("testQuestion")} span={2}>
+                  <Descriptions.Item
+                    label={
+                      assessment?.kind === "business_scenario"
+                        ? t("knowledgeNetwork.eval.scenarioCase.goal")
+                        : text("testQuestion")
+                    }
+                    span={2}
+                  >
                     <Typography.Paragraph className={styles.testQuestion}>
                       {detail.input_spec.question}
                     </Typography.Paragraph>
                   </Descriptions.Item>
+                )}
+              {assessment?.kind === "business_scenario" &&
+                (
+                  [
+                    ["context", "context"],
+                    ["constraints", "constraints"],
+                    ["output_requirements", "output"],
+                  ] as const
+                ).map(([field, key]) =>
+                  typeof detail.input_spec?.[field] === "string" && detail.input_spec[field] ? (
+                    <Descriptions.Item
+                      key={field}
+                      label={t(`knowledgeNetwork.eval.scenarioCase.${key}`)}
+                      span={2}
+                    >
+                      <Typography.Paragraph className={styles.testQuestion}>
+                        {String(detail.input_spec[field])}
+                      </Typography.Paragraph>
+                    </Descriptions.Item>
+                  ) : null,
                 )}
               {plannedScope && !query && (
                 <Descriptions.Item label={text("scope")}>
