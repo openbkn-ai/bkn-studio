@@ -728,6 +728,7 @@ describe("ProjectRequirements", () => {
               needs: [{ id: "bed", kind: "object_type" }],
               needs_source: "concepts",
               ontology_changed: true,
+              ontology_gone: ["床位"],
               scenario_ids: ["s1"],
               template: "",
               text: "哪些床位空着？",
@@ -751,7 +752,9 @@ describe("ProjectRequirements", () => {
     renderPage();
 
     expect(
-      await screen.findByText("概念模型有变化，1 个问题可能过期，重新生成会保留已采纳的部分。"),
+      await screen.findByText(
+        "概念模型有变化，1 个问题可能过期。重新生成会按当前模型核对已采纳的问题，仍然适用的不再标记；也可以逐个确认仍然适用。",
+      ),
     ).toBeInTheDocument();
     // One quiet line each, not colored alerts; the names open from the count.
     expect(document.querySelector(".ant-alert")).toBeNull();
@@ -760,12 +763,28 @@ describe("ProjectRequirements", () => {
     fireEvent.click(within(uncovered).getByRole("button", { name: "展开" }));
     expect(screen.getByText("病区")).toBeInTheDocument();
     expect(screen.getByText("可能过期")).toBeInTheDocument();
+    // What the model no longer has is said where the mark is.
+    fireEvent.mouseEnter(screen.getByText("可能过期"));
+    expect(
+      await screen.findByText(
+        "概念模型里已经没有它依赖的床位，请编辑这个问题；确认仍然适用后，这个标记会消失。",
+      ),
+    ).toBeInTheDocument();
     // Accepted: nothing waits for review.
     expect(screen.queryByText("AI 生成，待审核")).toBeNull();
     // Its scenario too, as one of its questions may no longer fit.
     fireEvent.click(screen.getByText(/^业务场景/));
     const scenario = (await screen.findByText("床位调度")).closest("section")!;
     expect(within(scenario).getByText("可能过期")).toBeInTheDocument();
+    // The owner can say it still applies: it is accepted again, as the model is now.
+    reviewRequirementsMock.mockResolvedValue(requirements({ updateTime: 2 }));
+    fireEvent.click(screen.getByText(/^场景问题/));
+    fireEvent.click(await screen.findByRole("button", { name: "确认「哪些床位空着？」仍然适用" }));
+    await waitFor(() =>
+      expect(reviewRequirementsMock).toHaveBeenCalledWith("p1", 1, [
+        { id: "q1", kind: "questions" },
+      ]),
+    );
   });
 
   it("names only what waits", async () => {

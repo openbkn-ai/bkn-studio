@@ -168,6 +168,7 @@ type BackendSpec = {
           needs_source: string;
           notes?: string[] | null;
           ontology_changed?: boolean;
+          ontology_gone?: string[] | null;
           relative_window?: boolean;
           scenario_ids?: string[] | null;
           source?: string;
@@ -348,6 +349,7 @@ export function mapSpec(spec: BackendSpec): RequirementSpec {
       needsSource: question.needs_source,
       notes: question.notes ?? [],
       ontologyChanged: question.ontology_changed ?? false,
+      ...(question.ontology_gone?.length ? { ontologyGone: question.ontology_gone } : {}),
       relativeWindow: question.relative_window ?? false,
       scenarioIds: question.scenario_ids ?? [],
       ...(question.source ? { source: question.source } : {}),
