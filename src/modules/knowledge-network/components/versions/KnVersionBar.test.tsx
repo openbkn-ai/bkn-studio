@@ -6,7 +6,11 @@
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useContext } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+import { ShellTrailSlotProvider } from "@/app/shell/workspace-slots";
+import { ShellTrailSlotContext } from "@/app/shell/workspace-slots-context";
 
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
 
@@ -48,11 +52,6 @@ import {
   KnUnversionedBar,
   KnVersionBar,
 } from "@/modules/knowledge-network/components/versions/KnVersionBar";
-import {
-  KnVersionActionHost,
-  KnVersionSlotHost,
-  KnVersionSlotProvider,
-} from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 
 function versioning(running: number, hasChanges: boolean): KnVersioning {
   return {
@@ -163,36 +162,14 @@ describe("KnVersionBar", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
-  it("sits beside the network's title when the section shows one", () => {
+  it("puts the picker and publishing after the top bar's trail", () => {
+    const Host = () => {
+      const slot = useContext(ShellTrailSlotContext);
+      return <span data-testid="trail" ref={slot?.setTrailHost} />;
+    };
     render(
-      <KnVersionSlotProvider>
-        <h2 data-testid="title">
-          name
-          <KnVersionSlotHost />
-        </h2>
-        <KnVersionBar
-          canModify
-          networkId="kn-1"
-          onChanged={vi.fn()}
-          onViewChange={vi.fn()}
-          versioning={versioning(2, false)}
-          view="draft"
-        />
-      </KnVersionSlotProvider>,
-    );
-    expect(screen.getByTestId("title").textContent).toContain("v2");
-  });
-
-  it("puts publishing on the right with the title's actions, and the picker by the title", () => {
-    render(
-      <KnVersionSlotProvider>
-        <h2 data-testid="title">
-          name
-          <KnVersionSlotHost />
-        </h2>
-        <div data-testid="actions">
-          <KnVersionActionHost />
-        </div>
+      <ShellTrailSlotProvider>
+        <Host />
         <KnVersionBar
           canModify
           networkId="kn-1"
@@ -201,13 +178,10 @@ describe("KnVersionBar", () => {
           versioning={versioning(2, true)}
           view="draft"
         />
-      </KnVersionSlotProvider>,
+      </ShellTrailSlotProvider>,
     );
-    expect(screen.getByTestId("actions").textContent).toContain(
-      "knowledgeNetwork.versions.publish.action",
-    );
-    expect(screen.getByTestId("title").textContent).not.toContain(
-      "knowledgeNetwork.versions.publish.action",
-    );
+    const trail = screen.getByTestId("trail").textContent;
+    expect(trail).toContain("knowledgeNetwork.versions.draft");
+    expect(trail).toContain("knowledgeNetwork.versions.publish.action");
   });
 });

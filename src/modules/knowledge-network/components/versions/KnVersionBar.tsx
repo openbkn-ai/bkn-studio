@@ -15,10 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { ShellTrailPortal } from "@/app/shell/workspace-slots";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import {
-  KnVersionActionPortal,
-  KnVersionSlotPortal,
-} from "@/modules/knowledge-network/components/versions/KnVersionSlot";
 import { PublishVersionModal } from "@/modules/knowledge-network/components/versions/PublishVersionModal";
 import {
   useReadableKnVersions,
@@ -137,25 +133,16 @@ export function KnUnversionedBar({ canModify, networkId, onChanged }: KnUnversio
     </span>
   );
   return (
-    <KnVersionSlotPortal
-      fallback={
-        <ShellTrailPortal fallback={<div className={styles.bar}>{trail}</div>}>
-          {trail}
-        </ShellTrailPortal>
-      }
-    >
-      <span className={styles.picker}>
-        {select}
-        <KnVersionActionPortal fallback={publish}>{publish}</KnVersionActionPortal>
-      </span>
-    </KnVersionSlotPortal>
+    <ShellTrailPortal fallback={<div className={styles.bar}>{trail}</div>}>
+      {trail}
+    </ShellTrailPortal>
   );
 }
 
 /**
- * Which version of a versioned network is on screen, as a quiet picker beside the network's
- * title on the overview, and after the top bar's trail elsewhere. A draft that matches the running version reads as that version; only unpublished
- * changes bring out the draft, its base and the publish action.
+ * Which version of a versioned network is on screen, as a quiet picker after the top bar's trail
+ * on every workspace page. A draft that matches the running version reads as that version; only
+ * unpublished changes bring out the draft, its base and the publish action.
  */
 export function KnVersionBar({
   canModify,
@@ -226,8 +213,7 @@ export function KnVersionBar({
     </Button>
   ) : null;
 
-  // In the top bar, publishing follows the picker; on the overview it is the main action on the
-  // right of the title, with the network's other actions.
+  // On every workspace page the picker, with publishing beside it, sits after the top bar's trail.
   const trailPicker = (
     <span className={styles.picker}>
       {select}
@@ -239,18 +225,9 @@ export function KnVersionBar({
 
   return (
     <>
-      <KnVersionSlotPortal
-        fallback={
-          <ShellTrailPortal fallback={<div className={styles.bar}>{trailPicker}</div>}>
-            {trailPicker}
-          </ShellTrailPortal>
-        }
-      >
-        <span className={styles.picker}>
-          {select}
-          <KnVersionActionPortal fallback={publish}>{publish}</KnVersionActionPortal>
-        </span>
-      </KnVersionSlotPortal>
+      <ShellTrailPortal fallback={<div className={styles.bar}>{trailPicker}</div>}>
+        {trailPicker}
+      </ShellTrailPortal>
       {outdated ? (
         <div className={styles.notice}>
           <Alert

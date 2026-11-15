@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { CloudUploadOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Space, Table, Tabs, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
@@ -373,6 +374,7 @@ export function KnVersionsPanel({
           {canModify ? (
             <Button
               disabled={!draft?.has_changes && running > 0}
+              icon={<CloudUploadOutlined />}
               onClick={() => setPublishOpen(true)}
               type="primary"
             >
