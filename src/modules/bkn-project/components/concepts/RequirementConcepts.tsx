@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Modal, Segmented, Tooltip } from "antd";
+import { Modal, Segmented } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { DescriptionTooltip } from "@/modules/bkn-project/components/ClampedText";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import type {
@@ -124,11 +125,11 @@ export function RequirementConcepts({
           <span className={styles.warning}>
             {t(`${PREFIX}.notInData`)}
             {requirement.basis ? (
-              <Tooltip title={requirement.basis}>
+              <DescriptionTooltip placement="topLeft" title={requirement.basis}>
                 <span className={styles.as} tabIndex={0}>
                   {t(`${PREFIX}.why`)}
                 </span>
-              </Tooltip>
+              </DescriptionTooltip>
             ) : null}
           </span>
           <span>
@@ -160,12 +161,12 @@ export function RequirementConcepts({
           </span>{" "}
           <span className={styles.name}>{requirement.match.name}</span>
         </span>
-        <Tooltip title={requirement.basis || undefined}>
+        <DescriptionTooltip placement="topLeft" title={requirement.basis || undefined}>
           <span className={styles.muted} tabIndex={requirement.basis ? 0 : undefined}>
             {t(`${PREFIX}.by.${requirement.by || "name"}`)}
             {requirement.basis ? t(`${PREFIX}.basisHint`) : null}
           </span>
-        </Tooltip>
+        </DescriptionTooltip>
       </div>
     );
   };

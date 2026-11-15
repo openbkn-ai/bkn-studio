@@ -16,6 +16,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { DescriptionTooltip } from "@/modules/bkn-project/components/ClampedText";
 import { ExistingMark } from "@/modules/bkn-project/components/draft/ExistingMark";
 import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import type { Concept, ConceptVerdict } from "@/modules/bkn-project/types/concepts";
@@ -449,11 +450,11 @@ export function DataConcepts({
         const { concept } = row;
         return (
           <span className={styles.actions}>
-            <Tooltip title={reasonOf(concept)}>
+            <DescriptionTooltip placement="topLeft" title={reasonOf(concept)}>
               <span className={styles.as} tabIndex={0}>
                 {asLabel(concept)}
               </span>
-            </Tooltip>
+            </DescriptionTooltip>
             {concept.verdict === "kinetic" && statusOf(concept) === "confirmed" ? (
               <AppButton onClick={onGoToKinetic} size="small" type="link">
                 {t(`${PREFIX}.goToKinetic`)}
