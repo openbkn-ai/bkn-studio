@@ -36,21 +36,16 @@ describe("cypherSuggestions for properties without a mapped column", () => {
         { name: "c_legacy" },
       ],
     },
-    unmappedReason: "map it first",
   };
 
-  it("lists them as disabled with the reason, and leaves mapped ones alone", () => {
+  it("does not offer them, and leaves mapped ones and ones without mapping info alone", () => {
     const items = cypherSuggestions(
       "MATCH (t:teams) RETURN t.",
       "MATCH (t:teams) RETURN t.",
       withMapping,
     );
 
-    expect(items.map((item) => [item.label, item.disabled ?? false, item.reason])).toEqual([
-      ["a_mapped", false, undefined],
-      ["b_unmapped", true, "map it first"],
-      ["c_legacy", false, undefined],
-    ]);
+    expect(items.map((item) => item.label)).toEqual(["a_mapped", "c_legacy"]);
   });
 
   it("offers it again once the reload reports the column as mapped", () => {
@@ -59,13 +54,13 @@ describe("cypherSuggestions for properties without a mapped column", () => {
       properties: { teams: [{ name: "b_unmapped", mapped: true }] },
     };
 
-    const [item] = cypherSuggestions(
+    const items = cypherSuggestions(
       "MATCH (t:teams) RETURN t.",
       "MATCH (t:teams) RETURN t.",
       remapped,
     );
 
-    expect(item.disabled).toBeUndefined();
+    expect(items.map((item) => item.label)).toEqual(["b_unmapped"]);
   });
 });
 

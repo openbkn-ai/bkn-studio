@@ -198,17 +198,7 @@ export const CypherEditor = forwardRef<
               (item) => ({
                 label: item.detail ? { label: item.label, description: item.detail } : item.label,
                 kind: kinds[item.kind],
-                // A disabled item is listed with its reason, struck through and last; accepting it
-                // leaves the typed text as it is.
-                insertText: item.disabled ? model.getValueInRange(range) : item.insert,
-                ...(item.disabled
-                  ? {
-                      documentation: item.reason,
-                      filterText: item.label,
-                      sortText: `~${item.label}`,
-                      tags: [monaco.languages.CompletionItemTag.Deprecated],
-                    }
-                  : {}),
+                insertText: item.insert,
                 range,
               }),
             ),

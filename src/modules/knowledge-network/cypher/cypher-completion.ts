@@ -14,8 +14,6 @@ export type CypherCompletionSchema = {
   relationTypes: { id: string; name: string; sourceId: string; targetId: string }[];
   /** Per object type id, its property names with their display names. */
   properties: Record<string, { name: string; displayName?: string; mapped?: boolean }[]>;
-  /** Why a property without a mapped column cannot be queried, shown where it is suggested. */
-  unmappedReason?: string;
 };
 
 export type CypherSuggestion = {
@@ -25,10 +23,6 @@ export type CypherSuggestion = {
   /** Shown in the list. */
   label: string;
   detail?: string;
-  /** Listed but not offered: accepting it inserts nothing. */
-  disabled?: boolean;
-  /** Why it is disabled. */
-  reason?: string;
 };
 
 export const CYPHER_KEYWORDS = [
@@ -90,16 +84,16 @@ export function cypherSuggestions(
     const otId =
       schema.objectTypes.find((item) => item.id === label)?.id ??
       schema.objectTypes.find((item) => item.name === label)?.id;
-    return (otId ? (schema.properties[otId] ?? []) : []).map((property) => {
-      const unmapped = property.mapped === false;
-      return {
+    // A property without a mapped column cannot be queried, so it is not offered at all; the
+    // schema panel shows it greyed out with the reason.
+    return (otId ? (schema.properties[otId] ?? []) : [])
+      .filter((property) => property.mapped !== false)
+      .map((property) => ({
         kind: "property",
         insert: cypherName(property.name),
         label: property.name,
         ...(property.displayName ? { detail: property.displayName } : {}),
-        ...(unmapped ? { disabled: true, reason: schema.unmappedReason ?? "" } : {}),
-      };
-    });
+      }));
   }
   return [
     ...CYPHER_KEYWORDS.map((keyword) => ({

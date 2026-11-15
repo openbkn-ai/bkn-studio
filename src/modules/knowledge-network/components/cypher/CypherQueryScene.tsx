@@ -282,9 +282,8 @@ export function CypherQueryScene({
         targetId: item.targetId,
       })),
       properties,
-      unmappedReason: t("knowledgeNetwork.cypherQuery.schema.unmappedHint"),
     }),
-    [properties, schema, t],
+    [properties, schema],
   );
 
   /* ---------------- editor ---------------- */
