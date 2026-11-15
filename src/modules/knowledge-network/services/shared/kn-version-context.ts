@@ -331,23 +331,17 @@ export function knVersionQuery(knId: string): Record<string, string> {
 
 /**
  * The version on screen, as request context for an Agent execution: `kn_version` (`draft`,
- * `running` or a number) and, for the draft, the `draft_revision` last seen. Without them the
- * Agent pins the running version whatever the page shows. Empty for a network without versioning,
- * or when its state is not known yet. Read it at send time, not at render time: the view can
- * change between turns of one conversation.
+ * `running` or a number). Without it the Agent pins the running version whatever the page shows.
+ * Empty for a network without versioning, or when its state is not known yet. Read it at send
+ * time, not at render time: the view can change between turns of one conversation.
+ *
+ * The draft goes without `draft_revision` on purpose. A revision named by the caller is fixed
+ * downstream: once another tab or user edits the draft, every read of the turn fails with
+ * DraftRevisionMismatch. Without it, Context Loader pins the revision from its first read and
+ * retries once against the newer draft, so the turn always runs on the latest draft.
  */
-export function knVersionAgentContext(knId: string): Record<string, string | number> {
-  const context = contexts.get(knId);
-  const kn_version = context ? knVersionParam(context) : undefined;
-  if (kn_version === undefined) {
-    return {};
-  }
-  return {
-    kn_version,
-    ...(context?.view === "draft" && context.draftRevision !== undefined
-      ? { draft_revision: context.draftRevision }
-      : {}),
-  };
+export function knVersionAgentContext(knId: string): Record<string, string> {
+  return knVersionQuery(knId);
 }
 
 function etagKey(knId: string, rest: string) {
