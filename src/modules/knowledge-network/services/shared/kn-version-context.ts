@@ -53,6 +53,8 @@ type KnVersionContext = {
 type KnRequestConfig = InternalAxiosRequestConfig & {
   _knProbe?: boolean;
   _knSkip?: boolean;
+  /** A create sent with `branch=main` because the running version is on screen. */
+  _knRunningCreate?: boolean;
 };
 
 declare module "axios" {
@@ -70,13 +72,6 @@ declare module "axios" {
     i18n.t("knowledgeNetwork.versions.conflict"),
   );
 });
-
-// A direct write to the running version is refused while the draft holds unpublished edits. The
-// backend's generic wording ("confirm to overwrite") suggests a way out that this path does not
-// have, so name the real ones.
-registerErrorCodeMessage("BknBackend.KNVersion.DraftHasChanges", () =>
-  i18n.t("knowledgeNetwork.versions.draftHasChanges"),
-);
 
 export class KnVersionReadOnlyError extends Error {
   constructor() {
@@ -426,6 +421,7 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
       // The running version is on screen: say so, instead of leaving the branch to the backend's
       // default. The backend still refuses the write while the draft has unpublished edits.
       config.params = { ...existingParams, branch: "main" };
+      config._knRunningCreate = true;
     }
     return config;
   }
@@ -529,17 +525,41 @@ function observeResponse(response: AxiosResponse): AxiosResponse {
   return response;
 }
 
+const DRAFT_HAS_CHANGES_CODE = "BknBackend.KNVersion.DraftHasChanges";
+
 const GONE_VERSION_CODES = new Set([
   "BknBackend.KNVersion.VersionPurged",
   "BknBackend.KNVersion.VersionNotFound",
 ]);
 
+/**
+ * A create against the running version is refused while the draft holds unpublished edits. The
+ * backend's generic wording ("confirm to overwrite") suggests a way out this path does not have,
+ * so name the real ones. The same code on other requests (draft reset, disabling versioning,
+ * whole-package import) keeps the backend's own message.
+ */
+function explainRunningCreateRefusal(failure: {
+  config?: KnRequestConfig;
+  response?: { data?: { error_code?: unknown; description?: unknown } };
+}) {
+  const data = failure.response?.data;
+  if (
+    failure.config?._knRunningCreate &&
+    data &&
+    typeof data === "object" &&
+    data.error_code === DRAFT_HAS_CHANGES_CODE
+  ) {
+    data.description = i18n.t("knowledgeNetwork.versions.draftHasChanges");
+  }
+}
+
 /** A numbered version on screen that the backend no longer has goes back to the default view. */
 function observeError(error: unknown) {
   const failure = error as {
     config?: KnRequestConfig;
-    response?: { data?: { error_code?: unknown } };
+    response?: { data?: { error_code?: unknown; description?: unknown } };
   };
+  explainRunningCreateRefusal(failure);
   const target = parseNetworkPath(failure.config?.url);
   const code = failure.response?.data?.error_code;
   const current = target ? contexts.get(target.knId) : undefined;

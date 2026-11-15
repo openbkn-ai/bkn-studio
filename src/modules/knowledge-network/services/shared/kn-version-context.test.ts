@@ -177,23 +177,44 @@ describe("kn version context", () => {
     expect(request("post", `${NETWORK}/action-types`)[0].params).toBeUndefined();
   });
 
-  it("explains a refused direct write in words that name the ways out", () => {
-    const error = Object.assign(new Error("conflict"), {
-      isAxiosError: true,
-      response: {
-        data: {
-          description: "The draft has unpublished changes; confirm to overwrite.",
-          error_code: "BknBackend.KNVersion.DraftHasChanges",
-        },
-        status: 409,
-      },
-    });
+  const draftHasChanges = () => ({
+    data: {
+      description: "The draft has unpublished changes; confirm to overwrite.",
+      error_code: "BknBackend.KNVersion.DraftHasChanges",
+    },
+    status: 409,
+  });
+
+  it("explains a refused create in the running view in words that name the ways out", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.get(`${NETWORK}/action-types`);
+    setKnVersionView("kn-1", "running");
+    routes[`POST ${NETWORK}/action-types`] = draftHasChanges();
+
+    const error: unknown = await http
+      .post(`${NETWORK}/action-types`, { entries: [] })
+      .catch((e: unknown) => e);
 
     const message = extractRequestErrorMessage(error);
-
     expect(message).not.toContain("confirm to overwrite");
     expect(message).toBe(i18n.t("knowledgeNetwork.versions.draftHasChanges"));
     expect(message).not.toBe("knowledgeNetwork.versions.draftHasChanges");
+  });
+
+  it("keeps the backend message for DraftHasChanges on other requests", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.get(`${NETWORK}/action-types`);
+    routes[`POST ${NETWORK}/draft/reset`] = draftHasChanges();
+    routes[`POST ${NETWORK}/action-types`] = draftHasChanges();
+
+    const reset: unknown = await http.post(`${NETWORK}/draft/reset`, {}).catch((e: unknown) => e);
+    // A create in the draft view is not sent with branch=main either.
+    const draftCreate: unknown = await http
+      .post(`${NETWORK}/action-types`, { entries: [] })
+      .catch((e: unknown) => e);
+
+    expect(extractRequestErrorMessage(reset)).toContain("confirm to overwrite");
+    expect(extractRequestErrorMessage(draftCreate)).toContain("confirm to overwrite");
   });
 
   it("reads the definition first when a save has no ETag yet", async () => {
