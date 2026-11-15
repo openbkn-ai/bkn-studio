@@ -46,6 +46,22 @@ describe("exampleBodyFromSchema", () => {
   });
 });
 
+describe("exampleBodyFromSchema for get_skill_content", () => {
+  it("leaves only the business arguments, with no bkn_context and no kn_id the tool does not need", () => {
+    const body = exampleBodyFromSchema({
+      type: "object",
+      properties: {
+        bkn_context: { type: "object" },
+        response_format: { type: "string" },
+        skill_id: { type: "string" },
+      },
+      required: ["bkn_context", "skill_id"],
+    });
+
+    expect(Object.keys(body).sort()).toEqual(["response_format", "skill_id"]);
+  });
+});
+
 describe("synthesizeOp", () => {
   it("builds a REST path and MCP arguments with no bkn_context in either", () => {
     const op = synthesizeOp({ name: "search_instance", inputSchema: searchInstanceSchema });

@@ -300,7 +300,7 @@ describe("sendRequest", () => {
     expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
   });
 
-  it("keeps a caller-supplied bkn_context that carries both ids", async () => {
+  it("replaces a caller-supplied bkn_context even when it carries both ids", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}", { status: 200 }));
@@ -317,7 +317,37 @@ describe("sendRequest", () => {
       bknContext,
     );
 
-    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: explicit });
+    // The ids are platform identity: a stale or made-up pair must not reach Context Loader.
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
+  it("injects the managed context into MCP arguments that hold only skill_id and an empty bkn_context", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+      );
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "mcp",
+      {},
+      '{"skill_id":"skill-1","response_format":"toon","bkn_context":{}}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
+      params: {
+        arguments: { skill_id: "skill-1", response_format: "toon", bkn_context: bknContext },
+      },
+    });
   });
 
   it("replaces a half-filled bkn_context, since both ids are required", async () => {
