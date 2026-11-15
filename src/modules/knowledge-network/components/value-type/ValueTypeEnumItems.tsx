@@ -57,7 +57,12 @@ export function ValueTypeEnumItems({
       dataIndex: "deprecated",
       key: "status",
       render: (deprecated?: boolean) =>
-        deprecated ? <Tag color="gold">{t(`${PREFIX}.enumColumn.deprecated`)}</Tag> : null,
+        // An omitted `deprecated` is the stored default for an active item, so it reads as active too.
+        deprecated ? (
+          <Tag color="gold">{t(`${PREFIX}.enumColumn.deprecated`)}</Tag>
+        ) : (
+          <Tag color="green">{t(`${PREFIX}.enumColumn.active`)}</Tag>
+        ),
       title: t(`${PREFIX}.enumColumn.status`),
       width: 96,
     },

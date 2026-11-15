@@ -24,6 +24,7 @@ export const valueTypesPart = {
     edit: "编辑",
     empty: "本网络还没有值类型",
     enumColumn: {
+      active: "正常",
       deprecated: "停用",
       description: "说明",
       display: "显示名",
