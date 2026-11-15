@@ -24,7 +24,12 @@ const mocks = vi.hoisted(() => ({
   listMetrics: vi.fn(),
   listVersions: vi.fn(),
   locationSearch: { current: "" },
-  locationState: { current: null as { knowledgeNetworkReturnTo?: string } | null },
+  locationState: {
+    current: null as {
+      knowledgeNetworkReturnTo?: string;
+      metricOperation?: { kind: "validated" | "published"; metricId: string; version: number };
+    } | null,
+  },
   navigate: vi.fn(),
   queryMetric: vi.fn(),
   trialMetric: vi.fn(),
@@ -181,6 +186,63 @@ function record(
 }
 
 describe("ObjectMetricDetailScene actions", () => {
+  it("shows validation success only for the validated version and clears it on switching", async () => {
+    const validated = record("validated");
+    validated.definition.version = 2;
+    const published = record("published");
+    published.definition.version = 1;
+    mocks.locationSearch.current = "?version=2";
+    mocks.locationState.current = {
+      knowledgeNetworkReturnTo: "/metrics",
+      metricOperation: { kind: "validated", metricId: "metric-1", version: 2 },
+    };
+    mocks.getObjectMetricV1.mockResolvedValue(validated);
+    mocks.listVersions.mockResolvedValue([published, validated]);
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(
+      await screen.findByText("对象指标 v2 已通过校验，发布知识网络后生效"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("对象指标已发布为 v2")).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "版本" }));
+    fireEvent.click(await screen.findByText("v1 · 已发布"));
+    expect(mocks.navigate).toHaveBeenCalledWith(expect.stringContaining("?version=1"), {
+      replace: true,
+      state: { knowledgeNetworkReturnTo: "/metrics" },
+    });
+  });
+
+  it("shows publication success only for the published version", async () => {
+    const published = record("published");
+    published.definition.version = 3;
+    mocks.locationSearch.current = "?version=3";
+    mocks.locationState.current = {
+      metricOperation: { kind: "published", metricId: "metric-1", version: 3 },
+    };
+    mocks.getObjectMetricV1.mockResolvedValue(published);
+    mocks.listVersions.mockResolvedValue([published]);
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("对象指标已发布为 v3")).toBeInTheDocument();
+  });
+
+  it("does not report publication when the loaded version is only validated", async () => {
+    const validated = record("validated");
+    validated.definition.version = 3;
+    mocks.locationSearch.current = "?version=3";
+    mocks.locationState.current = {
+      metricOperation: { kind: "published", metricId: "metric-1", version: 3 },
+    };
+    mocks.getObjectMetricV1.mockResolvedValue(validated);
+    mocks.listVersions.mockResolvedValue([validated]);
+
+    render(<ObjectMetricDetailScene />);
+
+    expect(await screen.findByText("已校验")).toBeInTheDocument();
+    expect(screen.queryByText("对象指标已发布为 v3")).not.toBeInTheDocument();
+  });
   it("opens the current metric authorization from the detail header", async () => {
     const published = record("published");
     published.definition.version = 4;

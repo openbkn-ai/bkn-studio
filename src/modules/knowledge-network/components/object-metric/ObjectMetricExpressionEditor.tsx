@@ -63,6 +63,8 @@ type Props = {
   allowedOperators?: string[];
   dependencyAliases?: string[];
   depth?: number;
+  errorPath?: string;
+  path?: string;
   onChange: (value: ObjectMetricExpressionV1) => void;
   properties: ObjectMetricExpressionPropertyOption[];
   requiresPropertyReference?: boolean;
@@ -129,6 +131,8 @@ export function ObjectMetricExpressionEditor({
   allowedOperators,
   dependencyAliases = [],
   depth = 0,
+  errorPath,
+  path = "specification.expression",
   onChange,
   properties,
   requiresPropertyReference = false,
@@ -297,7 +301,7 @@ export function ObjectMetricExpressionEditor({
 
   if (value.node_type === "unary") {
     return (
-      <div>
+      <div data-expression-path={path} tabIndex={-1}>
         <Space wrap>
           {nodeTypeSelect}
           <span>{objectMetricText("mee0a67eb1186")}</span>
@@ -315,6 +319,8 @@ export function ObjectMetricExpressionEditor({
             allowedOperators={allowedOperators}
             dependencyAliases={dependencyAliases}
             depth={depth + 1}
+            errorPath={errorPath}
+            path={`${path}.left`}
             onChange={(left) => onChange({ ...value, left })}
             properties={properties}
             requiresPropertyReference={requiresPropertyReference}
@@ -327,11 +333,12 @@ export function ObjectMetricExpressionEditor({
 
   if (value.node_type === "binary") {
     return (
-      <div>
+      <div data-expression-path={path} tabIndex={-1}>
         <Space wrap>
           {nodeTypeSelect}
           <Select
             aria-label={objectMetricText("m6a4b1a3683a3")}
+            status={errorPath === path ? "error" : undefined}
             onChange={(operator) => onChange({ ...value, operator })}
             options={[
               { label: objectMetricText("mf0f0327bc557"), value: "add" },
@@ -359,6 +366,8 @@ export function ObjectMetricExpressionEditor({
             allowedOperators={allowedOperators}
             dependencyAliases={dependencyAliases}
             depth={depth + 1}
+            errorPath={errorPath}
+            path={`${path}.left`}
             onChange={(left) => onChange({ ...value, left })}
             properties={properties}
             requiresPropertyReference={requiresPropertyReference}
@@ -370,6 +379,8 @@ export function ObjectMetricExpressionEditor({
             allowedOperators={allowedOperators}
             dependencyAliases={dependencyAliases}
             depth={depth + 1}
+            errorPath={errorPath}
+            path={`${path}.right`}
             onChange={(right) => onChange({ ...value, right })}
             properties={properties}
             requiresPropertyReference={requiresPropertyReference}
@@ -391,11 +402,12 @@ export function ObjectMetricExpressionEditor({
   const nextArgumentDefinition = functionArgumentAt(selectedFunction, value.arguments.length);
 
   return (
-    <div className={styles.callEditor}>
+    <div className={styles.callEditor} data-expression-path={path} tabIndex={-1}>
       <Space wrap>
         {nodeTypeSelect}
         <Select
           aria-label={objectMetricText("m1832990660bb")}
+          status={errorPath === path ? "error" : undefined}
           onChange={(func) => {
             const definition = objectMetricFunctionDefinitions.find((item) => item.value === func);
             if (!definition) return;
@@ -455,6 +467,8 @@ export function ObjectMetricExpressionEditor({
                   allowedOperators={allowedOperators}
                   dependencyAliases={dependencyAliases}
                   depth={depth + 1}
+                  errorPath={errorPath}
+                  path={`${path}.arguments[${index}]`}
                   onChange={(next) =>
                     onChange({
                       ...value,

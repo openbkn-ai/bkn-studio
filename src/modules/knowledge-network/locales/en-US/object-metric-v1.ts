@@ -631,6 +631,33 @@ export const objectMetricV1Part = {
   m7d5873e080fb: "banker rounding",
   m7d5e7c7bcea6: "Time attribute (also used for result bucketing)",
   m7d6fe77cb980: "Metric published as v{{p0}}",
+  metricValidatedVersion:
+    "Metric v{{p0}} validated; it takes effect after the knowledge network is published",
+  expressionUnitMismatchGeneric: "The units used in this formula are incompatible.",
+  expressionUnitMismatchSpecific:
+    "{{p0}} and {{p1}} have different units and cannot be {{p2}} directly.",
+  expressionUnitMismatchFormula: "Conflict: {{p0}} ({{p1}}) {{p2}} {{p3}} ({{p4}}).",
+  expressionUnitMismatchSuggestion:
+    "Check the intended calculation, choose metrics with compatible units or change the operator, and review the result unit.",
+  functionArgumentUnitMismatch: "The function arguments have incompatible units.",
+  functionArgumentUnitSuggestion: "Choose arguments with compatible units for this function.",
+  compositeResultUnitMismatch:
+    "The formula result unit differs from the unit configured under Result and Analysis.",
+  compositeResultUnitSuggestion:
+    "Review the formula and select a result unit that matches its output.",
+  expressionUnitMismatchPriceSuggestion:
+    "To calculate an average price, use “{{p0}} ÷ {{p1}}” and review the result unit.",
+  expressionDimensionless: "dimensionless",
+  expressionUnitCny: "CNY",
+  expressionUnitPiece: "piece",
+  expressionAddSymbol: "+",
+  expressionSubtractSymbol: "−",
+  expressionModuloSymbol: "%",
+  expressionAddVerb: "added",
+  expressionSubtractVerb: "subtracted",
+  expressionModuloVerb: "used in modulo",
+  expressionLocateError: "Go to formula",
+  validationTechnicalDetails: "Technical details",
   m7d7fca1df843: "Describe the metric definition or ask a follow-up…",
   m7d9782471028: "Reading dependent metrics · v{{p0}} (formula symbol: {{p1}})",
   m7da337decf29: "Please select a metric value type",

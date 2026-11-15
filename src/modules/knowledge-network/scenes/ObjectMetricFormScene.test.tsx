@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
     message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
     navigate: vi.fn(),
     routeParams,
+    versioned: { current: false },
     searchParams: { current: "" },
     runtimeConfig: {
       auth: { tokenManager: { getAccessToken: () => null, refreshAccessToken: vi.fn() } },
@@ -60,6 +61,10 @@ vi.mock("@/framework/context/use-app-services", () => ({
     message: mocks.message,
     runtimeConfig: mocks.runtimeConfig,
   }),
+}));
+
+vi.mock("@/modules/knowledge-network/hooks/useKnVersionView", () => ({
+  useKnVersioned: () => mocks.versioned.current,
 }));
 
 vi.mock(
@@ -197,6 +202,7 @@ beforeEach(() => {
   mocks.routeParams.current = { metricId: "metric-1", networkId: "network-1" };
   mocks.searchParams.current = "";
   mocks.locationState.current = null;
+  mocks.versioned.current = false;
 });
 
 describe("ObjectMetricFormScene object properties", () => {
@@ -1464,6 +1470,26 @@ describe("ObjectMetricFormScene edit loading", () => {
     mocks.routeParams.current = { metricId: "average-draft", networkId: "network-1" };
     render(<ObjectMetricFormScene mode="edit" />);
     expect(await screen.findByLabelText("对象指标名称")).toHaveValue("平均实付金额");
+    await screen.findByText("实付金额");
+    await screen.findByText("订单数");
+    mocks.validateObjectMetricV1.mockResolvedValueOnce({
+      valid: false,
+      issues: [
+        {
+          code: "expression_unit_mismatch",
+          field: "specification.expression",
+          message: "incompatible units",
+        },
+      ],
+      output_shape: "summary",
+    });
+    fireEvent.click(getButtonByText("语义校验"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalledTimes(1));
+    fireEvent.click(await findButtonByText("定位到运算公式"));
+    expect(document.activeElement).toHaveAttribute(
+      "data-expression-path",
+      "specification.expression",
+    );
     fireEvent.click(getButtonByText("AI 生成"));
     const prompt = screen.getByLabelText("描述要创建的对象指标");
     fireEvent.change(prompt, { target: { value: "只调整计算公式" } });
@@ -1773,8 +1799,18 @@ describe("ObjectMetricFormScene navigation context", () => {
     const definition = draftDefinition();
     mocks.getObjectMetricV1.mockResolvedValue({ definition });
     mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
-    mocks.validateObjectMetricVersionV1.mockResolvedValue({ definition });
-    mocks.publishObjectMetricV1.mockResolvedValue(undefined);
+    mocks.validateObjectMetricVersionV1.mockResolvedValue({
+      definition: {
+        ...definition,
+        lifecycle: { ...definition.lifecycle, status: "validated" },
+      },
+    });
+    mocks.publishObjectMetricV1.mockResolvedValue({
+      definition: {
+        ...definition,
+        lifecycle: { ...definition.lifecycle, status: "published" },
+      },
+    });
 
     render(<ObjectMetricFormScene mode="edit" />);
 
@@ -1796,8 +1832,18 @@ describe("ObjectMetricFormScene navigation context", () => {
     const definition = draftDefinition();
     mocks.getObjectMetricV1.mockResolvedValue({ definition });
     mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
-    mocks.validateObjectMetricVersionV1.mockResolvedValue({ definition });
-    mocks.publishObjectMetricV1.mockResolvedValue(undefined);
+    mocks.validateObjectMetricVersionV1.mockResolvedValue({
+      definition: {
+        ...definition,
+        lifecycle: { ...definition.lifecycle, status: "validated" },
+      },
+    });
+    mocks.publishObjectMetricV1.mockResolvedValue({
+      definition: {
+        ...definition,
+        lifecycle: { ...definition.lifecycle, status: "published" },
+      },
+    });
 
     render(<ObjectMetricFormScene mode="edit" />);
 
@@ -1806,15 +1852,73 @@ describe("ObjectMetricFormScene navigation context", () => {
     fireEvent.click(getButtonByText("发布对象指标"));
     await waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith(
-        "/knowledge-network/workspace/network-1/metrics/metric-1/detail",
+        "/knowledge-network/workspace/network-1/metrics/metric-1/detail?version=1",
         {
           state: {
-            justPublished: true,
+            metricOperation: { kind: "published", metricId: "metric-1", version: 1 },
             knowledgeNetworkReturnTo:
               "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
           },
         },
       ),
+    );
+  });
+
+  it("routes a versioned metric to its validated version without publishing it", async () => {
+    mocks.versioned.current = true;
+    const definition = draftDefinition();
+    definition.version = 2;
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
+    mocks.validateObjectMetricVersionV1.mockResolvedValue({
+      definition: {
+        ...definition,
+        lifecycle: { ...definition.lifecycle, status: "validated" },
+      },
+    });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+    fireEvent.click(await findButtonByText("保存并校验"));
+
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/metrics/metric-1/detail?version=2",
+        {
+          state: {
+            metricOperation: { kind: "validated", metricId: "metric-1", version: 2 },
+            knowledgeNetworkReturnTo:
+              "/knowledge-network/workspace/network-1/metrics?objectTypeId=order",
+          },
+        },
+      ),
+    );
+    expect(mocks.publishObjectMetricV1).not.toHaveBeenCalled();
+  });
+
+  it("does not show a success navigation when version validation fails", async () => {
+    mocks.versioned.current = true;
+    const definition = draftDefinition();
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.updateObjectMetricDraftV1.mockResolvedValue({ definition });
+    mocks.validateObjectMetricV1.mockResolvedValue({
+      valid: false,
+      issues: [
+        {
+          code: "expression_unit_mismatch",
+          field: "specification.expression",
+          message: "incompatible units",
+        },
+      ],
+      output_shape: "summary",
+    });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+    fireEvent.click(await findButtonByText("保存并校验"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    expect(mocks.validateObjectMetricVersionV1).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalledWith(
+      expect.stringContaining("/detail"),
+      expect.anything(),
     );
   });
 });

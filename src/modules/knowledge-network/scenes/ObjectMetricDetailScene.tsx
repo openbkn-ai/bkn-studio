@@ -425,6 +425,17 @@ export function ObjectMetricDetailScene() {
     );
   }
   const definition = record.definition;
+  const metricOperation = (
+    location.state as {
+      metricOperation?: { kind: "validated" | "published"; metricId: string; version: number };
+    } | null
+  )?.metricOperation;
+  const completedOperation =
+    metricOperation?.metricId === definition.id &&
+    metricOperation.version === definition.version &&
+    metricOperation.kind === definition.lifecycle.status
+      ? metricOperation
+      : undefined;
   const ownerObjectTypeName = ownerObjectType?.name || record.owner_object_type_name;
   const displayProperty = (reference: ObjectMetricPropertyRefV1) => {
     const name = objectMetricPropertyDisplayName(reference, ownerObjectType);
@@ -533,10 +544,11 @@ export function ObjectMetricDetailScene() {
                     `/knowledge-network/workspace/${encodeURIComponent(networkId)}/metrics/${encodeURIComponent(definition.id)}/detail?version=${version}`,
                     {
                       replace: true,
-                      state: location.state as {
-                        knowledgeNetworkReturnTo?: string;
-                        justPublished?: boolean;
-                      } | null,
+                      state: {
+                        knowledgeNetworkReturnTo: (
+                          location.state as { knowledgeNetworkReturnTo?: string } | null
+                        )?.knowledgeNetworkReturnTo,
+                      },
                     },
                   );
                 }
@@ -626,9 +638,13 @@ export function ObjectMetricDetailScene() {
         </div>
       </div>
       <div className={styles.content}>
-        {(location.state as { justPublished?: boolean } | null)?.justPublished ? (
+        {completedOperation ? (
           <Alert
-            message={objectMetricText("m7d6fe77cb980", { p0: definition.version })}
+            message={
+              completedOperation.kind === "validated"
+                ? objectMetricText("metricValidatedVersion", { p0: completedOperation.version })
+                : objectMetricText("m7d6fe77cb980", { p0: completedOperation.version })
+            }
             type="success"
             showIcon
             closable
