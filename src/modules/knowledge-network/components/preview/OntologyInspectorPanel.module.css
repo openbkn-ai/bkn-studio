@@ -274,3 +274,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A name that opens the detail page of the definition it stands for. */
+.detailLink {
+  color: inherit;
+}
+
+.detailLink:hover,
+.detailLink:focus-visible {
+  color: var(--color-primary, #2e68ff);
+  text-decoration: underline;
+}

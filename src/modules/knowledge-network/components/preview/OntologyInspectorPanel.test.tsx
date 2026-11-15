@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -107,12 +107,26 @@ describe("OntologyInspectorPanel", () => {
     const tags = screen.getAllByText(TAG);
     expect(tags).toHaveLength(2);
     expect(tags[0]).toHaveAttribute("title", "并入患者");
-    expect(screen.getByRole("link", { name: "患者" })).toHaveAttribute(
+    // The replacement line and the other end of each relation both open the replacing type.
+    const replacement = screen.getByText(
+      /knowledgeNetwork.definitionDeclarations.bannerReplacedBy/,
+    );
+    expect(within(replacement).getByRole("link", { name: "患者" })).toHaveAttribute(
       "href",
       "/knowledge-network/workspace/clinic/object-types/patient/detail",
     );
     // The reason is on the tag only: the panel is narrow.
     expect(screen.queryByText(/并入患者/)).toBeNull();
+  });
+
+  it("links the selected type, its relations and their other end to their detail pages", () => {
+    renderPanel("patient");
+
+    const base = "/knowledge-network/workspace/clinic";
+    const href = (name: string) => screen.getAllByText(name)[0].closest("a")?.getAttribute("href");
+    expect(href("患者")).toBe(`${base}/object-types/patient/detail`);
+    expect(href("入院")).toBe(`${base}/relation-types/admitted/detail`);
+    expect(href("住院患者")).toBe(`${base}/object-types/inpatient/detail`);
   });
 
   it("tags the deprecated relations of the selected type", () => {
@@ -121,7 +135,6 @@ describe("OntologyInspectorPanel", () => {
     const tags = screen.getAllByText(TAG);
     expect(tags).toHaveLength(1);
     expect(tags[0].closest("span[class]")?.parentElement?.textContent).toContain("入院（旧）");
-    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("keeps each relation on one line, with its full name on hover and no cardinality", () => {

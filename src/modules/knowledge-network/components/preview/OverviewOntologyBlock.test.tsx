@@ -5,7 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const {
@@ -67,6 +69,10 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+
+function render(ui: ReactElement) {
+  return rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe("OverviewOntologyBlock resource authorization regression", () => {
   it("uses authorized index statuses without reading resource details when a bound resource is denied", async () => {
@@ -194,6 +200,43 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
 
     expect(await screen.findByText("Core Group")).not.toBeNull();
     expect(screen.getByText("knowledgeNetwork.previewMappingResource")).not.toBeNull();
+  });
+
+  it("links the names in the structure tables to the definition detail pages", async () => {
+    getKnowledgeNetworkOverviewGraph.mockResolvedValue({
+      graph: {
+        edges: [
+          {
+            id: "relation-1",
+            name: "places",
+            sourceId: "object-customer",
+            targetId: "object-order",
+          },
+        ],
+        nodes: [
+          { id: "object-customer", indexStatus: { state: "available" }, name: "Customer" },
+          { id: "object-order", indexStatus: { state: "unavailable" }, name: "Order" },
+        ],
+      },
+      objectTypeTotal: 2,
+      relationTypeTotal: 1,
+      snapshot: "snapshot-1",
+      truncated: false,
+    });
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      conceptGroupNames: [],
+      dataProperties: [],
+    });
+
+    render(<OverviewOntologyBlock detailsExpanded networkId="network-1" />);
+
+    const base = "/knowledge-network/workspace/network-1";
+    const hrefs = (name: string) =>
+      screen.getAllByText(name).map((node) => node.closest("a")?.getAttribute("href"));
+    expect(await screen.findByText("places")).not.toBeNull();
+    expect(hrefs("places")).toEqual([`${base}/relation-types/relation-1/detail`]);
+    expect(hrefs("Customer")).toContain(`${base}/object-types/object-customer/detail`);
+    expect(hrefs("Order")).toContain(`${base}/object-types/object-order/detail`);
   });
 
   it("draws a deprecated relation apart from the one between the same types", async () => {

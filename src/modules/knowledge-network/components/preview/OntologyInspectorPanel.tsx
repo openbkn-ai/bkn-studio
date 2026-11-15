@@ -154,7 +154,14 @@ export function OntologyInspectorPanel({
         <span className={styles.headDot} style={{ background: entity.color || "#2e68ff" }} />
         <div className={styles.headTitle}>
           <DeprecatedName declarations={entity.declarations}>
-            <strong>{entity.name}</strong>
+            <strong>
+              <Link
+                className={styles.detailLink}
+                to={definitionDetailPath(networkId, { id: entity.id, kind: "object_type" })}
+              >
+                {entity.name}
+              </Link>
+            </strong>
           </DeprecatedName>
           <span className={styles.headMeta}>{resolveIndexLabel(entity)}</span>
           <Replacement declarations={entity.declarations} networkId={networkId} />
@@ -229,17 +236,28 @@ export function OntologyInspectorPanel({
               <div key={relation.id} className={styles.relRow}>
                 <span className={styles.relVerb}>
                   <DeprecatedName declarations={relation.definitionDeclarations}>
-                    <span className={styles.relName} title={relation.name}>
+                    <Link
+                      className={`${styles.relName} ${styles.detailLink}`}
+                      title={relation.name}
+                      to={definitionDetailPath(networkId, {
+                        id: relation.id,
+                        kind: "relation_type",
+                      })}
+                    >
                       {relation.name}
-                    </span>
+                    </Link>
                   </DeprecatedName>
                 </span>
                 <span className={styles.relArrow}>{out ? "→" : "←"}</span>
                 <span className={styles.relTarget}>
                   <span className={styles.dot} style={{ background: other?.color || "#999" }} />
-                  <span className={styles.relTargetName} title={otherName}>
+                  <Link
+                    className={`${styles.relTargetName} ${styles.detailLink}`}
+                    title={otherName}
+                    to={definitionDetailPath(networkId, { id: otherId, kind: "object_type" })}
+                  >
                     {otherName}
-                  </span>
+                  </Link>
                 </span>
               </div>
             );
