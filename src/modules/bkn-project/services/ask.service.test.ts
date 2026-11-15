@@ -251,6 +251,11 @@ describe("document assistant wire format", () => {
           value: { name: "number", extraction_instruction: "Read explicit only" },
         },
         {
+          field: "data_property",
+          value: { name: "included", extraction_method: "inferred" },
+        },
+        { field: "data_property", value: { name: "odd", extraction_method: "derived" } },
+        {
           field: "ends",
           value: {
             source_object_type_id: "contract_doc",
@@ -271,6 +276,12 @@ describe("document assistant wire format", () => {
         reason: "",
         value: { name: "number", extractionInstruction: "Read explicit only" },
       },
+      {
+        field: "data_property",
+        reason: "",
+        value: { name: "included", extractionMethod: "inferred" },
+      },
+      { field: "data_property", reason: "", value: { name: "odd" } },
       {
         field: "ends",
         reason: "",

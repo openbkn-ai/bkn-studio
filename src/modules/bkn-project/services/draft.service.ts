@@ -79,7 +79,11 @@ export type BackendCitation = {
   end: number;
   quote?: string;
 };
-type BackendExtraction = { instruction: string; examples: BackendCitation[] | null };
+type BackendExtraction = {
+  method?: string;
+  instruction: string;
+  examples: BackendCitation[] | null;
+};
 type BackendSourceChoice = {
   system_object_type_id: string;
   file_object_type_id: string;
@@ -226,6 +230,7 @@ const mapDocument = (d: BackendDocument): DraftDocumentModel => ({
   selectionRevision: d.selection_revision,
 });
 const mapExtraction = (e: BackendExtraction): DraftExtractionField => ({
+  ...(e.method === "verbatim" || e.method === "inferred" ? { method: e.method } : {}),
   instruction: e.instruction,
   examples: (e.examples ?? []).map(mapCitation),
 });
@@ -1582,6 +1587,7 @@ export function objectTypeBody(value: DraftObjectTypeSave) {
       ...(property.extraction
         ? {
             extraction: {
+              ...(property.extraction.method ? { method: property.extraction.method } : {}),
               instruction: property.extraction.instruction,
               examples: property.extraction.examples.map(citationBody),
             },

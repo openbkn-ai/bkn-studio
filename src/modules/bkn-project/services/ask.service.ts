@@ -131,6 +131,10 @@ function mapRevision(value: unknown): AskRevision | null {
               ...(typeof property.extraction_instruction === "string"
                 ? { extractionInstruction: property.extraction_instruction }
                 : {}),
+              ...(property.extraction_method === "verbatim" ||
+              property.extraction_method === "inferred"
+                ? { extractionMethod: property.extraction_method }
+                : {}),
               name: property.name,
             },
           }

@@ -872,10 +872,14 @@ describe("document draft transport", () => {
       table: { catalog_id: "", name: "", resource_id: "" },
     });
     Object.assign(backend.items.object_types![0].properties![0], {
-      extraction: { instruction: "Read the number", examples: [proof] },
+      extraction: { method: "inferred", instruction: "Read the number", examples: [proof] },
       read_only: false,
     });
-    Object.assign(backend.items.object_types![0].properties![1], { read_only: true });
+    Object.assign(backend.items.object_types![0].properties![1], {
+      read_only: true,
+      // A field saved before methods, or with one this client does not know, names none.
+      extraction: { method: "derived", instruction: "Managed", examples: null },
+    });
     mockGet.mockResolvedValue({ data: backend });
     const object = (await getDraft("p"))!.items.objectTypes[0];
     expect(object.document).toMatchObject({
@@ -884,6 +888,8 @@ describe("document draft transport", () => {
       citations: [{ contentVersionId: "8", blockId: "b1", start: 2, end: 7 }],
     });
     expect(object.properties[0].extraction?.instruction).toBe("Read the number");
+    expect(object.properties[0].extraction?.method).toBe("inferred");
+    expect(object.properties[1].extraction).not.toHaveProperty("method");
     expect(object.properties[1].readOnly).toBe(true);
     const body = objectTypeBody({
       description: object.description,
@@ -895,7 +901,7 @@ describe("document draft transport", () => {
       document: { timeProperty: "", participantRelations: [] },
     });
     expect(body.data_properties[0]).toMatchObject({
-      extraction: { instruction: "Read the number", examples: [proof] },
+      extraction: { method: "inferred", instruction: "Read the number", examples: [proof] },
     });
   });
 });

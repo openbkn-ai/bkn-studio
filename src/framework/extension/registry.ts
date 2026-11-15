@@ -130,6 +130,8 @@ export type ProjectSourceEditorProps<Item, Save> = {
   item: Item;
   value: Save;
   onChange: (value: Save) => void;
+  /** What the panel offers beside the item's source, such as making a further item from it. */
+  aside?: ReactNode;
 };
 
 export type ProjectObjectSourceEditor = ProjectSourceEditor<
@@ -140,7 +142,7 @@ export type ProjectObjectSourceEditor = ProjectSourceEditor<
   check: (value: DraftObjectTypeSave, item: DraftObjectType) => string | null;
   /** How one of Ask AI's revisions reads against the value being edited. */
   preview: (t: TFunction, value: DraftObjectTypeSave, revision: AskRevision) => RevisionPreview;
-  /** Over the form: makes a further object type from this one, saved at once. */
+  /** Beside the item's source in the form: makes a further object type from this one, saved at once. */
   Derive?: ComponentType<ProjectObjectDeriveProps>;
   /** How the model's tables and the item's detail name what it is drawn from. */
   describe: (t: TFunction, item: DraftObjectType) => ProjectObjectSourceDescription;
