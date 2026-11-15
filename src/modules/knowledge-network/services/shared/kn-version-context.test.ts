@@ -8,6 +8,7 @@
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
@@ -129,6 +130,70 @@ describe("kn version context", () => {
 
     const [write] = request("post", `${NETWORK}/object-types`);
     expect(write.params).toEqual({ branch: "draft" });
+  });
+
+  it("names the draft when an action type is created while the draft is on screen", async () => {
+    routes[`GET ${NETWORK}`] = {
+      data: {
+        ...versionedNetwork(["modify"]),
+        versioning: { ...versionedNetwork(["modify"]).versioning, draft: { has_changes: true } },
+      },
+    };
+
+    await http.post(`${NETWORK}/action-types`, { entries: [{ branch: "main" }] });
+
+    expect(request("post", `${NETWORK}/action-types`)[0].params).toEqual({ branch: "draft" });
+  });
+
+  it("names the running branch when an action type is created while the running version is on screen", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.get(`${NETWORK}/action-types`);
+    setKnVersionView("kn-1", "running");
+
+    await http.post(`${NETWORK}/action-types`, { entries: [] });
+
+    expect(request("post", `${NETWORK}/action-types`)[0].params).toEqual({ branch: "main" });
+  });
+
+  it("follows the version selected at the time of each create, not an earlier one", async () => {
+    routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+    await http.get(`${NETWORK}/action-types`);
+
+    setKnVersionView("kn-1", "running");
+    await http.post(`${NETWORK}/action-types`, { entries: [] });
+    setKnVersionView("kn-1", "draft");
+    await http.post(`${NETWORK}/action-types`, { entries: [] });
+
+    expect(
+      request("post", `${NETWORK}/action-types`).map((config) => config.params as unknown),
+    ).toEqual([{ branch: "main" }, { branch: "draft" }]);
+  });
+
+  it("sends no branch when a network without versioning creates an action type", async () => {
+    routes[`GET ${NETWORK}`] = { data: { id: "kn-1", operations: ["modify"] } };
+
+    await http.post(`${NETWORK}/action-types`, { entries: [] });
+
+    expect(request("post", `${NETWORK}/action-types`)[0].params).toBeUndefined();
+  });
+
+  it("explains a refused direct write in words that name the ways out", () => {
+    const error = Object.assign(new Error("conflict"), {
+      isAxiosError: true,
+      response: {
+        data: {
+          description: "The draft has unpublished changes; confirm to overwrite.",
+          error_code: "BknBackend.KNVersion.DraftHasChanges",
+        },
+        status: 409,
+      },
+    });
+
+    const message = extractRequestErrorMessage(error);
+
+    expect(message).not.toContain("confirm to overwrite");
+    expect(message).toBe(i18n.t("knowledgeNetwork.versions.draftHasChanges"));
+    expect(message).not.toBe("knowledgeNetwork.versions.draftHasChanges");
   });
 
   it("reads the definition first when a save has no ETag yet", async () => {

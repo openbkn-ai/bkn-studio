@@ -19,6 +19,8 @@ export const versionsPart = {
     outdated:
       "The running version was switched to {{running}}, but the draft is still based on {{base}}. Publishing it brings back what was rolled back.",
     outdatedTag: "Outdated",
+    draftHasChanges:
+      "The draft has unpublished edits, so the running version cannot be changed directly. Switch to the draft to make this change, or review and publish or discard the draft first.",
     writeBlocked: "This version is read-only. Switch to the draft to make changes.",
     stateUnknown:
       "The version state of this knowledge network could not be checked. Try again shortly.",

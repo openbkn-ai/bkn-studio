@@ -71,6 +71,13 @@ declare module "axios" {
   );
 });
 
+// A direct write to the running version is refused while the draft holds unpublished edits. The
+// backend's generic wording ("confirm to overwrite") suggests a way out that this path does not
+// have, so name the real ones.
+registerErrorCodeMessage("BknBackend.KNVersion.DraftHasChanges", () =>
+  i18n.t("knowledgeNetwork.versions.draftHasChanges"),
+);
+
 export class KnVersionReadOnlyError extends Error {
   constructor() {
     super(i18n.t("knowledgeNetwork.versions.writeBlocked"));
@@ -415,6 +422,10 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
     // Creates and validations name the draft: a write without it is published at once.
     if (context.view === "draft") {
       config.params = { ...existingParams, branch: "draft" };
+    } else if (context.view === "running") {
+      // The running version is on screen: say so, instead of leaving the branch to the backend's
+      // default. The backend still refuses the write while the draft has unpublished edits.
+      config.params = { ...existingParams, branch: "main" };
     }
     return config;
   }
