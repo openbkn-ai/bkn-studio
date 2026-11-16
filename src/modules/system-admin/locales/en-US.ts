@@ -1425,6 +1425,7 @@ export const systemAdminEnUS = {
         "bkn-project-document-ask": "BKNProjectDocumentAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
         "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
+        "bkn-project-draft-naming": "BKNProjectDraftNaming",
       },
       builtinNames: {
         "bkn-project-document-extraction": "Project - Document Extraction",
@@ -1441,8 +1442,13 @@ export const systemAdminEnUS = {
         "bkn-project-answer-judge": "Project - Regression Judge",
         "bkn-project-ontology-ask": "Project - Ontology Assistant",
         "bkn-project-document-ask": "Project - Document Ontology Assistant",
+        "bkn-project-draft-naming": "Project - Draft Naming",
       },
       builtinDescriptions: {
+        "resource-semantic-understanding":
+          "Reads data tables and their fields and infers business names and descriptions, used to draft the ontology and extract concepts; the original identifiers of tables and fields stay unchanged.",
+        "bkn-project-draft-naming":
+          "When a project drafts its ontology from tables whose catalog names and descriptions are not in the project's content language, rewrites the names and descriptions of the drafted object types, properties and relation types in that language; the original names stay as aliases and the catalog itself is unchanged.",
         eval_assistant:
           "Helps inspect evaluation rules, cases, suites, run results and findings, and proposes controlled actions for confirmation.",
         "bkn-project-document-extraction":

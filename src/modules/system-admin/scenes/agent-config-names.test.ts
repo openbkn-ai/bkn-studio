@@ -119,6 +119,12 @@ it.each([
     "项目管理 - 文档本体建模助手",
     "Project - Document Ontology Assistant",
   ],
+  [
+    "bkn-project-draft-naming",
+    "BKNProjectDraftNaming",
+    "项目管理 - 起草命名",
+    "Project - Draft Naming",
+  ],
 ])("names the project Agent %s, seeded as %s, in either language", (agent_id, stored, zh, en) => {
   for (const name of [stored, zh, en]) {
     expect(agentDisplayName({ agent_id, name }, i18n.getFixedT("zh-CN"))).toBe(zh);
@@ -162,4 +168,19 @@ it("describes concept extraction as proposals from samples requiring confirmatio
       i18n.getFixedT("zh-CN"),
     ),
   ).toBe("Team Models");
+});
+
+it("describes draft naming and semantic understanding by what they write", () => {
+  expect(
+    agentDescription({ agent_id: "bkn-project-draft-naming" }, i18n.getFixedT("zh-CN")),
+  ).toContain("项目内容语言");
+  expect(
+    agentDescription({ agent_id: "bkn-project-draft-naming" }, i18n.getFixedT("en-US")),
+  ).toContain("content language");
+  expect(
+    agentDescription({ agent_id: "resource-semantic-understanding" }, i18n.getFixedT("zh-CN")),
+  ).toContain("业务名称");
+  expect(
+    agentDescription({ agent_id: "resource-semantic-understanding" }, i18n.getFixedT("en-US")),
+  ).toContain("business names");
 });
