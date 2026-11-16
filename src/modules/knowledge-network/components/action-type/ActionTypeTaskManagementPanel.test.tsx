@@ -401,7 +401,7 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     expect(await screen.findByText("exec-2")).toBeTruthy();
   }, 15_000);
 
-  it("ignores a detail that finishes after the drawer closes", async () => {
+  it("ignores a detail error after the drawer closes", async () => {
     const pendingDetail = deferred<ActionTypeExecutionLogDetail | null>();
     mocks.detail.mockReturnValue(pendingDetail.promise);
     mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
@@ -410,8 +410,8 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     await openRow(0);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     await act(async () => {
-      pendingDetail.resolve(detail);
-      await pendingDetail.promise;
+      pendingDetail.reject(new Error("obsolete request"));
+      await pendingDetail.promise.catch(() => undefined);
     });
 
     expect(mocks.results).not.toHaveBeenCalled();
