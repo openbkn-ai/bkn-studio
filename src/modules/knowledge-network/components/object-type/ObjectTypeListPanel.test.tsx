@@ -20,9 +20,12 @@ const mocks = vi.hoisted(() => ({
   listObjectTypes: vi.fn(),
   modalError: vi.fn(),
   navigate: vi.fn(),
+  objectWritable: undefined as ((objectTypeId: string) => boolean) | undefined,
   setSearchParams: vi.fn(),
   success: vi.fn(),
   updateEventType: vi.fn(),
+  versioned: false,
+  versionView: "running",
   warning: vi.fn(),
 }));
 
@@ -75,12 +78,18 @@ vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   updateKnEventType: mocks.updateEventType,
 }));
 
+vi.mock("@/modules/knowledge-network/hooks/useKnVersionView", () => ({
+  useKnVersioned: () => mocks.versioned,
+  useKnVersionView: () => [mocks.versionView, vi.fn()] as const,
+}));
+
 vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph", () => ({
   ObjectTypeResourceGraph: ({
     canAuthorizeObject,
     canRequestObjectPermission,
     networkName,
     objectType,
+    objectWritable,
     onAuthorizeObject,
     onDeleteObject,
     onSelectObject,
@@ -89,28 +98,32 @@ vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGr
     canRequestObjectPermission: boolean;
     networkName: string;
     objectType: KnowledgeNetworkObjectTypeRecord;
+    objectWritable?: (objectTypeId: string) => boolean;
     onAuthorizeObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
     onDeleteObject: (objectType: KnowledgeNetworkObjectTypeRecord) => void;
     onSelectObject: (objectTypeId: string) => void;
-  }) => (
-    <div
-      data-can-authorize={canAuthorizeObject}
-      data-can-request={canRequestObjectPermission}
-      data-network-name={networkName}
-      data-object-type-id={objectType.id}
-      data-testid="object-resource-graph"
-    >
-      <button onClick={() => onSelectObject("customer")} type="button">
-        focus-customer
-      </button>
-      <button onClick={() => onAuthorizeObject(objectType)} type="button">
-        authorize-object
-      </button>
-      <button onClick={() => onDeleteObject(objectType)} type="button">
-        delete-object
-      </button>
-    </div>
-  ),
+  }) => {
+    mocks.objectWritable = objectWritable;
+    return (
+      <div
+        data-can-authorize={canAuthorizeObject}
+        data-can-request={canRequestObjectPermission}
+        data-network-name={networkName}
+        data-object-type-id={objectType.id}
+        data-testid="object-resource-graph"
+      >
+        <button onClick={() => onSelectObject("customer")} type="button">
+          focus-customer
+        </button>
+        <button onClick={() => onAuthorizeObject(objectType)} type="button">
+          authorize-object
+        </button>
+        <button onClick={() => onDeleteObject(objectType)} type="button">
+          delete-object
+        </button>
+      </div>
+    );
+  },
 }));
 
 import { ObjectTypeListPanel } from "./ObjectTypeListPanel";
@@ -181,6 +194,9 @@ beforeEach(() => {
   mocks.getObjectType.mockResolvedValue(customer);
   mocks.listEventTypes.mockResolvedValue([]);
   mocks.deleteEventType.mockResolvedValue(undefined);
+  mocks.objectWritable = undefined;
+  mocks.versioned = false;
+  mocks.versionView = "running";
 });
 
 afterEach(() => {
@@ -430,5 +446,60 @@ describe("ObjectTypeListPanel event classes", () => {
     await vi.waitFor(() => expect(mocks.listEventTypes).toHaveBeenCalled());
     expect(screen.queryByTestId("event-class-tag")).not.toBeInTheDocument();
     expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
+  });
+
+  it("offers no event class writes on the running version of a versioned network", async () => {
+    // Event types are written past the version interceptor, so nothing else would stop them.
+    mocks.versioned = true;
+    mocks.listEventTypes.mockResolvedValue([
+      overdueType,
+      { ...overdueType, code: "order.late", object_type_id: "" },
+    ]);
+    renderPanel();
+
+    await screen.findByTestId("event-class-tag");
+    expect(
+      screen.getByText("knowledgeNetwork.eventClasses.missingClasses", { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("knowledgeNetwork.eventClasses.createMissing"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
+    expect(mocks.objectWritable?.("order_overdue")).toBe(false);
+    expect(mocks.objectWritable?.("order")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    expect(mocks.deleteEventType).not.toHaveBeenCalled();
+  });
+
+  it("offers event class writes on the draft of a versioned network", async () => {
+    mocks.versioned = true;
+    mocks.versionView = "draft";
+    renderPanel();
+
+    await screen.findByTestId("event-class-tag");
+    expect(screen.getByText("knowledgeNetwork.eventClasses.create")).toBeInTheDocument();
+    expect(mocks.objectWritable?.("order_overdue")).toBe(true);
+  });
+
+  it("offers no edit or delete until it is known which object types are event classes", async () => {
+    let answer: (types: KnEventType[]) => void = () => undefined;
+    mocks.listEventTypes.mockReturnValue(
+      new Promise<KnEventType[]>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    renderPanel();
+
+    expect(await screen.findByTestId("object-resource-graph")).toBeInTheDocument();
+    expect(mocks.objectWritable?.("order_overdue")).toBe(false);
+    // Deleting now would take the event class down the object type path.
+    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
+    expect(mocks.confirm).not.toHaveBeenCalled();
+
+    answer([overdueType]);
+    await screen.findByTestId("event-class-tag");
+    expect(mocks.objectWritable?.("order_overdue")).toBe(true);
   });
 });

@@ -136,6 +136,8 @@ type Props = {
   networkName: string;
   objectType: KnowledgeNetworkObjectTypeRecord;
   objectTypeColors?: Record<string, string | undefined>;
+  /** Whether an object type can be edited and deleted here; all can when left out. */
+  objectWritable?: (objectTypeId: string) => boolean;
   onEditObject: (objectTypeId: string) => void;
   onEditAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
   onAuthorizeAction?: (action: KnowledgeNetworkActionTypeRecord) => void;
@@ -634,6 +636,7 @@ export function ObjectTypeResourceGraph({
   networkName,
   objectType,
   objectTypeColors = {},
+  objectWritable,
   onEditAction,
   onEditObject,
   onAuthorizeAction,
@@ -1641,6 +1644,7 @@ export function ObjectTypeResourceGraph({
     allowEditObject &&
     canModify &&
     selected.value !== undefined &&
+    (objectWritable?.(selected.id) ?? true) &&
     hasKnowledgeNetworkRecordOperation(selected.value, "modify");
   const canExecuteSelected =
     allowExecuteAction &&
@@ -1677,6 +1681,7 @@ export function ObjectTypeResourceGraph({
   const canDeleteSelectedObject =
     allowDeleteObject &&
     selectedObjectRecord !== undefined &&
+    (objectWritable?.(selectedObjectRecord.id) ?? true) &&
     hasKnowledgeNetworkRecordOperation(selectedObjectRecord, "delete");
   const selectedRelation = selected?.kind === "relation" ? selected.value : undefined;
   const canMapSelectedRelation =

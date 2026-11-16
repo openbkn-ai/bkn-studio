@@ -138,6 +138,7 @@ export const eventClassesPart = {
       noMessage: "没有说明",
       checkDone_one: "检查完成，命中 {{count}} 个对象。",
       checkDone_other: "检查完成，命中 {{count}} 个对象。",
+      checkFinished: "检查完成。",
       checkUnknown: "这次检查无法判断：{{message}}",
     },
     subject: {

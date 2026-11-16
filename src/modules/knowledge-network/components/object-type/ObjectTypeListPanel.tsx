@@ -79,7 +79,10 @@ import {
   useEventClassDeleteRefusal,
 } from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
 import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
-import { useKnVersioned } from "@/modules/knowledge-network/hooks/useKnVersionView";
+import {
+  useKnVersioned,
+  useKnVersionView,
+} from "@/modules/knowledge-network/hooks/useKnVersionView";
 import {
   deleteKnEventType,
   eventTypeUpdateBody,
@@ -165,8 +168,19 @@ export function ObjectTypeListPanel({
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null | undefined>();
   const trialRequestRef = useRef(0);
   const versioned = useKnVersioned(networkId);
+  const [versionView] = useKnVersionView(networkId);
   const eventTypes = useKnEventTypes(networkId, refreshVersion);
   const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
+  // Event types are written past the version interceptor, so their writes are offered only where
+  // definitions are edited: a network without versions, or the draft of a versioned one.
+  const eventsWritable = !versioned || versionView === "draft";
+  // An event class is edited and deleted through its event type, so edit and delete wait until
+  // the event types are read, and an event class offers them only where event types are written.
+  const objectWritable = useCallback(
+    (objectTypeId: string) =>
+      !eventTypes.loading && (!eventTypes.byClassId.has(objectTypeId) || eventsWritable),
+    [eventTypes.loading, eventTypes.byClassId, eventsWritable],
+  );
   const typesWithoutClass = useMemo(
     () => eventTypes.types.filter((type) => !type.object_type_id),
     [eventTypes.types],
@@ -450,20 +464,23 @@ export function ObjectTypeListPanel({
     () =>
       items.filter(
         (item) =>
-          selectedRowKeys.includes(item.id) && hasKnowledgeNetworkRecordOperation(item, "delete"),
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete") &&
+          objectWritable(item.id),
       ),
-    [items, selectedRowKeys],
+    [items, objectWritable, selectedRowKeys],
   );
   const deleteTargets = useMemo(() => {
     if (viewMode === "list") return selectedRows;
     if (
       selectedGraphObjectType?.id !== selectedGraphObjectTypeId ||
-      !hasKnowledgeNetworkRecordOperation(selectedGraphObjectType, "delete")
+      !hasKnowledgeNetworkRecordOperation(selectedGraphObjectType, "delete") ||
+      !objectWritable(selectedGraphObjectType.id)
     ) {
       return [];
     }
     return [selectedGraphObjectType];
-  }, [selectedGraphObjectType, selectedGraphObjectTypeId, selectedRows, viewMode]);
+  }, [objectWritable, selectedGraphObjectType, selectedGraphObjectTypeId, selectedRows, viewMode]);
 
   const canRequestObjectPermissionFor = (record: KnowledgeNetworkObjectTypeRecord) =>
     canRequestResourcePermission("object_type", record.operations, permissionRequestsEnabled) &&
@@ -530,6 +547,7 @@ export function ObjectTypeListPanel({
       return;
     }
 
+    if ((key === "edit" || key === "delete") && !objectWritable(record.id)) return;
     const eventType = eventTypes.byClassId.get(record.id);
     if (key === "edit") {
       if (eventType) {
@@ -619,7 +637,7 @@ export function ObjectTypeListPanel({
                 },
               ]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify") && objectWritable(record.id)
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
           ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
@@ -634,7 +652,7 @@ export function ObjectTypeListPanel({
                 },
               ]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete") && objectWritable(record.id)
             ? [{ key: "delete", danger: true, label: t("common.delete") }]
             : []),
         ];
@@ -917,7 +935,7 @@ export function ObjectTypeListPanel({
                   {t("common.create")}
                 </AppButton>
               ) : null}
-              {canModify && eventTypes.available ? (
+              {canModify && eventTypes.available && eventsWritable ? (
                 <AppButton
                   className={styles.toolbarButton}
                   icon={<PlusOutlined />}
@@ -1016,13 +1034,16 @@ export function ObjectTypeListPanel({
         {canModify && typesWithoutClass.length > 0 ? (
           <Alert
             action={
-              <AppButton
-                loading={creatingMissingClasses}
-                onClick={() => void createMissingClasses()}
-                size="small"
-              >
-                {t("knowledgeNetwork.eventClasses.createMissing")}
-              </AppButton>
+              // Saving the types writes the draft of a versioned network.
+              eventsWritable ? (
+                <AppButton
+                  loading={creatingMissingClasses}
+                  onClick={() => void createMissingClasses()}
+                  size="small"
+                >
+                  {t("knowledgeNetwork.eventClasses.createMissing")}
+                </AppButton>
+              ) : undefined
             }
             message={t("knowledgeNetwork.eventClasses.missingClasses", {
               count: typesWithoutClass.length,
@@ -1134,6 +1155,7 @@ export function ObjectTypeListPanel({
                     objectTypeColors={Object.fromEntries(
                       items.map((item) => [item.id, item.color]),
                     )}
+                    objectWritable={objectWritable}
                     onEditObject={(nextObjectTypeId) => {
                       const eventType = eventTypes.byClassId.get(nextObjectTypeId);
                       if (eventType) {

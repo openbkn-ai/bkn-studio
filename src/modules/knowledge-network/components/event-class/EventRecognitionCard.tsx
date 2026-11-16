@@ -119,7 +119,12 @@ export function EventRecognitionCard({
           t(`${PREFIX}.checkUnknown`, { message: check.message || t(`${PREFIX}.noMessage`) }),
         );
       } else {
-        void message.success(t(`${PREFIX}.checkDone`, { count: check?.hits ?? 0 }));
+        // A check that does not say how many it found is reported without a count.
+        void message.success(
+          typeof check?.hits === "number"
+            ? t(`${PREFIX}.checkDone`, { count: check.hits })
+            : t(`${PREFIX}.checkFinished`),
+        );
       }
       setCheckTick((current) => current + 1);
     } catch {

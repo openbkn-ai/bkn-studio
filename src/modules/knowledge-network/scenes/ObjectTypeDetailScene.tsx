@@ -251,6 +251,9 @@ export function ObjectTypeDetailScene() {
   const canModifyNetwork = useKnowledgeNetworkCanOperate(networkId, "modify");
   // Only the draft of a versioned network is edited, as on the workspace pages.
   const canEditEvents = canModifyNetwork && (!versioned || versionView === "draft");
+  // An event class changes through its event type, so edit and delete wait until the event types
+  // are read, and an event class offers them only where event types are written.
+  const definitionWritable = !eventTypes.loading && (!eventType || canEditEvents);
   const [eventForm, setEventForm] = useState<{
     eventType?: KnEventType;
     open: boolean;
@@ -2268,8 +2271,7 @@ export function ObjectTypeDetailScene() {
             ) : null}
             <KnowledgeNetworkResourceDetailActions
               actions={[
-                // An event class changes through its event type, on the draft of a versioned network.
-                ...(!eventType || canEditEvents
+                ...(definitionWritable
                   ? [
                       {
                         key: "edit",
@@ -2300,7 +2302,7 @@ export function ObjectTypeDetailScene() {
                   },
                   operation: "authorize",
                 },
-                ...(!eventType || canEditEvents
+                ...(definitionWritable
                   ? [
                       {
                         danger: true,

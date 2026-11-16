@@ -149,6 +149,7 @@ export const eventClassesPart = {
       noMessage: "No reason given",
       checkDone_one: "Check done. Found {{count}} object.",
       checkDone_other: "Check done. Found {{count}} objects.",
+      checkFinished: "Check done.",
       checkUnknown: "This check could not decide: {{message}}",
     },
     subject: {
