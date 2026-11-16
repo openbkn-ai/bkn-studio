@@ -156,12 +156,10 @@ describe("ChatPane BKN Agent execution", () => {
     );
     const ref = renderPane();
 
-    // The draft is the default view of a user who can modify the network.
+    // The draft is the default view of a user who can modify the network. The revision seen
+    // (7) is left out, so a draft edited elsewhere since does not fail the turn downstream.
     await send(ref, "第一问");
-    expect(startExecution.mock.calls[0][0].context).toEqual({
-      draft_revision: 7,
-      kn_version: "draft",
-    });
+    expect(startExecution.mock.calls[0][0].context).toEqual({ kn_version: "draft" });
 
     // Switching inside the conversation changes the next turn, not the thread.
     setKnVersionView(KN, "running");
