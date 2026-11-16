@@ -9,6 +9,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
+
 type SetSearchParams = (
   next: URLSearchParams | ((current: URLSearchParams) => URLSearchParams),
   options?: { replace?: boolean },
@@ -21,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
   getObjectTypeSampleData: vi.fn(),
+  listKnEventTypes: vi.fn(),
   listKnowledgeNetworkActionTypePage: vi.fn(),
   listKnowledgeNetworkActionTypes: vi.fn(),
   listObjectMetricsV1: vi.fn(),
@@ -170,6 +173,13 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   listKnowledgeNetworkRelationTypes: mocks.listKnowledgeNetworkRelationTypes,
 }));
 
+vi.mock("@/modules/knowledge-network/services/event-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/event-type.service")
+  >()),
+  listKnEventTypes: mocks.listKnEventTypes,
+}));
+
 vi.mock("@/modules/knowledge-network/services/relation-type.service", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/modules/knowledge-network/services/relation-type.service")
@@ -223,6 +233,7 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
   mocks.getKnowledgeNetwork.mockResolvedValue({ id: "network-1", name: "Customer network" });
+  mocks.listKnEventTypes.mockResolvedValue([]);
   mocks.locationState.current = null;
   mocks.searchParams.current = "";
   mocks.setSearchParams.mockReset();
@@ -353,7 +364,7 @@ describe("knowledge network detail scene headers", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findByText("Order")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(await screen.findByText("common.edit")).not.toBeNull();
     expect(screen.getByText("knowledgeNetwork.propertyAuthorizationAction")).not.toBeNull();
     expect(screen.getByText("common.delete")).not.toBeNull();
 
@@ -382,6 +393,45 @@ describe("knowledge network detail scene headers", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "back" }));
     expect(mocks.navigate).toHaveBeenCalledWith(graphReturnTo);
+  });
+
+  it("offers no object type edit or delete until it is known whether it is an event class", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    let answer: (types: KnEventType[]) => void = () => undefined;
+    mocks.listKnEventTypes.mockReturnValue(
+      new Promise<KnEventType[]>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Overdue order",
+      operations: ["view_detail", "modify", "delete"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    expect(await screen.findByText("Overdue order")).not.toBeNull();
+    // Editing now would open the object type form for an event class.
+    expect(screen.queryByText("common.edit")).toBeNull();
+    expect(screen.queryByText("common.delete")).toBeNull();
+
+    answer([]);
+    expect(await screen.findByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
   });
 
   it("opens the permission request dialog from the requestPermission query and clears it on close", async () => {

@@ -75,10 +75,11 @@ const relationTypes: KnowledgeNetworkRelationTypeRecord[] = [
   { ...relation, definitionDeclarations: deprecated, id: "admitted_old", name: "入院（旧）" },
 ];
 
-function renderPanel(selectedId: string | null) {
+function renderPanel(selectedId: string | null, eventClassIds?: ReadonlySet<string>) {
   renderWithoutAntdStyles(
     <MemoryRouter>
       <OntologyInspectorPanel
+        eventClassIds={eventClassIds}
         networkId="clinic"
         objectTypes={objectTypes}
         onSelect={vi.fn()}
@@ -127,6 +128,18 @@ describe("OntologyInspectorPanel", () => {
     expect(href("患者")).toBe(`${base}/object-types/patient/detail`);
     expect(href("入院")).toBe(`${base}/relation-types/admitted/detail`);
     expect(href("住院患者")).toBe(`${base}/object-types/inpatient/detail`);
+  });
+
+  it("tags event classes in its list and when selected", () => {
+    renderPanel(null, new Set(["inpatient"]));
+
+    const tags = screen.getAllByTestId("event-class-tag");
+    expect(tags).toHaveLength(1);
+    expect(tags[0].closest("button")?.textContent).toContain("住院患者");
+
+    cleanup();
+    renderPanel("inpatient", new Set(["inpatient"]));
+    expect(screen.getByTestId("event-class-tag")).toBeInTheDocument();
   });
 
   it("tags the deprecated relations of the selected type", () => {

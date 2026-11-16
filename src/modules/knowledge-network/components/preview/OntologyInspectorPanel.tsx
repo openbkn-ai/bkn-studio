@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
+import { EventClassTag } from "@/modules/knowledge-network/components/event-class/EventClassTag";
 import { definitionDetailPath } from "@/modules/knowledge-network/components/definition-declarations/definition-path";
 import { useDefinitionName } from "@/modules/knowledge-network/components/definition-declarations/use-definition-name";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -52,6 +53,8 @@ function Replacement({
 }
 
 type OntologyInspectorPanelProps = {
+  /** Object types whose objects are events, tagged as such. */
+  eventClassIds?: ReadonlySet<string>;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   relationTypes: KnowledgeNetworkRelationTypeRecord[];
@@ -60,6 +63,7 @@ type OntologyInspectorPanelProps = {
 };
 
 export function OntologyInspectorPanel({
+  eventClassIds,
   networkId,
   objectTypes,
   relationTypes,
@@ -135,6 +139,7 @@ export function OntologyInspectorPanel({
               <span className={styles.legendName}>
                 <DeprecatedName declarations={item.declarations}>{item.name}</DeprecatedName>
               </span>
+              {eventClassIds?.has(item.id) ? <EventClassTag /> : null}
               {hasIndexedLegend(item) ? <span className={styles.legendIndexed} /> : null}
             </button>
           ))}
@@ -153,16 +158,19 @@ export function OntologyInspectorPanel({
       <div className={styles.head}>
         <span className={styles.headDot} style={{ background: entity.color || "#2e68ff" }} />
         <div className={styles.headTitle}>
-          <DeprecatedName declarations={entity.declarations}>
-            <strong>
-              <Link
-                className={styles.detailLink}
-                to={definitionDetailPath(networkId, { id: entity.id, kind: "object_type" })}
-              >
-                {entity.name}
-              </Link>
-            </strong>
-          </DeprecatedName>
+          <div className={styles.headName}>
+            <DeprecatedName declarations={entity.declarations}>
+              <strong>
+                <Link
+                  className={styles.detailLink}
+                  to={definitionDetailPath(networkId, { id: entity.id, kind: "object_type" })}
+                >
+                  {entity.name}
+                </Link>
+              </strong>
+            </DeprecatedName>
+            {eventClassIds?.has(entity.id) ? <EventClassTag /> : null}
+          </div>
           <span className={styles.headMeta}>{resolveIndexLabel(entity)}</span>
           <Replacement declarations={entity.declarations} networkId={networkId} />
         </div>

@@ -60,6 +60,10 @@
   font-size: 13px;
 }
 
+.legendItem :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
 .legendIndexed {
   width: 7px;
   height: 7px;
@@ -92,6 +96,17 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
+}
+
+.headName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.headName :global(.ant-tag) {
+  margin-inline-end: 0;
 }
 
 .headTitle strong {

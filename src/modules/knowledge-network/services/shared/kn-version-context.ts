@@ -30,8 +30,20 @@ import type { KnVersioning, KnVersionView } from "@/modules/knowledge-network/ty
 
 const NETWORK_PATH = /^\/bkn-backend\/v1\/knowledge-networks\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/;
 
-/** Sub-resources that are not definitions, or that take version arguments of their own. */
-const UNSCOPED_PREFIXES = ["/versions", "/versioning", "/draft", "/evals"];
+/**
+ * Sub-resources that are not definitions, or that take version arguments of their own. Events are
+ * kept on the network, not on a branch: the event module writes an event type's class into the
+ * draft by itself, so its requests carry no version arguments.
+ */
+const UNSCOPED_PREFIXES = [
+  "/versions",
+  "/versioning",
+  "/draft",
+  "/evals",
+  "/event-types",
+  "/events",
+  "/rule-checks",
+];
 
 /** How long a failed probe is trusted before the next request tries again. */
 const PROBE_FAILURE_TTL_MS = 30_000;

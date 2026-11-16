@@ -22,6 +22,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { definitionDetailPath } from "@/modules/knowledge-network/components/definition-declarations/definition-path";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
 import { typeColors } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
+import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   getKnowledgeNetworkObjectTypeDetail,
@@ -166,6 +167,8 @@ export function OverviewOntologyBlock({
 
   // The same colour as the graph gives each type: its own, or a palette slot.
   const colorOfType = useMemo(() => typeColors(graph.nodes), [graph.nodes]);
+  const eventTypes = useKnEventTypes(networkId);
+  const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
   const objectTypes = useMemo<KnowledgeNetworkObjectTypeRecord[]>(
     () =>
       graph.nodes.map((node) => ({
@@ -521,6 +524,7 @@ export function OverviewOntologyBlock({
     <div className={styles.block}>
       <Spin spinning={previewLoading}>
         <OntologyGraphCard
+          eventClassIds={eventClassIds}
           loadConceptGroups={false}
           networkId={networkId}
           objectTypes={objectTypes}

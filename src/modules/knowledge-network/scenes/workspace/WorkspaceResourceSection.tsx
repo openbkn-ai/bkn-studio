@@ -108,6 +108,7 @@ export function WorkspaceResourceSection({
           canDelete={canDelete}
           networkId={networkId}
           networkName={networkName}
+          onDefinitionsChanged={() => void data.reloadDetail()}
           onDelete={async (records) => {
             const failed = await deleteEach(records, (record) =>
               deleteKnowledgeNetworkObjectType(networkId, record.id),

@@ -78,6 +78,19 @@ import type {
 import { hasDeclarations } from "@/modules/knowledge-network/utils/property-declarations";
 import type { ObjectMetricRecordV1 } from "@/modules/knowledge-network/types/object-metric";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
+import { EventClassFormDrawer } from "@/modules/knowledge-network/components/event-class/EventClassFormDrawer";
+import { EventClassTag } from "@/modules/knowledge-network/components/event-class/EventClassTag";
+import { EventRecognitionCard } from "@/modules/knowledge-network/components/event-class/EventRecognitionCard";
+import { SubjectEventClassesPanel } from "@/modules/knowledge-network/components/event-class/SubjectEventClassesPanel";
+import { useEventClassDelete } from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
+import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import {
+  useKnVersioned,
+  useKnVersionView,
+} from "@/modules/knowledge-network/hooks/useKnVersionView";
+import { getKnowledgeNetworkObjectType } from "@/modules/knowledge-network/services/object-type.service";
+import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
 import styles from "./ObjectTypeDetailScene.module.css";
 
@@ -99,7 +112,7 @@ function getLogicTypeLabel(_type: ObjectTypeLogicProperty["type"], t: (key: stri
 
 type ObjectTypeDetailTabKey = "overview" | "properties" | "data" | "related";
 type ObjectTypeDataSectionKey = "instance" | "logic";
-type ObjectTypeRelatedSectionKey = "relations" | "metrics" | "actions";
+type ObjectTypeRelatedSectionKey = "relations" | "metrics" | "actions" | "events";
 
 const OBJECT_TYPE_DETAIL_TABS: ObjectTypeDetailTabKey[] = [
   "overview",
@@ -129,7 +142,7 @@ function parseObjectTypeDataSection(value: string | null): ObjectTypeDataSection
 }
 
 function parseObjectTypeRelatedSection(value: string | null): ObjectTypeRelatedSectionKey {
-  if (value === "metrics" || value === "actions") {
+  if (value === "metrics" || value === "actions" || value === "events") {
     return value;
   }
 
@@ -224,12 +237,37 @@ export function ObjectTypeDetailScene() {
   );
   const dataSection =
     activeTab === "data" ? parseObjectTypeDataSection(searchParams.get("section")) : "instance";
+  const eventTypes = useKnEventTypes(networkId);
+  // This object type is the class of an event type: the platform writes it from that type.
+  const eventType = eventTypes.byClassId.get(objectTypeId);
+  const subjectEventTypes = useMemo(
+    () => eventTypes.types.filter((type) => type.subject === objectTypeId),
+    [eventTypes.types, objectTypeId],
+  );
+  const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
+  const showEventsSection = eventTypes.available && !eventType;
+  const versioned = useKnVersioned(networkId);
+  const [versionView] = useKnVersionView(networkId);
+  const canModifyNetwork = useKnowledgeNetworkCanOperate(networkId, "modify");
+  // Only the draft of a versioned network is edited, as on the workspace pages.
+  const canEditEvents = canModifyNetwork && (!versioned || versionView === "draft");
+  // An event class changes through its event type, so edit and delete wait until the event types
+  // are read, and an event class offers them only where event types are written.
+  const definitionWritable = !eventTypes.loading && (!eventType || canEditEvents);
+  const [eventForm, setEventForm] = useState<{
+    eventType?: KnEventType;
+    open: boolean;
+    subject?: string;
+  }>({ open: false });
+  const [subjectName, setSubjectName] = useState<string>();
+  const deleteEventClass = useEventClassDelete();
   const requestedRelatedSection =
     activeTab === "related"
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const relatedSection =
-    requestedRelatedSection === "metrics" && !objectMetricsAvailable
+    (requestedRelatedSection === "metrics" && !objectMetricsAvailable) ||
+    (requestedRelatedSection === "events" && !showEventsSection)
       ? "relations"
       : requestedRelatedSection;
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
@@ -294,6 +332,16 @@ export function ObjectTypeDetailScene() {
 
   const confirmDelete = () => {
     if (!detail) {
+      return;
+    }
+
+    if (eventType) {
+      // An event class goes with its event type.
+      void deleteEventClass(networkId, eventType, { versioned }).then((deleted) => {
+        if (deleted) {
+          void navigate(clearKnowledgeNetworkGraphSelectionFromPath(returnPath));
+        }
+      });
       return;
     }
 
@@ -428,6 +476,34 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const eventSubject = eventType?.subject;
+  useEffect(() => {
+    if (!eventSubject) {
+      setSubjectName(undefined);
+      return;
+    }
+    let cancelled = false;
+    void getKnowledgeNetworkObjectType(networkId, eventSubject, { skipErrorToast: true })
+      .then((record) => {
+        if (!cancelled) setSubjectName(record?.name);
+      })
+      .catch(() => {
+        if (!cancelled) setSubjectName(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventSubject, networkId]);
+
+  const handleEventClassSaved = () => {
+    setEventForm({ open: false });
+    eventTypes.reload();
+    if (eventType) {
+      // The class takes the type's name, so this page shows it again.
+      void loadData();
+    }
+  };
 
   const missingRequestableOperations = getMissingResourcePermissionOperations(
     "object_type",
@@ -1116,6 +1192,10 @@ export function ObjectTypeDetailScene() {
   const logicPropertyCount = detail.logicProperties.length;
   const objectTypePrimaryKeys = detail.primaryKeys;
   const objectTypeDisplayKey = detail.displayKey;
+  // An object type bound to a table of events: what it declares makes it an event class.
+  const declaresEventTime = detail.dataProperties.some(
+    (property) => property.declarations?.semantic === "event_time",
+  );
   const handleTabChange = (nextTab: string) => {
     openTab(nextTab as ObjectTypeDetailTabKey);
   };
@@ -1156,6 +1236,11 @@ export function ObjectTypeDetailScene() {
                 {t("knowledgeNetwork.objectTypeDetailOverviewIdentityTitle")}
               </h3>
             </div>
+            {eventType ? (
+              <EventClassTag />
+            ) : declaresEventTime ? (
+              <EventClassTag managed={false} />
+            ) : null}
           </div>
           <div className={styles.overviewMetaSections}>
             <dl className={styles.overviewMetaList}>
@@ -1293,6 +1378,23 @@ export function ObjectTypeDetailScene() {
         </section>
       </div>
 
+      {eventType ? (
+        <EventRecognitionCard
+          canModify={canEditEvents}
+          canQueryData={hasKnowledgeNetworkRecordOperation(detail, "query_data")}
+          eventType={eventType}
+          networkId={networkId}
+          onEdit={() => setEventForm({ eventType, open: true })}
+          onOpenSubject={(subjectId) => {
+            void navigate(
+              `/knowledge-network/workspace/${networkId}/object-types/${subjectId}/detail`,
+              { state: { knowledgeNetworkReturnTo: detailPath } },
+            );
+          }}
+          subjectName={subjectName}
+        />
+      ) : null}
+
       <section className={styles.overviewStatsSection}>
         <h3 className={styles.overviewSectionTitle}>
           {t("knowledgeNetwork.objectTypeDetailQuickStatsTitle")}
@@ -1401,6 +1503,23 @@ export function ObjectTypeDetailScene() {
               })}
             </span>
           </button>
+          {showEventsSection ? (
+            <button
+              className={styles.quickStatButton}
+              onClick={() => {
+                openTab("related", { relatedSection: "events" });
+              }}
+              type="button"
+            >
+              <span className={styles.quickStatHeader}>
+                <span className={styles.quickStatLabel}>
+                  {t("knowledgeNetwork.eventClasses.subject.section")}
+                </span>
+                <ArrowRightOutlined className={styles.quickStatArrow} />
+              </span>
+              <span className={styles.quickStatValue}>{subjectEventTypes.length}</span>
+            </button>
+          ) : null}
         </div>
       </section>
     </div>
@@ -1655,7 +1774,9 @@ export function ObjectTypeDetailScene() {
       ? t("knowledgeNetwork.objectTypeRelatedRelationsDescription")
       : relatedSection === "metrics"
         ? t("knowledgeNetwork.objectTypeDetailRelatedMetricsDescription")
-        : t("knowledgeNetwork.objectTypeDetailRelatedActionsDescription");
+        : relatedSection === "events"
+          ? t("knowledgeNetwork.eventClasses.subject.description")
+          : t("knowledgeNetwork.objectTypeDetailRelatedActionsDescription");
 
   const dataPanel = (
     <div className={styles.tabPanel}>
@@ -1947,6 +2068,14 @@ export function ObjectTypeDetailScene() {
                 label: t("knowledgeNetwork.objectTypeDetailRelatedSectionActions"),
                 value: "actions",
               },
+              ...(showEventsSection
+                ? [
+                    {
+                      label: t("knowledgeNetwork.eventClasses.subject.section"),
+                      value: "events",
+                    },
+                  ]
+                : []),
             ]}
             size="small"
             value={relatedSection}
@@ -2093,6 +2222,29 @@ export function ObjectTypeDetailScene() {
             )}
           </>
         ) : null}
+
+        {relatedSection === "events" ? (
+          <SubjectEventClassesPanel
+            canCreate={canEditEvents}
+            eventTypes={subjectEventTypes}
+            keyword={relatedKeyword}
+            loading={eventTypes.loading}
+            onCreate={() => setEventForm({ open: true, subject: objectTypeId })}
+            onOpen={(item) => {
+              if (!item.object_type_id) {
+                // No class yet: saving the type creates it.
+                if (canEditEvents) {
+                  setEventForm({ eventType: item, open: true });
+                }
+                return;
+              }
+              void navigate(
+                `/knowledge-network/workspace/${networkId}/object-types/${item.object_type_id}/detail`,
+                { state: { knowledgeNetworkReturnTo: detailPath } },
+              );
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -2119,18 +2271,26 @@ export function ObjectTypeDetailScene() {
             ) : null}
             <KnowledgeNetworkResourceDetailActions
               actions={[
-                {
-                  key: "edit",
-                  label: t("common.edit"),
-                  onClick: () => {
-                    void navigate(
-                      `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
-                      { state: knowledgeNetworkReturnState(returnPath) },
-                    );
-                  },
-                  operation: "modify",
-                  type: "primary",
-                },
+                ...(definitionWritable
+                  ? [
+                      {
+                        key: "edit",
+                        label: t("common.edit"),
+                        onClick: () => {
+                          if (eventType) {
+                            setEventForm({ eventType, open: true });
+                            return;
+                          }
+                          void navigate(
+                            `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                            { state: knowledgeNetworkReturnState(returnPath) },
+                          );
+                        },
+                        operation: "modify",
+                        type: "primary" as const,
+                      },
+                    ]
+                  : []),
                 {
                   key: "authorize",
                   label: t("knowledgeNetwork.propertyAuthorizationAction"),
@@ -2142,13 +2302,17 @@ export function ObjectTypeDetailScene() {
                   },
                   operation: "authorize",
                 },
-                {
-                  danger: true,
-                  key: "delete",
-                  label: t("common.delete"),
-                  onClick: confirmDelete,
-                  operation: "delete",
-                },
+                ...(definitionWritable
+                  ? [
+                      {
+                        danger: true,
+                        key: "delete",
+                        label: t("common.delete"),
+                        onClick: confirmDelete,
+                        operation: "delete",
+                      },
+                    ]
+                  : []),
               ]}
               record={detail}
             />
@@ -2196,6 +2360,16 @@ export function ObjectTypeDetailScene() {
           </section>
         </div>
       </KnowledgeNetworkResourceConfigShell>
+      <EventClassFormDrawer
+        eventClassIds={eventClassIds}
+        eventType={eventForm.eventType}
+        initialSubject={eventForm.subject}
+        networkId={networkId}
+        onClose={() => setEventForm({ open: false })}
+        onSaved={handleEventClassSaved}
+        open={eventForm.open}
+        versioned={versioned}
+      />
     </>
   );
 }

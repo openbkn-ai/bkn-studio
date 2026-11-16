@@ -44,6 +44,8 @@ const EMPTY_GROUP_MAP = new Map<string, string>();
 
 type OntologyGraphCardProps = {
   emptyDescription?: string;
+  /** Object types whose objects are events, tagged in the panel beside the graph. */
+  eventClassIds?: ReadonlySet<string>;
   /** Types and relations drawn faint and dashed: shown for context, not part of the model. */
   fadedIds?: ReadonlySet<string>;
   /** Types drawn with a small dot at their top left, such as what a draft's network already has. */
@@ -71,6 +73,7 @@ type OntologyGraphCardProps = {
 
 export function OntologyGraphCard({
   emptyDescription,
+  eventClassIds,
   fadedIds,
   markedIds,
   fillAvailableHeight = false,
@@ -296,6 +299,7 @@ export function OntologyGraphCard({
           {showInspector ? (
             <aside className={styles.graphAside}>
               <OntologyInspectorPanel
+                eventClassIds={eventClassIds}
                 networkId={networkId}
                 objectTypes={objectTypes}
                 relationTypes={relationTypes}
