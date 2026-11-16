@@ -228,9 +228,10 @@ function concepts(extra: Partial<Concepts> = {}): Concepts {
 const onGoToResources = vi.fn();
 const onOpenItem = vi.fn();
 
-function renderConcepts(ownerIsCaller = true) {
+function renderConcepts(ownerIsCaller = true, onCount?: (count: number) => void) {
   return renderWithoutAntdStyles(
     <ProjectConcepts
+      onCount={onCount}
       onGoToKinetic={vi.fn()}
       onGoToModel={vi.fn()}
       onGoToResources={onGoToResources}
@@ -739,6 +740,29 @@ describe("ProjectConcepts", () => {
 
     await waitFor(() => expect(service.addDraftCatalogs).toHaveBeenCalledWith("p1", ["c1"]));
     expect(service.generateDraft).not.toHaveBeenCalled();
+  });
+
+  it("tells the navigation the new count when an extraction adds concepts", async () => {
+    kb.mode = "enabled";
+    slots.kbModel = function Panel({ onChanged }: ProjectKnowledgeBaseModelProps) {
+      return (
+        <button onClick={onChanged} type="button">
+          extracted
+        </button>
+      );
+    };
+    const before = concepts();
+    service.getConcepts.mockResolvedValue(before);
+    const onCount = vi.fn();
+    renderConcepts(true, onCount);
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(before.concepts.length));
+
+    const after = concepts({
+      concepts: [...before.concepts, concept({ key: "kb/lot", name: "Lot" })],
+    });
+    service.getConcepts.mockResolvedValue(after);
+    fireEvent.click(await screen.findByRole("button", { name: "extracted" }));
+    await waitFor(() => expect(onCount).toHaveBeenLastCalledWith(before.concepts.length + 1));
   });
 
   it("keeps the sources card for a project with only knowledge-base files", async () => {
