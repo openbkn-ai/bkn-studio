@@ -313,10 +313,15 @@ export function UserManagementScene() {
     (user: AdminUser) => {
       void modal.confirm({
         title: t("systemAdmin.users.deleteUserTitle"),
-        content: t("systemAdmin.users.deleteUserConfirm", {
-          name: user.name,
-          account: user.account,
-        }),
+        content: t(
+          user.source === "sso"
+            ? "systemAdmin.users.deleteExternalUserConfirm"
+            : "systemAdmin.users.deleteUserConfirm",
+          {
+            name: user.name,
+            account: user.account,
+          },
+        ),
         okText: t("common.delete"),
         cancelText: t("common.cancel"),
         okButtonProps: { danger: true },
@@ -385,7 +390,7 @@ export function UserManagementScene() {
           label: t("systemAdmin.users.actions.configureRoles"),
         });
       }
-      if (canResetPassword) {
+      if (canResetPassword && user.source === "local") {
         items.push({
           key: "resetPassword",
           label: t("systemAdmin.users.actions.resetPassword"),
@@ -478,6 +483,13 @@ export function UserManagementScene() {
           <span className={styles.nameTitle}>
             {user.name}
             {user.builtin ? `（${t("systemAdmin.users.builtin")}）` : ""}
+            {user.source && (
+              <Tag className={styles.roleTag}>
+                {t(
+                  `systemAdmin.users.identitySources.${user.source === "local" || user.source === "ldap" || user.source === "sso" ? user.source : "external"}`,
+                )}
+              </Tag>
+            )}
           </span>
           <span className={styles.subText}>
             {user.account}
@@ -571,7 +583,12 @@ export function UserManagementScene() {
   const handleDeleteDept = (dept: AdminDepartment) => {
     void modal.confirm({
       title: t("systemAdmin.users.deleteDeptTitle"),
-      content: t("systemAdmin.users.deleteDeptConfirm", { name: dept.name }),
+      content: t(
+        dept.source === "sso"
+          ? "systemAdmin.users.deleteExternalDeptConfirm"
+          : "systemAdmin.users.deleteDeptConfirm",
+        { name: dept.name },
+      ),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },

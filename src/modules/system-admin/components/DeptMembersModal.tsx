@@ -271,6 +271,9 @@ export function DeptMembersModal({
       <p className={styles.mutedText} style={{ marginBottom: 12 }}>
         {t("systemAdmin.users.deptMembers.memberCount", { count: members.length })}
       </p>
+      {department.source === "sso" && (
+        <p className={styles.mutedText}>{t("systemAdmin.users.syncedMembershipHint")}</p>
+      )}
       <div className={modalStyles.toolbar}>
         <DirectoryUserPicker
           className={modalStyles.memberSelect}

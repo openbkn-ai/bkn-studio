@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Drawer, Form, Input, Spin, Tag, TreeSelect } from "antd";
+import { Alert, Drawer, Form, Input, Spin, Tag, TreeSelect } from "antd";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -108,6 +108,7 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const isEdit = Boolean(user);
+  const external = Boolean(user?.source && user.source !== "local");
 
   // TreeSelect uses a real tree (not flat indents).
   const deptTreeData = useMemo(() => buildDeptTreeData(departments, null), [departments]);
@@ -153,10 +154,13 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
           await updateUser(
             user.id,
             {
-              name: values.name.trim(),
-              email: values.email.trim(),
-              telephone: values.telephone.trim(),
-              enabled: user.enabled,
+              ...(external
+                ? {}
+                : {
+                    name: values.name.trim(),
+                    email: values.email.trim(),
+                    telephone: values.telephone.trim(),
+                  }),
               departmentIds: deptIds,
             },
             { skipErrorToast: true },
@@ -272,6 +276,9 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
             </div>
           ) : null}
 
+          {external && (
+            <Alert type="info" showIcon message={t("systemAdmin.users.externalProfileHint")} />
+          )}
           <Form
             className={drawerStyles.formStack}
             form={form}
@@ -298,7 +305,10 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
                   name="name"
                   rules={[{ required: true, message: t("common.required") }]}
                 >
-                  <Input placeholder={t("systemAdmin.users.drawer.displayNamePlaceholder")} />
+                  <Input
+                    disabled={external}
+                    placeholder={t("systemAdmin.users.drawer.displayNamePlaceholder")}
+                  />
                 </Form.Item>
               </div>
               {!isEdit ? (
@@ -333,7 +343,10 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
                       { type: "email", message: t("systemAdmin.users.deptDrawer.emailInvalid") },
                     ]}
                   >
-                    <Input placeholder={t("systemAdmin.users.drawer.emailPlaceholder")} />
+                    <Input
+                      disabled={external}
+                      placeholder={t("systemAdmin.users.drawer.emailPlaceholder")}
+                    />
                   </Form.Item>
                   <Form.Item
                     label={
@@ -344,7 +357,10 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
                     }
                     name="telephone"
                   >
-                    <Input placeholder={t("systemAdmin.users.drawer.telephonePlaceholder")} />
+                    <Input
+                      disabled={external}
+                      placeholder={t("systemAdmin.users.drawer.telephonePlaceholder")}
+                    />
                   </Form.Item>
                 </div>
               </div>
@@ -354,6 +370,9 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
               description={t("systemAdmin.users.drawer.sectionOrganizationDesc")}
               title={t("systemAdmin.users.drawer.sectionOrganization")}
             >
+              {user?.source === "sso" && (
+                <p className={styles.mutedText}>{t("systemAdmin.users.syncedMembershipHint")}</p>
+              )}
               <Form.Item label={t("systemAdmin.users.drawer.department")}>
                 <TreeSelect
                   allowClear

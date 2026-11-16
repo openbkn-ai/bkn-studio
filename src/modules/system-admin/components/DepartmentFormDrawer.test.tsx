@@ -75,6 +75,32 @@ describe("DepartmentFormDrawer parent selection", () => {
     expect(screen.getAllByText("Root").length).toBeGreaterThan(0);
   });
 
+  it("locks synchronized name and hierarchy while preserving editable local metadata", async () => {
+    render(
+      <DepartmentFormDrawer
+        department={{ ...departments[1], source: "sso" }}
+        departments={departments}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        open
+      />,
+    );
+    expect(screen.getByLabelText("systemAdmin.users.deptDrawer.name")).toBeDisabled();
+    expect(
+      screen.getByRole("combobox", { name: "systemAdmin.users.deptDrawer.parent" }),
+    ).toBeDisabled();
+    const remark = screen.getByLabelText("systemAdmin.users.deptDrawer.remark");
+    expect(remark).toBeEnabled();
+    fireEvent.change(remark, { target: { value: "Local note" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() =>
+      expect(mocks.updateDepartment).toHaveBeenCalledWith(
+        "child",
+        expect.objectContaining({ name: "Child", parentId: "root", remark: "Local note" }),
+      ),
+    );
+  });
+
   it("shows a backend cycle rejection and keeps the editor open without reporting success", async () => {
     const description =
       "The parent department cannot be this department or one of its descendants.";

@@ -947,6 +947,18 @@ export const systemAdminEnUS = {
       builtinRolePermissionCannotModify: "Built-in role permissions cannot be modified.",
     },
     users: {
+      identitySources: { local: "Local", ldap: "LDAP", sso: "SSO", external: "External" },
+      externalProfileHint:
+        "This user's name, email, phone and password are managed by the identity provider. Update them there.",
+      externalDepartmentHint:
+        "This department is synchronized from an identity provider. Its name and parent are managed there; other details can be edited here.",
+      syncedMembershipHint:
+        "Provider-managed department memberships are updated on subsequent sign-in or synchronization and may overwrite manual changes. Local department memberships can be managed separately.",
+      deleteExternalUserConfirm:
+        "Delete {{name}} ({{account}})? This removes the OpenBKN user and permission bindings, but keeps the identity provider account. Sign-in or directory synchronization may recreate the user. Disable the user to block access.",
+      deleteExternalDeptConfirm:
+        "Delete {{name}}? The identity provider department will remain and may be recreated on subsequent sign-in or directory synchronization.",
+
       title: "Users",
       description: "Pick a department on the left; manage users and accounts on the right.",
       tabUsers: "Users",
