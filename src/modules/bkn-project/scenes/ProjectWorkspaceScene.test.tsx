@@ -908,8 +908,11 @@ describe("ProjectWorkspaceScene", () => {
     renderScene("resources");
 
     expect(await screen.findByText(/resources page owner/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "bknProject.workspace.sections.resources" }),
-    ).toHaveTextContent("2");
+    // The count arrives with the workspace summary, which settles independently of the page.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "bknProject.workspace.sections.resources" }),
+      ).toHaveTextContent("2"),
+    );
   });
 });
