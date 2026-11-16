@@ -8,17 +8,25 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Entitlement } from "@/framework/entitlement/types";
-import type { SSOProvider } from "@/modules/system-admin/services/sso-provider.service";
+import type {
+  SSOProvider,
+  SSOProviderInput,
+  SSOProviderPage,
+} from "@/modules/system-admin/services/sso-provider.service";
 import adminStyles from "../scenes/admin.module.css";
 const state = vi.hoisted(() => ({ loading: false, snapshot: null as Entitlement | null }));
+type ConfirmationOptions = {
+  okButtonProps?: { danger?: boolean };
+  onOk: () => Promise<void>;
+};
 const api = vi.hoisted(() => ({
-  list: vi.fn(),
-  remove: vi.fn(),
-  save: vi.fn(),
-  test: vi.fn(),
+  list: vi.fn<(cursor?: string) => Promise<SSOProviderPage>>(),
+  remove: vi.fn<(id: string) => Promise<void>>(),
+  save: vi.fn<(input: Partial<SSOProviderInput>, id?: string) => Promise<SSOProvider>>(),
+  test: vi.fn<(input: SSOProviderInput) => Promise<void>>(),
   error: vi.fn(),
   success: vi.fn(),
-  confirm: vi.fn(),
+  confirm: vi.fn<(options: ConfirmationOptions) => void>(),
 }));
 vi.mock("@/framework/entitlement/use-entitlement", () => ({ useEntitlementContext: () => state }));
 vi.mock("react-i18next", async (original) => ({
@@ -185,6 +193,43 @@ describe("SSO management edition and credentials", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "systemAdmin.sso.next" })).not.toBeInTheDocument();
   });
+  it("stops loading when the backend repeats a pagination cursor", async () => {
+    state.snapshot = {
+      ...state.snapshot!,
+      licensed: true,
+      edition: "professional",
+      extensions: ["sso"],
+      capabilities: ["sso"],
+    };
+    api.list.mockResolvedValue({ entries: [provider], total: 2, next_cursor: "same-cursor" });
+    renderPage();
+    expect(await screen.findByText("systemAdmin.sso.paginationFailed")).toBeInTheDocument();
+    expect(api.list).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "systemAdmin.sso.refresh" })).not.toHaveClass(
+      "ant-btn-loading",
+    );
+  });
+  it("limits loading even when the backend keeps returning new cursors", async () => {
+    state.snapshot = {
+      ...state.snapshot!,
+      licensed: true,
+      edition: "professional",
+      extensions: ["sso"],
+      capabilities: ["sso"],
+    };
+    let pageNumber = 0;
+    api.list.mockImplementation(() => {
+      pageNumber += 1;
+      return Promise.resolve({
+        entries: [],
+        total: 3000,
+        next_cursor: pageNumber > 100 ? null : String(pageNumber),
+      });
+    });
+    renderPage();
+    expect(await screen.findByText("systemAdmin.sso.paginationFailed")).toBeInTheDocument();
+    expect(api.list).toHaveBeenCalledTimes(100);
+  });
   it("preserves a blank existing secret and omits metadata when editing", async () => {
     state.snapshot = {
       ...state.snapshot!,
@@ -233,7 +278,7 @@ describe("SSO management edition and credentials", () => {
     fireEvent.click(await screen.findByText("systemAdmin.sso.delete"));
     expect(api.remove).not.toHaveBeenCalled();
     const confirmation = api.confirm.mock.calls[0][0];
-    expect(confirmation.okButtonProps.danger).toBe(true);
+    expect(confirmation.okButtonProps?.danger).toBe(true);
     await act(async () => {
       await confirmation.onOk();
     });

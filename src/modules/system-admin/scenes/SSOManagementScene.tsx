@@ -73,9 +73,16 @@ export function SSOManagementScene() {
     setError("");
     try {
       const entries: SSOProvider[] = [];
+      const seenCursors = new Set<string>();
+      let pageCount = 0;
       let cursor: string | undefined;
       let result: SSOProviderPage;
       do {
+        if (++pageCount > 100 || (cursor && seenCursors.has(cursor))) {
+          setError("SSO_PROVIDER_PAGINATION_FAILED");
+          return;
+        }
+        if (cursor) seenCursors.add(cursor);
         result = await listSSOProviders(cursor);
         entries.push(...result.entries);
         cursor = result.next_cursor ?? undefined;
@@ -325,7 +332,13 @@ export function SSOManagementScene() {
         </div>
       </div>
       <div className={styles.tableSurface}>
-        {error && <Alert type="error" showIcon message={error} />}
+        {error && (
+          <Alert
+            type="error"
+            showIcon
+            message={error === "SSO_PROVIDER_PAGINATION_FAILED" ? label("paginationFailed") : error}
+          />
+        )}
         <AppTable<SSOProvider>
           rowKey="id"
           loading={loading}

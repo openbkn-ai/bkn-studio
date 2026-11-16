@@ -74,8 +74,6 @@ export const systemAdminEnUS = {
         "Scopes requested for the exchanged OpenBKN access token, such as openid. API permissions still depend on the user’s roles.",
       defaultAvailableHint:
         "Use as the default OpenBKN sign-in entry. Only one provider can be the default.",
-      httpAddressHint:
-        "The configuration contains HTTP URLs. Before testing the connection, enable Allow HTTP under Advanced settings below, or use HTTPS URLs.",
       departmentHint:
         "Claim containing user departments; Casdoor uses groups by default. Configure directory sync separately from the list.",
       copyCallback: "Copy callback URL",
@@ -93,6 +91,8 @@ export const systemAdminEnUS = {
         limitHint:
           "Client credentials and actual sign-in were not verified. Verify sign-in or token exchange next.",
       },
+      paginationFailed:
+        "Provider pagination repeated a cursor or exceeded the loading limit. Refresh and retry.",
       useDatabaseSecret: "Use database secret",
       errors: {
         SSO_PROVIDER_ACTIVE: "Disable the provider and clear default sign-in before deleting it.",

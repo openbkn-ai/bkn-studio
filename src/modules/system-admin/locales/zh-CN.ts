@@ -64,8 +64,6 @@ export const systemAdminZhCN = {
       issuedScopeHint:
         "换发得到的 OpenBKN access_token 申请的 Scope，例如 openid；实际接口权限仍由用户角色决定。",
       defaultAvailableHint: "作为 OpenBKN 的默认登录入口，同一时间只能设置一个。",
-      httpAddressHint:
-        "当前配置包含 HTTP 地址。测试连接前，请在下方“高级配置”中开启“允许 HTTP”，或改用 HTTPS 地址。",
       departmentHint:
         "用户部门信息的 Claim 名称，Casdoor 默认使用 groups。目录同步请在列表中单独配置。",
       copyCallback: "复制回调地址",
@@ -81,6 +79,7 @@ export const systemAdminZhCN = {
         notChecked: "未检查",
         limitHint: "未验证应用密钥或实际登录，请继续验证登录或 Token 换发。",
       },
+      paginationFailed: "列表分页返回异常或超过加载上限，请刷新后重试。",
       useDatabaseSecret: "改用数据库密钥",
       errors: {
         SSO_PROVIDER_ACTIVE: "请先停用身份源并取消默认登录，再删除。",
