@@ -53,6 +53,13 @@ export type EffectiveDecision = {
 
 /** One object-level grant that gives a user selected operations on an object. */
 export type ObjectGrant = {
+  configurationSummary?: {
+    row_policies: number;
+    row_conditions: number;
+    field_rules: number;
+    masked_rules: number;
+    hidden_rules: number;
+  };
   /** Grantee subject ID (backend accessor_id). */
   accessorId: string;
   /** Roles are valid direct permission subjects and must not be queried as users. */

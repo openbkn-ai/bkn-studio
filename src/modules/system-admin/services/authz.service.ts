@@ -236,6 +236,92 @@ export async function listObjectGrants(query: ObjectGrantQuery = {}): Promise<Ob
   return grantList;
 }
 
+/** Project only the current domain resource page; never enumerate platform grants. */
+export async function projectNetworkPermissions(
+  networkId: string,
+  subject: { id: string; type: "user" | "role" },
+  resources: Array<{ type: string; id: string }>,
+  signal: AbortSignal,
+): Promise<ObjectGrant[]> {
+  const response = await http.post<{ entries?: BackendEntry[] }>(
+    `${ADMIN}/permission-projection`,
+    {
+      network_id: networkId,
+      subject,
+      resources,
+    },
+    { signal, skipErrorToast: true },
+  );
+  return (response.data.entries ?? []).map(mapObjectGrantEntry);
+}
+
+export type PermissionSourceDecision = {
+  operation: string;
+  decision: string;
+  basis: string;
+  steps: Array<{
+    resource_type: string;
+    resource_id: string;
+    matched_grants: Array<{
+      grant_id: string;
+      management?: {
+        kind: "object_grants" | "role_permissions";
+        can_manage: boolean;
+        resource_type: string;
+        resource_id: string;
+      };
+      subject_id: string;
+      subject_kind: string;
+      subject_name?: string;
+      effect: string;
+      operation: string;
+      object: string;
+    }>;
+  }>;
+};
+
+export async function getNetworkPermissionSources(
+  networkId: string,
+  subject: { id: string; type: "user" | "role" },
+  resource: { type: string; id: string },
+  signal: AbortSignal,
+): Promise<PermissionSourceDecision[]> {
+  const response = await http.post<{
+    subjects?: Record<string, string>;
+    source_targets?: Record<
+      string,
+      {
+        kind: "object_grants" | "role_permissions";
+        can_manage: boolean;
+        resource_type: string;
+        resource_id: string;
+      }
+    >;
+    entries: Array<{ effective_decisions: PermissionSourceDecision[] }>;
+  }>(
+    `${ADMIN}/permission-projection`,
+    {
+      network_id: networkId,
+      subject,
+      resources: [resource],
+      include_sources: true,
+    },
+    { signal, skipErrorToast: true },
+  );
+  const decisions = response.data.entries[0]?.effective_decisions ?? [];
+  return decisions.map((decision) => ({
+    ...decision,
+    steps: (decision.steps ?? []).map((step) => ({
+      ...step,
+      matched_grants: step.matched_grants.map((grant) => ({
+        ...grant,
+        subject_name: response.data.subjects?.[grant.subject_id],
+        management: response.data.source_targets?.[grant.grant_id],
+      })),
+    })),
+  }));
+}
+
 /** One grouped row: an object group or grantee group aggregate. */
 export type AuthzGroup = {
   objType?: string;
@@ -544,6 +630,7 @@ export async function revokeCommunityBundle(grantId: string): Promise<void> {
 // ---- backend mapper (real path) --------------------------------------------
 
 type BackendEntry = {
+  configuration_summary?: ObjectGrant["configurationSummary"];
   accessor_id?: string;
   accessor_account?: string;
   accessor_name?: string;
@@ -621,6 +708,7 @@ export function mapObjectGrantEntry(item: BackendEntry): ObjectGrant {
   const objId = item.resource?.id ?? "";
   const accessorId = item.accessor_id ?? "";
   return {
+    configurationSummary: item.configuration_summary,
     accessorId,
     accessorAccount: item.accessor_account,
     accessorName: item.accessor_name,
@@ -663,6 +751,7 @@ type BackendMeGrantEntry = {
 export async function listObjectGrantsForObject(
   objType: string,
   objId: string,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<{ accounts: AdminUser[]; grants: ObjectGrant[] }> {
   if (useMock) {
     return {
@@ -674,6 +763,7 @@ export async function listObjectGrantsForObject(
     "/safe/v1/me/object-grants",
     {
       params: { resource_id: objId, resource_type: objType },
+      skipErrorToast: options.skipErrorToast,
     },
   );
   const entries = (response.data.entries ?? []).filter((entry) => entry.accessor_id);
@@ -759,6 +849,7 @@ export async function listGrantableUsersForObject(
   objType: string,
   objId: string,
   search = "",
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<AdminUser[]> {
   const normalizedSearch = search.trim();
   if (useMock) {
@@ -772,7 +863,10 @@ export async function listGrantableUsersForObject(
   }
   const response = await http.get<{ users?: { account?: string; id?: string; name?: string }[] }>(
     "/safe/v1/me/grantable-users",
-    { params: { resource_id: objId, resource_type: objType, search: normalizedSearch } },
+    {
+      params: { resource_id: objId, resource_type: objType, search: normalizedSearch },
+      skipErrorToast: options.skipErrorToast,
+    },
   );
   return (response.data.users ?? [])
     .filter((user) => user.id)
@@ -799,6 +893,7 @@ export async function listGrantableRolesForObject(
   objType: string,
   objId: string,
   search = "",
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<GrantableRole[]> {
   const normalizedSearch = search.trim();
   if (useMock) {
@@ -813,6 +908,7 @@ export async function listGrantableRolesForObject(
   }
   const response = await http.get<{ roles?: GrantableRole[] }>("/safe/v1/me/grantable-roles", {
     params: { resource_id: objId, resource_type: objType, search: normalizedSearch || undefined },
+    skipErrorToast: options.skipErrorToast,
   });
   return (response.data.roles ?? []).filter((role) => role.id);
 }

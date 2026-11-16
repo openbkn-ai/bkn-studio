@@ -41,6 +41,9 @@ function objectMetricsRouteChild(path: string): ReactElement {
 }
 
 describe("knowledge network standalone routes", () => {
+  it("registers the permission matrix workspace route", () => {
+    expect(routeChild("/knowledge-network/workspace/:networkId/permissions")).toBeTruthy();
+  });
   it("keeps unlicensed Eval behind the Professional gate without mounting its API consumers", () => {
     const gate = routeChild("/knowledge-network/workspace/:networkId/evals") as ReactElement<{
       capability: string;

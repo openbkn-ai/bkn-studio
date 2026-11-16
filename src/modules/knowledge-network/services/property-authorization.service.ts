@@ -31,6 +31,7 @@ type BackendGrantEntry = {
 };
 
 type BackendDecision = {
+  display_name?: string;
   level: PropertyAccessLevel;
   name: string;
   source: string;
@@ -63,7 +64,12 @@ function mapEntry(entry: BackendGrantEntry): PropertyGrantEntry {
 }
 
 function mapDecision(decision: BackendDecision): PropertyAccessDecision {
-  return { level: decision.level, name: decision.name, source: decision.source };
+  return {
+    level: decision.level,
+    name: decision.name,
+    source: decision.source,
+    displayName: decision.display_name,
+  };
 }
 
 function mapSnapshot(snapshot: BackendSnapshot): PropertyGrantSnapshot {
@@ -78,6 +84,7 @@ function mapSnapshot(snapshot: BackendSnapshot): PropertyGrantSnapshot {
 export async function listPropertyGrantSnapshot(
   subject: PropertyGrantSubject,
   objectTypeRef: string,
+  options: { skipErrorToast?: boolean; signal?: AbortSignal } = {},
 ): Promise<PropertyGrantSnapshot> {
   if (useMock) {
     return {
@@ -89,11 +96,29 @@ export async function listPropertyGrantSnapshot(
     };
   }
   const response = await http.get<BackendSnapshot>(PROPERTY_GRANTS, {
+    signal: options.signal,
     params: {
       accessor_id: subject.id,
       accessor_type: subject.type,
       object_type_ref: objectTypeRef,
     },
+    skipErrorToast: options.skipErrorToast,
+  });
+  return mapSnapshot(response.data);
+}
+
+export async function getEffectivePropertySnapshot(
+  subject: PropertyGrantSubject,
+  objectTypeRef: string,
+  options: { signal?: AbortSignal; skipErrorToast?: boolean } = {},
+): Promise<PropertyGrantSnapshot> {
+  const response = await http.get<BackendSnapshot>("/safe/v1/admin/permission-projection/fields", {
+    params: {
+      accessor_id: subject.id,
+      accessor_type: subject.type,
+      object_type_ref: objectTypeRef,
+    },
+    ...options,
   });
   return mapSnapshot(response.data);
 }

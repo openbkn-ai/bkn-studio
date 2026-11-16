@@ -15,6 +15,7 @@ export type PropertyGrantSubject = {
 };
 
 export type PropertyGrantEntry = {
+  displayName?: string;
   createdAt?: string;
   createdBy?: string;
   expiresAt?: string;
@@ -26,6 +27,7 @@ export type PropertyGrantEntry = {
 };
 
 export type PropertyAccessDecision = {
+  displayName?: string;
   level: PropertyAccessLevel;
   name: string;
   source: string;

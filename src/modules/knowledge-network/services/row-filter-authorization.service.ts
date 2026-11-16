@@ -119,10 +119,13 @@ function mockPredicate(policy: RowFilterPolicy | null) {
 export async function getRowFilterSnapshot(
   subject: RowFilterSubject,
   objectTypeRef: string,
+  options: { skipErrorToast?: boolean; signal?: AbortSignal } = {},
 ): Promise<RowFilterSnapshot> {
   if (useMock) return mockSnapshot(subject, objectTypeRef);
   const response = await http.get<BackendSnapshot>(ROW_FILTER_POLICIES, {
+    signal: options.signal,
     params: { object_type_ref: objectTypeRef, subject_id: subject.id, subject_type: subject.type },
+    skipErrorToast: options.skipErrorToast,
   });
   return mapSnapshot(response.data);
 }
@@ -149,7 +152,7 @@ export async function patchRowFilterPolicy(patch: RowFilterPatch): Promise<RowFi
     object_type_ref: patch.objectTypeRef,
     policy: patch.policy ? toBackendPolicy(patch.policy) : null,
     reason: patch.reason,
-    subject: patch.subject,
+    subject: { id: patch.subject.id, type: patch.subject.type },
   });
   return mapSnapshot(response.data);
 }
@@ -157,6 +160,7 @@ export async function patchRowFilterPolicy(patch: RowFilterPatch): Promise<RowFi
 export async function explainRowFilter(
   subject: RowFilterSubject,
   objectTypeRef: string,
+  options: { signal?: AbortSignal; skipErrorToast?: boolean } = {},
 ): Promise<RowFilterExplain> {
   if (useMock) {
     const snapshot = mockSnapshot(subject, objectTypeRef);
@@ -169,10 +173,14 @@ export async function explainRowFilter(
       snapshot,
     };
   }
-  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, {
-    object_type_ref: objectTypeRef,
-    subject,
-  });
+  const response = await http.post<BackendExplain>(
+    ROW_FILTER_EXPLAIN,
+    {
+      object_type_ref: objectTypeRef,
+      subject: { id: subject.id, type: subject.type },
+    },
+    options,
+  );
   return {
     directPolicy: mapPolicy(response.data.direct_policy) ?? undefined,
     effectivePredicate: response.data.effective_predicate,

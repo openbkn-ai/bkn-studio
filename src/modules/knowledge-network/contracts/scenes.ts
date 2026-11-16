@@ -29,6 +29,8 @@ export type KnowledgeNetworkWorkspaceSection =
   | "skills"
   | "knowledge-bases"
   | "versions"
+  | "permissions"
+  | "action-control"
   /** A page another build registered with its sidebar entry (WorkspaceNavEntry.page). */
   | "extension";
 

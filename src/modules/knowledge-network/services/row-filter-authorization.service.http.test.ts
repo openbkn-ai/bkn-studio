@@ -30,12 +30,17 @@ describe("row-filter-authorization.service HTTP contract", () => {
 
     const { explainRowFilter } =
       await import("@/modules/knowledge-network/services/row-filter-authorization.service");
-    await explainRowFilter({ id: "user-1", type: "user" }, "kn-1/order");
+    const selectedUser = { id: "user-1", type: "user" as const, name: "Administrator" };
+    await explainRowFilter(selectedUser, "kn-1/order");
 
-    expect(post).toHaveBeenCalledWith("/safe/v1/admin/row-filter-policies/explain", {
-      object_type_ref: "kn-1/order",
-      subject: { id: "user-1", type: "user" },
-    });
+    expect(post).toHaveBeenCalledWith(
+      "/safe/v1/admin/row-filter-policies/explain",
+      {
+        object_type_ref: "kn-1/order",
+        subject: { id: "user-1", type: "user" },
+      },
+      {},
+    );
   });
 
   it("maps field display names from the management snapshot", async () => {
@@ -84,6 +89,7 @@ describe("row-filter-authorization.service HTTP contract", () => {
 
     const { patchRowFilterPolicy } =
       await import("@/modules/knowledge-network/services/row-filter-authorization.service");
+    const selectedUser = { id: "user-1", type: "user" as const, name: "Administrator" };
     await patchRowFilterPolicy({
       expectedRevision: "revision-1",
       objectTypeRef: "kn-1/order",
@@ -92,7 +98,7 @@ describe("row-filter-authorization.service HTTP contract", () => {
         relation: "and",
       },
       reason: "test",
-      subject: { id: "user-1", type: "user" },
+      subject: selectedUser,
     });
 
     expect(patch).toHaveBeenCalledWith("/safe/v1/admin/row-filter-policies", {
