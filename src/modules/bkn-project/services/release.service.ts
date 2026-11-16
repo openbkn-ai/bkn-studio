@@ -359,13 +359,23 @@ export async function publishRelease(
   };
 }
 
-/** Brings the live version into the project's branch. */
-export async function syncBranch(projectId: string): Promise<void> {
+/**
+ * Brings the live version into the project's branch. With keepProject, where the two changed the
+ * same thing differently the project's side is kept instead of refusing.
+ */
+export async function syncBranch(
+  projectId: string,
+  { keepProject = false }: { keepProject?: boolean } = {},
+): Promise<void> {
   if (useMock) {
     await wait(null);
     return;
   }
-  await http.post(`${projectPath(projectId)}/branch:sync`, undefined, { skipErrorToast: true });
+  await http.post(
+    `${projectPath(projectId)}/branch:sync`,
+    keepProject ? { keep_project: true } : undefined,
+    { skipErrorToast: true },
+  );
 }
 
 /** Drops what was edited on the network and not published: its draft goes back to the running version. */

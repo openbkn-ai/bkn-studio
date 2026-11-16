@@ -51,6 +51,9 @@ import type {
 import styles from "./Release.module.css";
 
 const PREFIX = "bknProject.release.publish";
+
+/** What the owner does about a live version that moved or was edited outside the project. */
+type Settle = "commitDrift" | "discardDrift" | "sync";
 const VERSION = /^\d+\.\d+\.\d+$/;
 
 /**
@@ -93,8 +96,9 @@ export function ReleaseReviewDialog({
   const [publishError, setPublishError] = useState<string | null>(null);
   // The network has edits nobody published: the owner chooses what happens to them.
   const [draftChanged, setDraftChanged] = useState(false);
-  // Committing the network's edits conflicted with the project's: the owner may discard them.
-  const [driftConflict, setDriftConflict] = useState(false);
+  // Bringing the live version into the project conflicted with the project's own edits: the owner
+  // may sync again keeping the project's side.
+  const [syncConflict, setSyncConflict] = useState(false);
   // Only the newest read is shown: reading again for another version or after a move wins.
   const latest = useRef(0);
 
@@ -190,42 +194,45 @@ export function ReleaseReviewDialog({
     }
   };
 
-  /** Brings the live version into the project, or commits what changed on it, then reviews again. */
-  const settle = async (action: "commitDrift" | "sync") => {
+  /**
+   * Brings the live version into the project, commits what was edited on it, or discards those
+   * edits, then reviews again.
+   */
+  const settle = async (action: Settle) => {
     setBusy(true);
     try {
-      await (action === "sync" ? syncBranch(projectId) : commitDrift(projectId));
+      await (action === "sync"
+        ? syncBranch(projectId)
+        : action === "discardDrift"
+          ? discardDrift(projectId)
+          : commitDrift(projectId));
       message.success(t(`${PREFIX}.${action}Done`));
       void load(reviewed);
     } catch (error) {
-      if (action === "commitDrift") {
-        failedCommit(error);
-      } else {
-        message.error(publishErrorText(t, projectErrorCode(error)));
-      }
+      failedCommit(error);
     } finally {
       setBusy(false);
     }
   };
 
-  /** A commit that conflicts stays on screen with what to do; anything else is said once. */
+  /** A sync that conflicts stays on screen with what to do; anything else is said once. */
   const failedCommit = (error: unknown) => {
     const code = projectErrorCode(error);
     if (code?.endsWith(".MergeConflict")) {
       setDraftChanged(false);
-      setDriftConflict(true);
+      setSyncConflict(true);
     } else {
       message.error(publishErrorText(t, code));
     }
   };
 
-  /** Drops the network's unpublished edits, back to the running version, then reviews again. */
-  const discardEdits = async () => {
+  /** Brings the live version in keeping the project's side where the two conflict. */
+  const syncKeepingProject = async () => {
     setBusy(true);
     try {
-      await discardDrift(projectId);
-      setDriftConflict(false);
-      message.success(t(`${PREFIX}.driftConflict.discarded`));
+      await syncBranch(projectId, { keepProject: true });
+      setSyncConflict(false);
+      message.success(t(`${PREFIX}.syncConflict.done`));
       void load(reviewed);
     } catch (error) {
       message.error(publishErrorText(t, projectErrorCode(error)));
@@ -308,24 +315,23 @@ export function ReleaseReviewDialog({
             review={review}
           />
         )}
-        {driftConflict ? (
+        {syncConflict ? (
           <Alert
             action={
               <Popconfirm
-                okButtonProps={{ danger: true }}
-                okText={t(`${PREFIX}.driftConflict.discard`)}
-                onConfirm={() => void discardEdits()}
-                title={t(`${PREFIX}.driftConflict.confirm`)}
+                okText={t(`${PREFIX}.syncConflict.keepProject`)}
+                onConfirm={() => void syncKeepingProject()}
+                title={t(`${PREFIX}.syncConflict.confirm`)}
               >
-                <AppButton danger disabled={busy} size="small">
-                  {t(`${PREFIX}.driftConflict.discard`)}
+                <AppButton disabled={busy} size="small">
+                  {t(`${PREFIX}.syncConflict.keepProject`)}
                 </AppButton>
               </Popconfirm>
             }
             closable
-            description={t(`${PREFIX}.driftConflict.description`)}
-            message={t(`${PREFIX}.driftConflict.title`)}
-            onClose={() => setDriftConflict(false)}
+            description={t(`${PREFIX}.syncConflict.description`)}
+            message={t(`${PREFIX}.syncConflict.title`)}
+            onClose={() => setSyncConflict(false)}
             showIcon
             type="warning"
           />
@@ -368,7 +374,7 @@ function ReviewBody({
   onGoToBuild?: () => void;
   onGoToKinetic?: () => void;
   onAccept: (accept: string, checked: boolean) => void;
-  onSettle: (action: "commitDrift" | "sync") => void;
+  onSettle: (action: Settle) => void;
   review: ReleaseReview;
 }) {
   const { t } = useTranslation();
@@ -540,7 +546,7 @@ function CheckRow({
   itemName: (id: string) => string;
   onAccept: (accept: string, checked: boolean) => void;
   onGoToBuild?: () => void;
-  onSettle: (action: "commitDrift" | "sync") => void;
+  onSettle: (action: Settle) => void;
 }) {
   const { t } = useTranslation();
   // The items a check names, such as those whose tables are gone: a few at first.
@@ -593,6 +599,19 @@ function CheckRow({
           <AppButton loading={busy} onClick={() => onSettle(settle)} size="small">
             {t(`${PREFIX}.${settle}`)}
           </AppButton>
+          {/* Edits nobody wants, such as what an unfinished write left, go without entering main. */}
+          {settle === "commitDrift" ? (
+            <Popconfirm
+              okButtonProps={{ danger: true }}
+              okText={t(`${PREFIX}.discardDrift`)}
+              onConfirm={() => onSettle("discardDrift")}
+              title={t(`${PREFIX}.discardDriftConfirm`)}
+            >
+              <AppButton danger disabled={busy} size="small" type="link">
+                {t(`${PREFIX}.discardDrift`)}
+              </AppButton>
+            </Popconfirm>
+          ) : null}
         </span>
       ) : null}
     </li>
