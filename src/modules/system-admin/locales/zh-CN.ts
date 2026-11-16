@@ -1315,6 +1315,7 @@ export const systemAdminZhCN = {
         "bkn-project-document-ask": "BKNProjectDocumentAsk",
         "bkn-project-concept-extraction": "BKNProjectConceptExtraction",
         "bkn-project-document-extraction": "BKNProjectDocumentExtraction",
+        "bkn-project-draft-naming": "BKNProjectDraftNaming",
       },
       builtinNames: {
         "bkn-project-document-extraction": "项目管理 - 文档抽取",
@@ -1331,8 +1332,13 @@ export const systemAdminZhCN = {
         "bkn-project-answer-judge": "项目管理 - 回归判答",
         "bkn-project-ontology-ask": "项目管理 - 本体建模助手",
         "bkn-project-document-ask": "项目管理 - 文档本体建模助手",
+        "bkn-project-draft-naming": "项目管理 - 起草命名",
       },
       builtinDescriptions: {
+        "resource-semantic-understanding":
+          "读取数据表及其字段，推断业务名称和说明，供起草本体和抽取概念使用；表和字段的原始标识不变。",
+        "bkn-project-draft-naming":
+          "从数据表起草本体时，数据目录里的名称和说明不是项目内容语言的，按项目内容语言重写新起草的对象类、属性和关系类的名称和说明；原名称留作别名，数据目录本身不改。",
         eval_assistant:
           "协助查询质量评测规则、用例、测试集、运行结果和问题记录，并在确认后提出受控操作建议。",
         "bkn-project-document-extraction":
