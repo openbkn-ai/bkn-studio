@@ -77,6 +77,12 @@
   margin-bottom: 8px;
 }
 
+/* A text area's character count sits below its box, outside the item: leave it room so it
+   does not cover the next row. */
+.basic :global(.ant-form-item:has(.ant-input-textarea-show-count)) {
+  margin-bottom: 30px;
+}
+
 .canvas {
   display: flex;
   flex: 1;
