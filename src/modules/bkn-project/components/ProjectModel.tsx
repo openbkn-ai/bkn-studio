@@ -186,6 +186,8 @@ export function ProjectModel({
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
   // Adopted object types that could refresh their local index by an update field, and have none.
   const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
+  // Adopted same-object links waiting for where each field comes from; confirming waits for them.
+  const [sourcePlans, setSourcePlans] = useState<PendingItem[]>([]);
 
   // Counts every read, failed or not, so a drafting draft is read again after a failure too.
   const [reads, setReads] = useState(0);
@@ -235,6 +237,7 @@ export function ProjectModel({
     if (readyAt === null) {
       setNeededBy(new Map());
       setUpdateFields([]);
+      setSourcePlans([]);
       return undefined;
     }
     let active = true;
@@ -245,6 +248,7 @@ export function ProjectModel({
             new Map(pending.items.map((item) => [`${item.kind}/${item.itemId}`, item.neededBy])),
           );
           setUpdateFields(pending.items.filter((item) => item.reason === "needs_update_field"));
+          setSourcePlans(pending.items.filter((item) => item.reason === "source_plan_pending"));
         }
       })
       .catch(() => undefined);
@@ -370,7 +374,8 @@ export function ProjectModel({
       (updateTime) => chooseIdentity(project.id, objectType.id, updateTime, properties),
       (_before, next) => {
         const after = next.items.objectTypes.find((item) => item.id === objectType.id);
-        // Choosing does not adopt: say what is left to do when there is something.
+        // Choosing adopts what drafting left out only for want of an identity; when it is still
+        // out, say what is left to do.
         message.success(
           t(
             after && !after.adopted
@@ -733,7 +738,11 @@ export function ProjectModel({
     }
   };
   const pending =
-    items.objectTypes.filter((item) => item.needsIdentity).length + unadoptedEnds.length;
+    items.objectTypes.filter((item) => item.needsIdentity).length +
+    unadoptedEnds.length +
+    sourcePlans.filter((item) =>
+      items.relationTypes.some((relation) => relation.id === item.itemId && relation.adopted),
+    ).length;
   const leftOut = items.excluded.length + items.unreadable.length;
   const tabs: { label: ReactNode; value: Tab }[] = [
     {
@@ -950,6 +959,7 @@ export function ProjectModel({
                 (await sendEdit("object_types", objectTypeId, { incrementalKey: property })) !==
                 "failed"
               }
+              sourcePlans={sourcePlans}
               unadoptedEnds={unadoptedEnds}
               updateFields={updateFields}
             />

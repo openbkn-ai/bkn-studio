@@ -301,6 +301,8 @@ export type DraftItems = {
    */
   draftedCatalogIds?: string[];
   decisions: DraftDecision[];
+  /** Concepts read from documents that no item is, such as rules, by id with their names. */
+  documentConcepts?: { id: string; name: string }[];
   excluded: DraftExcludedField[];
   objectTypes: DraftObjectType[];
   relationTypes: DraftRelationType[];

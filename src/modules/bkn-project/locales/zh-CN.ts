@@ -777,8 +777,12 @@ export const bknProjectZhCN = {
       changes: {
         waitingTitle: "待你决定",
         doneTitle: "已做的修改",
-        needsIdentity: "「{{name}}」还没有唯一标识，选好后才能采纳。",
+        needsIdentity: "「{{name}}」还没有唯一标识，选好后即采纳。",
         unadoptedEnd: "关系类「{{name}}」连接的对象类没有采纳，请取消采纳它。",
+        sourcePlan:
+          "「{{name}}」把文档里的对象和表里的对象当成同一个，确认模型前要先定各字段以哪边为准；不需要这层对应时可以取消采纳。",
+        sourcePlanOpen: "确定字段来源",
+        sourcePlanOpenOf: "为{{name}}确定字段来源",
         neededBy: "需要它才能回答的问题：",
         unadopt: "取消采纳",
         unadoptItem: "取消采纳{{name}}",
@@ -1635,6 +1639,12 @@ export const bknProjectZhCN = {
         link_types_mismatch: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
         link_types_mismatch_one: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
         link_types_mismatch_other: "{{count}} 个已采纳的关系类，用来对应的两个字段类型对不上",
+        source_plan_pending:
+          "{{count}} 个已采纳的关联把文档侧对象和表侧对象当成同一个，但各字段以哪边为准还没定",
+        source_plan_pending_one:
+          "{{count}} 个已采纳的关联把文档侧对象和表侧对象当成同一个，但各字段以哪边为准还没定",
+        source_plan_pending_other:
+          "{{count}} 个已采纳的关联把文档侧对象和表侧对象当成同一个，但各字段以哪边为准还没定",
         nothing_adopted: "还没有采纳任何对象类",
         no_catalogs: "项目还没有选择数据目录",
         branch_not_v3: "这个项目还是旧版格式，需要先同步网络的最新内容才能确认",

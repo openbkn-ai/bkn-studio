@@ -150,6 +150,12 @@ describe("publish messages", () => {
     expect(blockedText(en, "needs_identity", [{ ...blockers[0], count: 1 }])).toBe(
       "1 adopted object type still needs an identity",
     );
+    // A same-object link waiting for its field sources says what is left to decide.
+    expect(
+      blockedText(zh, "source_plan_pending", [
+        { code: "source_plan_pending", count: 1, waitingFor: "editor" },
+      ]),
+    ).toBe("1 个已采纳的关联把文档侧对象和表侧对象当成同一个，但各字段以哪边为准还没定");
     // Without a count, the reason is not said as "0 object types".
     expect(blockedText(zh, "unadopted_ends", [])).toBe("现在还不能确认");
     expect(blockedText(zh, "catalog_missing", [])).toBe("有数据目录已被删除");

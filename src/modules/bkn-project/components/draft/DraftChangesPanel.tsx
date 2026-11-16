@@ -43,6 +43,7 @@ export function DraftChangesPanel({
   focus,
   neededBy,
   onSetUpdateField,
+  sourcePlans = [],
   unadoptedEnds,
   updateFields = [],
 }: {
@@ -57,6 +58,11 @@ export function DraftChangesPanel({
   neededBy: ReadonlyMap<string, PendingQuestion[]>;
   /** Sets an object type's update field; true once the draft has it. */
   onSetUpdateField?: (objectTypeId: string, property: string) => Promise<boolean>;
+  /**
+   * Adopted links saying a document's object and a table's are the same, waiting for where each
+   * field comes from: settled on the document's object, or by leaving the link out.
+   */
+  sourcePlans?: PendingItem[];
   unadoptedEnds: DraftRelationType[];
   /** Object types without an update field, suggested after what blocks and what is undecided. */
   updateFields?: PendingItem[];
@@ -74,7 +80,14 @@ export function DraftChangesPanel({
     return objectType && !objectType.incrementalKey;
   });
 
-  // What waits, in order: identities, relation ends, then update fields. A few at first.
+  // Only those the draft still adopts: one left out since the list was read waits no more.
+  const relationTypes = new Map(draft.items.relationTypes.map((item) => [item.id, item]));
+  const samePlans = sourcePlans.flatMap((item) => {
+    const relation = relationTypes.get(item.itemId);
+    return relation?.adopted ? [{ relation, source: objectTypes.get(relation.source) }] : [];
+  });
+
+  // What waits, in order: identities, relation ends, field sources, then update fields. A few at first.
   const rows = [
     ...waiting.map((objectType) => (
       <li className={styles.change} key={`identity-${objectType.id}`}>
@@ -109,6 +122,33 @@ export function DraftChangesPanel({
         </AppButton>
       </li>
     )),
+    ...samePlans.map(({ relation, source }) => (
+      <li className={styles.change} key={`source-plan-${relation.id}`}>
+        <span className={styles.changeText}>
+          {t("bknProject.model.changes.sourcePlan", { name: relation.name })}
+          <NeededBy questions={neededBy.get(`relation_types/${relation.id}`)} />
+        </span>
+        {source ? (
+          <AppButton
+            aria-label={t("bknProject.model.changes.sourcePlanOpenOf", { name: source.name })}
+            disabled={disabled}
+            onClick={() => actions.onEdit("object_types", source)}
+            size="small"
+            type="primary"
+          >
+            {t("bknProject.model.changes.sourcePlanOpen")}
+          </AppButton>
+        ) : null}
+        <AppButton
+          aria-label={t("bknProject.model.changes.unadoptItem", { name: relation.name })}
+          disabled={disabled}
+          onClick={() => actions.onAdopt("relation_types", relation, false)}
+          size="small"
+        >
+          {t("bknProject.model.changes.unadopt")}
+        </AppButton>
+      </li>
+    )),
     ...suggested.map((item) => (
       <UpdateFieldRow
         disabled={disabled}
@@ -125,11 +165,18 @@ export function DraftChangesPanel({
   const waitingRows = useCollapsedList(
     rows,
     COLLAPSED_ITEMS,
-    focusedAt >= 0 && waiting.length + unadoptedEnds.length + focusedAt >= COLLAPSED_ITEMS,
+    focusedAt >= 0 &&
+      waiting.length + unadoptedEnds.length + samePlans.length + focusedAt >= COLLAPSED_ITEMS,
   );
   const decisionPage = useListPage(decisions.length);
 
-  if (!waiting.length && !unadoptedEnds.length && !suggested.length && !decisions.length) {
+  if (
+    !waiting.length &&
+    !unadoptedEnds.length &&
+    !samePlans.length &&
+    !suggested.length &&
+    !decisions.length
+  ) {
     return (
       <EmptyStatePanel
         description={t("bknProject.model.changes.none")}
@@ -140,7 +187,7 @@ export function DraftChangesPanel({
 
   return (
     <div className={styles.stack}>
-      {waiting.length || unadoptedEnds.length || suggested.length ? (
+      {waiting.length || unadoptedEnds.length || samePlans.length || suggested.length ? (
         <section>
           <h3 className={styles.sectionTitle}>{t("bknProject.model.changes.waitingTitle")}</h3>
           <ul className={styles.changes}>{waitingRows.visible}</ul>

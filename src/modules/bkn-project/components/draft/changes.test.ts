@@ -54,6 +54,28 @@ describe("change log", () => {
     );
   });
 
+  it("names a document's concept and one added from Ask AI, never by their ids", () => {
+    const draft = mapDraft(mockDraft("p1"));
+    draft.items.documentConcepts = [{ id: "c10", name: "分批与合并开票规则" }];
+    draft.items.decisions = [
+      decision({
+        action: "add",
+        after: { name: "供应商资质" },
+        itemId: "ai_concepts/a1",
+        kind: "concepts",
+      }),
+    ];
+    const named = itemNames(draft);
+    const judge = (itemId: string) =>
+      describeDecision(
+        t,
+        decision({ action: "judge", after: "none", itemId, kind: "concepts" }),
+        named,
+      ).text;
+    expect(judge("document_concepts/c10")).toContain('"name":"分批与合并开票规则"');
+    expect(judge("ai_concepts/a1")).toContain('"name":"供应商资质"');
+  });
+
   it("says what was adopted, by its kind and current name", () => {
     expect(describeDecision(t, decision({}), names).text).toBe(
       'bknProject.model.changes.action.adopt:{"kind":"bknProject.model.changes.kind.object_types","name":"customers"}',

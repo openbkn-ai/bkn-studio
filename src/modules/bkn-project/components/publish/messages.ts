@@ -202,7 +202,12 @@ function documentDataItemText(t: TFunction, details: unknown) {
 }
 
 /** Reasons said with the count of what waits; without a count they fall back to the general text. */
-const COUNTED_REASONS = new Set(["link_types_mismatch", "needs_identity", "unadopted_ends"]);
+const COUNTED_REASONS = new Set([
+  "link_types_mismatch",
+  "needs_identity",
+  "source_plan_pending",
+  "unadopted_ends",
+]);
 
 const BLOCKED_REASONS = new Set([
   "archived",
@@ -217,6 +222,7 @@ const BLOCKED_REASONS = new Set([
   "not_owner",
   "nothing_adopted",
   "running",
+  "source_plan_pending",
   "table_missing",
   "unadopted_ends",
 ]);

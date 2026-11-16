@@ -26,6 +26,14 @@ const KINDS = ["object_types", "relation_types", "value_types"];
 /** What a confirmation accepted, recorded on the draft as a whole and listing what it took in. */
 const ACCEPTANCES = ["accept_partial", "accept_undecided", "accept_unresolved_conflicts"];
 
+const asText = (value: unknown) => (typeof value === "string" ? value : "");
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+const asList = (value: unknown) =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+
 /** Current item names by kind and id: a decision names the item as it is now called. */
 export type ItemNames = Record<string, Record<string, string>>;
 
@@ -33,7 +41,20 @@ export function itemNames(draft: Draft): ItemNames {
   const byId = (items: { id: string; name: string }[]) =>
     Object.fromEntries(items.map(({ id, name }) => [id, name]));
   const objectTypes = byId(draft.items.objectTypes);
+  // Concepts added from Ask AI are named by the decisions that added or defined them.
+  const added: Record<string, string> = {};
+  for (const decision of draft.items.decisions) {
+    const name = asText(asRecord(decision.after)?.name);
+    if (decision.kind === "concepts" && name && ["add", "define"].includes(decision.action)) {
+      const [kind = "", ...rest] = decision.itemId.split("/");
+      if (kind === "ai_concepts") {
+        added[rest.join("/")] = name;
+      }
+    }
+  }
   return {
+    ai_concepts: added,
+    document_concepts: byId(draft.items.documentConcepts ?? []),
     // A restore names the object type the field was restored to.
     excluded: objectTypes,
     object_types: objectTypes,
@@ -44,14 +65,6 @@ export function itemNames(draft: Draft): ItemNames {
 
 /** One decision in a sentence, with what it replaced when that says more than the sentence. */
 export type DescribedDecision = { after?: string; before?: string; text: string };
-
-const asText = (value: unknown) => (typeof value === "string" ? value : "");
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-const asList = (value: unknown) =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
 /** What adding catalogs drafted, as its decision records it; or that drafting their tables failed. */
 function addedCatalogsText(t: TFunction, after: unknown) {

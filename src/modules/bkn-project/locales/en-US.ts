@@ -837,9 +837,13 @@ export const bknProjectEnUS = {
       changes: {
         waitingTitle: "Waiting for you",
         doneTitle: "Changes made",
-        needsIdentity: "{{name}} has no identity yet; choose one before adopting it.",
+        needsIdentity: "{{name}} has no identity yet; choosing one adopts it.",
         unadoptedEnd:
           "Relation type {{name}} connects an object type that is not adopted; unadopt it.",
+        sourcePlan:
+          "{{name}} treats an object in the documents and one in a table as the same. Before confirming the model, decide which side each field comes from, or unadopt it if you don't need this match.",
+        sourcePlanOpen: "Decide field sources",
+        sourcePlanOpenOf: "Decide field sources for {{name}}",
         neededBy: "Questions that need it to be answered:",
         unadopt: "Unadopt",
         unadoptItem: "Unadopt {{name}}",
@@ -1753,6 +1757,12 @@ export const bknProjectEnUS = {
           "{{count}} adopted relation type matches fields whose types differ",
         link_types_mismatch_other:
           "{{count}} adopted relation types match fields whose types differ",
+        source_plan_pending:
+          "{{count}} adopted links say a document's object and a table's are the same, but which side each field comes from is not decided yet",
+        source_plan_pending_one:
+          "{{count}} adopted link says a document's object and a table's are the same, but which side each field comes from is not decided yet",
+        source_plan_pending_other:
+          "{{count}} adopted links say a document's object and a table's are the same, but which side each field comes from is not decided yet",
         nothing_adopted: "No object type is adopted yet",
         no_catalogs: "The project has no data catalogs yet",
         branch_not_v3:

@@ -182,6 +182,40 @@ describe("DraftChangesPanel update field", () => {
     expect(screen.queryByText("选择更新时间字段")).toBeNull();
   });
 
+  it("lists a same-object link waiting for its field sources, to settle on its object or leave out", () => {
+    const of = draft();
+    const relation = of.items.relationTypes.find((item) => item.adopted)!;
+    const source = of.items.objectTypes.find((item) => item.id === relation.source)!;
+    renderWithoutAntdStyles(
+      <DraftChangesPanel
+        actions={actions}
+        currentUserId="me"
+        directory={new Map()}
+        draft={of}
+        neededBy={new Map()}
+        sourcePlans={[
+          {
+            blocking: true,
+            itemId: relation.id,
+            kind: "relation_types",
+            name: relation.name,
+            neededBy: [],
+            reason: "source_plan_pending",
+          },
+        ]}
+        unadoptedEnds={[]}
+      />,
+    );
+    expect(screen.getByText("待你决定")).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`「${relation.name}」把文档里的对象和表里的对象当成同一个`)),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `为${source.name}确定字段来源` }));
+    expect(actions.onEdit).toHaveBeenCalledWith("object_types", source);
+    fireEvent.click(screen.getByRole("button", { name: `取消采纳${relation.name}` }));
+    expect(actions.onAdopt).toHaveBeenCalledWith("relation_types", relation, false);
+  });
+
   it("keeps what waits on top and pages the changes made, 20 at a time", () => {
     const of = draft();
     of.items.decisions = Array.from({ length: 25 }, (_, index) => ({
