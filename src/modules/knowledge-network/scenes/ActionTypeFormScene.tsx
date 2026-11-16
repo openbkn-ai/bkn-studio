@@ -149,6 +149,8 @@ const INSTANCE_OPERATIONS = [
   { kind: "unlink", titleKey: "knowledgeNetwork.actionRelationDelete" },
 ] as const;
 
+const ACTION_TYPE_DESCRIPTION_MAX_LENGTH = 1000;
+
 // The rule panel each form field of a collapsed panel sits in.
 const RULE_PANEL_OF_FIELD: Readonly<Record<string, string>> = {
   affectComment: "impact",
@@ -812,6 +814,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                     {
                       message: t("knowledgeNetwork.actionTypeNameRequired"),
                       required: true,
+                      whitespace: true,
                     },
                     {
                       max: RESOURCE_NAME_MAX_LENGTH,
@@ -871,10 +874,21 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item label={t("knowledgeNetwork.descriptionField")} name="description">
+            <Form.Item
+              label={t("knowledgeNetwork.descriptionField")}
+              name="description"
+              rules={[
+                {
+                  max: ACTION_TYPE_DESCRIPTION_MAX_LENGTH,
+                  message: t("knowledgeNetwork.actionTypeDescriptionMaxLength", {
+                    len: ACTION_TYPE_DESCRIPTION_MAX_LENGTH,
+                  }),
+                },
+              ]}
+            >
               <Input.TextArea
                 autoSize={{ minRows: 4, maxRows: 8 }}
-                maxLength={1000}
+                maxLength={ACTION_TYPE_DESCRIPTION_MAX_LENGTH}
                 placeholder={t("knowledgeNetwork.pleaseInput")}
                 showCount
               />

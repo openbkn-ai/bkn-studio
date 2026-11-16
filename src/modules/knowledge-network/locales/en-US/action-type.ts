@@ -113,6 +113,7 @@ export const actiontypePart = {
   actionTypeKindUpdate: "Edit",
   actionTypeName: "Action type name",
   actionTypeNameRequired: "Please enter an action type name.",
+  actionTypeDescriptionMaxLength: "Must be {{len}} characters or fewer.",
   actionTypeObject: "Applicable object",
   actionTypeObjectPlaceholder: "Select a bound object type",
   actionTypeObjectSelectPlaceholder: "Select an object type",

@@ -548,6 +548,7 @@ describe("ActionTypeFormScene navigation context", () => {
           actionKind: "create",
           affect: undefined,
           condition: undefined,
+          description: "",
           name: "Send notification",
           objectTypeId: "",
         }),
@@ -769,6 +770,130 @@ describe("ActionTypeFormScene navigation context", () => {
         }),
       ),
     );
+  });
+});
+
+describe("ActionTypeFormScene basic field boundaries", () => {
+  const save = () =>
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
+
+  beforeEach(() => {
+    mocks.locationState.current = { actionTypeCreateMode: "independent" };
+  });
+
+  it.each(["", "   ", "\t\n "])(
+    "rejects a blank name before creating an action (%j)",
+    async (name) => {
+      renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+      fireEvent.change(await screen.findByLabelText("knowledgeNetwork.actionTypeName"), {
+        target: { value: name },
+      });
+
+      save();
+
+      expect(
+        await screen.findByText("knowledgeNetwork.actionTypeNameRequired"),
+      ).toBeInTheDocument();
+      expect(mocks.createActionType).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps a valid name and a 1000-character description intact when creating", async () => {
+    mocks.createActionType.mockResolvedValue({ id: "new-action" });
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    fireEvent.change(await screen.findByLabelText("knowledgeNetwork.actionTypeName"), {
+      target: { value: " Valid action " },
+    });
+    fireEvent.change(screen.getByLabelText("knowledgeNetwork.descriptionField"), {
+      target: { value: "述".repeat(1000) },
+    });
+
+    save();
+
+    await waitFor(() =>
+      expect(mocks.createActionType).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({ name: " Valid action ", description: "述".repeat(1000) }),
+      ),
+    );
+  });
+
+  it("rejects a 1001-character description before creating", async () => {
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+    fireEvent.change(await screen.findByLabelText("knowledgeNetwork.actionTypeName"), {
+      target: { value: "Valid action" },
+    });
+    fireEvent.change(screen.getByLabelText("knowledgeNetwork.descriptionField"), {
+      target: { value: "述".repeat(1001) },
+    });
+
+    save();
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeDescriptionMaxLength"),
+    ).toBeInTheDocument();
+    expect(mocks.createActionType).not.toHaveBeenCalled();
+  });
+
+  it("rejects an overlong description loaded for editing until it is shortened", async () => {
+    mocks.routeParams.current = { actionTypeId: "existing", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      condition: null,
+      description: "述".repeat(1001),
+      executionConfig: {},
+      id: "existing",
+      name: "Valid action",
+      objectTypeId: "",
+      tags: [],
+    });
+    mocks.updateActionType.mockResolvedValue(undefined);
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    const description = await screen.findByLabelText("knowledgeNetwork.descriptionField");
+    expect(description).toHaveValue("述".repeat(1001));
+    save();
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeDescriptionMaxLength"),
+    ).toBeInTheDocument();
+    expect(mocks.updateActionType).not.toHaveBeenCalled();
+
+    fireEvent.change(description, { target: { value: "述".repeat(1000) } });
+    save();
+
+    await waitFor(() =>
+      expect(mocks.updateActionType).toHaveBeenCalledWith(
+        "network-1",
+        "existing",
+        expect.objectContaining({ description: "述".repeat(1000) }),
+      ),
+    );
+  });
+
+  it("rejects an all-space name before updating an action", async () => {
+    mocks.routeParams.current = { actionTypeId: "existing", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      condition: null,
+      description: "Valid description",
+      executionConfig: {},
+      id: "existing",
+      name: "Valid action",
+      objectTypeId: "",
+      tags: [],
+    });
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+    fireEvent.change(await screen.findByLabelText("knowledgeNetwork.actionTypeName"), {
+      target: { value: "   " },
+    });
+
+    save();
+
+    expect(await screen.findByText("knowledgeNetwork.actionTypeNameRequired")).toBeInTheDocument();
+    expect(mocks.updateActionType).not.toHaveBeenCalled();
   });
 });
 
