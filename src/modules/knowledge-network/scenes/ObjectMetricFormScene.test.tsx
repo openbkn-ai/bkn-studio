@@ -1965,7 +1965,9 @@ describe("ObjectMetricFormScene navigation context", () => {
     });
 
     render(<ObjectMetricFormScene mode="edit" />);
-    fireEvent.click(await findButtonByText("保存并校验"));
+    // Saving is refused until the object type's properties arrive, which settles after the record.
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("保存并校验"));
 
     await waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith(
@@ -2000,7 +2002,9 @@ describe("ObjectMetricFormScene navigation context", () => {
     });
 
     render(<ObjectMetricFormScene mode="edit" />);
-    fireEvent.click(await findButtonByText("保存并校验"));
+    // Saving is refused until the object type's properties arrive, which settles after the record.
+    expect(await screen.findByText("订单 ID · order_id")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("保存并校验"));
     await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
     expect(mocks.validateObjectMetricVersionV1).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalledWith(
