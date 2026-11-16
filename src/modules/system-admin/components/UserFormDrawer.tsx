@@ -108,7 +108,7 @@ export function UserFormDrawer({ departments, onClose, onSaved, open, user }: Us
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const isEdit = Boolean(user);
-  const external = Boolean(user?.source && user.source !== "local");
+  const external = Boolean(user && user.source !== "local");
 
   // TreeSelect uses a real tree (not flat indents).
   const deptTreeData = useMemo(() => buildDeptTreeData(departments, null), [departments]);

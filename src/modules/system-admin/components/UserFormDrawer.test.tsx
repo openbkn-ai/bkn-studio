@@ -85,4 +85,12 @@ describe("UserFormDrawer external profiles", () => {
     expect(screen.getByDisplayValue(local.email)).toBeEnabled();
     expect(screen.queryByText("systemAdmin.users.externalProfileHint")).not.toBeInTheDocument();
   });
+  it("does not allow profile edits when the identity source is missing", () => {
+    const unknown = { ...user, source: undefined };
+    mocks.getUser.mockResolvedValue(unknown);
+    render(
+      <UserFormDrawer user={unknown} departments={[]} onClose={vi.fn()} onSaved={vi.fn()} open />,
+    );
+    expect(screen.getByLabelText("systemAdmin.users.drawer.displayName")).toBeDisabled();
+  });
 });
