@@ -22,6 +22,7 @@ const getReleaseReviewMock = vi.hoisted(() => vi.fn());
 const publishReleaseMock = vi.hoisted(() => vi.fn());
 const prepareReleaseMock = vi.hoisted(() => vi.fn());
 const commitDriftMock = vi.hoisted(() => vi.fn());
+const discardDriftMock = vi.hoisted(() => vi.fn());
 const syncBranchMock = vi.hoisted(() => vi.fn());
 const getRegressionMock = vi.hoisted(() => vi.fn());
 const getRollbackPlanMock = vi.hoisted(() => vi.fn());
@@ -43,6 +44,7 @@ vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
 vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/release.service")>()),
   commitDrift: commitDriftMock,
+  discardDrift: discardDriftMock,
   getRegression: getRegressionMock,
   getReleaseReview: getReleaseReviewMock,
   getRollbackPlan: getRollbackPlanMock,
@@ -500,6 +502,36 @@ describe("ReleasePublish", () => {
       ),
     ).toBeInTheDocument();
     expect(view.queryByText(/kept_document|document_values/)).toBeNull();
+  });
+
+  it("says why committing online edits conflicted, and discards them when the owner confirms", async () => {
+    prepareReleaseMock.mockRejectedValueOnce(refusal("Release.DraftHasChanges"));
+    commitDriftMock.mockRejectedValueOnce(refusal("Lineage.MergeConflict"));
+    discardDriftMock.mockResolvedValueOnce(undefined);
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(prepareButton());
+    fireEvent.click(await screen.findByText("先提交到项目"));
+
+    expect(
+      await screen.findByText("线上未发布的修改和项目里的修改冲突，没能提交"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/放弃它们后，线上草稿会回到当前运行版本/)).toBeInTheDocument();
+    expect(messageMock.error).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "放弃线上未发布的修改" }));
+    fireEvent.click(
+      within(await screen.findByRole("tooltip")).getByRole("button", {
+        name: "放弃线上未发布的修改",
+      }),
+    );
+    await waitFor(() => expect(discardDriftMock).toHaveBeenCalledWith("p1"));
+    expect(messageMock.success).toHaveBeenCalledWith(
+      "已放弃线上未发布的修改，发布审核已重新检查。",
+    );
+    await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("线上未发布的修改和项目里的修改冲突，没能提交")).toBeNull();
   });
 
   it("asks what happens to online edits nobody published, and commits or overwrites them", async () => {

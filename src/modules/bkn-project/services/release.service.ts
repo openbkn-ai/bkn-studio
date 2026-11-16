@@ -368,6 +368,16 @@ export async function syncBranch(projectId: string): Promise<void> {
   await http.post(`${projectPath(projectId)}/branch:sync`, undefined, { skipErrorToast: true });
 }
 
+/** Drops what was edited on the network and not published: its draft goes back to the running version. */
+export async function discardDrift(projectId: string): Promise<void> {
+  if (useMock) {
+    mockDraft.hasChanges = false;
+    await wait(null);
+    return;
+  }
+  await http.post(`${projectPath(projectId)}/drift:discard`, undefined, { skipErrorToast: true });
+}
+
 /** Commits what was edited on the network outside the project, then brings it into the project. */
 export async function commitDrift(projectId: string): Promise<void> {
   if (useMock) {

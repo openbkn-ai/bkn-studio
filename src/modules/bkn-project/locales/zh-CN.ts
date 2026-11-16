@@ -2985,6 +2985,14 @@ export const bknProjectZhCN = {
         syncDone: "已同步线上版本，发布审核已重新检查。",
         commitDrift: "提交线上的修改",
         commitDriftDone: "已提交线上的修改，发布审核已重新检查。",
+        driftConflict: {
+          title: "线上未发布的修改和项目里的修改冲突，没能提交",
+          description:
+            "这些修改多半是之前一次没有完成的写入网络留下的，项目里已有更新的内容。放弃它们后，线上草稿会回到当前运行版本，再写入网络时用项目里的内容。",
+          discard: "放弃线上未发布的修改",
+          confirm: "放弃后，线上草稿里未发布的修改不能恢复。确定放弃吗？",
+          discarded: "已放弃线上未发布的修改，发布审核已重新检查。",
+        },
         changesTitle: "本次变更",
         added: "新增",
         changed: "修改",
@@ -3053,6 +3061,7 @@ export const bknProjectZhCN = {
           BranchBehind: "线上已有更新的版本，需要先同步到项目里。",
           Drift: "线上版本在项目之外被修改过，需要先提交这些修改。",
           MergeConflict: "线上的修改和项目里的修改有冲突，需要处理后再发布。",
+          NoRunningVersion: "网络还没有发布过的版本，没有可以退回的线上版本。",
           UnfinishedAttempt: "上次发布未完成，分支此后有改动，请换一个新的版本号。",
           NotPrepared: "还没有写入网络，请先准备发布。",
           DraftHasChanges: "网络里有尚未发布的在线修改。",

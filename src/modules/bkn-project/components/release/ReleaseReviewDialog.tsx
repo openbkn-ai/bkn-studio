@@ -6,7 +6,7 @@
  */
 
 import { CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled } from "@ant-design/icons";
-import { Alert, Checkbox, Input, Modal, Spin } from "antd";
+import { Alert, Checkbox, Input, Modal, Popconfirm, Spin } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -36,6 +36,7 @@ import {
 import { DraftChangesDialog } from "@/modules/bkn-project/components/release/DraftChangesDialog";
 import {
   commitDrift,
+  discardDrift,
   getReleaseReview,
   prepareRelease,
   syncBranch,
@@ -92,6 +93,8 @@ export function ReleaseReviewDialog({
   const [publishError, setPublishError] = useState<string | null>(null);
   // The network has edits nobody published: the owner chooses what happens to them.
   const [draftChanged, setDraftChanged] = useState(false);
+  // Committing the network's edits conflicted with the project's: the owner may discard them.
+  const [driftConflict, setDriftConflict] = useState(false);
   // Only the newest read is shown: reading again for another version or after a move wins.
   const latest = useRef(0);
 
@@ -181,7 +184,7 @@ export function ReleaseReviewDialog({
       message.success(t(`${PREFIX}.draftCommitted`));
       void load(reviewed);
     } catch (error) {
-      message.error(publishErrorText(t, projectErrorCode(error)));
+      failedCommit(error);
     } finally {
       setBusy(false);
     }
@@ -193,6 +196,36 @@ export function ReleaseReviewDialog({
     try {
       await (action === "sync" ? syncBranch(projectId) : commitDrift(projectId));
       message.success(t(`${PREFIX}.${action}Done`));
+      void load(reviewed);
+    } catch (error) {
+      if (action === "commitDrift") {
+        failedCommit(error);
+      } else {
+        message.error(publishErrorText(t, projectErrorCode(error)));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** A commit that conflicts stays on screen with what to do; anything else is said once. */
+  const failedCommit = (error: unknown) => {
+    const code = projectErrorCode(error);
+    if (code?.endsWith(".MergeConflict")) {
+      setDraftChanged(false);
+      setDriftConflict(true);
+    } else {
+      message.error(publishErrorText(t, code));
+    }
+  };
+
+  /** Drops the network's unpublished edits, back to the running version, then reviews again. */
+  const discardEdits = async () => {
+    setBusy(true);
+    try {
+      await discardDrift(projectId);
+      setDriftConflict(false);
+      message.success(t(`${PREFIX}.driftConflict.discarded`));
       void load(reviewed);
     } catch (error) {
       message.error(publishErrorText(t, projectErrorCode(error)));
@@ -275,6 +308,28 @@ export function ReleaseReviewDialog({
             review={review}
           />
         )}
+        {driftConflict ? (
+          <Alert
+            action={
+              <Popconfirm
+                okButtonProps={{ danger: true }}
+                okText={t(`${PREFIX}.driftConflict.discard`)}
+                onConfirm={() => void discardEdits()}
+                title={t(`${PREFIX}.driftConflict.confirm`)}
+              >
+                <AppButton danger disabled={busy} size="small">
+                  {t(`${PREFIX}.driftConflict.discard`)}
+                </AppButton>
+              </Popconfirm>
+            }
+            closable
+            description={t(`${PREFIX}.driftConflict.description`)}
+            message={t(`${PREFIX}.driftConflict.title`)}
+            onClose={() => setDriftConflict(false)}
+            showIcon
+            type="warning"
+          />
+        ) : null}
         {publishError ? (
           <Alert
             closable

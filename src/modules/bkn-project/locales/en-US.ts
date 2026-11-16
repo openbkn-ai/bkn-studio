@@ -3194,6 +3194,15 @@ export const bknProjectEnUS = {
         syncDone: "The live version is brought in, and the release was checked again.",
         commitDrift: "Commit the live edits",
         commitDriftDone: "The live edits are committed, and the release was checked again.",
+        driftConflict: {
+          title: "The live unpublished edits conflict with the project's and were not committed",
+          description:
+            "They were most likely left by an earlier write into the network that did not finish, and the project already holds newer content. Discarding them puts the live draft back to the running version; writing into the network then uses the project's content.",
+          discard: "Discard the live unpublished edits",
+          confirm:
+            "Unpublished edits in the live draft cannot be restored once discarded. Discard them?",
+          discarded: "The live unpublished edits are discarded, and the release was checked again.",
+        },
         changesTitle: "What changes",
         added: "Added",
         changed: "Changed",
@@ -3271,6 +3280,7 @@ export const bknProjectEnUS = {
           Drift: "The live version was edited outside the project; commit those edits first.",
           MergeConflict:
             "Live edits conflict with the project's edits; resolve them before publishing.",
+          NoRunningVersion: "The network has no published version to go back to.",
           UnfinishedAttempt:
             "The last publishing of this version did not finish and the branch has changed since. Choose a new version number.",
           NotPrepared: "Nothing is written into the network yet. Prepare the release first.",

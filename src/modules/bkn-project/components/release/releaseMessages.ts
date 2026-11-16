@@ -92,6 +92,7 @@ const PUBLISH_ERRORS = new Set([
   "BranchBehind",
   "Drift",
   "MergeConflict",
+  "NoRunningVersion",
   "UnfinishedAttempt",
   "NotPrepared",
   "DraftHasChanges",
