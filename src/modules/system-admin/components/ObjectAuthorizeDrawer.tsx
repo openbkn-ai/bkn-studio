@@ -85,8 +85,9 @@ type ObjectAuthorizeDrawerProps = {
   objName: string;
   objSub?: string;
   objType: string;
-  /** Optionally preselect the grantee during creation. */
+  /** Optionally preselect the grantee when opening the drawer. */
   prefillGranteeId?: string;
+  prefillGranteeType?: "user" | "role";
   onChanged?: () => void;
   onClose: () => void;
   open: boolean;
@@ -114,6 +115,7 @@ export function ObjectAuthorizeDrawer({
   objSub,
   objType,
   prefillGranteeId,
+  prefillGranteeType = "user",
   onChanged,
   onClose,
   open,
@@ -348,13 +350,13 @@ export function ObjectAuthorizeDrawer({
     setGrantUsers([]);
     setLoadedResourceKey(undefined);
     setCandidate(prefillGranteeId);
-    setCandidateType("user");
+    setCandidateType(prefillGranteeType);
     setCandidateOperations([]);
     setSourceAccessorId(undefined);
     const controller = new AbortController();
     void loadRemote(controller.signal);
     return () => controller.abort();
-  }, [loadRemote, open, prefillGranteeId]);
+  }, [loadRemote, open, prefillGranteeId, prefillGranteeType]);
 
   const grantUserMap = useMemo(
     () => new Map(scopedGrantUsers.map((user) => [user.id, user])),

@@ -157,22 +157,22 @@ it("opens a direct Eval URL with workspace navigation and can switch to overview
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
   // The current shell owns the network heading; the workspace no longer repeats it.
   expect(screen.getByRole("banner").textContent).toBe("Studio");
-  expect(screen.getByTitle("knowledgeNetwork.evalNav").className).toMatch(/sideItemActive/);
+  expect(screen.getByTitle("knowledgeNetwork.riskEvalNav").className).toMatch(/sideItemActive/);
   expect(
-    screen.getByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
+    screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
   ).toHaveAttribute("aria-expanded", "true");
   fireEvent.click(screen.getByRole("button", { name: "shell.collapseSidenav" }));
-  expect(screen.getByTitle("knowledgeNetwork.evalNav").textContent).toBe("");
+  expect(screen.getByTitle("knowledgeNetwork.riskEvalNav").textContent).toBe("");
   fireEvent.click(screen.getByRole("button", { name: "shell.expandSidenav" }));
   fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork.workspaceOverviewShort/ }));
   expect(screen.getByText("Network overview")).toBeTruthy();
   expect(screen.queryByText("Eval content: supply")).toBeNull();
-  const verificationGroup = screen.getByRole("button", {
-    name: "knowledgeNetwork.workspaceAbilityVerification",
+  const governanceGroup = screen.getByRole("button", {
+    name: "knowledgeNetwork.workspaceRiskControl",
   });
-  expect(verificationGroup).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(verificationGroup);
-  fireEvent.click(screen.getByTitle("knowledgeNetwork.evalNav"));
+  expect(governanceGroup).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(governanceGroup);
+  fireEvent.click(screen.getByTitle("knowledgeNetwork.riskEvalNav"));
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
 });
 
@@ -231,7 +231,7 @@ it("does not mount Eval content when backend admission denies the current user",
   );
   expect(screen.queryByText("Eval content: supply")).toBeNull();
   expect(screen.getByText("knowledgeNetwork.eval.access.denied")).toBeTruthy();
-  expect(screen.getByTitle("knowledgeNetwork.evalNav")).toBeTruthy();
+  expect(screen.getByTitle("knowledgeNetwork.riskEvalNav")).toBeTruthy();
   access.status = "allowed";
 });
 
@@ -247,12 +247,12 @@ it("keeps navigation visible during an admission failure and retries only the pa
   const { rerender } = render(page());
   expect(access.ids).toEqual(["supply"]);
   expect(screen.queryByText("Eval content: supply")).toBeNull();
-  expect(screen.getByTitle("knowledgeNetwork.evalNav")).toBeTruthy();
+  expect(screen.getByTitle("knowledgeNetwork.riskEvalNav")).toBeTruthy();
   fireEvent.click(screen.getByText("knowledgeNetwork.eval.access.retry"));
   expect(access.retry).toHaveBeenCalledOnce();
   access.status = "allowed";
   rerender(page());
   expect(screen.getByText("Eval content: supply")).toBeTruthy();
-  expect(screen.getByTitle("knowledgeNetwork.evalNav")).toBeTruthy();
+  expect(screen.getByTitle("knowledgeNetwork.riskEvalNav")).toBeTruthy();
   expect(access.ids).toEqual(["supply", "supply"]);
 });

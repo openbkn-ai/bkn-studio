@@ -1156,6 +1156,32 @@ describe("ObjectAuthorizeDrawer source records", () => {
     });
   }, 20_000);
 
+  it("opens on a prefilled role when launched from a role view", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    mocks.listGrantableRolesForObject.mockResolvedValue([
+      { description: "", id: "role-sales", name: "Sales" },
+    ]);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="action-1"
+        objName="Approve order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+        prefillGranteeId="role-sales"
+        prefillGranteeType="role"
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByText("knowledgeNetwork.propertyAuthorizationRole")
+          .closest("label")
+          ?.querySelector("input"),
+      ).toBeChecked(),
+    );
+  });
+
   it("grants the current resource to an existing role without loading role members", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
     mocks.listGrantableRolesForObject.mockResolvedValue([

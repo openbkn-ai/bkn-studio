@@ -140,6 +140,15 @@
   background: var(--color-hover);
 }
 
+.sideItem:disabled {
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+
+.sideItem:disabled:hover {
+  background: transparent;
+}
+
 .sideItemActive:hover {
   background: var(--color-primary-100);
 }
@@ -219,6 +228,10 @@
 
 .sideItem .sideItemMeta :global(svg) {
   color: var(--color-text-primary);
+}
+
+.sideItem:disabled .sideItemMeta :global(svg) {
+  color: var(--color-text-tertiary);
 }
 
 .sideItemActive .sideItemMeta :global(svg) {

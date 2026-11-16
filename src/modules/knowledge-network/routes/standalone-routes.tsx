@@ -125,6 +125,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("versions"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/permissions",
+    {
+      descriptionKey: "knowledgeNetwork.permissionMatrix.description",
+      titleKey: "knowledgeNetwork.permissionMatrix.title",
+    },
+    workspaceSectionPage("permissions"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/experience",
     {
       descriptionKey: "knowledgeNetwork.experienceDescription",
