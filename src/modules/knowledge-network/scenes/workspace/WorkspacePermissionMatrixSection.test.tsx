@@ -7,6 +7,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PermissionSourceDecision } from "@/modules/system-admin/services/authz.service";
 
 import { WorkspacePermissionMatrixSection } from "./WorkspacePermissionMatrixSection";
 
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   objectTypes: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(),
   row: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   property: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  sources: vi.fn<(...args: unknown[]) => Promise<PermissionSourceDecision[]>>(),
+  metrics: vi.fn<(...args: unknown[]) => Promise<{ entries: []; total_count: number }>>(),
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("react-i18next", () => ({
@@ -29,7 +32,22 @@ vi.mock("@/modules/system-admin/services/authz.service", () => ({
   listGrantableRolesForObject: (...args: unknown[]) => mocks.roles(...args),
   listGrantableUsersForObject: (...args: unknown[]) => mocks.users(...args),
   projectNetworkPermissions: (...args: unknown[]) => mocks.effective(...args),
-  getNetworkPermissionSources: () => Promise.resolve([]),
+  getNetworkPermissionSources: (...args: unknown[]) => mocks.sources(...args),
+}));
+vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
+  ObjectAuthorizeDrawer: ({
+    objName,
+    objId,
+    objectAuthorized,
+  }: {
+    objName: string;
+    objId: string;
+    objectAuthorized: boolean;
+  }) => (
+    <div data-testid="authorization-target">
+      {objName}|{objId}|{String(objectAuthorized)}
+    </div>
+  ),
 }));
 vi.mock("@/modules/system-admin/services/authorization-registry.service", () => ({
   getAuthorizationRegistry: () => Promise.resolve({ resourceTypes: [] }),
@@ -47,7 +65,7 @@ vi.mock("@/modules/knowledge-network/services/concept-group.service", () => ({
   listKnowledgeNetworkConceptGroups: () => Promise.resolve([]),
 }));
 vi.mock("@/modules/knowledge-network/services/object-metric.service", () => ({
-  listObjectMetricsV1: () => Promise.resolve({ entries: [], total_count: 0 }),
+  listObjectMetricsV1: (...args: unknown[]) => mocks.metrics(...args),
 }));
 vi.mock("@/modules/knowledge-network/services/row-filter-authorization.service", () => ({
   explainRowFilter: async (...args: unknown[]) => ({
@@ -69,6 +87,8 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   }));
   for (const mock of Object.values(mocks)) mock.mockReset();
+  mocks.sources.mockResolvedValue([]);
+  mocks.metrics.mockResolvedValue({ entries: [], total_count: 0 });
   mocks.roles.mockResolvedValue([{ id: "sales", name: "Sales", description: "" }]);
   mocks.users.mockResolvedValue([{ id: "user-1", name: "Awei Zhu", account: "awei" }]);
   mocks.objectTypes.mockResolvedValue([
@@ -117,6 +137,7 @@ beforeEach(() => {
 function renderMatrix(
   fineGrainedAvailable = true,
   fineGrainedStatus?: "not-licensed" | "not-installed" | "unknown",
+  metricsAvailable = true,
 ) {
   render(
     <WorkspacePermissionMatrixSection
@@ -125,6 +146,7 @@ function renderMatrix(
       canAuthorize
       fineGrainedAvailable={fineGrainedAvailable}
       fineGrainedStatus={fineGrainedStatus}
+      metricsAvailable={metricsAvailable}
     />,
   );
 }
@@ -134,6 +156,64 @@ async function selectRole() {
 }
 
 describe("WorkspacePermissionMatrixSection", () => {
+  it("does not request or display metrics when the capability is unavailable", async () => {
+    renderMatrix(true, undefined, false);
+    await selectRole();
+    expect(mocks.metrics).not.toHaveBeenCalled();
+    expect(screen.queryByRole("tab", { name: /metricsTabBase/ })).not.toBeInTheDocument();
+  });
+  it.each(["network-1", "missing-network"])(
+    "manages the actual parent source, or hides unknown targets (%s)",
+    async (resourceId) => {
+      mocks.objectTypes.mockResolvedValue([{ id: "orders", name: "Orders", operations: [] }]);
+      mocks.sources.mockResolvedValue([
+        {
+          operation: "view_detail",
+          decision: "allow",
+          basis: "inherited",
+          steps: [
+            {
+              resource_type: "knowledge_network",
+              resource_id: resourceId,
+              matched_grants: [
+                {
+                  grant_id: "parent-grant",
+                  subject_id: "sales",
+                  subject_kind: "role",
+                  subject_name: "Sales",
+                  effect: "allow",
+                  operation: "view_detail",
+                  object: `knowledge_network:${resourceId}`,
+                  management: {
+                    kind: "object_grants",
+                    can_manage: true,
+                    resource_type: "knowledge_network",
+                    resource_id: resourceId,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+      renderMatrix();
+      await selectRole();
+      fireEvent.click(
+        (await screen.findAllByText("knowledgeNetwork.permissionMatrix.viewSources"))[0],
+      );
+      await waitFor(() => expect(mocks.sources).toHaveBeenCalled());
+      if (resourceId === "network-1") {
+        fireEvent.click(await screen.findByText("knowledgeNetwork.permissionMatrix.manageSource"));
+        expect(await screen.findByTestId("authorization-target")).toHaveTextContent(
+          "Network|network-1|true",
+        );
+      } else {
+        expect(
+          screen.queryByText("knowledgeNetwork.permissionMatrix.manageSource"),
+        ).not.toBeInTheDocument();
+      }
+    },
+  );
   it.each(["not-licensed", "not-installed"] as const)(
     "labels unavailable fine-grained permissions as Enterprise features (%s)",
     async (status) => {

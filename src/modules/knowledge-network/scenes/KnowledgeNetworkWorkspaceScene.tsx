@@ -479,6 +479,7 @@ export function KnowledgeNetworkWorkspaceScene({
             canAuthorize={hasKnowledgeNetworkRecordOperation(detail, "authorize")}
             fineGrainedAvailable={fineGrainedCapability === "available"}
             fineGrainedStatus={fineGrainedCapability}
+            metricsAvailable={objectMetricsCapability === "available"}
           />
         </Suspense>
       );

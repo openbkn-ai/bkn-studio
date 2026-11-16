@@ -179,11 +179,13 @@ export function WorkspacePermissionMatrixSection({
   canAuthorize,
   fineGrainedAvailable,
   fineGrainedStatus,
+  metricsAvailable = false,
 }: {
   networkId: string;
   networkName: string;
   canAuthorize: boolean;
   fineGrainedAvailable: boolean;
+  metricsAvailable?: boolean;
   fineGrainedStatus?: "available" | "unknown" | "not-licensed" | "not-installed";
 }) {
   const { t } = useTranslation();
@@ -352,6 +354,10 @@ export function WorkspacePermissionMatrixSection({
     setResourceErrors([]);
     void Promise.all(
       CATEGORIES.map(async (category) => {
+        if (category === "metric" && !metricsAvailable) {
+          setResourceState((current) => ({ networkId, groups: { ...current.groups, metric: [] } }));
+          return;
+        }
         try {
           const rows = await loadCategory(category, networkId, networkName, canAuthorize);
           if (active)
@@ -370,7 +376,7 @@ export function WorkspacePermissionMatrixSection({
     return () => {
       active = false;
     };
-  }, [networkId, networkName, canAuthorize, resourceRevision]);
+  }, [networkId, networkName, canAuthorize, resourceRevision, metricsAvailable]);
 
   useEffect(() => {
     let active = true;
@@ -1242,7 +1248,7 @@ export function WorkspacePermissionMatrixSection({
               setTab(value);
               setResourcePage(1);
             }}
-            items={tabs}
+            items={tabs.filter((item) => metricsAvailable || item.key !== "metrics")}
             className={styles.matrixTabs}
           />
         </div>
@@ -1294,36 +1300,42 @@ export function WorkspacePermissionMatrixSection({
             },
             {
               title: t("knowledgeNetwork.permissionMatrix.actions"),
-              render: (_value, row) =>
-                row.grant &&
-                sourceResource &&
-                row.grant.management?.can_manage &&
-                ["user", "role"].includes(row.grant.subject_kind) ? (
+              render: (_value, row) => {
+                const grant = row.grant;
+                const management = grant?.management;
+                const target = resources.find(
+                  (resource) =>
+                    resource.type === management?.resource_type &&
+                    resource.objId === management?.resource_id,
+                );
+                if (
+                  !grant ||
+                  !management?.can_manage ||
+                  !["user", "role"].includes(grant.subject_kind) ||
+                  (management.kind !== "role_permissions" && !target)
+                )
+                  return "—";
+                return (
                   <Button
                     size="small"
                     type="link"
                     onClick={() => {
-                      if (row.grant!.management?.kind === "role_permissions") {
+                      if (management.kind === "role_permissions") {
                         void navigate("/system/roles");
                         return;
                       }
                       setDrawerSubject({
-                        id: row.grant!.subject_id,
-                        type: row.grant!.subject_kind as SubjectType,
-                        name: row.grant!.subject_name || "",
+                        id: grant.subject_id,
+                        type: grant.subject_kind as SubjectType,
+                        name: grant.subject_name || "",
                       });
-                      setDrawerRow({
-                        ...sourceResource,
-                        objId: row.grant!.management!.resource_id,
-                        type: row.grant!.management!.resource_type as Category,
-                      });
+                      if (target) setDrawerRow(target);
                     }}
                   >
                     {t("knowledgeNetwork.permissionMatrix.manageSource")}
                   </Button>
-                ) : (
-                  "—"
-                ),
+                );
+              },
             },
           ]}
           dataSource={sourceDecisions
