@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import styles from "../scenes/admin.module.css";
 import {
   getDirectorySync,
   saveDirectorySync,
@@ -111,6 +112,7 @@ export function SSODirectorySyncModal({
   }
   return (
     <Modal
+      rootClassName={styles.adminOverlay}
       open={!!provider}
       title={label("title")}
       width={760}

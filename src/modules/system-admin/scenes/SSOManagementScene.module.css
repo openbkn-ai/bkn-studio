@@ -1,0 +1,141 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--admin-color-text);
+  font-size: var(--admin-font-size-meta);
+}
+
+.providerName {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.providerId {
+  composes: nameText;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+}
+
+.providerForm {
+  display: grid;
+  gap: 16px;
+}
+
+.formSection {
+  min-width: 0;
+}
+
+.formSection + .formSection {
+  padding-top: 16px;
+  border-top: 1px solid var(--admin-color-border-soft);
+}
+
+.providerForm :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  color: var(--admin-color-heading);
+  font-size: 14px;
+  font-weight: var(--admin-font-weight-strong);
+}
+
+.sectionDescription {
+  margin: 0;
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.7;
+}
+
+.formSection > :last-child {
+  margin-bottom: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.dependentFields {
+  margin-left: 8px;
+  padding-left: 16px;
+  border-left: 2px solid var(--admin-color-border-soft);
+}
+
+.switchField :global(.ant-form-item-row) {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.switchField :global(.ant-form-item-label) {
+  padding-bottom: 0;
+  white-space: normal;
+}
+
+.inactiveCapability {
+  color: var(--admin-color-muted);
+  cursor: help;
+}
+
+.checkResults {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--admin-font-size-meta);
+  line-height: 1.8;
+}
+
+.advancedSection {
+  padding-top: 16px;
+  border: 0;
+  border-top: 1px solid var(--admin-color-border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.advancedSection :global(.ant-collapse-header) {
+  padding: 0 !important;
+  color: var(--admin-color-heading);
+  font-weight: var(--admin-font-weight-strong);
+}
+
+.advancedSection :global(.ant-collapse-content-box) {
+  padding: 16px 0 0 !important;
+}
+
+.advancedSection :global(.ant-collapse-item + .ant-collapse-item) {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--admin-color-border-soft);
+}
+
+@media (max-width: 600px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

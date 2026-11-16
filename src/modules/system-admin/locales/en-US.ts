@@ -46,8 +46,58 @@ export const systemAdminEnUS = {
         SSO_SYNC_LEASE_LOST:
           "Configuration or job ownership changed during the run. The job will be rescheduled.",
       },
+      sections: {
+        provider: "Identity provider",
+        providerHint:
+          "Configure the identity provider URL and application credentials used by OpenBKN.",
+        login: "Browser sign-in",
+        loginHint: "Allow users to sign in to OpenBKN through this provider.",
+        exchange: "API token exchange",
+        exchangeHint:
+          "Allow third-party systems to exchange an existing identity provider access token for an OpenBKN access token.",
+        advanced: "Advanced settings",
+        advancedHint: "Configure department mapping and HTTP connections for test environments.",
+      },
+      idHint:
+        "Cannot be changed after creation. Identifies this provider and forms its callback URL.",
+      discoveryHint:
+        "Generated from the issuer. Customize it if needed; manual edits are preserved.",
+      clientIdHint:
+        "The application registered for OpenBKN with the identity provider. Shared by browser sign-in and external token validation.",
+      multiValueHint: "Press Enter or Space after each value to add multiple values.",
+      externalClientHint:
+        "Client IDs of third-party applications allowed to exchange tokens, such as agentflow. Configured separately from the OpenBKN application above.",
+      audienceHint:
+        "Audiences (aud) of the external access token. Must match the values issued by the identity provider.",
+      externalScopeHint: "Scopes required in the external access token, such as read.",
+      issuedScopeHint:
+        "Scopes requested for the exchanged OpenBKN access token, such as openid. API permissions still depend on the user’s roles.",
+      defaultAvailableHint:
+        "Use as the default OpenBKN sign-in entry. Only one provider can be the default.",
+      httpAddressHint:
+        "The configuration contains HTTP URLs. Before testing the connection, enable Allow HTTP under Advanced settings below, or use HTTPS URLs.",
+      departmentHint:
+        "Claim containing user departments; Casdoor uses groups by default. Configure directory sync separately from the list.",
+      copyCallback: "Copy callback URL",
+      copyFailed: "Copy failed. Copy the callback URL manually.",
+      inactiveHint:
+        "These are the saved settings. Browser sign-in and API token exchange are inactive while this provider is disabled.",
+      connectionChecks: {
+        passedTitle: "Connection checks passed",
+        failedTitle: "Connection checks failed",
+        discovery: "OIDC discovery and issuer",
+        keys: "RS256 signing keys",
+        passed: "Passed",
+        failed: "Failed",
+        notChecked: "Not checked",
+        limitHint:
+          "Client credentials and actual sign-in were not verified. Verify sign-in or token exchange next.",
+      },
       useDatabaseSecret: "Use database secret",
       errors: {
+        SSO_PROVIDER_ACTIVE: "Disable the provider and clear default sign-in before deleting it.",
+        SSO_PROVIDER_IN_USE:
+          "This provider has linked users or departments, or a directory sync is running. Keep it disabled instead.",
         INVALID_PARAMETER:
           "The configuration is incomplete or invalid. Check the highlighted field.",
         RESOURCE_EXISTED: "This provider ID already exists.",
@@ -62,6 +112,17 @@ export const systemAdminEnUS = {
       },
       title: "Single sign-on",
       description: "Manage identity providers, browser sign-in and API token exchange.",
+      delete: "Delete",
+      deleteConfirm: "Delete this identity provider?",
+      deleteHint:
+        "Delete “{{name}}” ({{id}}), its client secret and sync configuration. This cannot be undone.",
+      deleteDisabledHint: "Disable the provider and clear default sign-in first.",
+      deleted: "Identity provider deleted",
+      more: "More",
+      status: "Status",
+      enabledStatus: "Enabled",
+      disabledStatus: "Disabled",
+      defaultBadge: "Default",
       add: "Add identity provider",
       edit: "Edit",
       save: "Save",
@@ -98,7 +159,8 @@ export const systemAdminEnUS = {
       exchangeHint:
         "Separate application IDs, audiences and scopes with spaces. External and issued scopes are configured separately.",
       advanced: "Departments and advanced settings",
-      httpHint: "Allow HTTP only in trusted test environments. Use HTTPS for normal deployments.",
+      httpHint:
+        "Enable this when the identity provider uses HTTP URLs. Recommended only for trusted test environments.",
       testHint:
         "Tests discovery and RS256 public keys, not client credentials, user identity or department API permissions.",
       id: "Provider ID",
@@ -106,19 +168,19 @@ export const systemAdminEnUS = {
       adapter: "Provider type",
       issuer: "Issuer URL",
       discovery_url: "OIDC discovery URL",
-      client_id: "Client ID",
-      client_secret: "Client secret",
+      client_id: "OpenBKN client ID",
+      client_secret: "OpenBKN client secret",
       redirect_uri: "Sign-in callback URL",
       scopes: "Sign-in scopes",
       department_claim: "Department claim",
-      allowed_client_ids: "Allowed external client IDs",
+      allowed_client_ids: "Allowed third-party client IDs",
       exchange_audience: "External token audience",
       external_required_scope: "Required external scopes",
       hydra_issue_scope: "OpenBKN token scopes",
       enabled: "Enable provider",
       login_enabled: "Browser sign-in",
       exchange_enabled: "API token exchange",
-      default_for_login: "Default sign-in provider",
+      default_for_login: "Set as default sign-in method",
       allow_insecure_http: "Allow HTTP",
     },
     userPicker: {
