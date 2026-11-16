@@ -65,7 +65,9 @@
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  padding: 16px 24px 0;
+  /* The whole editor scrolls, so a short window still leaves the mapping canvas room. */
+  overflow-y: auto;
+  padding: 16px 24px 16px;
 }
 
 .basic {
@@ -85,9 +87,10 @@
 
 .canvas {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
-  min-height: 0;
+  /* Nearly a full window high, never squeezed into what the fields above leave. */
+  min-height: max(560px, calc(100vh - 160px));
   overflow: hidden;
   border: 1px solid var(--color-border);
 }
@@ -96,12 +99,10 @@
   margin: 24px;
 }
 
-/* A relation's ends and mapping: a table that grows with its rows, scrolled within the panel. */
+/* A relation's ends and mapping: a table that grows with its rows; the editor scrolls with it. */
 .mapping {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-bottom: 16px;
+  flex: 1 0 auto;
+  overflow-x: auto;
 }
 
 .sourceCanvas {
