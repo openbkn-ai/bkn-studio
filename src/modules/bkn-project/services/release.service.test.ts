@@ -104,6 +104,8 @@ describe("release.service", () => {
     expect(mockGet).toHaveBeenCalledWith(`${prefix}/release-review`, {
       params: { version: "1.0.3" },
       skipErrorToast: true,
+      // Reviewing a large knowledge-base build takes longer than the default 30 seconds.
+      timeout: 300_000,
     });
     expect(review).toEqual({
       accepts: ["index_not_ready"],
