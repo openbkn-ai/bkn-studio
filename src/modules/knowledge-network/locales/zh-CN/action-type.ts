@@ -106,6 +106,7 @@ export const actiontypePart = {
   actionTypeKindUpdate: "编辑",
   actionTypeName: "行动类名称",
   actionTypeNameRequired: "请输入行动类名称。",
+  actionTypeDescriptionMaxLength: "长度不能超过 {{len}} 个字符。",
   actionTypeObject: "绑定对象类",
   actionTypeObjectPlaceholder: "选择绑定对象类",
   actionTypeObjectSelectPlaceholder: "请选择对象类",
