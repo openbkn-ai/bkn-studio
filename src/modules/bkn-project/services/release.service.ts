@@ -311,9 +311,11 @@ export async function getReleaseReview(projectId: string, version: string): Prom
   if (useMock) {
     return wait(await mockReview(projectId, version));
   }
+  // The review verifies the full knowledge-base build's links again: on a large build, well past 30 s.
   const response = await http.get<BackendReview>(`${projectPath(projectId)}/release-review`, {
     params: { version },
     skipErrorToast: true,
+    timeout: RELEASE_REQUEST_TIMEOUT_MS,
   });
   return mapReview(response.data);
 }
