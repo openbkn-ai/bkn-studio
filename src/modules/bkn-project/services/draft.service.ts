@@ -353,6 +353,8 @@ export type BackendDraft = {
       reason?: string;
       time: number;
     }[];
+    /** Concepts read from documents that no item is, such as rules; only their names are read. */
+    document_concepts?: { id: string; name: string }[] | null;
     excluded: { field: string; keyword?: string; object_type: string; reason: string }[] | null;
     object_types: BackendObjectType[] | null;
     relation_types: BackendRelationType[] | null;
@@ -489,6 +491,7 @@ export function mapDraft(draft: BackendDraft): Draft {
         kind: decision.kind,
         time: decision.time,
       })),
+      documentConcepts: (items.document_concepts ?? []).map(({ id, name }) => ({ id, name })),
       excluded: (items.excluded ?? []).map((field) => ({
         field: field.field,
         keyword: field.keyword,
