@@ -13,7 +13,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
+import { Alert, Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,6 +72,20 @@ import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import { DeprecatedName } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedName";
+import { EventClassFormDrawer } from "@/modules/knowledge-network/components/event-class/EventClassFormDrawer";
+import { EventClassTag } from "@/modules/knowledge-network/components/event-class/EventClassTag";
+import {
+  useEventClassDelete,
+  useEventClassDeleteRefusal,
+} from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
+import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
+import { useKnVersioned } from "@/modules/knowledge-network/hooks/useKnVersionView";
+import {
+  deleteKnEventType,
+  eventTypeUpdateBody,
+  updateKnEventType,
+} from "@/modules/knowledge-network/services/event-type.service";
+import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
@@ -80,6 +94,8 @@ type ObjectTypeListPanelProps = {
   canModify: boolean;
   networkId: string;
   networkName: string;
+  /** An event type was saved: its class may have changed the draft of a versioned network. */
+  onDefinitionsChanged?: () => void;
   onDelete: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void>;
 };
 
@@ -98,6 +114,7 @@ export function ObjectTypeListPanel({
   canModify,
   networkId,
   networkName,
+  onDefinitionsChanged,
   onDelete,
 }: ObjectTypeListPanelProps) {
   const entitlement = useEntitlement();
@@ -110,7 +127,7 @@ export function ObjectTypeListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { modal } = useAppServices();
+  const { message, modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
   const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "all");
@@ -147,6 +164,19 @@ export function ObjectTypeListPanel({
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
   const [trialObjectType, setTrialObjectType] = useState<ObjectTypeDetail | null | undefined>();
   const trialRequestRef = useRef(0);
+  const versioned = useKnVersioned(networkId);
+  const eventTypes = useKnEventTypes(networkId, refreshVersion);
+  const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
+  const typesWithoutClass = useMemo(
+    () => eventTypes.types.filter((type) => !type.object_type_id),
+    [eventTypes.types],
+  );
+  const [eventForm, setEventForm] = useState<{ eventType?: KnEventType; open: boolean }>({
+    open: false,
+  });
+  const [creatingMissingClasses, setCreatingMissingClasses] = useState(false);
+  const deleteEventClass = useEventClassDelete();
+  const explainEventClassRefusal = useEventClassDeleteRefusal();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
@@ -464,7 +494,25 @@ export function ObjectTypeListPanel({
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        await onDelete(records);
+        // An event class goes with its event type; the object type API would leave the type behind.
+        const eventRecords = records.flatMap((record) => {
+          const eventType = eventTypes.byClassId.get(record.id);
+          return eventType ? [eventType] : [];
+        });
+        const objectRecords = records.filter((record) => !eventTypes.byClassId.has(record.id));
+        if (objectRecords.length > 0) {
+          await onDelete(objectRecords);
+        }
+        for (const eventType of eventRecords) {
+          try {
+            await deleteKnEventType(networkId, eventType.code);
+          } catch (error) {
+            explainEventClassRefusal(error, eventType);
+          }
+        }
+        if (eventRecords.length > 0) {
+          onDefinitionsChanged?.();
+        }
         if (records.some((record) => record.id === selectedGraphObjectTypeId)) {
           setSelectedGraphObjectTypeId("");
           setSelectedGraphObjectType(null);
@@ -482,8 +530,27 @@ export function ObjectTypeListPanel({
       return;
     }
 
+    const eventType = eventTypes.byClassId.get(record.id);
     if (key === "edit") {
+      if (eventType) {
+        // The platform writes an event class; what can change is its event type.
+        setEventForm({ eventType, open: true });
+        return;
+      }
       void navigate(`/knowledge-network/workspace/${networkId}/object-types/${record.id}/edit`);
+      return;
+    }
+
+    if (key === "delete" && eventType) {
+      void deleteEventClass(networkId, eventType, { versioned }).then((deleted) => {
+        if (!deleted) return;
+        if (record.id === selectedGraphObjectTypeId) {
+          setSelectedGraphObjectTypeId("");
+          setSelectedGraphObjectType(null);
+        }
+        onDefinitionsChanged?.();
+        setRefreshVersion((current) => current + 1);
+      });
       return;
     }
 
@@ -525,6 +592,7 @@ export function ObjectTypeListPanel({
           <DeprecatedName declarations={record.declarations}>
             <span className={styles.objectName}>{value}</span>
           </DeprecatedName>
+          {eventClassIds.has(record.id) ? <EventClassTag /> : null}
         </div>
       ),
     },
@@ -745,6 +813,55 @@ export function ObjectTypeListPanel({
     return `/knowledge-network/workspace/${networkId}/object-types?${graphReturnParams.toString()}`;
   };
 
+  /**
+   * Saves each event type that has no class as it is, which creates its class. The platform fills
+   * classes in by itself only where there are no versions: in a versioned network a class goes
+   * into the draft, so it waits for someone to save the type.
+   */
+  const createMissingClasses = async () => {
+    setCreatingMissingClasses(true);
+    let saved = 0;
+    let classless = 0;
+    try {
+      for (const eventType of typesWithoutClass) {
+        try {
+          const result = await updateKnEventType(
+            networkId,
+            eventType.code,
+            eventTypeUpdateBody(eventType),
+          );
+          saved += 1;
+          // An event module from before event classes saves the type and makes no class.
+          if (!result.object_type_id) {
+            classless += 1;
+          }
+        } catch {
+          // The request layer shows why; the other types are still tried.
+        }
+      }
+    } finally {
+      setCreatingMissingClasses(false);
+    }
+    if (saved > 0) {
+      if (classless > 0) {
+        void message.warning(t("knowledgeNetwork.eventClasses.savedWithoutClass"));
+      } else {
+        void message.success(t("knowledgeNetwork.eventClasses.createMissingDone"));
+      }
+      onDefinitionsChanged?.();
+      setRefreshVersion((current) => current + 1);
+    }
+  };
+
+  const handleEventClassSaved = (saved: KnEventType) => {
+    setEventForm({ open: false });
+    onDefinitionsChanged?.();
+    setRefreshVersion((current) => current + 1);
+    if (saved.object_type_id && viewMode === "graph") {
+      setSelectedGraphObjectTypeId(saved.object_type_id);
+    }
+  };
+
   const openMetricTrial = async (record: ObjectMetricRecordV1) => {
     const request = ++trialRequestRef.current;
     setTrialObjectType(undefined);
@@ -798,6 +915,15 @@ export function ObjectTypeListPanel({
                   type="primary"
                 >
                   {t("common.create")}
+                </AppButton>
+              ) : null}
+              {canModify && eventTypes.available ? (
+                <AppButton
+                  className={styles.toolbarButton}
+                  icon={<PlusOutlined />}
+                  onClick={() => setEventForm({ open: true })}
+                >
+                  {t("knowledgeNetwork.eventClasses.create")}
                 </AppButton>
               ) : null}
               {canDelete ? (
@@ -887,6 +1013,28 @@ export function ObjectTypeListPanel({
           </div>
         </div>
 
+        {canModify && typesWithoutClass.length > 0 ? (
+          <Alert
+            action={
+              <AppButton
+                loading={creatingMissingClasses}
+                onClick={() => void createMissingClasses()}
+                size="small"
+              >
+                {t("knowledgeNetwork.eventClasses.createMissing")}
+              </AppButton>
+            }
+            message={t("knowledgeNetwork.eventClasses.missingClasses", {
+              count: typesWithoutClass.length,
+              names: typesWithoutClass
+                .map((type) => type.name || type.code)
+                .join(t("knowledgeNetwork.eventClasses.listSeparator")),
+            })}
+            showIcon
+            type="info"
+          />
+        ) : null}
+
         {viewMode === "list" ? (
           <div className={styles.tableCard}>
             <Table<KnowledgeNetworkObjectTypeRecord>
@@ -946,6 +1094,7 @@ export function ObjectTypeListPanel({
                         <span className={graphStyles.objectButtonName} title={item.name}>
                           {item.name}
                         </span>
+                        {eventClassIds.has(item.id) ? <EventClassTag /> : null}
                       </button>
                     ))}
                     {!isLoading && items.length === 0 ? renderEmptyContent() : null}
@@ -986,6 +1135,11 @@ export function ObjectTypeListPanel({
                       items.map((item) => [item.id, item.color]),
                     )}
                     onEditObject={(nextObjectTypeId) => {
+                      const eventType = eventTypes.byClassId.get(nextObjectTypeId);
+                      if (eventType) {
+                        setEventForm({ eventType, open: true });
+                        return;
+                      }
                       void navigate(
                         `/knowledge-network/workspace/${networkId}/object-types/${nextObjectTypeId}/edit`,
                         {
@@ -1167,6 +1321,15 @@ export function ObjectTypeListPanel({
         networkId={networkId}
         onClose={() => setValueTypesOpen(false)}
         open={valueTypesOpen}
+      />
+      <EventClassFormDrawer
+        eventClassIds={eventClassIds}
+        eventType={eventForm.eventType}
+        networkId={networkId}
+        onClose={() => setEventForm({ open: false })}
+        onSaved={handleEventClassSaved}
+        open={eventForm.open}
+        versioned={versioned}
       />
     </>
   );

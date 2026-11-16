@@ -1,0 +1,72 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.block {
+  width: 100%;
+}
+
+.form {
+  margin-top: 12px;
+}
+
+.parameters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.parameterRow {
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.parameterName {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.parameterHint {
+  font-size: 12px;
+}
+
+.parameterMode {
+  min-width: 160px;
+}
+
+.parameterValue {
+  min-width: 220px;
+}
+
+.scheduleKind {
+  min-width: 160px;
+}
+
+.weekday {
+  min-width: 100px;
+}
+
+.cron {
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  width: 200px;
+}
+
+.timezone {
+  width: 240px;
+}

@@ -398,6 +398,8 @@ export function useWorkspaceData(networkId: string, section: WorkspaceDataSectio
     recentObjects,
     recentLoading,
     reloadCapabilities,
+    /** Reads the network again, such as its draft state after a write that changed the draft. */
+    reloadDetail: loadDetail,
     reloadMetrics,
     sectionError,
     sectionLoading,

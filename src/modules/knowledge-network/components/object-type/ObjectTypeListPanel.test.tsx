@@ -8,15 +8,22 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 const mocks = vi.hoisted(() => ({
   canAuthorize: true,
   confirm: vi.fn(),
+  deleteEventType: vi.fn(),
   getObjectType: vi.fn(),
+  listEventTypes: vi.fn(),
   listObjectTypes: vi.fn(),
+  modalError: vi.fn(),
   navigate: vi.fn(),
   setSearchParams: vi.fn(),
+  success: vi.fn(),
+  updateEventType: vi.fn(),
+  warning: vi.fn(),
 }));
 
 const searchParams = new URLSearchParams("view=graph");
@@ -33,7 +40,10 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ modal: { confirm: mocks.confirm } }),
+  useAppServices: () => ({
+    message: { error: vi.fn(), success: mocks.success, warning: mocks.warning },
+    modal: { confirm: mocks.confirm, error: mocks.modalError },
+  }),
 }));
 
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
@@ -56,6 +66,13 @@ vi.mock("@/modules/account/services/permission-requests.service", () => ({
 vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
   getKnowledgeNetworkObjectTypeDetail: mocks.getObjectType,
   listKnowledgeNetworkObjectTypePage: mocks.listObjectTypes,
+}));
+
+vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
+  deleteKnEventType: mocks.deleteEventType,
+  eventTypeUpdateBody: (eventType: KnEventType) => ({ name: eventType.name }),
+  listKnEventTypes: mocks.listEventTypes,
+  updateKnEventType: mocks.updateEventType,
 }));
 
 vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGraph", () => ({
@@ -118,6 +135,26 @@ const customer = {
   name: "Customer",
 };
 
+const overdue = {
+  ...order,
+  id: "order_overdue",
+  name: "Overdue order",
+  tags: ["event"],
+};
+
+const overdueType: KnEventType = {
+  check_failures: 0,
+  check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
+  code: "order.overdue",
+  merge_hours: 0,
+  name: "Overdue order",
+  object_type_id: "order_overdue",
+  rule_tool: { box_id: "box-1", tool_id: "tool-1" },
+  severity: "P2",
+  source: "rule",
+  subject: "order",
+};
+
 const originalMatchMedia = window.matchMedia;
 
 beforeAll(() => {
@@ -142,6 +179,8 @@ beforeEach(() => {
   searchParams.delete("view");
   mocks.listObjectTypes.mockResolvedValue({ entries: [order], totalCount: 1 });
   mocks.getObjectType.mockResolvedValue(customer);
+  mocks.listEventTypes.mockResolvedValue([]);
+  mocks.deleteEventType.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -281,5 +320,115 @@ describe("ObjectTypeListPanel graph view", () => {
     await vi.waitFor(() => {
       expect(screen.getByTestId("object-resource-graph").dataset.objectTypeId).toBe("customer");
     });
+  });
+});
+
+describe("ObjectTypeListPanel event classes", () => {
+  beforeEach(() => {
+    mocks.listObjectTypes.mockResolvedValue({ entries: [overdue, order], totalCount: 2 });
+    mocks.listEventTypes.mockResolvedValue([overdueType]);
+  });
+
+  const renderPanel = (
+    props: {
+      onDefinitionsChanged?: () => void;
+      onDelete?: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void>;
+    } = {},
+  ) =>
+    render(
+      <ObjectTypeListPanel
+        canDelete
+        canModify
+        networkId="network-1"
+        networkName="Sales"
+        onDefinitionsChanged={props.onDefinitionsChanged}
+        onDelete={props.onDelete ?? vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+  it("tags only the event class", async () => {
+    renderPanel();
+
+    expect(await screen.findByTestId("event-class-tag")).toBeInTheDocument();
+    expect(screen.getAllByTestId("event-class-tag")).toHaveLength(1);
+    expect(screen.getByText("knowledgeNetwork.eventClasses.create")).toBeInTheDocument();
+  });
+
+  it("deletes an event class through its event type, not the object type API", async () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const onDefinitionsChanged = vi.fn();
+    renderPanel({ onDefinitionsChanged, onDelete });
+
+    await screen.findByTestId("event-class-tag");
+    expect(screen.getByTestId("object-resource-graph").dataset.objectTypeId).toBe("order_overdue");
+    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
+    const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await confirmation.onOk();
+
+    expect(mocks.deleteEventType).toHaveBeenCalledWith("network-1", "order.overdue");
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(onDefinitionsChanged).toHaveBeenCalledOnce();
+  });
+
+  it("says why an event class with events cannot be deleted", async () => {
+    mocks.deleteEventType.mockRejectedValue({
+      response: { data: { error_code: "BknBackend.KnEvent.EventTypeInUse" } },
+    });
+    renderPanel();
+
+    await screen.findByTestId("event-class-tag");
+    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
+    const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await confirmation.onOk();
+
+    expect(mocks.modalError).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "knowledgeNetwork.eventClasses.delete.hasEvents" }),
+    );
+  });
+
+  it("creates the missing classes by saving their types as they are", async () => {
+    const classless = { ...overdueType, object_type_id: "" };
+    mocks.listEventTypes.mockResolvedValue([classless]);
+    mocks.updateEventType.mockResolvedValue(overdueType);
+    const onDefinitionsChanged = vi.fn();
+    renderPanel({ onDefinitionsChanged });
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.eventClasses.createMissing"));
+
+    await vi.waitFor(() =>
+      expect(mocks.success).toHaveBeenCalledWith("knowledgeNetwork.eventClasses.createMissingDone"),
+    );
+    expect(mocks.updateEventType).toHaveBeenCalledWith("network-1", "order.overdue", {
+      name: "Overdue order",
+    });
+    expect(mocks.warning).not.toHaveBeenCalled();
+    expect(onDefinitionsChanged).toHaveBeenCalledOnce();
+  });
+
+  it("does not claim the classes were made when the platform saved the types without them", async () => {
+    const classless = { ...overdueType, object_type_id: "" };
+    mocks.listEventTypes.mockResolvedValue([classless]);
+    // An event module from before event classes answers without object_type_id.
+    const withoutClassField: Partial<KnEventType> = { ...classless };
+    delete withoutClassField.object_type_id;
+    mocks.updateEventType.mockResolvedValue(withoutClassField);
+    renderPanel();
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.eventClasses.createMissing"));
+
+    await vi.waitFor(() =>
+      expect(mocks.warning).toHaveBeenCalledWith("knowledgeNetwork.eventClasses.savedWithoutClass"),
+    );
+    expect(mocks.success).not.toHaveBeenCalled();
+  });
+
+  it("hides event class actions when the event module cannot be reached", async () => {
+    mocks.listEventTypes.mockRejectedValue(new Error("not found"));
+    renderPanel();
+
+    expect(await screen.findByTestId("object-resource-graph")).toBeInTheDocument();
+    await vi.waitFor(() => expect(mocks.listEventTypes).toHaveBeenCalled());
+    expect(screen.queryByTestId("event-class-tag")).not.toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
   });
 });

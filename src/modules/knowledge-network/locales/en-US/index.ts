@@ -7,6 +7,7 @@
 
 import { networkPart } from "./network";
 import { versionsPart } from "./versions";
+import { eventClassesPart } from "./event-classes";
 import { conceptgroupPart } from "./concept-group";
 import { objecttypePart } from "./object-type";
 import { relationtypePart } from "./relation-type";
@@ -34,6 +35,7 @@ export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
     ...networkPart,
     ...versionsPart,
+    ...eventClassesPart,
     ...conceptgroupPart,
     ...objecttypePart,
     ...relationtypePart,
