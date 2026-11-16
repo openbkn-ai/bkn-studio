@@ -5,11 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { AxiosError } from "axios";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import {
   checkReasonText,
+  releaseFailureText,
   releaseNotes,
   reviewRelinkPath,
 } from "@/modules/bkn-project/components/release/releaseMessages";
@@ -84,5 +86,34 @@ describe("relinking what the release review cannot read", () => {
     expect(reviewRelinkPath(code, 502, { kind: "function", network_id: "kn" })).toBeNull();
     expect(reviewRelinkPath(code, 404, { kind: "function" })).toBeNull();
     expect(reviewRelinkPath("Release.Other", 404, { network_id: "kn" })).toBeNull();
+  });
+});
+
+describe("a release request the page stopped waiting for", () => {
+  it("says to refresh and check instead of the generic failure, in either language", async () => {
+    const timedOut = new AxiosError("timeout of 300000ms exceeded", "ECONNABORTED");
+    const refused = new AxiosError("Request failed", "ERR_BAD_RESPONSE", undefined, undefined, {
+      data: {},
+      status: 500,
+      statusText: "",
+      headers: {},
+      config: {} as never,
+    });
+    await i18n.changeLanguage("zh-CN");
+    expect(releaseFailureText(i18n.t, timedOut, undefined, "prepare")).toBe(
+      "写入网络超过 5 分钟还没完成，页面已停止等待。模型较大时会更久：请刷新页面看是否已写入，没有的话再试一次。",
+    );
+    expect(releaseFailureText(i18n.t, timedOut, undefined, "publish")).toContain(
+      "刷新页面看是否已发布",
+    );
+    // A server that answered keeps its own reason.
+    expect(releaseFailureText(i18n.t, refused, undefined, "prepare")).toBe(
+      "没能发布，请稍后重试。",
+    );
+    await i18n.changeLanguage("en-US");
+    expect(releaseFailureText(i18n.t, timedOut, undefined, "prepare")).toContain(
+      "more than 5 minutes",
+    );
+    await i18n.changeLanguage("zh-CN");
   });
 });

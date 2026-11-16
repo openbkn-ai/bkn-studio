@@ -8,6 +8,10 @@
 import type { TFunction } from "i18next";
 
 import type { LightStatusTone } from "@/framework/ui/common/LightStatusTag";
+import {
+  isRequestTimeout,
+  RELEASE_REQUEST_TIMEOUT_MS,
+} from "@/modules/bkn-project/services/release.service";
 import type {
   NetworkVersion,
   Regression,
@@ -252,6 +256,22 @@ export function refusalText(t: TFunction, code: string) {
 }
 
 /** Why publishing was refused, from its error code; none for an error without one. */
+/**
+ * Why writing into the network or publishing failed. When the page stopped waiting, the server had
+ * not answered: the person refreshes to see whether it went through instead of a generic retry.
+ */
+export function releaseFailureText(
+  t: TFunction,
+  error: unknown,
+  code: string | undefined,
+  step: "prepare" | "publish",
+) {
+  if (isRequestTimeout(error)) {
+    return t(`${PREFIX}.error.timedOut.${step}`, { minutes: RELEASE_REQUEST_TIMEOUT_MS / 60_000 });
+  }
+  return publishErrorText(t, code);
+}
+
 export function publishErrorText(t: TFunction, code: string | undefined) {
   const name = code ? codeName(code) : "";
   return t(`${PREFIX}.error.${PUBLISH_ERRORS.has(name) ? name : "other"}`);

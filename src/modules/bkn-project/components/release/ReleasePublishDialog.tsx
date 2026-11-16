@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { publishErrorText } from "@/modules/bkn-project/components/release/releaseMessages";
+import { releaseFailureText } from "@/modules/bkn-project/components/release/releaseMessages";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
 import { publishRelease } from "@/modules/bkn-project/services/release.service";
 
@@ -86,7 +86,7 @@ export function ReleasePublishDialog({
       } else if (code === "Release.NothingToPublish") {
         onNothingToPublish();
       } else {
-        setError(publishErrorText(t, code));
+        setError(releaseFailureText(t, failure, code, "publish"));
       }
     } finally {
       setBusy(false);

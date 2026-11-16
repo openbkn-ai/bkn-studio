@@ -3287,6 +3287,12 @@ export const bknProjectEnUS = {
           NotReady: "Publishing is not available right now. Try again later.",
           PublishPending:
             "This version was sent for publishing and no answer came back. Publish again to finish it instead of preparing it anew.",
+          timedOut: {
+            prepare:
+              "Writing into the network took more than {{minutes}} minutes, so the page stopped waiting. Large models take longer: refresh to see whether it was written, and try again if not.",
+            publish:
+              "Publishing took more than {{minutes}} minutes, so the page stopped waiting. Refresh to see whether it was published, and click Publish again if not.",
+          },
           other: "Could not publish; try again later.",
         },
       },
