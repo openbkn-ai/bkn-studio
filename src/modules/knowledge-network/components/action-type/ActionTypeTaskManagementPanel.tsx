@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Badge, Descriptions, Drawer, Dropdown, Empty, Input, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -98,6 +98,10 @@ export function ActionTypeTaskManagementPanel({
   const [statusFilter, setStatusFilter] = useState<ActionTypeExecutionStatus | "">("");
   const [triggerFilter, setTriggerFilter] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailContext, setDetailContext] = useState<{
+    actionTypeId: string;
+    networkId: string;
+  } | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [currentLog, setCurrentLog] = useState<ActionTypeExecutionLogDetail | null>(null);
   const [resultPage, setResultPage] = useState(1);
@@ -108,6 +112,23 @@ export function ActionTypeTaskManagementPanel({
   const [resultsLoading, setResultsLoading] = useState(false);
   // An older backend has no results endpoint; the detail response then carries the first page.
   const [embeddedResultsOnly, setEmbeddedResultsOnly] = useState(false);
+  const detailRequestRef = useRef(0);
+  const isCurrentContext =
+    detailContext?.actionTypeId === actionTypeId && detailContext?.networkId === networkId;
+
+  useLayoutEffect(() => {
+    setDrawerOpen(false);
+    setDetailContext(null);
+    setDrawerLoading(false);
+    setCurrentLog(null);
+    setResultRows([]);
+    setResultTotal(0);
+    setResultsLoading(false);
+    return () => {
+      // A context change or unmount makes every outstanding detail response obsolete.
+      detailRequestRef.current += 1;
+    };
+  }, [actionTypeId, networkId]);
 
   const statusOptions = useMemo(
     () => [
@@ -215,6 +236,8 @@ export function ActionTypeTaskManagementPanel({
   }, [loadLogs, refreshToken]);
 
   const openLogDetail = async (record: ActionTypeExecutionLog) => {
+    const requestId = ++detailRequestRef.current;
+    setDetailContext({ actionTypeId, networkId });
     setDrawerOpen(true);
     setDrawerLoading(true);
     setCurrentLog(null);
@@ -226,19 +249,30 @@ export function ActionTypeTaskManagementPanel({
 
     try {
       const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(networkId, record.id);
-      setCurrentLog(detail);
+      if (requestId === detailRequestRef.current) {
+        setCurrentLog(detail);
+      }
     } catch (error) {
-      setCurrentLog(null);
-      void message.error(extractRequestErrorMessage(error));
+      if (requestId === detailRequestRef.current) {
+        setCurrentLog(null);
+        void message.error(extractRequestErrorMessage(error));
+      }
     } finally {
-      setDrawerLoading(false);
+      if (requestId === detailRequestRef.current) {
+        setDrawerLoading(false);
+      }
     }
   };
 
-  const currentLogId = currentLog?.id;
+  const closeLogDetail = () => {
+    detailRequestRef.current += 1;
+    setDrawerOpen(false);
+  };
+
+  const currentLogId = isCurrentContext ? currentLog?.id : undefined;
 
   useEffect(() => {
-    if (!drawerOpen || !currentLogId || embeddedResultsOnly) {
+    if (!drawerOpen || !isCurrentContext || !currentLogId || embeddedResultsOnly) {
       return;
     }
 
@@ -281,6 +315,7 @@ export function ActionTypeTaskManagementPanel({
     currentLogId,
     drawerOpen,
     embeddedResultsOnly,
+    isCurrentContext,
     message,
     networkId,
     resultPage,
@@ -493,8 +528,8 @@ export function ActionTypeTaskManagementPanel({
 
       <Drawer
         destroyOnHidden
-        onClose={() => setDrawerOpen(false)}
-        open={drawerOpen}
+        onClose={closeLogDetail}
+        open={drawerOpen && isCurrentContext}
         title={t("knowledgeNetwork.actionTypeExecutionLogDetailTitle")}
         width={720}
       >

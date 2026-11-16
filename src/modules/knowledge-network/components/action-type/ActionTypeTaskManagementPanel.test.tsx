@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
@@ -103,6 +103,21 @@ function resultTable() {
 
 function lastResultsQuery() {
   return mocks.results.mock.calls.at(-1)?.[2] as ActionTypeExecutionResultQuery | undefined;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
+async function openRow(index: number) {
+  fireEvent.click((await screen.findAllByRole("button", { name: "common.actions" }))[index]);
+  fireEvent.click((await screen.findAllByText("common.detail")).at(-1)!);
 }
 
 describe("ActionTypeTaskManagementPanel execution results", () => {
@@ -318,5 +333,194 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
 
     expect(within(resultTable()).getByText("result-40")).toBeTruthy();
     expect(within(resultTable()).queryByText("result-20")).toBeNull();
+  }, 15_000);
+
+  it("keeps the latest task and its results when an older detail succeeds late", async () => {
+    const second = { ...log, id: "exec-2", status: "failed" as const };
+    const firstDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    mocks.list.mockResolvedValue({ entries: [log, second], totalCount: 2 });
+    mocks.detail.mockImplementation((_networkId: string, logId: string) =>
+      logId === log.id ? firstDetail.promise : Promise.resolve({ ...detail, ...second }),
+    );
+    mocks.results.mockImplementation((_networkId: string, logId: string) =>
+      Promise.resolve({
+        entries: [{ displayName: `${logId}-result`, status: "success" }],
+        totalCount: 1,
+      }),
+    );
+
+    render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
+    await openRow(0);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await openRow(1);
+    await screen.findByText("knowledgeNetwork.actionTypeExecutionResultTitle");
+    await within(resultTable()).findByText("exec-2-result");
+
+    await act(async () => {
+      firstDetail.resolve(detail);
+      await firstDetail.promise;
+    });
+
+    expect(screen.getByText("exec-2")).toBeTruthy();
+    expect(within(resultTable()).getByText("exec-2-result")).toBeTruthy();
+    expect(within(resultTable()).queryByText("exec-1-result")).toBeNull();
+    expect(mocks.results).toHaveBeenCalledTimes(1);
+    expect(mocks.results).toHaveBeenCalledWith("network-1", "exec-2", {
+      limit: 20,
+      offset: 0,
+      status: "",
+    });
+  }, 15_000);
+
+  it("does not show an old error or finish the latest task's loading", async () => {
+    const second = { ...log, id: "exec-2" };
+    const firstDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    const secondDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    mocks.list.mockResolvedValue({ entries: [log, second], totalCount: 2 });
+    mocks.detail.mockImplementation((_networkId: string, logId: string) =>
+      logId === log.id ? firstDetail.promise : secondDetail.promise,
+    );
+    mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
+    await openRow(0);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await openRow(1);
+
+    await act(async () => {
+      firstDetail.reject(new Error("obsolete request"));
+      await firstDetail.promise.catch(() => undefined);
+    });
+    expect(mocks.services.message.error).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog").querySelector(".ant-spin")).toBeTruthy();
+
+    await act(async () => {
+      secondDetail.resolve({ ...detail, ...second });
+      await secondDetail.promise;
+    });
+    expect(await screen.findByText("exec-2")).toBeTruthy();
+  }, 15_000);
+
+  it("ignores a detail that finishes after the drawer closes", async () => {
+    const pendingDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    mocks.detail.mockReturnValue(pendingDetail.promise);
+    mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
+    await openRow(0);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await act(async () => {
+      pendingDetail.resolve(detail);
+      await pendingDetail.promise;
+    });
+
+    expect(mocks.results).not.toHaveBeenCalled();
+    expect(mocks.services.message.error).not.toHaveBeenCalled();
+  }, 15_000);
+
+  it("distinguishes an older request when the same task is opened again", async () => {
+    const firstDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    const latestDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    const second = { ...log, id: "exec-2" };
+    mocks.list.mockResolvedValue({ entries: [log, second], totalCount: 2 });
+    mocks.detail
+      .mockReturnValueOnce(firstDetail.promise)
+      .mockResolvedValueOnce({ ...detail, ...second })
+      .mockReturnValueOnce(latestDetail.promise);
+    mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
+    await openRow(0);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await openRow(1);
+    await screen.findByText("exec-2");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await openRow(0);
+
+    await act(async () => {
+      firstDetail.resolve(detail);
+      await firstDetail.promise;
+    });
+    expect(screen.getByRole("dialog").querySelector(".ant-spin")).toBeTruthy();
+    expect(screen.queryByText("exec-1")).toBeNull();
+
+    await act(async () => {
+      latestDetail.resolve(detail);
+      await latestDetail.promise;
+    });
+    expect(await screen.findByText("exec-1")).toBeTruthy();
+  }, 15_000);
+
+  it("invalidates the detail when the network or action changes", async () => {
+    const oldDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    const nextLog = { ...log, actionTypeId: "action-2", id: "exec-2" };
+    mocks.list.mockImplementation((networkId: string) =>
+      Promise.resolve({
+        entries: [networkId === "network-1" ? log : nextLog],
+        totalCount: 1,
+      }),
+    );
+    mocks.detail.mockImplementation((networkId: string) =>
+      networkId === "network-1" ? oldDetail.promise : Promise.resolve({ ...detail, ...nextLog }),
+    );
+    mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    const view = render(
+      <ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />,
+    );
+    await openRow(0);
+    view.rerender(<ActionTypeTaskManagementPanel actionTypeId="action-2" networkId="network-2" />);
+    await act(async () => {
+      oldDetail.resolve(detail);
+      await oldDetail.promise;
+    });
+
+    expect(screen.queryByText("exec-1")).toBeNull();
+    expect(mocks.results).not.toHaveBeenCalled();
+    await openRow(0);
+    expect(await screen.findByText("exec-2")).toBeTruthy();
+    expect(mocks.results).toHaveBeenCalledTimes(1);
+    expect(mocks.results).toHaveBeenCalledWith("network-2", "exec-2", {
+      limit: 20,
+      offset: 0,
+      status: "",
+    });
+  }, 15_000);
+
+  it("does not request the old task's results in a new context", async () => {
+    mocks.results.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    const view = render(
+      <ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />,
+    );
+    await openRow(0);
+    await waitFor(() => expect(mocks.results).toHaveBeenCalledTimes(1));
+
+    view.rerender(<ActionTypeTaskManagementPanel actionTypeId="action-2" networkId="network-2" />);
+
+    expect(mocks.results).toHaveBeenCalledTimes(1);
+    expect(mocks.results).toHaveBeenCalledWith("network-1", "exec-1", {
+      limit: 20,
+      offset: 0,
+      status: "",
+    });
+    expect(screen.queryByText("exec-1")).toBeNull();
+  }, 15_000);
+
+  it("does not report a detail error after unmount", async () => {
+    const pendingDetail = deferred<ActionTypeExecutionLogDetail | null>();
+    mocks.detail.mockReturnValue(pendingDetail.promise);
+
+    const view = render(
+      <ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />,
+    );
+    await openRow(0);
+    view.unmount();
+    await act(async () => {
+      pendingDetail.reject(new Error("obsolete request"));
+      await pendingDetail.promise.catch(() => undefined);
+    });
+
+    expect(mocks.services.message.error).not.toHaveBeenCalled();
   }, 15_000);
 });
