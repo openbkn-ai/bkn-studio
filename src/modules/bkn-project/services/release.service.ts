@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { AxiosError, type AxiosResponse } from "axios";
+import axios, { AxiosError, type AxiosResponse } from "axios";
 
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
@@ -291,6 +291,21 @@ export const mapVersions = (data: BackendVersions): ProjectVersions => ({
 
 /* ------------------------------------ API ------------------------------------ */
 
+/**
+ * How long the page waits for writing a release into the network and for publishing it. A large
+ * model takes well over the default 30 seconds; the gateway in front of bkn-project allows 330.
+ */
+export const RELEASE_REQUEST_TIMEOUT_MS = 300_000;
+
+/** Whether the page stopped waiting for a request before the server answered. */
+export function isRequestTimeout(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    !error.response &&
+    (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT")
+  );
+}
+
 /** What publishing the project's branch as `version` would bring; nothing is changed. */
 export async function getReleaseReview(projectId: string, version: string): Promise<ReleaseReview> {
   if (useMock) {
@@ -319,7 +334,7 @@ export async function prepareRelease(projectId: string, input: PrepareInput): Pr
       overwrite_draft_changes: input.overwriteDraftChanges,
       signature: input.signature,
     },
-    { skipErrorToast: true },
+    { skipErrorToast: true, timeout: RELEASE_REQUEST_TIMEOUT_MS },
   );
 }
 
@@ -334,7 +349,7 @@ export async function publishRelease(
   const response = await http.post<{ kn_version: number; purged_version?: number }>(
     `${projectPath(projectId)}/releases`,
     { allow_outdated_base: input.allowOutdatedBase, notes: input.notes, version: input.version },
-    { skipErrorToast: true },
+    { skipErrorToast: true, timeout: RELEASE_REQUEST_TIMEOUT_MS },
   );
   return {
     knVersion: response.data.kn_version,

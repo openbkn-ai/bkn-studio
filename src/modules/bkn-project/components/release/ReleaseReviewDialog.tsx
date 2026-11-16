@@ -22,6 +22,7 @@ import {
   checkReasonText,
   checkTitle,
   publishErrorText,
+  releaseFailureText,
   refusalText,
   reviewLoadFailedText,
   reviewRelinkPath,
@@ -164,7 +165,7 @@ export function ReleaseReviewDialog({
       } else {
         // A server error included: the dialog stays, says why and keeps the button to try again.
         setDraftChanged(false);
-        setPublishError(publishErrorText(t, code));
+        setPublishError(releaseFailureText(t, error, code, "prepare"));
       }
     } finally {
       setBusy(false);

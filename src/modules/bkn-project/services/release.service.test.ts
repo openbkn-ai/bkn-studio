@@ -178,7 +178,8 @@ describe("release.service", () => {
     expect(mockPost).toHaveBeenCalledWith(
       `${prefix}/releases/1.0.3/prepare`,
       { accepts: ["index_not_ready"], overwrite_draft_changes: true, signature: "sig" },
-      { skipErrorToast: true },
+      // A large model takes minutes to write into the network: not the default 30 seconds.
+      { skipErrorToast: true, timeout: 300_000 },
     );
 
     mockPost.mockResolvedValueOnce({ data: { kn_version: 8, network_id: "n", purged_version: 6 } });
@@ -192,7 +193,7 @@ describe("release.service", () => {
     expect(mockPost).toHaveBeenLastCalledWith(
       `${prefix}/releases`,
       { allow_outdated_base: true, notes: "Adds orders", version: "1.0.3" },
-      { skipErrorToast: true },
+      { skipErrorToast: true, timeout: 300_000 },
     );
   });
 
