@@ -631,6 +631,7 @@ export function KnowledgeNetworkWorkspaceScene({
                 section === "experience-cypher" ||
                 section === "extension" ||
                 section === "metrics" ||
+                section === "concept-groups" ||
                 section === "object-types" ||
                 section === "relation-types" ||
                 section === "action-types"

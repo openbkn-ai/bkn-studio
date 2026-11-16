@@ -299,15 +299,17 @@ export function ToolFormDrawer({
                 <Input />
               </Form.Item>
             </>
-          ) : (
-            <Form.Item label={t("executionFactory.useRule")} name="useRule">
-              <Input.TextArea rows={2} />
-            </Form.Item>
-          )}
+          ) : null}
           {metadataType === "openapi" ? (
             <OpenApiDefinitionFields required={mode === "create"} />
           ) : null}
           {metadataType === "function" ? <FunctionDefinitionFields /> : null}
+          {/* Optional, so it follows the required definition above. */}
+          {mode === "edit" ? null : (
+            <Form.Item label={t("executionFactory.useRule")} name="useRule">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          )}
           <Collapse
             ghost
             items={[

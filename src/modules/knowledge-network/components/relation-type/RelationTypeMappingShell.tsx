@@ -26,7 +26,7 @@ type RelationTypeMappingShellProps = {
   networkId?: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   resourceName?: string;
-  /** What the relation means between its ends, shown after the ends and before the rules. */
+  /** What the relation means between its ends; optional, so it comes after the required rules. */
   semantics?: ReactNode;
   sourceObjectTypeId: string;
   targetObjectTypeId: string;
@@ -37,7 +37,7 @@ type RelationTypeMappingShellProps = {
 
 /**
  * The relation settings step: the ends and the mapping mode first, since what follows depends on
- * them; then what the relation means; then the mapping rules.
+ * them; then the required mapping rules; then the optional semantics of the relation.
  */
 export function RelationTypeMappingShell({
   children,
@@ -129,17 +129,17 @@ export function RelationTypeMappingShell({
         />
       </section>
 
+      <section className={styles.group}>
+        <h3 className={styles.groupTitle}>{t("knowledgeNetwork.relationTypeConfigRules")}</h3>
+        {children}
+      </section>
+
       {semantics ? (
         <section className={styles.group}>
           <h3 className={styles.groupTitle}>{t("knowledgeNetwork.relationTypeConfigSemantics")}</h3>
           {semantics}
         </section>
       ) : null}
-
-      <section className={styles.group}>
-        <h3 className={styles.groupTitle}>{t("knowledgeNetwork.relationTypeConfigRules")}</h3>
-        {children}
-      </section>
     </div>
   );
 }
