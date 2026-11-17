@@ -13,6 +13,7 @@ import { FieldIdentity } from "./FieldIdentity";
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 import {
   compatibleFilterFields,
+  filterRequiresNonEmptyString,
   FILTER_TIME_UNITS,
   filterSupportsFieldValue,
   filterValueKind,
@@ -48,6 +49,7 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
   );
   const stringInput =
     ["string", "text"].includes(type ?? "") || (type === "large_integer" && queryPath !== "source");
+  const acceptsEmptyString = stringInput && !filterRequiresNonEmptyString(rule.operation);
   const input = (value: string | undefined, label: string, update: (value: string) => void) =>
     type === "boolean" ? (
       <Select
@@ -69,14 +71,14 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
         placeholder={
           type === "datetime"
             ? t("dataCatalog.filter.datetimePlaceholder")
-            : stringInput && value === ""
+            : acceptsEmptyString && value === ""
               ? t("dataCatalog.filter.emptyString")
               : label
         }
         suffix={
           type === "datetime" ? (
             timeHelp("datetimeHint")
-          ) : stringInput ? (
+          ) : acceptsEmptyString ? (
             <Tooltip title={t("dataCatalog.filter.useEmptyString")}>
               <button
                 type="button"

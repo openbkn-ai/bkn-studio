@@ -422,6 +422,28 @@ describe("relative time units", () => {
 });
 
 describe("explicit empty string input", () => {
+  it.each(["like", "not_like", "regex", "prefix", "not_prefix", "match", "match_phrase"] as const)(
+    "does not offer an explicit empty string for %s",
+    (operation) => {
+      render(
+        <FilterTreeEditor
+          fields={fields}
+          queryPath="local_index"
+          onChange={vi.fn()}
+          value={{
+            kind: "group",
+            operation: "and",
+            children: [{ kind: "rule", field: "status", operation, value: "" }],
+          }}
+        />,
+      );
+      expect(
+        screen.queryByRole("button", { name: "dataCatalog.filter.useEmptyString" }),
+      ).toBeNull();
+      expect(screen.getByRole("textbox", { name: "dataCatalog.filter.value" })).toHaveValue("");
+    },
+  );
+
   it("distinguishes a new draft entry from an explicitly selected empty string", () => {
     const changed = vi.fn();
     render(

@@ -223,7 +223,7 @@ describe("filter boundaries and precision", () => {
     "round-trips stored and edited SQL LIKE patterns for %s on every query path",
     (operation) => {
       for (const path of ["source", "local_index", "managed_local_index"] as const) {
-        for (const value of ["abc", "%abc%", "a_b", "a\\%\\_b", "a\\qb", "a\\\\", ""]) {
+        for (const value of ["abc", "%abc%", "a_b", "a\\%\\_b", "a\\qb", "a\\\\", "   "]) {
           const raw = { field: "title", operation, value };
           const parsed = parseFilterCondition(raw, path);
           expect(parsed).not.toBeNull();
@@ -231,6 +231,30 @@ describe("filter boundaries and precision", () => {
           expect(filterToBackend(parsed!, fields, path)).toEqual({
             operation: "and",
             sub_conditions: [{ ...raw, value_from: "const" }],
+          });
+        }
+      }
+    },
+  );
+
+  it.each(["like", "not_like", "regex", "prefix", "not_prefix", "match", "match_phrase"] as const)(
+    "rejects an empty %s value without discarding a saved condition",
+    (operation) => {
+      const searchable = [
+        { name: "title", type: "string", features: [{ featureType: "fulltext" as const }] },
+      ];
+      for (const path of ["source", "local_index", "managed_local_index"] as const) {
+        if (!filterOperationsForField(searchable[0], path).includes(operation)) continue;
+        const raw = { field: "title", operation, value: "", value_from: "const" };
+        const parsed = parseFilterCondition(raw, path)!;
+        expect(parsed.children).toHaveLength(1);
+        expect(filterValidationError(parsed, searchable, path)).toBe("missingValue");
+        expect(filterToBackend(parsed, searchable, path)).toMatchObject({ sub_conditions: [raw] });
+        for (const value of ["   ", operation === "regex" ? ".*" : "%"]) {
+          const nonEmpty = parseFilterCondition({ ...raw, value }, path)!;
+          expect(filterValidationError(nonEmpty, searchable, path)).toBeNull();
+          expect(filterToBackend(nonEmpty, searchable, path)).toMatchObject({
+            sub_conditions: [{ ...raw, value }],
           });
         }
       }
