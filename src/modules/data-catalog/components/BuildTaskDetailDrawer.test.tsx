@@ -73,6 +73,26 @@ describe("BuildTaskDetailDrawer origin", () => {
     expect(screen.getByText("dataCatalog.task.statuses.failed")).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(getBuildTaskMock).toHaveBeenCalledWith("task-1");
+    const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
+    expect(within(nameRow!).getByText("-")).toBeInTheDocument();
+  });
+
+  it("shows the schedule name and ID immediately after the execution type", async () => {
+    getBuildTaskMock.mockResolvedValue({
+      ...task,
+      triggerType: "scheduled",
+      scheduleId: "schedule-1",
+      scheduleName: "Nightly warehouse rebuild_定时全量构建",
+    });
+    render(<BuildTaskDetailDrawer open resource={null} taskId="task-1" onClose={vi.fn()} />);
+
+    expect(await screen.findByText("Nightly warehouse rebuild_定时全量构建")).toBeInTheDocument();
+    const executionRow = screen.getByText("dataCatalog.build.executeType").closest("tr");
+    const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
+    const idRow = screen.getByText("dataCatalog.buildSchedule.scheduleId").closest("tr");
+    expect(executionRow?.nextElementSibling).toBe(nameRow);
+    expect(nameRow?.nextElementSibling).toBe(idRow);
+    expect(within(idRow!).getByText("schedule-1")).toBeInTheDocument();
   });
 
   it.each(["manual", undefined] as const)(
@@ -85,6 +105,8 @@ describe("BuildTaskDetailDrawer origin", () => {
       const scheduleRow = screen.getByText("dataCatalog.buildSchedule.scheduleId").closest("tr");
       expect(scheduleRow).not.toBeNull();
       expect(within(scheduleRow!).getByText("-")).toBeInTheDocument();
+      const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
+      expect(within(nameRow!).getByText("-")).toBeInTheDocument();
     },
   );
 });

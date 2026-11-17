@@ -297,9 +297,6 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.buildSchedule.taskSource")}>
               {t(`dataCatalog.buildSchedule.${task.triggerType ?? "manual"}`)}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.buildSchedule.scheduleId")}>
-              {task.scheduleId || EMPTY_VALUE}
-            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
               {task.catalogName || task.catalogId || EMPTY_VALUE}
             </Descriptions.Item>
@@ -317,6 +314,12 @@ export function BuildTaskDetailDrawer({
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.build.executeType")}>
               {executeTypeLabel ?? EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.buildSchedule.name")}>
+              {task.scheduleName || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.buildSchedule.scheduleId")}>
+              {task.scheduleId || EMPTY_VALUE}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.primaryKeyFields")}>
               {renderFieldTags(task.primaryKeyFields)}

@@ -1391,19 +1391,31 @@ export function IndexConfigFormPanel({
                 />
               ) : (
                 <>
-                  <Select
-                    allowClear
-                    disabled={actionsLocked}
-                    onChange={(value) => {
-                      setDefaultModelId(value);
-                      setOrphanSavedModel(null);
-                      markDirty();
-                    }}
-                    options={modelOptions}
-                    placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
-                    style={{ width: "100%" }}
-                    value={defaultModelId}
-                  />
+                  <Tooltip
+                    title={
+                      defaultModel ? (
+                        <span aria-hidden="true">
+                          {modelOptions.find((option) => option.value === defaultModel.id)?.label}
+                        </span>
+                      ) : undefined
+                    }
+                    trigger={["hover", "focus"]}
+                  >
+                    <Select
+                      allowClear
+                      aria-label={t("dataCatalog.build.defaultEmbeddingModel")}
+                      disabled={actionsLocked}
+                      onChange={(value) => {
+                        setDefaultModelId(value);
+                        setOrphanSavedModel(null);
+                        markDirty();
+                      }}
+                      options={modelOptions}
+                      placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
+                      style={{ width: "100%" }}
+                      value={defaultModelId}
+                    />
+                  </Tooltip>
                   {orphanSavedModel ? (
                     <Alert
                       message={t("dataCatalog.build.savedModelUnavailable", {

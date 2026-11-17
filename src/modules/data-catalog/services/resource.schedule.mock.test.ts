@@ -44,6 +44,10 @@ describe("Resource deletion with build schedules", () => {
   it("deletes only bound plans and retains Task history and source filtering after deleting Resource", async () => {
     const { db, resource, plan, task } = await seedDeletionFixture();
     const otherPlan = db.mockBuildSchedules[0];
+    const { getBuildTask } = await import("./build-task.service");
+    const beforeDeletion = getBuildTask(task.id);
+    await vi.runAllTimersAsync();
+    expect(await beforeDeletion).toMatchObject({ scheduleName: plan.name, scheduleId: plan.id });
     const { deleteCatalogResource } = await import("./resource.service");
     const deleting = deleteCatalogResource(resource.id);
     await vi.runAllTimersAsync();
@@ -53,6 +57,9 @@ describe("Resource deletion with build schedules", () => {
     expect(db.mockBuildSchedules).toContain(otherPlan);
     expect(db.mockBuildTasks).toContain(task);
     expect(task.scheduleId).toBe(plan.id);
+    const afterDeletion = getBuildTask(task.id);
+    await vi.runAllTimersAsync();
+    expect(await afterDeletion).toMatchObject({ scheduleName: "", scheduleId: plan.id });
     const { listBuildTaskPage } = await import("./build-task.service");
     const listing = listBuildTaskPage({
       catalogId: resource.catalogId,

@@ -15,6 +15,7 @@ import {
   Select,
   Space,
   Switch,
+  Tooltip,
   type MenuProps,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -218,16 +219,30 @@ export function BuildSchedulePanel({ active = true, resource, catalog }: BuildSc
       dataIndex: "name",
       width: 180,
       render: (value: string, row) => (
-        <AppButton
-          disabled={busyId !== null}
-          onClick={() => void loadDetail(row, false)}
-          type="link"
-        >
-          {value}
-        </AppButton>
+        <Tooltip title={<span aria-hidden="true">{value}</span>} trigger={["hover", "focus"]}>
+          <AppButton
+            className={styles.nameLink}
+            disabled={busyId !== null}
+            onClick={() => void loadDetail(row, false)}
+            type="link"
+          >
+            <span className={styles.cellEllipsis}>{value}</span>
+          </AppButton>
+        </Tooltip>
       ),
     },
-    { title: t("dataCatalog.buildSchedule.cron"), dataIndex: "cronExpr", width: 160 },
+    {
+      title: t("dataCatalog.buildSchedule.cron"),
+      dataIndex: "cronExpr",
+      width: 160,
+      render: (value: string) => (
+        <Tooltip title={<span aria-hidden="true">{value}</span>} trigger={["hover", "focus"]}>
+          <span className={styles.cellEllipsis} tabIndex={0}>
+            {value}
+          </span>
+        </Tooltip>
+      ),
+    },
     {
       title: t("dataCatalog.buildSchedule.executeType"),
       dataIndex: "executeType",
@@ -391,6 +406,7 @@ export function BuildSchedulePanel({ active = true, resource, catalog }: BuildSc
             pagination={false}
             rowKey="id"
             scroll={{ x: 1280 }}
+            tableLayout="fixed"
           />
         )}
       </TableSurface>

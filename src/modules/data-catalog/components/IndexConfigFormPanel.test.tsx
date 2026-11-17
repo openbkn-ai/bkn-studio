@@ -148,6 +148,50 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it.each([
+    "Short",
+    "QA_EN_MM_Embedding_20261021_ReportingWarehouse",
+    "用于中文检索与报告分析的默认向量模型_20261117",
+  ])("keeps the full model label %s available and saves its ID", async (name) => {
+    const modelId = "long-name-model";
+    const label = `${name} - 1024d`;
+    loadEmbeddingModelOptionsMock.mockResolvedValue({
+      errorMessage: null,
+      options: [{ dimensions: 1024, id: modelId, name }],
+      state: "ready",
+    });
+    updateCatalogResourceMock.mockResolvedValue(resource);
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    const select = await screen.findByRole("combobox", {
+      name: "dataCatalog.build.defaultEmbeddingModel",
+    });
+    await waitFor(() => expect(select).toBeEnabled());
+    fireEvent.mouseDown(select);
+    fireEvent.click(
+      await screen.findByText(label, { selector: ".ant-select-item-option-content" }),
+    );
+    fireEvent.focus(select);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(label);
+    fireEvent.blur(select);
+
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
+    const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
+    expect(payload.indexConfig?.defaultEmbeddingModel).toBe(modelId);
+
+    const control = select.closest(".ant-select");
+    const clearButton = control?.querySelector(".ant-select-clear");
+    expect(clearButton).not.toBeNull();
+    fireEvent.mouseDown(clearButton as HTMLElement);
+    await waitFor(() => expect(control?.querySelector(".ant-select-selection-item")).toBeNull());
+    expect(select).toBeEnabled();
+  });
+
   it("shows capability checking instead of incomplete configuration while analyzers load", () => {
     loadAnalyzerCapabilitiesMock.mockReturnValue(new Promise(() => undefined));
     const textResource: CatalogResource = {

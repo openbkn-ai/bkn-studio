@@ -98,6 +98,21 @@ describe("snapshotFieldsOf", () => {
 });
 
 describe("mapBuildTask", () => {
+  it("maps the current schedule name and tolerates responses without it", () => {
+    expect(
+      mapBuildTask({
+        id: "scheduled-task",
+        schedule_id: "plan-1",
+        schedule_name: "Nightly warehouse rebuild",
+        trigger_type: "scheduled",
+      }),
+    ).toMatchObject({ scheduleId: "plan-1", scheduleName: "Nightly warehouse rebuild" });
+    expect(mapBuildTask({ id: "old-task", schedule_id: "deleted-plan" })).toMatchObject({
+      scheduleId: "deleted-plan",
+      scheduleName: "",
+    });
+  });
+
   it("keeps scheduled provenance independent from Task execution failure", () => {
     expect(
       mapBuildTask({

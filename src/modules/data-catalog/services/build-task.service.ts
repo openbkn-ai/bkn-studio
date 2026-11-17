@@ -12,6 +12,7 @@ import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-
 import {
   emitMockChange,
   mockCatalogName,
+  mockBuildSchedules,
   mockBuildTasks,
   mockResources,
   mockSlug,
@@ -63,6 +64,7 @@ type BackendBuildTask = {
   resource_id?: string;
   resource_name?: string;
   schedule_id?: string;
+  schedule_name?: string;
   trigger_type?: "manual" | "scheduled";
   start_time?: number;
   status?: string;
@@ -231,6 +233,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
   return {
     id: item.id,
     scheduleId: item.schedule_id ?? "",
+    scheduleName: item.schedule_name ?? "",
     triggerType: item.trigger_type === "scheduled" ? "scheduled" : "manual",
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
@@ -384,7 +387,20 @@ export async function listBuildTaskPage(
 
 export async function getBuildTask(id: string) {
   if (useMock) {
-    return wait(mockBuildTasks.find((item) => item.id === id) ?? null, 120);
+    const task = mockBuildTasks.find((item) => item.id === id);
+    return wait(
+      task
+        ? {
+            ...task,
+            scheduleName:
+              task.triggerType === "scheduled" && task.scheduleId
+                ? (mockBuildSchedules.find((schedule) => schedule.id === task.scheduleId)?.name ??
+                  "")
+                : "",
+          }
+        : null,
+      120,
+    );
   }
 
   const response = await http.get<BackendBuildTask>(`/vega-backend/v1/build-tasks/${id}`);
