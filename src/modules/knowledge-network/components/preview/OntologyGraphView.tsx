@@ -118,9 +118,18 @@ export function OntologyGraphView({
   }, [theme]);
 
   // Recompute layout when graph or arrangement changes, not when selecting a node.
+  // Previewed relations are drawn where the types already are: showing one moves nothing.
+  const arranged = useMemo(
+    () =>
+      graph.edges.some((edge) => edge.preview)
+        ? { ...graph, edges: graph.edges.filter((edge) => !edge.preview) }
+        : graph,
+    [graph],
+  );
+  // The arrangement is deterministic: the same types and relations land in the same places.
   const layout = useMemo(
-    () => layoutOntologyGraph(graph, renderMode, groupOf),
-    [graph, groupOf, renderMode],
+    () => layoutOntologyGraph(arranged, renderMode, groupOf),
+    [arranged, groupOf, renderMode],
   );
   const ungroupedLabel = t("knowledgeNetwork.previewUngrouped");
   const structure = useMemo(

@@ -21,10 +21,13 @@ import styles from "./DraftTables.module.css";
  * drafting counted unique for an object type waiting for its identity comes first.
  */
 export function IdentityDialog({
+  initial,
   objectType,
   onCancel,
   onSave,
 }: {
+  /** Properties to start from, such as those a suggestion proposes; ignored unless all can be chosen. */
+  initial?: string[];
   objectType: DraftObjectType;
   onCancel: () => void;
   onSave: (properties: string[]) => Promise<void>;
@@ -33,6 +36,12 @@ export function IdentityDialog({
   const candidates = identityCandidates(objectType);
   const suggested = objectType.needsIdentity ? suggestedIdentity(objectType) : null;
   const [selected, setSelected] = useState<string[]>(() => {
+    if (
+      initial?.length &&
+      initial.every((name) => candidates.some((property) => property.name === name))
+    ) {
+      return initial;
+    }
     const kept = objectType.primaryKeys.filter((name) =>
       candidates.some((property) => property.name === name),
     );

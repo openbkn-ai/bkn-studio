@@ -31,6 +31,7 @@ const editDraftItemMock = vi.hoisted(() => vi.fn());
 const acceptSuggestionsMock = vi.hoisted(() => vi.fn());
 const chooseIdentityMock = vi.hoisted(() => vi.fn());
 const restoreFieldMock = vi.hoisted(() => vi.fn());
+const getDiagnosisMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -96,6 +97,11 @@ vi.mock("@/modules/bkn-project/services/publish.service", async (importOriginal)
         },
       ],
     }),
+}));
+
+vi.mock("@/modules/bkn-project/services/diagnosis.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/bkn-project/services/diagnosis.service")>()),
+  getDiagnosis: getDiagnosisMock,
 }));
 
 vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal) => ({
@@ -1256,5 +1262,54 @@ describe("ProjectModel", () => {
     expect(tab.closest(".ant-segmented-item")).toHaveTextContent(
       'bknProject.model.pending:{"count":2}',
     );
+  });
+
+  it("opens the network diagnosis beside the model and chooses a suggested identity there", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    getDiagnosisMock.mockResolvedValue({
+      components: [["sales_orders", "customers"], ["material_bom"]],
+      computedAt: 1,
+      draftUpdateTime: 0,
+      error: "",
+      metrics: null,
+      runId: "r1",
+      stale: false,
+      state: "ready",
+      suggestions: [
+        {
+          apply: {
+            candidates: [["bom_material_code"]],
+            kind: "choose_identity",
+            objectTypeId: "material_bom",
+          },
+          evidence: { quotes: [] },
+          group: "object",
+          id: "s1",
+          impact: { connects: [], questions: [] },
+          kind: "choose_identity",
+          rank: 1,
+          reason: "",
+          status: "open",
+          title: "Choose the identity of material_bom",
+        },
+      ],
+    });
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.diagnosis.open" }));
+    const panel = await screen.findByRole("complementary", { name: "bknProject.diagnosis.title" });
+    // The island is pointed out beside the graph.
+    expect(
+      await screen.findByText('bknProject.diagnosis.graph.islands:{"count":1}'),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      await within(panel).findByRole("button", {
+        name: "bknProject.diagnosis.actions.chooseIdentity",
+      }),
+    );
+    // The page's own identity chooser opens, starting from the suggested identity.
+    const dialog = await openDialog();
+    expect(dialog.getByRole("checkbox", { name: /^bom_material_code/ })).toBeChecked();
+    expect(dialog.getByRole("checkbox", { name: /^material_code/ })).not.toBeChecked();
   });
 });
