@@ -54,6 +54,7 @@ export type DirectorySyncConfig = {
   organization: string;
   enabled: boolean;
   interval_seconds: number;
+  role_sync_enabled: boolean;
   next_run_at: string;
   last_started_at: string | null;
   last_finished_at: string | null;
@@ -61,6 +62,7 @@ export type DirectorySyncConfig = {
   last_error_code: string;
   users: number;
   departments: number;
+  roles: number;
   disabled_users: number;
   retained_departments: number;
 };
@@ -73,7 +75,7 @@ export type DirectorySyncView = {
 export type DirectorySyncInput = Pick<
   DirectorySyncConfig,
   "enabled" | "organization" | "interval_seconds"
-> & { webhook_secret?: string };
+> & { webhook_secret?: string; role_sync_enabled?: boolean };
 const syncBase = (id: string) => `${base}/${encodeURIComponent(id)}/directory-sync`;
 export async function getDirectorySync(id: string): Promise<DirectorySyncView> {
   return (await http.get<DirectorySyncView>(syncBase(id))).data;

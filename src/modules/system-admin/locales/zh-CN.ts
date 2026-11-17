@@ -11,13 +11,19 @@ export const systemAdminZhCN = {
       sync: {
         title: "目录同步",
         scopeHint:
-          "同步指定 Casdoor 组织的用户和部门。外部删除将停用本地用户；本地停用账号和其他来源的归属关系会保留。已有 Token 的即时撤销不在此流程内。",
+          "同步指定 Casdoor 组织的用户和部门，也可选择同步角色。用户同步不包含已有 Token 的即时撤销。",
         close: "关闭",
         run: "立即同步",
         save: "保存同步配置",
         saved: "同步配置已保存。启用后将执行首次全量同步。",
         queued: "同步请求已排队，请刷新状态查看结果。",
-        enabled: "启用目录同步",
+        enabled: "同步用户和部门",
+        roleSyncEnabled: "同步角色",
+        roleSyncHint:
+          "仅导入角色名称和描述，不同步用户、角色成员或权限。关闭后保留已导入角色；源端删除的角色也会保留。同名本地角色不会自动合并。开启或关闭需要角色创建和编辑权限。",
+        roles: "本轮同步角色数",
+        SSO_ROLE_NAME_CONFLICT:
+          "角色名称与已有角色冲突，本轮未提交。请调整 Casdoor 角色显示名称或本地角色名称后重试。",
         organization: "Casdoor 组织名称",
         organizationFormat: "使用组织标识，可包含字母、数字、下划线、点和连字符，最多 100 位。",
         interval: "定时对账间隔（秒，60–86400）",
@@ -866,7 +872,7 @@ export const systemAdminZhCN = {
       builtinRolePermissionCannotModify: "内置角色的权限不可修改",
     },
     users: {
-      identitySources: { local: "本地", ldap: "LDAP", sso: "单点登录", external: "第三方" },
+      identitySources: { local: "本地", ldap: "LDAP", sso: "第三方", external: "第三方" },
       externalProfileHint:
         "该用户的名称、邮箱和电话由身份源管理，请到身份源修改。密码也在身份源中管理。",
       externalDepartmentHint:

@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   run: vi.fn(),
   success: vi.fn(),
   error: vi.fn(),
+  permissions: ["admin-role:create", "admin-role:edit"],
 }));
 vi.mock("react-i18next", async (original) => ({
   ...(await original<typeof import("react-i18next")>()),
@@ -22,7 +23,10 @@ vi.mock("react-i18next", async (original) => ({
   }),
 }));
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { success: api.success, error: api.error } }),
+  useAppServices: () => ({
+    message: { success: api.success, error: api.error },
+    runtimeConfig: { currentUser: { permissions: api.permissions } },
+  }),
 }));
 vi.mock("../services/sso-provider.service", () => ({
   getDirectorySync: api.get,
@@ -40,6 +44,7 @@ const view: DirectorySyncView = {
     provider_id: "casdoor",
     organization: "org",
     enabled: true,
+    role_sync_enabled: false,
     interval_seconds: 300,
     next_run_at: "",
     last_started_at: null,
@@ -48,6 +53,7 @@ const view: DirectorySyncView = {
     last_error_code: "",
     users: 6,
     departments: 3,
+    roles: 0,
     disabled_users: 0,
     retained_departments: 0,
   },
@@ -57,6 +63,7 @@ const view: DirectorySyncView = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  api.permissions = ["admin-role:create", "admin-role:edit"];
   api.get.mockResolvedValue(view);
   api.save.mockResolvedValue(view);
   api.run.mockResolvedValue(undefined);
@@ -98,6 +105,7 @@ describe("SSO directory synchronization", () => {
       expect(api.save).toHaveBeenCalledWith("casdoor", {
         organization: "org",
         enabled: true,
+        role_sync_enabled: false,
         interval_seconds: 300,
         webhook_secret: undefined,
       }),
@@ -108,6 +116,41 @@ describe("SSO directory synchronization", () => {
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
     await screen.findByLabelText("systemAdmin.sso.sync.organization");
     expect(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" })).toBeDisabled();
+  });
+  it("allows a saved role-only configuration to run without user sync", async () => {
+    api.get.mockResolvedValue({
+      ...view,
+      config: { ...view.config, enabled: false, role_sync_enabled: true },
+    });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    expect(screen.queryByLabelText("systemAdmin.sso.sync.enabled")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("systemAdmin.sso.sync.roleSyncEnabled")).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" }));
+    await waitFor(() => expect(api.run).toHaveBeenCalledWith("casdoor"));
+  });
+  it("enables user sync when saving and keeps role sync off by default", async () => {
+    api.get.mockResolvedValue({ ...view, config: { ...view.config, enabled: false } });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    expect(screen.getByLabelText("systemAdmin.sso.sync.roleSyncEnabled")).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText("systemAdmin.sso.sync.roleSyncEnabled"));
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        "casdoor",
+        expect.objectContaining({ enabled: true, role_sync_enabled: true }),
+      ),
+    );
+  });
+  it("does not submit role settings without role management permissions", async () => {
+    api.permissions = [];
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    expect(screen.getByLabelText("systemAdmin.sso.sync.roleSyncEnabled")).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() => expect(api.save).toHaveBeenCalled());
+    expect(api.save.mock.calls[0]?.[1]).not.toHaveProperty("role_sync_enabled");
   });
   it("keeps an operation error after a successful status poll", async () => {
     let poll: (() => void) | undefined;
