@@ -291,6 +291,7 @@ export function checkReasonText(t: TFunction, reason: string | undefined) {
 
 export const INDEX_STATE_TONE: Record<IndexState, LightStatusTone> = {
   building: "info",
+  missing: "error",
   not_built: "neutral",
   not_configured: "warning",
   ready: "success",
