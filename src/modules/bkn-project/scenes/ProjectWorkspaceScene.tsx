@@ -49,6 +49,7 @@ import {
 import type { Project, ProjectRelease } from "@/modules/bkn-project/types/project";
 import {
   nextProjectSection,
+  projectBuildPath,
   projectObjectTypePath,
   projectResourcesPath,
   projectSectionPath,
@@ -279,11 +280,7 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "release" ? (
                 <ProjectReleasePage
-                  onGoToBuild={(tab) =>
-                    void navigate(
-                      `${projectSectionPath(project.id, "build")}${tab ? `?tab=${tab}` : ""}`,
-                    )
-                  }
+                  onGoToBuild={(tab) => void navigate(projectBuildPath(project.id, tab))}
                   onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
                   onReleaseChanged={() => void load()}
