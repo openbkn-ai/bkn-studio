@@ -182,6 +182,7 @@ type BackendIndex = {
         } | null;
       }[]
     | null;
+  missing_catalogs?: string[] | null;
   tasks_visible: boolean;
 };
 
@@ -387,6 +388,7 @@ function mapIndex(index: BackendIndex): ProjectIndex {
           }
         : null,
     })),
+    missingCatalogs: index.missing_catalogs ?? [],
     tasksVisible: index.tasks_visible,
   };
 }

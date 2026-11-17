@@ -518,6 +518,7 @@ describe("publish.service", () => {
             task: { id: "t2", status: "running" },
           },
         ],
+        missing_catalogs: ["c-gone"],
         tasks_visible: false,
       },
     };
@@ -552,6 +553,7 @@ describe("publish.service", () => {
           updateField: null,
         },
       ],
+      missingCatalogs: ["c-gone"],
       tasksVisible: false,
     });
 

@@ -3377,6 +3377,8 @@ export const bknProjectZhCN = {
         empty: "还没有采纳的对象类",
         loadFailed: "本地索引暂时读取不到",
         tasksInvisible: "你没有查看这个数据目录构建任务的权限，正在构建的索引可能显示为未构建。",
+        catalogGone:
+          "这些表所在的数据目录已被删除。请到项目概览重新选择数据目录；同名的数据目录重新创建后，会在那里自动重新连接。",
         build: "重新构建",
         started: "已重新发起构建",
         noneStarted: "没有表开始构建，原因见各表的“上次构建”。",
@@ -3395,6 +3397,7 @@ export const bknProjectZhCN = {
           not_built: "未构建",
           not_configured: "缺少构建设置",
           unreadable: "无法读取这张表",
+          missing: "这张表已不存在",
         },
         staleHint: "建索引之后，表的设置或结构有变化。",
         missing: "缺少：{{fields}}",

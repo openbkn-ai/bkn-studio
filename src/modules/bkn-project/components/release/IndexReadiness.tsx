@@ -241,6 +241,9 @@ export function IndexReadiness({
         <p className={styles.muted}>{t("bknProject.release.index.empty")}</p>
       ) : (
         <>
+          {index?.missingCatalogs?.length ? (
+            <Alert message={t("bknProject.release.index.catalogGone")} showIcon type="warning" />
+          ) : null}
           {index?.tasksVisible === false ? (
             <p className={styles.muted}>{t("bknProject.release.index.tasksInvisible")}</p>
           ) : null}

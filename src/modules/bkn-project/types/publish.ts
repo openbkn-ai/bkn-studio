@@ -178,7 +178,7 @@ export type OntologyCheck = {
 };
 
 export type IndexState =
-  "building" | "not_built" | "not_configured" | "ready" | "stale" | "unreadable";
+  "building" | "missing" | "not_built" | "not_configured" | "ready" | "stale" | "unreadable";
 
 export type IndexBuildOutcome =
   "created" | "existing" | "failed" | "no_config_permission" | "no_permission" | "not_configurable";
@@ -214,6 +214,8 @@ export type IndexItem = {
 
 export type ProjectIndex = {
   counts: Record<string, number>;
+  /** The catalogs of the tables that are gone: deleted, not hidden from the caller. */
+  missingCatalogs?: string[];
   objectTypes: IndexItem[];
   /** False when the caller may not list the catalog's build tasks: a build in progress reads as not built. */
   tasksVisible: boolean;

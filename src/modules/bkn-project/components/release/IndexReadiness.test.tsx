@@ -208,6 +208,23 @@ describe("IndexReadiness", () => {
     expect(await screen.findByText("还没有采纳的对象类")).toBeInTheDocument();
   });
 
+  it("says the catalog was deleted, not that permission is missing, when its tables are gone", async () => {
+    getOntologyIndexMock.mockResolvedValueOnce({
+      ...readiness([item("customers", { build: null, state: "missing" })]),
+      missingCatalogs: ["c-gone"],
+    });
+    renderIndex();
+
+    expect(
+      await screen.findByText(
+        "这些表所在的数据目录已被删除。请到项目概览重新选择数据目录；同名的数据目录重新创建后，会在那里自动重新连接。",
+      ),
+    ).toBeInTheDocument();
+    expect(section().getByText("这张表已不存在")).toBeInTheDocument();
+    expect(screen.queryByText(/没有查看这个数据目录构建任务的权限/)).toBeNull();
+    expect(section().queryByText("无法读取这张表")).toBeNull();
+  });
+
   it("lets the owner build again what is not built, and follows the builds until they end", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     getOntologyIndexMock

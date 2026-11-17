@@ -3621,6 +3621,8 @@ export const bknProjectEnUS = {
         loadFailed: "The local indexes could not be loaded",
         tasksInvisible:
           "You cannot see this data catalog's build tasks, so an index being built may show as not built.",
+        catalogGone:
+          "The data catalog these tables were in has been deleted. Choose a data catalog again on the project overview; a catalog created again under the same name is reconnected there automatically.",
         build: "Build again",
         started: "Building again",
         noneStarted: "No table started building. See each table's last build for why.",
@@ -3639,6 +3641,7 @@ export const bknProjectEnUS = {
           not_built: "Not built",
           not_configured: "Build settings missing",
           unreadable: "Table cannot be read",
+          missing: "Table no longer exists",
         },
         staleHint: "The table's settings or structure changed after the index was built.",
         missing: "Missing: {{fields}}",
