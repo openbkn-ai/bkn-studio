@@ -47,6 +47,7 @@ import type {
   ReleaseQuestion,
   ReleaseReview,
 } from "@/modules/bkn-project/types/release";
+import type { BuildTab } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./Release.module.css";
 
@@ -74,8 +75,8 @@ export function ReleaseReviewDialog({
   /** The owner of an unarchived project; others read the review. */
   canPublish: boolean;
   onCancel: () => void;
-  /** Opens the build page, where indexes not ready yet are built. */
-  onGoToBuild?: () => void;
+  /** Opens the build page, on a tab when given: indexes and knowledge-base files are built there. */
+  onGoToBuild?: (tab?: BuildTab) => void;
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
   onPrepared: (version: string) => void;
@@ -373,7 +374,7 @@ function ReviewBody({
   accepted: string[];
   busy: boolean;
   canPublish: boolean;
-  onGoToBuild?: () => void;
+  onGoToBuild?: (tab?: BuildTab) => void;
   onGoToKinetic?: () => void;
   onAccept: (accept: string, checked: boolean) => void;
   onSettle: (action: Settle) => void;
@@ -386,6 +387,23 @@ function ReviewBody({
   const itemName = (id: string) =>
     [...changes.added, ...changes.changed, ...changes.removed].find((item) => item.id === id)
       ?.name || id;
+  // A check that failed and cannot be accepted with a tick keeps the version from being written:
+  // those come first, apart from the ones a tick settles.
+  const blocking = review.checks.filter((check) => !check.passed && !check.accept);
+  const others = review.checks.filter((check) => check.passed || check.accept);
+  const checkRow = (check: ReleaseCheck) => (
+    <CheckRow
+      accepted={check.accept ? accepted.includes(check.accept) : false}
+      busy={busy}
+      canPublish={canPublish}
+      check={check}
+      itemName={itemName}
+      key={check.code}
+      onAccept={onAccept}
+      onGoToBuild={onGoToBuild}
+      onSettle={onSettle}
+    />
+  );
 
   return (
     <>
@@ -407,24 +425,24 @@ function ReviewBody({
         />
       ) : null}
 
-      <section className={styles.stack}>
-        <h4 className={styles.blockTitle}>{t(`${PREFIX}.checksTitle`)}</h4>
-        <ul className={styles.list}>
-          {review.checks.map((check) => (
-            <CheckRow
-              accepted={check.accept ? accepted.includes(check.accept) : false}
-              busy={busy}
-              canPublish={canPublish}
-              check={check}
-              itemName={itemName}
-              key={check.code}
-              onAccept={onAccept}
-              onGoToBuild={onGoToBuild}
-              onSettle={onSettle}
-            />
-          ))}
-        </ul>
-      </section>
+      {blocking.length ? (
+        <Alert
+          description={<ul className={styles.list}>{blocking.map(checkRow)}</ul>}
+          message={t(`${PREFIX}.blockingTitle`, {
+            action: t(`${PREFIX}.prepare`),
+            count: blocking.length,
+          })}
+          showIcon
+          type="error"
+        />
+      ) : null}
+
+      {others.length ? (
+        <section className={styles.stack}>
+          <h4 className={styles.blockTitle}>{t(`${PREFIX}.checksTitle`)}</h4>
+          <ul className={styles.list}>{others.map(checkRow)}</ul>
+        </section>
+      ) : null}
 
       <section className={styles.stack}>
         <h4 className={styles.blockTitle}>{t(`${PREFIX}.changesTitle`)}</h4>
@@ -547,7 +565,7 @@ function CheckRow({
   check: ReleaseCheck;
   itemName: (id: string) => string;
   onAccept: (accept: string, checked: boolean) => void;
-  onGoToBuild?: () => void;
+  onGoToBuild?: (tab?: BuildTab) => void;
   onSettle: (action: Settle) => void;
 }) {
   const { t } = useTranslation();
@@ -591,8 +609,16 @@ function CheckRow({
       {/* The indexes are built on the build page: the way there, not a dead end. */}
       {!check.passed && check.reason === "index_not_ready" && onGoToBuild ? (
         <span className={styles.indent}>
-          <AppButton onClick={onGoToBuild} size="small" type="link">
+          <AppButton onClick={() => onGoToBuild()} size="small" type="link">
             {t(`${PREFIX}.goToBuild`)}
+          </AppButton>
+        </span>
+      ) : null}
+      {/* The knowledge-base files are processed on the build page's document tab. */}
+      {!check.passed && check.reason === "knowledge_base_not_ready" && onGoToBuild ? (
+        <span className={styles.indent}>
+          <AppButton onClick={() => onGoToBuild("unstructured")} size="small" type="link">
+            {t(`${PREFIX}.goToKnowledgeBaseBuild`)}
           </AppButton>
         </span>
       ) : null}

@@ -3113,6 +3113,13 @@ export const bknProjectEnUS = {
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
         goToBuild: "Build the indexes on the build page",
+        goToKnowledgeBaseBuild: "Process the knowledge-base files on the build page",
+        blockingTitle:
+          "These checks did not pass. “{{action}}” stays unavailable until they are fixed",
+        blockingTitle_one:
+          "This check did not pass. “{{action}}” stays unavailable until it is fixed",
+        blockingTitle_other:
+          "These checks did not pass. “{{action}}” stays unavailable until they are fixed",
         check: {
           knowledge_base: "Knowledge-base build and source access",
           confirmed: "Model confirmation",

@@ -2911,6 +2911,10 @@ export const bknProjectZhCN = {
           "{{count}} 份文件的原文将纳入网络检索。未开启的文件仅保留证据定位。",
         checksTitle: "发布检查",
         goToBuild: "去构建页处理索引",
+        goToKnowledgeBaseBuild: "去构建页处理知识库文件",
+        blockingTitle: "以下检查没有通过，处理好之前不能“{{action}}”",
+        blockingTitle_one: "以下检查没有通过，处理好之前不能“{{action}}”",
+        blockingTitle_other: "以下检查没有通过，处理好之前不能“{{action}}”",
         check: {
           knowledge_base: "知识库构建与来源权限",
           confirmed: "草稿确认",

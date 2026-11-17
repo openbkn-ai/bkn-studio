@@ -967,6 +967,46 @@ describe("ReleasePublish", () => {
     expect(prepareReleaseMock).not.toHaveBeenCalled();
   });
 
+  it("puts the checks a tick cannot settle first, says writing waits on them, and leads to the fix", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        blocked: true,
+        checks: [
+          { code: "confirmed", passed: true },
+          {
+            accept: "index_not_ready",
+            code: "index",
+            details: { not_configured: 1, ready: 3 },
+            passed: false,
+            reason: "index_not_ready",
+          },
+          { code: "knowledge_base", passed: false, reason: "knowledge_base_not_ready" },
+        ],
+      }),
+    );
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+
+    const notice = (
+      await view.findByText("以下检查没有通过，处理好之前不能“写入网络并回归”")
+    ).closest(".ant-alert") as HTMLElement;
+    expect(within(notice).getByText("知识库构建与来源权限")).toBeInTheDocument();
+    expect(
+      within(notice).getByText("请先按当前模型处理完知识库的全部文件，并核对结果。"),
+    ).toBeInTheDocument();
+    // What a tick settles stays in the check list, after the notice.
+    expect(within(notice).queryByText("本地索引")).toBeNull();
+    expect(within(notice).queryByRole("checkbox")).toBeNull();
+    const checks = view.getByText("发布检查");
+    expect(notice.compareDocumentPosition(checks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(view.getByText("本地索引")).toBeInTheDocument();
+    expect(prepareButton()).toBeDisabled();
+
+    fireEvent.click(within(notice).getByRole("button", { name: "去构建页处理知识库文件" }));
+    expect(onGoToBuild).toHaveBeenCalledWith("unstructured");
+  });
+
   it("shows a prepared release with its regression, and publishes once failures are accepted", async () => {
     getRegressionMock.mockResolvedValue(regression(["passed", "passed", "not_answered"]));
     publishReleaseMock.mockResolvedValue({ knVersion: 8, purgedVersion: 0 });

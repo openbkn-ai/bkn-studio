@@ -28,6 +28,7 @@ import { getRegression, REGRESSION_POLL_MS } from "@/modules/bkn-project/service
 import type { ProjectStatus } from "@/modules/bkn-project/types/publish";
 import type { ProjectVersions, Regression } from "@/modules/bkn-project/types/release";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
+import type { BuildTab } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./Release.module.css";
 
@@ -86,7 +87,7 @@ export function ReleasePublish({
   /** Something was prepared, published or switched: the page reads status and versions again. */
   onChanged: () => void;
   /** Opens the build page, where indexes not ready yet are built. */
-  onGoToBuild?: () => void;
+  onGoToBuild?: (tab?: BuildTab) => void;
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
   /** Opens how the scenario questions did on a release; `prepared` while it is not published. */

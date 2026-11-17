@@ -279,7 +279,11 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "release" ? (
                 <ProjectReleasePage
-                  onGoToBuild={() => go("build")}
+                  onGoToBuild={(tab) =>
+                    void navigate(
+                      `${projectSectionPath(project.id, "build")}${tab ? `?tab=${tab}` : ""}`,
+                    )
+                  }
                   onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => void navigate(projectSectionPath(project.id, "model"))}
                   onReleaseChanged={() => void load()}
