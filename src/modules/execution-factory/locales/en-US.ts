@@ -872,7 +872,14 @@ export const executionFactoryEnUS = {
       },
       consoleNote: "Queries the chosen network as you · read-only, not persisted",
       paramsHint:
-        "Parameters follow the statement's $name references. The type decides how a call's value is converted; change it here.",
+        "Parameters follow the statement's $name references; you can also select a value in the statement and right-click Make parameter. The type decides how a call's value is converted; change it here.",
+      parameterize: {
+        make: "Make parameter",
+        hint: "Replace the selected value with a $parameter, keeping the value as its example; also on the right-click menu",
+        selectValue: "Select a value in the statement first, such as 'S1' or 100.",
+        notValue:
+          "The selection is not a value. Only a string, number, boolean or a list of them can become a parameter.",
+      },
       noNetworkRun: "Choose the knowledge network to query first.",
       noStatementRun: "Write a Cypher statement first.",
       ai: {

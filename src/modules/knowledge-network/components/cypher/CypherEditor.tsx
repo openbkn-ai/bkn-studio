@@ -54,6 +54,11 @@ export const CypherEditor = forwardRef<
     ariaLabel: string;
     /** Shows the statement without letting it be changed, for a reader without edit rights. */
     readOnly?: boolean;
+    /**
+     * Adds 「设为参数」 to the context menu, offered on a selection in an editable statement. The
+     * label is read when the editor mounts.
+     */
+    parameterize?: { label: string; run: () => void };
   }
 >(function CypherEditor(
   {
@@ -67,6 +72,7 @@ export const CypherEditor = forwardRef<
     minHeight = MIN_HEIGHT,
     ariaLabel,
     readOnly = false,
+    parameterize,
   },
   ref,
 ) {
@@ -81,6 +87,8 @@ export const CypherEditor = forwardRef<
   schemaRef.current = schema;
   onRunRef.current = onRun;
   onHistoryRef.current = onHistory;
+  const parameterizeRef = useRef(parameterize);
+  parameterizeRef.current = parameterize;
 
   useImperativeHandle(ref, () => ({
     insert: (text) => {
@@ -167,6 +175,18 @@ export const CypherEditor = forwardRef<
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.Enter, () => onRunRef.current());
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.UpArrow, () => onHistoryRef.current(true));
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.DownArrow, () => onHistoryRef.current(false));
+    if (parameterizeRef.current) {
+      disposables.current.push(
+        editor.addAction({
+          id: "cypher.parameterize",
+          label: parameterizeRef.current.label,
+          precondition: "editorHasSelection && !editorReadonly",
+          contextMenuGroupId: "1_modification",
+          contextMenuOrder: 0,
+          run: () => parameterizeRef.current?.run(),
+        }),
+      );
+    }
     const kinds = {
       label: monaco.languages.CompletionItemKind.Class,
       relation: monaco.languages.CompletionItemKind.Interface,

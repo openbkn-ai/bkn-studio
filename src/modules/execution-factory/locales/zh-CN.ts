@@ -829,7 +829,14 @@ export const executionFactoryZhCN = {
           "LIMIT 1 没配 ORDER BY 时，取到哪一行不确定，每次调用可能不同。请加 ORDER BY，或改用 count()、max() 等聚合。",
       },
       consoleNote: "以你的身份查询所选知识网络 · 只读、不落库",
-      paramsHint: "参数跟随语句中的 $名称 自动增删；类型决定调用时的值如何转换，可在这里修改。",
+      paramsHint:
+        "参数跟随语句中的 $名称 自动增删；也可以在语句里选中一个值，右键「设为参数」。类型决定调用时的值如何转换，可在这里修改。",
+      parameterize: {
+        make: "设为参数",
+        hint: "把选中的值换成 $参数，原值留作参数示例；也可以在语句里右键",
+        selectValue: "先在语句中选中一个值，如 'S1' 或 100。",
+        notValue: "选中的不是值：只有字符串、数字、布尔值或它们的列表能设为参数。",
+      },
       noNetworkRun: "先选择要查询的知识网络。",
       noStatementRun: "先写 Cypher 语句。",
       ai: {

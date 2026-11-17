@@ -12,6 +12,7 @@ import {
   ClockCircleOutlined,
   CodeOutlined,
   DeleteOutlined,
+  DollarOutlined,
   DownOutlined,
   ApiOutlined,
   EllipsisOutlined,
@@ -105,11 +106,21 @@ import {
   type CypherFunctionSuggestion,
 } from "@/modules/execution-factory/utils/cypher-function-ai";
 import {
+  cypherDraftInputs,
   readCypherFunctionDraft,
   withoutCypherFunctionDraft,
   type CypherFunctionDraft,
 } from "@/modules/execution-factory/utils/cypher-function-draft";
-import { CypherEditor } from "@/modules/knowledge-network/components/cypher/CypherEditor";
+import {
+  CypherEditor,
+  type CypherEditorHandle,
+} from "@/modules/knowledge-network/components/cypher/CypherEditor";
+import {
+  cypherParameterReference,
+  parseCypherLiteral,
+  suggestCypherParameterName,
+  type CypherLiteral,
+} from "@/modules/knowledge-network/cypher/cypher-parameters";
 import { CypherFunctionAiModal } from "@/modules/execution-factory/scenes/function-workbench/CypherFunctionAiModal";
 import { runCypherQuery } from "@/modules/knowledge-network/cypher/cypher-query.service";
 
@@ -333,13 +344,51 @@ export function FunctionWorkbenchScene({
     [active, isCypher],
   );
 
+  const cypherEditorRef = useRef<CypherEditorHandle>(null);
+  /** The value 「设为参数」 just replaced, to type the input it becomes and keep as its example. */
+  const parameterizedRef = useRef<{ name: string; literal: CypherLiteral } | null>(null);
+
   /** A statement's `$name` parameters are its inputs, so they follow the statement as it is typed. */
   const handleCypherCodeChange = (code: string) => {
     if (!active || !canEditFunction) {
       return;
     }
-    const inputs = syncCypherInputs(active.inputs, code);
+    let inputs = syncCypherInputs(active.inputs, code);
+    const parameterized = parameterizedRef.current;
+    parameterizedRef.current = null;
+    if (parameterized && !active.inputs.some((input) => input.name === parameterized.name)) {
+      const [typed] = cypherDraftInputs([parameterized.name], {
+        [parameterized.name]: parameterized.literal,
+      });
+      inputs = inputs.map((input) =>
+        input.name === parameterized.name && typed ? { ...typed, required: input.required } : input,
+      );
+    }
     patchActive(isSameInputList(active.inputs, inputs) ? { code } : { code, inputs });
+  };
+
+  /** Turns the selected value into a `$name` input, keeping the value as its example. */
+  const parameterizeSelection = () => {
+    if (!active) {
+      return;
+    }
+    const selection = cypherEditorRef.current?.selection();
+    if (!selection) {
+      void message.warning(t("executionFactory.cypherFunction.parameterize.selectValue"));
+      return;
+    }
+    const literal = parseCypherLiteral(selection.text);
+    if (!literal) {
+      void message.warning(t("executionFactory.cypherFunction.parameterize.notValue"));
+      return;
+    }
+    const name = suggestCypherParameterName(
+      selection.before,
+      active.inputs.map((input) => input.name ?? ""),
+    );
+    parameterizedRef.current = { name, literal };
+    cypherEditorRef.current?.insert(cypherParameterReference(name));
+    setDockTab("params");
   };
 
   /** A generated statement replaces the current one; the Agent's word on each parameter fills blanks. */
@@ -1755,13 +1804,27 @@ export function FunctionWorkbenchScene({
                           // The Cypher Agent checks its own permission; the statement lands in
                           // the draft, so editing is all this page asks for.
                           canEditFunction ? (
-                            <AppButton
-                              icon={<ThunderboltOutlined />}
-                              onClick={() => setCypherAiOpen(true)}
-                              type="primary"
-                            >
-                              {t("executionFactory.cypherFunction.ai.open")}
-                            </AppButton>
+                            <>
+                              <Tooltip
+                                title={t("executionFactory.cypherFunction.parameterize.hint")}
+                              >
+                                <AppButton
+                                  data-testid="cypher-function-parameterize"
+                                  disabled={!active.code.trim()}
+                                  icon={<DollarOutlined />}
+                                  onClick={parameterizeSelection}
+                                >
+                                  {t("executionFactory.cypherFunction.parameterize.make")}
+                                </AppButton>
+                              </Tooltip>
+                              <AppButton
+                                icon={<ThunderboltOutlined />}
+                                onClick={() => setCypherAiOpen(true)}
+                                type="primary"
+                              >
+                                {t("executionFactory.cypherFunction.ai.open")}
+                              </AppButton>
+                            </>
                           ) : null
                         ) : (
                           <>
@@ -1874,7 +1937,12 @@ export function FunctionWorkbenchScene({
                         onChange={handleCypherCodeChange}
                         onHistory={() => undefined}
                         onRun={() => void handleRun()}
+                        parameterize={{
+                          label: t("executionFactory.cypherFunction.parameterize.make"),
+                          run: parameterizeSelection,
+                        }}
                         readOnly={!canEditFunction}
+                        ref={cypherEditorRef}
                         schema={cypher.schema}
                         value={active.code}
                       />

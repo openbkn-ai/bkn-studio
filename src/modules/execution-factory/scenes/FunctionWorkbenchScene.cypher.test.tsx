@@ -60,26 +60,64 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 // Monaco does not run in jsdom: a textarea stands in for the Cypher editor.
-vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", () => ({
-  CypherEditor: ({
-    ariaLabel,
-    onChange,
-    readOnly,
-    value,
-  }: {
-    ariaLabel: string;
-    onChange: (value: string) => void;
-    readOnly?: boolean;
-    value: string;
-  }) => (
-    <textarea
-      aria-label={ariaLabel}
-      onChange={(event) => onChange(event.target.value)}
-      readOnly={readOnly}
-      value={value}
-    />
-  ),
-}));
+vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", async () => {
+  const { forwardRef, useImperativeHandle, useRef } = await import("react");
+  return {
+    CypherEditor: forwardRef(function MockCypherEditor(
+      {
+        ariaLabel,
+        onChange,
+        parameterize,
+        readOnly,
+        value,
+      }: {
+        ariaLabel: string;
+        onChange: (value: string) => void;
+        parameterize?: { label: string; run: () => void };
+        readOnly?: boolean;
+        value: string;
+      },
+      ref,
+    ) {
+      const area = useRef<HTMLTextAreaElement>(null);
+      useImperativeHandle(ref, () => ({
+        focus: () => area.current?.focus(),
+        insert: (text: string) => {
+          const node = area.current;
+          if (!node) return;
+          onChange(
+            node.value.slice(0, node.selectionStart) + text + node.value.slice(node.selectionEnd),
+          );
+        },
+        selection: () => {
+          const node = area.current;
+          if (!node || node.selectionStart === node.selectionEnd) return null;
+          return {
+            text: node.value.slice(node.selectionStart, node.selectionEnd),
+            before: node.value.slice(0, node.selectionStart),
+          };
+        },
+      }));
+      return (
+        <>
+          <textarea
+            aria-label={ariaLabel}
+            onChange={(event) => onChange(event.target.value)}
+            readOnly={readOnly}
+            ref={area}
+            value={value}
+          />
+          {/* Stands in for the context-menu item Monaco shows on a selection. */}
+          {parameterize && !readOnly ? (
+            <button data-testid="cypher-editor-context" onClick={parameterize.run} type="button">
+              {parameterize.label}
+            </button>
+          ) : null}
+        </>
+      );
+    }),
+  };
+});
 
 vi.mock("@/modules/knowledge-network/scenes/NetworkSelect", () => ({
   NetworkSelect: () => null,
@@ -285,6 +323,37 @@ describe("FunctionWorkbenchScene Cypher functions", () => {
       parameters: { code: "" },
     });
     await waitFor(() => expect(screen.getByText(/"value": 16/)).toBeTruthy());
+  });
+
+  it("turns a selected value into an input typed by it, from the context menu or the button", async () => {
+    const query = "MATCH (o:po) WHERE o.qty > 100 AND o.code = 'S1' RETURN count(o) AS n";
+    router.state = { cypherDraft: { query, knId: "kn-1" } };
+    cypher.runCypherQuery.mockResolvedValue({
+      ok: true,
+      result: { columns: [{ name: "n" }], entries: [{ n: 4 }] },
+      exchange: { url: "", request: {}, status: 200, latencyMs: 8, response: {} },
+    });
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+    await waitFor(() => expect(statementEditor().value).toBe(query));
+
+    const select = (text: string) => {
+      const start = statementEditor().value.indexOf(text);
+      statementEditor().setSelectionRange(start, start + text.length);
+    };
+    select("100");
+    fireEvent.click(screen.getByTestId("cypher-editor-context"));
+    select("'S1'");
+    fireEvent.click(screen.getByTestId("cypher-function-parameterize"));
+
+    expect(statementEditor().value).toBe(
+      "MATCH (o:po) WHERE o.qty > $qty AND o.code = $code RETURN count(o) AS n",
+    );
+    // The replaced values are the examples a trial run starts from.
+    fireEvent.click(runButton());
+    await waitFor(() => expect(cypher.runCypherQuery).toHaveBeenCalledTimes(1));
+    expect(cypher.runCypherQuery.mock.calls[0][0]).toMatchObject({
+      parameters: { qty: 100, code: "S1" },
+    });
   });
 
   it("refuses a value result with more than one row, as the saved function would", async () => {

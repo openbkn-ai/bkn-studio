@@ -20,7 +20,6 @@ import {
   CloseOutlined,
   ColumnHeightOutlined,
   DatabaseOutlined,
-  DollarOutlined,
   ExportOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -79,15 +78,7 @@ import {
   saveHistory,
   stepHistory,
 } from "@/modules/knowledge-network/cypher/cypher-history";
-import {
-  cypherLiteralText,
-  cypherParameterReference,
-  cypherParameterValue,
-  cypherParameterValues,
-  parseCypherLiteral,
-  scanCypherParameters,
-  suggestCypherParameterName,
-} from "@/modules/knowledge-network/cypher/cypher-parameters";
+import { scanCypherParameters } from "@/modules/knowledge-network/cypher/cypher-parameters";
 import { splitExplain, withExplain } from "@/modules/knowledge-network/cypher/cypher-plan";
 import {
   getObjectTypeDisplayKeys,
@@ -305,48 +296,16 @@ export function CypherQueryScene({
 
   useEffect(() => saveHistory(knId, history), [history, knId]);
 
-  /* ---------------- parameters ---------------- */
-
-  /** Values typed for the statement's `$name` parameters, as Cypher literals, by name. */
-  const [parameterTexts, setParameterTexts] = useState<Record<string, string>>({});
-  /** Why the last 「设为参数」 did nothing; cleared by the next edit. */
-  const [parameterHint, setParameterHint] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
-  const parameterNames = useMemo(() => scanCypherParameters(cypherText).names, [cypherText]);
 
-  /** The values a run of `query` sends: those typed for the parameters it uses. */
-  const parametersFor = (query: string) =>
-    cypherParameterValues(scanCypherParameters(query).names, parameterTexts);
-
-  /** Turns the selected value into a `$name` parameter, keeping the value to run it with. */
-  const parameterizeSelection = () => {
-    const selection = editorRef.current?.selection();
-    if (!selection) {
-      setParameterHint(t("knowledgeNetwork.cypherQuery.parameters.selectValue"));
-      return;
-    }
-    if (!parseCypherLiteral(selection.text)) {
-      setParameterHint(t("knowledgeNetwork.cypherQuery.parameters.notValue"));
-      return;
-    }
-    const name = suggestCypherParameterName(selection.before, parameterNames);
-    setParameterTexts((current) => ({ ...current, [name]: selection.text.trim() }));
-    setParameterHint(null);
-    editorRef.current?.insert(cypherParameterReference(name));
-  };
-
+  /** Statements are published as written; the function workbench sets up their `$name` inputs. */
   const publishDraft = (): CypherFunctionDraft => {
     const query = cypherText.trim();
     const names = scanCypherParameters(query).names;
     return {
       query,
       knId: networkId,
-      inputs: cypherDraftInputs(
-        names,
-        Object.fromEntries(
-          names.map((name) => [name, cypherParameterValue(parameterTexts[name] ?? "")]),
-        ),
-      ),
+      inputs: cypherDraftInputs(names, {}),
     };
   };
 
@@ -622,7 +581,7 @@ export function CypherQueryScene({
   const submit = () => {
     if (mode === "cypher") {
       const query = cypherText.trim();
-      if (query) runNew(query, parametersFor(query));
+      if (query) runNew(query);
       return;
     }
     const question = askText.trim();
@@ -1162,7 +1121,6 @@ export function CypherQueryScene({
                 minHeight={editorExpanded ? EDITOR_MIN_HEIGHT_EXPANDED : undefined}
                 onChange={(value) => {
                   historyPosition.current = -1;
-                  setParameterHint(null);
                   setCypherText(value);
                 }}
                 onHistory={stepThroughHistory}
@@ -1189,47 +1147,7 @@ export function CypherQueryScene({
                 value={askText}
               />
             )}
-            {mode === "cypher" && parameterNames.length > 0 ? (
-              <div className={styles.parameterBar} data-testid="cypher-parameters">
-                <Tooltip title={t("knowledgeNetwork.cypherQuery.parameters.hint")}>
-                  <span className={styles.parameterTitle}>
-                    {t("knowledgeNetwork.cypherQuery.parameters.title")}
-                  </span>
-                </Tooltip>
-                {parameterNames.map((name) => (
-                  <label className={styles.parameterField} key={name}>
-                    <span className={styles.parameterName}>${name}</span>
-                    <Input
-                      aria-label={name}
-                      onChange={(event) =>
-                        setParameterTexts((current) => ({ ...current, [name]: event.target.value }))
-                      }
-                      onPressEnter={submit}
-                      placeholder={t("knowledgeNetwork.cypherQuery.parameters.placeholder")}
-                      size="small"
-                      value={parameterTexts[name] ?? ""}
-                    />
-                  </label>
-                ))}
-              </div>
-            ) : null}
             <div className={styles.editorActions}>
-              {parameterHint && mode === "cypher" ? (
-                <span className={styles.agentHint}>{parameterHint}</span>
-              ) : null}
-              {mode === "cypher" ? (
-                <Tooltip title={t("knowledgeNetwork.cypherQuery.parameters.makeHint")}>
-                  <Button
-                    data-testid="cypher-editor-parameterize"
-                    disabled={!cypherText.trim()}
-                    icon={<DollarOutlined />}
-                    onClick={parameterizeSelection}
-                    size="small"
-                  >
-                    {t("knowledgeNetwork.cypherQuery.parameters.make")}
-                  </Button>
-                </Tooltip>
-              ) : null}
               {mode === "cypher" && onPublishFunction ? (
                 <Tooltip title={t("knowledgeNetwork.cypherQuery.publish.hint")}>
                   <Button
@@ -1254,9 +1172,7 @@ export function CypherQueryScene({
                     data-testid="cypher-editor-plan"
                     disabled={!cypherText.trim()}
                     icon={<ProfileOutlined />}
-                    onClick={() =>
-                      runNew(withExplain(cypherText.trim()), parametersFor(cypherText))
-                    }
+                    onClick={() => runNew(withExplain(cypherText.trim()))}
                     size="small"
                   >
                     {t("knowledgeNetwork.cypherQuery.editor.plan")}
@@ -1336,18 +1252,6 @@ export function CypherQueryScene({
                 onLoad={() => {
                   setMode("cypher");
                   setCypherText(frame.query);
-                  const loaded = frame.parameters;
-                  if (loaded) {
-                    setParameterTexts((current) => ({
-                      ...current,
-                      ...Object.fromEntries(
-                        Object.entries(loaded).map(([name, value]) => [
-                          name,
-                          cypherLiteralText(value),
-                        ]),
-                      ),
-                    }));
-                  }
                   // An AI frame brings its question too, so switching modes finds both.
                   if (frame.ai) setAskText(frame.ai.question);
                 }}

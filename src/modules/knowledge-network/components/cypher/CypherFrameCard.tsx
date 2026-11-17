@@ -235,11 +235,11 @@ export function CypherFrameCard({
           </div>
         ) : null}
         {frame.query ? (
-          <Tooltip title={t("knowledgeNetwork.cypherQuery.frames.loadQuery")}>
-            <button className={styles.frameQuery} onClick={onLoad} type="button">
-              <code>{frame.query}</code>
-            </button>
-          </Tooltip>
+          // No tooltip: centred over a three-line statement it covered the question above it, and
+          // the pen in the actions already says 「载入编辑器」.
+          <button className={styles.frameQuery} onClick={onLoad} type="button">
+            <code>{frame.query}</code>
+          </button>
         ) : null}
       </div>
       <div className={styles.frameActions}>
