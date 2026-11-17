@@ -215,7 +215,7 @@ export const dataConnectEnUS = {
     discoverNextRun: "Next Run",
     discoverLastRun: "Last Run",
     discoverTaskStatus: "Task Status",
-    discoverTriggerType: "Trigger Type",
+    discoverTriggerType: "Trigger type",
     discoverProgress: "Progress",
     discoverMessage: "Message",
     discoverFinishTime: "Finish Time",

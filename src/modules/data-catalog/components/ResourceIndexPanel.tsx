@@ -478,6 +478,13 @@ export function ResourceIndexPanel({
           : "-",
     },
     {
+      dataIndex: "triggerType",
+      title: t("dataCatalog.buildSchedule.taskSource"),
+      width: 140,
+      render: (value: BuildTask["triggerType"]) =>
+        t(`dataCatalog.buildSchedule.${value ?? "manual"}`),
+    },
+    {
       dataIndex: "status",
       title: t("dataCatalog.task.detailSections.status"),
       width: 120,

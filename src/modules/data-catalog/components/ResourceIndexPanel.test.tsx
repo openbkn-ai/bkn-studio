@@ -619,6 +619,39 @@ describe("ResourceIndexPanel", () => {
     expect(screen.getByTestId("selection-completed-task").textContent).toBe("false");
   });
 
+  it.each(["manual", "scheduled", undefined] as const)(
+    "shows the task origin %s immediately after the execution type",
+    async (triggerType) => {
+      const historyTask = buildTask({ id: "history-task", executeType: "full", triggerType });
+      listBuildTaskPageMock.mockResolvedValue({ items: [historyTask], total: 1 });
+      render(
+        <MemoryRouter>
+          <ResourceIndexPanel
+            active
+            catalog={manageableCatalog}
+            indexView="tasks"
+            indexViewExplicit
+            onIndexViewChange={vi.fn()}
+            onRefresh={vi.fn()}
+            resource={resource}
+            tasks={[historyTask]}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(
+        await screen.findByText(`dataCatalog.buildSchedule.${triggerType ?? "manual"}`),
+      ).toBeInTheDocument();
+      const sourceHeader = screen.getByText("dataCatalog.buildSchedule.taskSource");
+      expect(sourceHeader.previousElementSibling).toBe(
+        screen.getByText("dataCatalog.build.executeType"),
+      );
+      expect(sourceHeader.nextElementSibling).toBe(
+        screen.getByText("dataCatalog.task.detailSections.status"),
+      );
+    },
+  );
+
   it("loads the selected history page from Vega with the resource filter", async () => {
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 21 });
     render(

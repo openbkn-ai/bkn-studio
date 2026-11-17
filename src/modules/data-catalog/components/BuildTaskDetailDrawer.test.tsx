@@ -73,7 +73,7 @@ describe("BuildTaskDetailDrawer origin", () => {
     expect(screen.getByText("dataCatalog.task.statuses.failed")).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(getBuildTaskMock).toHaveBeenCalledWith("task-1");
-    const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
+    const nameRow = screen.getByText("dataCatalog.task.fields.buildScheduleName").closest("tr");
     expect(within(nameRow!).getByText("-")).toBeInTheDocument();
   });
 
@@ -88,8 +88,8 @@ describe("BuildTaskDetailDrawer origin", () => {
 
     expect(await screen.findByText("Nightly warehouse rebuild_定时全量构建")).toBeInTheDocument();
     const executionRow = screen.getByText("dataCatalog.build.executeType").closest("tr");
-    const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
-    const idRow = screen.getByText("dataCatalog.buildSchedule.scheduleId").closest("tr");
+    const nameRow = screen.getByText("dataCatalog.task.fields.buildScheduleName").closest("tr");
+    const idRow = screen.getByText("dataCatalog.task.fields.buildScheduleId").closest("tr");
     expect(executionRow?.nextElementSibling).toBe(nameRow);
     expect(nameRow?.nextElementSibling).toBe(idRow);
     expect(within(idRow!).getByText("schedule-1")).toBeInTheDocument();
@@ -102,10 +102,10 @@ describe("BuildTaskDetailDrawer origin", () => {
       render(<BuildTaskDetailDrawer open resource={null} taskId="task-1" onClose={vi.fn()} />);
 
       expect(await screen.findByText("dataCatalog.buildSchedule.manual")).toBeInTheDocument();
-      const scheduleRow = screen.getByText("dataCatalog.buildSchedule.scheduleId").closest("tr");
+      const scheduleRow = screen.getByText("dataCatalog.task.fields.buildScheduleId").closest("tr");
       expect(scheduleRow).not.toBeNull();
       expect(within(scheduleRow!).getByText("-")).toBeInTheDocument();
-      const nameRow = screen.getByText("dataCatalog.buildSchedule.name").closest("tr");
+      const nameRow = screen.getByText("dataCatalog.task.fields.buildScheduleName").closest("tr");
       expect(within(nameRow!).getByText("-")).toBeInTheDocument();
     },
   );

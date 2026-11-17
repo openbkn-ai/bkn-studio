@@ -315,10 +315,10 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.build.executeType")}>
               {executeTypeLabel ?? EMPTY_VALUE}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.buildSchedule.name")}>
+            <Descriptions.Item label={t("dataCatalog.task.fields.buildScheduleName")}>
               {task.scheduleName || EMPTY_VALUE}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.buildSchedule.scheduleId")}>
+            <Descriptions.Item label={t("dataCatalog.task.fields.buildScheduleId")}>
               {task.scheduleId || EMPTY_VALUE}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.primaryKeyFields")}>
