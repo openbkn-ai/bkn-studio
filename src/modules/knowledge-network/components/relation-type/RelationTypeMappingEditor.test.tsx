@@ -223,7 +223,7 @@ describe("RelationTypeMappingEditor ends", () => {
     (id) => ({ color: "#1677ff", id, name: id }) as KnowledgeNetworkObjectTypeRecord,
   );
 
-  it("chooses the ends above the rules, with the semantics between them", () => {
+  it("puts the ends, then the required rules, above the optional semantics", () => {
     renderWithoutAntdStyles(
       <RelationTypeMappingEditor
         networkId="n1"
@@ -238,8 +238,8 @@ describe("RelationTypeMappingEditor ends", () => {
     const order = [
       screen.getByText("knowledgeNetwork.relationTypeConfigEnds"),
       screen.getByRole("combobox", { name: "knowledgeNetwork.relationTypeMappingSourcePoint" }),
-      screen.getByText("relation semantics"),
       screen.getByText("knowledgeNetwork.relationTypeConfigRules"),
+      screen.getByText("relation semantics"),
     ];
     order.slice(1).forEach((node, index) => {
       expect(

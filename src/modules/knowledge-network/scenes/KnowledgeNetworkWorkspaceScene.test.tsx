@@ -487,6 +487,25 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
   });
 });
 
+describe("KnowledgeNetworkWorkspaceScene resource list padding", () => {
+  // Each list panel pads itself; a padded section around it would double the gutter.
+  it.each(["concept-groups", "object-types", "relation-types", "action-types"] as const)(
+    "lays the %s list flush against the workspace",
+    async (section) => {
+      render(
+        <EntitlementContext.Provider
+          value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+        >
+          <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+        </EntitlementContext.Provider>,
+      );
+
+      const content = await screen.findByTestId("resource-content");
+      expect(content.parentElement?.className).toMatch(/workspaceSectionFlush/);
+    },
+  );
+});
+
 describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
   beforeEach(() => {
     mocks.extensionEntries = { items: [], upgrades: [] };
