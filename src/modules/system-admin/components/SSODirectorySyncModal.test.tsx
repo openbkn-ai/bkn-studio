@@ -124,12 +124,12 @@ describe("SSO directory synchronization", () => {
     });
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
     await screen.findByLabelText("systemAdmin.sso.sync.organization");
-    expect(screen.queryByLabelText("systemAdmin.sso.sync.enabled")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("systemAdmin.sso.sync.enabled")).not.toBeChecked();
     expect(screen.getByLabelText("systemAdmin.sso.sync.roleSyncEnabled")).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" }));
     await waitFor(() => expect(api.run).toHaveBeenCalledWith("casdoor"));
   });
-  it("enables user sync when saving and keeps role sync off by default", async () => {
+  it("saves role sync independently of user and department sync", async () => {
     api.get.mockResolvedValue({ ...view, config: { ...view.config, enabled: false } });
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
     await screen.findByLabelText("systemAdmin.sso.sync.organization");
@@ -139,7 +139,20 @@ describe("SSO directory synchronization", () => {
     await waitFor(() =>
       expect(api.save).toHaveBeenCalledWith(
         "casdoor",
-        expect.objectContaining({ enabled: true, role_sync_enabled: true }),
+        expect.objectContaining({ enabled: false, role_sync_enabled: true }),
+      ),
+    );
+  });
+  it("can disable both kinds of sync", async () => {
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    expect(screen.getByLabelText("systemAdmin.sso.sync.enabled")).toBeChecked();
+    fireEvent.click(screen.getByLabelText("systemAdmin.sso.sync.enabled"));
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        "casdoor",
+        expect.objectContaining({ enabled: false, role_sync_enabled: false }),
       ),
     );
   });
