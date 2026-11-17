@@ -38,6 +38,7 @@ export function ResetPasswordModal({ onClose, open, user }: ResetPasswordModalPr
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = () => {
+    if (user.source !== "local") return;
     void form.validateFields().then(async (values) => {
       setSubmitting(true);
       try {
@@ -60,7 +61,7 @@ export function ResetPasswordModal({ onClose, open, user }: ResetPasswordModalPr
       okText={t("systemAdmin.users.reset.submit")}
       onCancel={onClose}
       onOk={handleSubmit}
-      open={open}
+      open={open && user.source === "local"}
       rootClassName={[styles.adminOverlay, modalStyles.resetPasswordModal].join(" ")}
       title={t("systemAdmin.users.reset.title", { name: user.name })}
     >

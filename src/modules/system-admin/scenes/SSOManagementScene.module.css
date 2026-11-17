@@ -98,6 +98,13 @@
   white-space: normal;
 }
 
+.formSection > .switchField :global(.ant-form-item-label > label),
+.advancedSection :global(.ant-collapse-header) {
+  color: var(--admin-color-heading);
+  font-size: 14px;
+  font-weight: var(--admin-font-weight-medium);
+}
+
 .inactiveCapability {
   color: var(--admin-color-muted);
   cursor: help;
@@ -120,8 +127,7 @@
 
 .advancedSection :global(.ant-collapse-header) {
   padding: 0 !important;
-  color: var(--admin-color-heading);
-  font-weight: var(--admin-font-weight-strong);
+  align-items: center !important;
 }
 
 .advancedSection :global(.ant-collapse-content-box) {

@@ -23,6 +23,7 @@ export type ResourceGrant = {
 export type AdminUser = {
   account: string;
   accountType: string;
+  source?: string;
   builtin?: boolean;
   /** Department IDs for the user (many-to-many; absent from list endpoints and obtained from details or department-member lookup). */
   departmentIds?: string[];
@@ -41,6 +42,7 @@ export type AdminUser = {
 };
 
 export type AdminDepartment = {
+  source?: string;
   code?: string;
   email?: string;
   id: string;
@@ -95,10 +97,10 @@ export type CreateUserInput = {
 export type UpdateUserInput = {
   /** Replacement semantics: an array replaces the whole set, [] clears it, and omission is decided by the caller. */
   departmentIds: string[];
-  email: string;
-  enabled: boolean;
-  name: string;
-  telephone: string;
+  email?: string;
+  enabled?: boolean;
+  name?: string;
+  telephone?: string;
 };
 
 export type DepartmentInput = {

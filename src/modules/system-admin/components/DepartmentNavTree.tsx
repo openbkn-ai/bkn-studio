@@ -263,6 +263,11 @@ export function DepartmentNavTree({
                 {highlightName(dept.name, debouncedDeptSearch)}
               </span>
             </Tooltip>
+            {dept.source === "sso" && (
+              <span className={navStyles.orgBadge}>
+                {t("systemAdmin.users.identitySources.sso")}
+              </span>
+            )}
             {dept.type === "org" ? (
               <span className={navStyles.orgBadge}>
                 {t("systemAdmin.users.deptDrawer.typeOrg")}

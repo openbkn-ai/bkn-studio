@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Drawer, Form, Input, Select } from "antd";
+import { Alert, Drawer, Form, Input, Select } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -51,6 +51,7 @@ export function DepartmentFormDrawer({
   const [form] = Form.useForm<DeptFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(department);
+  const synced = department?.source === "sso";
   const isRoot = isEdit && !department?.parentId;
 
   const parentOptions = useMemo(() => {
@@ -132,17 +133,23 @@ export function DepartmentFormDrawer({
       }
       width={520}
     >
+      {synced && (
+        <Alert type="info" showIcon message={t("systemAdmin.users.externalDepartmentHint")} />
+      )}
       <Form form={form} layout="vertical" requiredMark>
         <Form.Item
           label={t("systemAdmin.users.deptDrawer.name")}
           name="name"
           rules={[{ required: true, message: t("common.required") }]}
         >
-          <Input placeholder={t("systemAdmin.users.deptDrawer.namePlaceholder")} />
+          <Input
+            disabled={synced}
+            placeholder={t("systemAdmin.users.deptDrawer.namePlaceholder")}
+          />
         </Form.Item>
         <Form.Item label={t("systemAdmin.users.deptDrawer.parent")} name="parentId">
           <Select
-            disabled={isRoot}
+            disabled={isRoot || synced}
             options={
               isRoot
                 ? [{ label: t("systemAdmin.users.deptDrawer.rootNode"), value: "" }]

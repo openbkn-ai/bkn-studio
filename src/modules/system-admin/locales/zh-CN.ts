@@ -866,6 +866,18 @@ export const systemAdminZhCN = {
       builtinRolePermissionCannotModify: "内置角色的权限不可修改",
     },
     users: {
+      identitySources: { local: "本地", ldap: "LDAP", sso: "单点登录", external: "第三方" },
+      externalProfileHint:
+        "该用户的名称、邮箱和电话由身份源管理，请到身份源修改。密码也在身份源中管理。",
+      externalDepartmentHint:
+        "该部门来自身份源同步，名称和上级部门由身份源管理；其他信息可在此维护。",
+      syncedMembershipHint:
+        "身份源管理的部门成员关系会在后续登录或同步时更新，手工修改可能被覆盖。本地部门关系可单独维护。",
+      deleteExternalUserConfirm:
+        "确定删除用户「{{name}}」（{{account}}）吗？这只会删除 OpenBKN 中的用户及其权限绑定，不会删除身份源用户。后续登录或目录同步可能重新创建该用户。如需禁止访问，建议停用。",
+      deleteExternalDeptConfirm:
+        "确定删除部门「{{name}}」吗？身份源中的部门不会被删除，后续登录或目录同步可能重新创建该部门。",
+
       title: "用户管理",
       description: "左侧选择组织部门，右侧管理平台用户与账号。",
       tabUsers: "用户",

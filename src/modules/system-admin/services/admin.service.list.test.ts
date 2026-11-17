@@ -24,6 +24,20 @@ describe("admin.service complete lookups", () => {
     vi.unstubAllEnvs();
   });
 
+  it("preserves user and department identity sources from the API", async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: { total: 1, users: [{ id: "external", name: "External", source: "sso" }] },
+      })
+      .mockResolvedValueOnce({
+        data: { total: 1, departments: [{ id: "synced", name: "Synced", source: "sso" }] },
+      });
+    const { listUsersPage, listDepartments } =
+      await import("@/modules/system-admin/services/admin.service");
+    expect((await listUsersPage()).users[0]?.source).toBe("sso");
+    expect((await listDepartments())[0]?.source).toBe("sso");
+  });
+
   it("collects every user page", async () => {
     getMock
       .mockResolvedValueOnce({

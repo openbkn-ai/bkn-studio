@@ -344,11 +344,12 @@ export function SSOManagementScene() {
           loading={loading}
           dataSource={page.entries}
           pagination={false}
-          scroll={{ x: 820 }}
+          scroll={{ x: 1000 }}
           columns={[
             {
               title: label("display_name"),
               dataIndex: "display_name",
+              width: "30%",
               render: (_, row) => (
                 <div className={styles.nameCell}>
                   <div className={ssoStyles.providerName}>
@@ -368,13 +369,13 @@ export function SSOManagementScene() {
             {
               title: label("adapter"),
               dataIndex: "adapter",
-              width: 130,
+              width: "14%",
               render: (adapter: SSOProvider["adapter"]) =>
                 adapter === "casdoor" ? "Casdoor" : label("generic"),
             },
             {
               title: label("status"),
-              width: 110,
+              width: "12%",
               render: (_, row) => (
                 <LightStatusTag tone={row.enabled ? "success" : "neutral"}>
                   {label(row.enabled ? "enabledStatus" : "disabledStatus")}
@@ -383,18 +384,18 @@ export function SSOManagementScene() {
             },
             {
               title: label("login_enabled"),
-              width: 120,
+              width: "15%",
               render: (_, row) => capabilityCell(row.login_enabled, row),
             },
             {
               title: label("exchange_enabled"),
-              width: 150,
+              width: "17%",
               render: (_, row) => capabilityCell(row.exchange_enabled, row),
             },
             {
               title: label("actions"),
               fixed: "right",
-              width: 140,
+              width: "12%",
               render: (_, row) => (
                 <Space size="small">
                   <AppButton
@@ -638,6 +639,7 @@ export function SSOManagementScene() {
           <Collapse
             className={ssoStyles.advancedSection}
             ghost
+            expandIconPosition="end"
             activeKey={advancedKeys}
             onChange={(keys) => setAdvancedKeys(typeof keys === "string" ? [keys] : keys)}
             items={[

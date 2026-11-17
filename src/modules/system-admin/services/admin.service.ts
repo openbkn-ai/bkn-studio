@@ -484,7 +484,11 @@ export async function getUser(
     if (!user) {
       throw new Error("user not found");
     }
-    return wait({ ...user, departmentIds: [...(user.departmentIds ?? [])] });
+    return wait({
+      ...user,
+      source: user.source ?? "local",
+      departmentIds: [...(user.departmentIds ?? [])],
+    });
   }
   const response = await http.get<BackendUser>(`${ADMIN}/users/${encodeURIComponent(id)}`, {
     skipErrorToast: options?.skipErrorToast,
@@ -666,10 +670,10 @@ export async function updateUser(
       throw new Error("user not found");
     }
     Object.assign(user, {
-      name: input.name,
-      email: input.email,
-      telephone: input.telephone,
-      enabled: input.enabled,
+      ...(input.name === undefined ? {} : { name: input.name }),
+      ...(input.email === undefined ? {} : { email: input.email }),
+      ...(input.telephone === undefined ? {} : { telephone: input.telephone }),
+      ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
       departmentIds: [...input.departmentIds],
       updatedAt: now(),
     });
@@ -977,6 +981,7 @@ export async function setRolePermission(
 // ---- backend mappers (real path) -------------------------------------------
 
 type BackendUser = {
+  source?: string;
   Departments?: string[];
   account?: string;
   account_type?: string;
@@ -998,6 +1003,7 @@ type BackendUser = {
 // Department endpoints return PascalCase, unlike the lowercase users/roles payloads,
 // so both naming styles are supported.
 type BackendDept = {
+  source?: string;
   Code?: string;
   CreatedAt?: string;
   Email?: string;
@@ -1078,6 +1084,7 @@ function enrichMockUserListItem(user: AdminUser): AdminUser {
   const userRoles = roles.filter((role) => role.accessorIds.includes(user.id));
   return {
     ...user,
+    source: user.source ?? "local",
     departmentIds: [...deptIds],
     departmentNames: deptIds.map((id) => departments.find((dept) => dept.id === id)?.name ?? id),
     roleIds: userRoles.map((role) => role.id),
@@ -1093,6 +1100,7 @@ function mapUser(item: BackendUser, detail = false): AdminUser {
   return {
     id: item.id,
     account: item.account ?? item.id,
+    source: item.source,
     name: item.name ?? item.account ?? item.id,
     email: item.email ?? "",
     telephone: item.telephone ?? "",
@@ -1110,6 +1118,7 @@ function mapDept(item: BackendDept): AdminDepartment {
   const id = item.ID ?? item.id ?? "";
   return {
     id,
+    source: item.source,
     // ParentID "" means top-level and maps to null.
     parentId: item.ParentID || item.parent_id || null,
     name: item.Name || item.name || item.dept_name || item.department_name || id,
