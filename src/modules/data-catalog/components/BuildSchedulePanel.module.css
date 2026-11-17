@@ -11,6 +11,20 @@
   min-width: 0;
 }
 
+.nameLink {
+  max-width: 100%;
+  min-width: 0;
+  padding-inline: 0;
+}
+
+.cellEllipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .actionMore {
   min-width: 24px;
   padding-inline: 0;

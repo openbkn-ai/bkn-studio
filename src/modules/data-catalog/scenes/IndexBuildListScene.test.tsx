@@ -116,6 +116,7 @@ describe("IndexBuildListScene", () => {
     expect(source).toBeGreaterThan(-1);
     expect(status).toBeLessThan(source);
     expect(progress).toBeLessThan(source);
+    expect(headers).not.toContain("dataCatalog.buildSchedule.scheduleId");
   });
 
   it("shows the linked schedule scope even when no tasks have been created", async () => {
@@ -174,7 +175,7 @@ describe("IndexBuildListScene", () => {
     expect(
       within(scheduledRow).getByText("dataCatalog.buildSchedule.scheduled"),
     ).toBeInTheDocument();
-    expect(within(scheduledRow).getByText("deleted-schedule")).toBeInTheDocument();
+    expect(within(scheduledRow).queryByText("deleted-schedule")).not.toBeInTheDocument();
     expect(within(scheduledRow).getByText("dataCatalog.task.statuses.failed")).toBeInTheDocument();
     expect(
       within(screen.getByRole("row", { name: /manual-task/ })).getByText(

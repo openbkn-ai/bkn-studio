@@ -367,12 +367,6 @@ export function IndexBuildListScene() {
       ),
     },
     {
-      dataIndex: "scheduleId",
-      title: t("dataCatalog.buildSchedule.scheduleId"),
-      width: 180,
-      render: (value: BuildTask["scheduleId"]) => <EllipsisText text={value || "-"} />,
-    },
-    {
       dataIndex: "lastProgressTime",
       key: "last_progress_time",
       title: t("dataCatalog.task.fields.lastProgressTime"),
@@ -552,7 +546,7 @@ export function IndexBuildListScene() {
                   }
                 : undefined
             }
-            scroll={{ x: 2120 }}
+            scroll={{ x: 1940 }}
             tableLayout="fixed"
           />
         )}

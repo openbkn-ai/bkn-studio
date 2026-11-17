@@ -211,6 +211,8 @@ export type EmbeddingFieldConfig = {
 export type BuildTask = {
   /** Server-maintained origin; manual creation cannot set these fields. */
   readonly scheduleId?: string;
+  /** Current schedule name returned with task details; absent for deleted schedules and older servers. */
+  readonly scheduleName?: string;
   readonly triggerType?: BuildTaskTriggerType;
   incrementalFields: string[];
   /** Catalog containing the backend task record. Legacy mock data may omit it and derive it from the resource. */

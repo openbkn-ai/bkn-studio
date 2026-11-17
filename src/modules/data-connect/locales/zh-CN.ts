@@ -270,8 +270,8 @@ export const dataConnectZhCN = {
       cancelled: "已取消",
     },
     discoverTriggerTypes: {
-      manual: "手动",
-      scheduled: "定时",
+      manual: "手动触发",
+      scheduled: "定时触发",
     },
     discoverMock: {
       cleanupTimeout:

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -162,6 +162,39 @@ describe("BuildSchedulePanel", () => {
       expect(mocks.get).toHaveBeenCalledWith(schedule.id, { skipErrorToast: true }),
     );
     expect(await screen.findByRole("dialog")).toBeVisible();
+  });
+
+  it.each([
+    "UI演示_定时全量构建_20261117_0908",
+    "NightlyWarehouseFullBuildScheduleForReporting",
+    "QA2775_full_20261116_1801_warehouse_reporting",
+  ])("keeps the full name %s available on focus and in details", async (name) => {
+    const longSchedule = { ...schedule, name };
+    mocks.list.mockResolvedValue({ items: [longSchedule], total: 1 });
+    mocks.get.mockResolvedValue(longSchedule);
+    renderPanel();
+
+    const button = await screen.findByRole("button", { name });
+    expect(button).toHaveTextContent(name);
+    fireEvent.focus(button);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(name);
+    fireEvent.blur(button);
+    fireEvent.click(button);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(name)).toBeVisible();
+    expect(mocks.get).toHaveBeenCalledWith(schedule.id, { skipErrorToast: true });
+  });
+
+  it("reveals a full timezone Cron expression on keyboard focus", async () => {
+    const cronExpr = "CRON_TZ=America/Argentina/Buenos_Aires 0 2 * * *";
+    mocks.list.mockResolvedValue({ items: [{ ...schedule, cronExpr }], total: 1 });
+    renderPanel();
+
+    const expression = await screen.findByText(cronExpr);
+    expect(expression).toHaveAttribute("tabindex", "0");
+    fireEvent.focus(expression);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(cronExpr);
   });
 
   it("loads only the bound resource and shows a failure before any task exists", async () => {
