@@ -62,7 +62,7 @@ export type DirectorySyncConfig = {
   last_error_code: string;
   users: number;
   departments: number;
-  roles: number;
+  roles?: number;
   disabled_users: number;
   retained_departments: number;
 };

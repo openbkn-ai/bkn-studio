@@ -152,6 +152,12 @@ describe("SSO directory synchronization", () => {
     await waitFor(() => expect(api.save).toHaveBeenCalled());
     expect(api.save.mock.calls[0]?.[1]).not.toHaveProperty("role_sync_enabled");
   });
+  it("does not display a role count when the backend does not provide one", async () => {
+    api.get.mockResolvedValue({ ...view, config: { ...view.config, roles: undefined } });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    expect(screen.queryByText("systemAdmin.sso.sync.roles")).not.toBeInTheDocument();
+  });
   it("keeps an operation error after a successful status poll", async () => {
     let poll: (() => void) | undefined;
     const timerHandle = setNodeInterval(() => undefined, 60_000);

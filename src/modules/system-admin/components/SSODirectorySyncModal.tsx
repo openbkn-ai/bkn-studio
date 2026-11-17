@@ -247,7 +247,9 @@ export function SSODirectorySyncModal({
                   label: label("departments"),
                   children: view.config.departments,
                 },
-                { key: "roles", label: label("roles"), children: view.config.roles ?? 0 },
+                ...(view.config.roles == null
+                  ? []
+                  : [{ key: "roles", label: label("roles"), children: view.config.roles }]),
                 {
                   key: "disabled",
                   label: label("disabledUsers"),

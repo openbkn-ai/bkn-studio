@@ -20,7 +20,7 @@ export const systemAdminEnUS = {
         enabled: "Sync users and departments",
         roleSyncEnabled: "Sync roles",
         roleSyncHint:
-          "Import role names and descriptions only. Users, memberships and permissions are not imported. Turning this off or deleting a role at the source retains imported roles. Existing same-name roles are not merged. Changing this setting requires role creation and editing permissions.",
+          "Import role names and descriptions only; synchronization overwrites local edits to those fields. Users, memberships and permissions are not imported. Turning this off or deleting a role at the source retains imported roles. Existing same-name roles are not merged. Changing this setting requires role creation and editing permissions.",
         roles: "Roles synchronized in this run",
         SSO_ROLE_NAME_CONFLICT:
           "A role name conflicts with an existing role. No changes were committed. Rename the Casdoor display name or local role, then retry.",
