@@ -185,6 +185,7 @@ export function ReleaseReviewDialog({
     try {
       await commitDrift(projectId);
       setDraftChanged(false);
+      setSyncConflict(false);
       message.success(t(`${PREFIX}.draftCommitted`));
       void load(reviewed);
     } catch (error) {
@@ -206,6 +207,7 @@ export function ReleaseReviewDialog({
         : action === "discardDrift"
           ? discardDrift(projectId)
           : commitDrift(projectId));
+      setSyncConflict(false);
       message.success(t(`${PREFIX}.${action}Done`));
       void load(reviewed);
     } catch (error) {
