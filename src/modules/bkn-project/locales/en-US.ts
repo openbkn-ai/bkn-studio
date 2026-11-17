@@ -3194,6 +3194,19 @@ export const bknProjectEnUS = {
         syncDone: "The live version is brought in, and the release was checked again.",
         commitDrift: "Commit the live edits",
         commitDriftDone: "The live edits are committed, and the release was checked again.",
+        discardDrift: "Discard the live edits",
+        discardDriftConfirm:
+          "Unpublished edits in the live draft cannot be restored once discarded; the live draft goes back to the running version (before a first publish, to what the project last synced). Discard them?",
+        discardDriftDone: "The live edits are discarded, and the release was checked again.",
+        syncConflict: {
+          title: "The live version conflicts with the project's edits and was not brought in",
+          description:
+            "The live version holds changes that differ from the project's, often left by an earlier write into the network that did not finish. Syncing in favor of the project keeps the project's content where they conflict and brings the other live changes in as usual.",
+          keepProject: "Sync in favor of the project",
+          confirm:
+            "Where they conflict, the project's content is used and that part of the live version is not brought in. Sync in favor of the project?",
+          done: "The live version was synced in favor of the project, and the release was checked again.",
+        },
         changesTitle: "What changes",
         added: "Added",
         changed: "Changed",

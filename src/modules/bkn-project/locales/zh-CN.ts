@@ -2985,6 +2985,19 @@ export const bknProjectZhCN = {
         syncDone: "已同步线上版本，发布审核已重新检查。",
         commitDrift: "提交线上的修改",
         commitDriftDone: "已提交线上的修改，发布审核已重新检查。",
+        discardDrift: "放弃线上的修改",
+        discardDriftConfirm:
+          "放弃后，线上草稿里未发布的修改不能恢复，线上草稿会回到当前运行版本（还没发布过时，回到项目上次同步的内容）。确定放弃吗？",
+        discardDriftDone: "已放弃线上的修改，发布审核已重新检查。",
+        syncConflict: {
+          title: "线上版本和项目里的修改冲突，没能同步进项目",
+          description:
+            "线上版本里有和项目不一样的改动，常见于之前一次没有完成的写入网络留下的内容。以项目为准同步后，冲突的地方保留项目里的内容，线上其他改动照常带进项目。",
+          keepProject: "以项目为准同步",
+          confirm:
+            "冲突的地方会用项目里的内容，线上版本里的那部分不会带进项目。确定以项目为准同步吗？",
+          done: "已以项目为准同步线上版本，发布审核已重新检查。",
+        },
         changesTitle: "本次变更",
         added: "新增",
         changed: "修改",

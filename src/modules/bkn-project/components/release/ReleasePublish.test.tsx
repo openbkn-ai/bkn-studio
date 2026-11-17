@@ -22,6 +22,7 @@ const getReleaseReviewMock = vi.hoisted(() => vi.fn());
 const publishReleaseMock = vi.hoisted(() => vi.fn());
 const prepareReleaseMock = vi.hoisted(() => vi.fn());
 const commitDriftMock = vi.hoisted(() => vi.fn());
+const discardDriftMock = vi.hoisted(() => vi.fn());
 const syncBranchMock = vi.hoisted(() => vi.fn());
 const getRegressionMock = vi.hoisted(() => vi.fn());
 const getRollbackPlanMock = vi.hoisted(() => vi.fn());
@@ -43,6 +44,7 @@ vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
 vi.mock("@/modules/bkn-project/services/release.service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/bkn-project/services/release.service")>()),
   commitDrift: commitDriftMock,
+  discardDrift: discardDriftMock,
   getRegression: getRegressionMock,
   getReleaseReview: getReleaseReviewMock,
   getRollbackPlan: getRollbackPlanMock,
@@ -502,6 +504,34 @@ describe("ReleasePublish", () => {
     expect(view.queryByText(/kept_document|document_values/)).toBeNull();
   });
 
+  it("says why bringing the live version in conflicted, and syncs keeping the project when confirmed", async () => {
+    prepareReleaseMock.mockRejectedValueOnce(refusal("Release.DraftHasChanges"));
+    commitDriftMock.mockRejectedValueOnce(refusal("Lineage.MergeConflict"));
+    syncBranchMock.mockResolvedValueOnce(undefined);
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+    fireEvent.click(await view.findByText("知道部分索引还没就绪，仍然发布"));
+    fireEvent.click(prepareButton());
+    fireEvent.click(await screen.findByText("先提交到项目"));
+
+    expect(
+      await screen.findByText("线上版本和项目里的修改冲突，没能同步进项目"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/冲突的地方保留项目里的内容/)).toBeInTheDocument();
+    expect(messageMock.error).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "以项目为准同步" }));
+    fireEvent.click(
+      within(await screen.findByRole("tooltip")).getByRole("button", { name: "以项目为准同步" }),
+    );
+    await waitFor(() => expect(syncBranchMock).toHaveBeenCalledWith("p1", { keepProject: true }));
+    expect(messageMock.success).toHaveBeenCalledWith(
+      "已以项目为准同步线上版本，发布审核已重新检查。",
+    );
+    await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("线上版本和项目里的修改冲突，没能同步进项目")).toBeNull();
+  });
+
   it("asks what happens to online edits nobody published, and commits or overwrites them", async () => {
     prepareReleaseMock
       .mockRejectedValueOnce(refusal("Release.DraftHasChanges"))
@@ -686,6 +716,79 @@ describe("ReleasePublish", () => {
     fireEvent.click(view.getByRole("button", { name: "同步线上版本" }));
     await waitFor(() => expect(syncBranchMock).toHaveBeenCalledWith("p1"));
     await waitFor(() => expect(getReleaseReviewMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("discards live edits outside the project when confirmed, and says why syncing conflicted", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [
+          { code: "drift", passed: false, reason: "drift" },
+          {
+            code: "baseline",
+            details: { base_version: "1.0.2", live_network_id: "n" },
+            passed: false,
+            reason: "branch_behind",
+          },
+        ],
+      }),
+    );
+    discardDriftMock.mockResolvedValueOnce(undefined);
+    syncBranchMock.mockRejectedValueOnce(refusal("Lineage.MergeConflict"));
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+
+    fireEvent.click(await view.findByRole("button", { name: "放弃线上的修改" }));
+    fireEvent.click(
+      within(await screen.findByRole("tooltip")).getByRole("button", { name: "放弃线上的修改" }),
+    );
+    await waitFor(() => expect(discardDriftMock).toHaveBeenCalledWith("p1"));
+    expect(commitDriftMock).not.toHaveBeenCalled();
+    expect(messageMock.success).toHaveBeenCalledWith("已放弃线上的修改，发布审核已重新检查。");
+
+    fireEvent.click(await view.findByRole("button", { name: "同步线上版本" }));
+    expect(
+      await screen.findByText("线上版本和项目里的修改冲突，没能同步进项目"),
+    ).toBeInTheDocument();
+    expect(messageMock.error).not.toHaveBeenCalled();
+  });
+
+  it("drops the sync conflict notice once the live edits are discarded instead", async () => {
+    getReleaseReviewMock.mockResolvedValue(
+      review({
+        accepts: [],
+        blocked: true,
+        checks: [
+          { code: "drift", passed: false, reason: "drift" },
+          {
+            code: "baseline",
+            details: { base_version: "1.0.2", live_network_id: "n" },
+            passed: false,
+            reason: "branch_behind",
+          },
+        ],
+      }),
+    );
+    syncBranchMock.mockRejectedValueOnce(refusal("Lineage.MergeConflict"));
+    discardDriftMock.mockResolvedValueOnce(undefined);
+    renderPublish();
+    fireEvent.click(screen.getByRole("button", { name: "审查并准备发布" }));
+    const view = await dialog();
+
+    fireEvent.click(await view.findByRole("button", { name: "同步线上版本" }));
+    expect(
+      await screen.findByText("线上版本和项目里的修改冲突，没能同步进项目"),
+    ).toBeInTheDocument();
+    fireEvent.click(await view.findByRole("button", { name: "放弃线上的修改" }));
+    fireEvent.click(
+      within(await screen.findByRole("tooltip")).getByRole("button", { name: "放弃线上的修改" }),
+    );
+    await waitFor(() => expect(discardDriftMock).toHaveBeenCalledWith("p1"));
+    await waitFor(() =>
+      expect(screen.queryByText("线上版本和项目里的修改冲突，没能同步进项目")).toBeNull(),
+    );
   });
 
   it("names the items whose tables are gone, which no one can accept", async () => {
