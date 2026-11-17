@@ -427,9 +427,9 @@ export const workspaceUiResources = {
     comparingTheCurrentlySelectedRunsDifferencesDoNotAutomatically:
       "对比对象：当前选中的运行。结果仅说明两次测评的差异，不自动认定修复完成。",
     theRunsUseDifferentTargetSnapshotsAResultChange:
-      "两次运行的目标快照不同，结果变化不能直接认定为修复或退化。",
+      "两次运行的函数版本或目标快照不同；改善／退化表示同一用例的结果变化。",
     theCurrentDataBaselineHasNoVerifiableImmutableRevision:
-      "当前数据基线没有可验证的不可变修订；结果只标记为变化，不认定为改善或退化。",
+      "两次运行的数据环境尚未验证一致；改善／退化表示评测结果变化，不能仅据此归因于函数修改。",
     currentResultRevision: "当前结果版本",
     change: "变化",
     declarationPreflight: "声明预检",
@@ -947,9 +947,9 @@ export const workspaceUiResources = {
     comparingTheCurrentlySelectedRunsDifferencesDoNotAutomatically:
       "Comparing the currently selected runs. Differences do not automatically confirm that a repair is complete.",
     theRunsUseDifferentTargetSnapshotsAResultChange:
-      "The runs use different target snapshots. A result change does not by itself indicate improvement or regression.",
+      "The function versions or target snapshots differ. Improvement/regression describes outcome changes under the same Case definition.",
     theCurrentDataBaselineHasNoVerifiableImmutableRevision:
-      "The current data baseline has no verifiable immutable revision. Results are marked as changed, without judging improvement or regression.",
+      "The data environments have not been verified as identical. Improvement/regression describes test outcomes and does not establish that the function change caused them.",
     currentResultRevision: "Current result revision",
     change: "Change",
     declarationPreflight: "Declaration preflight",

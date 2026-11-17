@@ -134,7 +134,7 @@ it("compares published revisions and does not call a Case definition change an i
   expect(screen.queryByText(/结果仅说明两次测评的差异/)).toBeNull();
   fireEvent.mouseEnter(screen.getByRole("button", { name: "基线运行 ?" }));
   expect(await screen.findByRole("tooltip")).toHaveTextContent("结果仅说明两次测评的差异");
-  expect(screen.getByText(/数据基线没有可验证的不可变修订/)).toBeTruthy();
+  expect(screen.getByText(/数据环境尚未验证一致/)).toBeTruthy();
 });
 
 it("loads the original failed Run as the preferred baseline after a retest", async () => {
