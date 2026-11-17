@@ -42,16 +42,17 @@ const EDITOR = [
   "execution-factory:function:debug",
 ];
 const grants = vi.hoisted(() => ({ current: [] as string[] }));
+const feedback = vi.hoisted(() => ({
+  destroy: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
+}));
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: {
-      destroy: vi.fn(),
-      error: vi.fn(),
-      info: vi.fn(),
-      success: vi.fn(),
-      warning: vi.fn(),
-    },
+    message: feedback,
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: { permissions: grants.current },
@@ -354,6 +355,25 @@ describe("FunctionWorkbenchScene Cypher functions", () => {
     expect(cypher.runCypherQuery.mock.calls[0][0]).toMatchObject({
       parameters: { qty: 100, code: "S1" },
     });
+  });
+
+  it("says why 「设为参数」 did nothing when no value or no literal is selected", async () => {
+    router.state = { cypherDraft: { query: STATEMENT, knId: "kn-1" } };
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+    await waitFor(() => expect(statementEditor().value).toBe(STATEMENT));
+
+    fireEvent.click(screen.getByTestId("cypher-function-parameterize"));
+    expect(feedback.warning).toHaveBeenLastCalledWith(
+      "executionFactory.cypherFunction.parameterize.selectValue",
+    );
+
+    const start = STATEMENT.indexOf("o.supplier_code");
+    statementEditor().setSelectionRange(start, start + "o.supplier_code".length);
+    fireEvent.click(screen.getByTestId("cypher-function-parameterize"));
+    expect(feedback.warning).toHaveBeenLastCalledWith(
+      "executionFactory.cypherFunction.parameterize.notValue",
+    );
+    expect(statementEditor().value).toBe(STATEMENT);
   });
 
   it("refuses a value result with more than one row, as the saved function would", async () => {
