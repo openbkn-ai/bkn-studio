@@ -28,6 +28,7 @@ vi.mock("@/modules/bkn-project/services/requirements.service", async (importOrig
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
 
 import { RequirementDocuments } from "./RequirementDocuments";
+import { selectWidthFor } from "./requirementMessages";
 
 const documents: RequirementDocument[] = [
   {
@@ -131,5 +132,24 @@ describe("RequirementDocuments", () => {
     expect(screen.getByText("业务需求")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "上传文档" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("keeps the type select wide enough for the longest type, chosen or not", () => {
+    // The longest label decides; CJK characters count wider than Latin ones.
+    expect(selectWidthFor(["其他", "Skill 文档"])).toBe("calc(5.6em + 40px)");
+    expect(selectWidthFor(["Other", "Business requirements"])).toBe("calc(12.6em + 40px)");
+
+    documents[0] = { ...documents[0], docType: "" };
+    try {
+      renderDocuments();
+      const select = screen
+        .getByRole("combobox", { name: "「ward-prd.md」的文档类型" })
+        .closest(".ant-select") as HTMLElement;
+      expect(select.style.width).toBe(
+        selectWidthFor(["业务需求", "制度规范", "标准", "Skill 文档", "API 描述", "其他"]),
+      );
+    } finally {
+      documents[0] = { ...documents[0], docType: "prd" };
+    }
   });
 });

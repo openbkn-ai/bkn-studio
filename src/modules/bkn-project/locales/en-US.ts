@@ -428,6 +428,9 @@ export const bknProjectEnUS = {
         count_one: "{{count}} selected (kept across pages)",
         count_other: "{{count}} selected (kept across pages)",
         clear: "Clear selection",
+        all: "Select all {{count}} concepts shown by the filter",
+        all_one: "Select the {{count}} concept shown by the filter",
+        all_other: "Select all {{count}} concepts shown by the filter",
         confirmed: "Confirmed {{count}} concepts",
         confirmed_one: "Confirmed {{count}} concept",
         confirmed_other: "Confirmed {{count}} concepts",
@@ -2291,6 +2294,25 @@ export const bknProjectEnUS = {
         stale:
           "Someone just changed the kinetic needs; they were read again, make the change once more.",
       },
+      selection: {
+        count: "{{count}} selected (kept across pages)",
+        count_one: "{{count}} selected (kept across pages)",
+        count_other: "{{count}} selected (kept across pages)",
+        all: "Select all {{count}} needs shown by the filter",
+        all_one: "Select the {{count}} need shown by the filter",
+        all_other: "Select all {{count}} needs shown by the filter",
+        item: "Select {{name}}",
+        clear: "Clear selection",
+        removeTitle: "Remove the {{count}} selected kinetic needs?",
+        removeTitle_one: "Remove the {{count}} selected kinetic need?",
+        removeTitle_other: "Remove the {{count}} selected kinetic needs?",
+        accepted: "Accepted {{count}} kinetic needs",
+        accepted_one: "Accepted {{count}} kinetic need",
+        accepted_other: "Accepted {{count}} kinetic needs",
+        removed: "Removed {{count}} kinetic needs",
+        removed_one: "Removed {{count}} kinetic need",
+        removed_other: "Removed {{count}} kinetic needs",
+      },
       fields: {
         name: "Name",
         kind: "Kind",
@@ -3091,6 +3113,13 @@ export const bknProjectEnUS = {
           "Originals from {{count}} documents will be included in network search. Other documents retain evidence locations only.",
         checksTitle: "Release checks",
         goToBuild: "Build the indexes on the build page",
+        goToKnowledgeBaseBuild: "Process the knowledge-base files on the build page",
+        blockingTitle:
+          "These checks did not pass. “{{action}}” stays unavailable until they are fixed",
+        blockingTitle_one:
+          "This check did not pass. “{{action}}” stays unavailable until it is fixed",
+        blockingTitle_other:
+          "These checks did not pass. “{{action}}” stays unavailable until they are fixed",
         check: {
           knowledge_base: "Knowledge-base build and source access",
           confirmed: "Model confirmation",

@@ -6,7 +6,7 @@
  */
 
 import { LoadingOutlined } from "@ant-design/icons";
-import { Alert, Select, Spin, Tooltip } from "antd";
+import { Alert, Checkbox, Select, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,6 @@ import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
 import { modelCountsOf } from "@/modules/bkn-project/components/ai/askModel";
 import { AskSources } from "@/modules/bkn-project/components/ai/AskSources";
 import { RequirementAskPanel } from "@/modules/bkn-project/components/ai/RequirementAskPanel";
-import { SelectionBar } from "@/modules/bkn-project/components/ai/SelectionBar";
 import { useFlash } from "@/modules/bkn-project/components/ai/useFlash";
 import { ClampedText } from "@/modules/bkn-project/components/ClampedText";
 import {
@@ -542,10 +541,66 @@ export function ProjectKinetic({
   // conversation.
   const askReady = confirmed ?? (statusUnread ? true : null);
   const canAsk = canEdit && askReady === true;
-  const refs = selected
+  const ticked = selected
     .map((id) => needs.find((need) => need.id === id))
-    .filter((need): need is LogicNeedView => need !== undefined)
-    .map((need) => ({ id: need.id, kind: "logic_needs" as const, name: need.name }));
+    .filter((need): need is LogicNeedView => need !== undefined);
+  const refs = ticked.map((need) => ({
+    id: need.id,
+    kind: "logic_needs" as const,
+    name: need.name,
+  }));
+  // Needs are ticked to accept or remove them together, or to ask AI about them.
+  const selectable = editable || canAsk;
+  // Select-all takes every need the filters show, on every page; ticks made under other filters
+  // stay.
+  const shownIds = shown.map((entry) => entry.need.id);
+  const tickedShown = shownIds.filter((id) => selected.includes(id)).length;
+  const allShownTicked = shownIds.length > 0 && tickedShown === shownIds.length;
+  const tickAll = (on: boolean) =>
+    setSelected(
+      on
+        ? [...selected, ...shownIds.filter((id) => !selected.includes(id))]
+        : selected.filter((id) => !shownIds.includes(id)),
+    );
+  const tickedWaiting = ticked.filter((need) => !need.accepted);
+
+  const acceptTicked = () =>
+    void apply((time) =>
+      reviewRequirements(
+        project.id,
+        time,
+        tickedWaiting.map(({ id }) => ({ id, kind: "logic_needs" as const })),
+      ),
+    ).then((done) => {
+      if (done) {
+        message.success(t(`${KINETIC}.selection.accepted`, { count: tickedWaiting.length }));
+        setSelected([]);
+      }
+    });
+
+  // There is no batch removal: each is removed in turn, each with the update time the last replied.
+  const removeTicked = () => {
+    const removing = ticked;
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(`${KINETIC}.editing.removeConfirm`),
+      okButtonProps: { danger: true },
+      okText: t(`${KINETIC}.editing.remove`),
+      onOk: () =>
+        apply(async (time) => {
+          let at = time;
+          for (const need of removing) {
+            at = (await removeItem(project.id, "logic_needs", need.id, at)).updateTime;
+          }
+        }).then((done) => {
+          if (done) {
+            message.success(t(`${KINETIC}.selection.removed`, { count: removing.length }));
+            setSelected([]);
+          }
+        }),
+      title: t(`${KINETIC}.selection.removeTitle`, { count: removing.length }),
+    });
+  };
 
   const columns: ColumnsType<{ need: LogicNeedView; state: NeedState }> = [
     {
@@ -887,11 +942,41 @@ export function ProjectKinetic({
                     value={stateFilter}
                   />
                 ) : null}
-                <span className={styles.spacer} />
-                {canAsk ? (
-                  <SelectionBar count={refs.length} onBring={() => setAsking(true)} />
-                ) : null}
               </div>
+              {selectable && ticked.length ? (
+                <div className={styles.selection} role="status">
+                  <span>{t(`${KINETIC}.selection.count`, { count: ticked.length })}</span>
+                  {editable ? (
+                    <>
+                      <AppButton
+                        disabled={saving || !tickedWaiting.length}
+                        onClick={acceptTicked}
+                        size="small"
+                        type="link"
+                      >
+                        {t(`${KINETIC}.review.accept`)}
+                      </AppButton>
+                      <AppButton
+                        danger
+                        disabled={saving}
+                        onClick={removeTicked}
+                        size="small"
+                        type="link"
+                      >
+                        {t(`${KINETIC}.editing.remove`)}
+                      </AppButton>
+                    </>
+                  ) : null}
+                  {canAsk ? (
+                    <AppButton onClick={() => setAsking(true)} size="small" type="link">
+                      {t("bknProject.ask.select.bring")}
+                    </AppButton>
+                  ) : null}
+                  <AppButton onClick={() => setSelected([])} size="small" type="link">
+                    {t(`${KINETIC}.selection.clear`)}
+                  </AppButton>
+                </div>
+              ) : null}
               <AppTable<{ need: LogicNeedView; state: NeedState }>
                 columns={columns}
                 dataSource={shown}
@@ -900,10 +985,20 @@ export function ProjectKinetic({
                 rowClassName={(entry) => (flash.has(entry.need.id) ? ask.flash : "")}
                 rowKey={(entry) => entry.need.id}
                 rowSelection={
-                  canAsk
+                  selectable
                     ? {
+                        columnTitle: (
+                          <Checkbox
+                            aria-label={t(`${KINETIC}.selection.all`, { count: shownIds.length })}
+                            checked={allShownTicked}
+                            disabled={!shownIds.length}
+                            indeterminate={tickedShown > 0 && !allShownTicked}
+                            onChange={(event) => tickAll(event.target.checked)}
+                          />
+                        ),
                         getCheckboxProps: (entry) => ({
-                          title: t("bknProject.ask.select.item", { name: entry.need.name }),
+                          "aria-label": t(`${KINETIC}.selection.item`, { name: entry.need.name }),
+                          title: t(`${KINETIC}.selection.item`, { name: entry.need.name }),
                         }),
                         // Ticked needs stay ticked on other pages and filters.
                         preserveSelectedRowKeys: true,

@@ -227,3 +227,18 @@ const checkReasonWord = word("testCheckReason", [
  */
 export const testCheckReasonText = (t: TFunction, reason: string) =>
   checkReasonWord(t, reason.split(":", 1)[0].trim());
+
+/**
+ * A width that fits the longest label, so the type select keeps one size whether or not a type is
+ * chosen. Wide (CJK) characters count a full em, others about six tenths; the rest is the select's
+ * padding and arrow.
+ */
+export function selectWidthFor(labels: string[]): string {
+  const ems = Math.max(
+    0,
+    ...labels.map((label) =>
+      [...label].reduce((sum, char) => sum + (/[\u2E80-\uFFEF]/.test(char) ? 1 : 0.6), 0),
+    ),
+  );
+  return `calc(${Math.ceil(ems * 10) / 10}em + 40px)`;
+}

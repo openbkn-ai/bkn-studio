@@ -45,6 +45,7 @@ import type {
   OntologyCheck,
   ProjectStatus,
 } from "@/modules/bkn-project/types/publish";
+import type { BuildTab } from "@/modules/bkn-project/types/workspace";
 
 import styles from "./ProjectReleasePage.module.css";
 
@@ -407,7 +408,7 @@ export function ProjectReleasePage({
   project,
 }: {
   /** Opens the build page, where the local indexes are built. */
-  onGoToBuild?: () => void;
+  onGoToBuild?: (tab?: BuildTab) => void;
   /** Opens kinetic modeling, where needs not implemented yet are implemented. */
   onGoToKinetic?: () => void;
   onGoToModel: () => void;
