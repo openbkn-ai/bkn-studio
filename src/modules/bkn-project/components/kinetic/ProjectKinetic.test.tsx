@@ -351,7 +351,7 @@ describe("ProjectKinetic", () => {
     expect(await screen.findByRole("button", { name: "问 AI（已选 1 条）" })).toBeInTheDocument();
     // Ticking alone opens nothing: the toolbar above the list says how many and brings them in.
     expect(screen.queryByRole("complementary", { name: "AI 助手" })).toBeNull();
-    expect(screen.getByText("已选 1 条")).toBeInTheDocument();
+    expect(screen.getByText("已选 1 条（跨页保留）")).toBeInTheDocument();
     expect(screen.queryByText(/勾选条目后点/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "带入 AI 讨论" }));
     // The panel opens with the ticked need as a reference of the next question.
@@ -388,6 +388,10 @@ describe("ProjectKinetic", () => {
     expect(await table().findByText("指标1")).toBeInTheDocument();
     expect(table().queryByText("指标21")).toBeNull();
     expect(screen.getByRole("button", { name: "问 AI（已选 2 条）" })).toBeInTheDocument();
+
+    // The header ticks every need the filters show, not only this page's.
+    fireEvent.click(screen.getByRole("checkbox", { name: "选择筛选出的全部 25 条" }));
+    expect(screen.getByText("已选 25 条（跨页保留）")).toBeInTheDocument();
   });
 
   it("does not offer asking AI to others", async () => {
@@ -1465,6 +1469,51 @@ describe("ProjectKinetic", () => {
         9,
       ),
     );
+  });
+
+  it("ticks every need the filters show, then accepts or removes the ticked ones together", async () => {
+    mocks.reviewRequirements.mockResolvedValue(requirements());
+    mocks.removeItem
+      .mockResolvedValueOnce({ ...requirements(), updateTime: 10 })
+      .mockResolvedValueOnce({ ...requirements(), updateTime: 11 });
+    // The confirmation is answered by hand below.
+    mocks.confirm.mockImplementation(() => undefined);
+    renderPage();
+
+    const all = await screen.findByRole("checkbox", { name: "选择筛选出的全部 7 条" });
+    fireEvent.click(all);
+    const bar = () => within(screen.getByText("已选 7 条（跨页保留）").closest("div")!);
+    expect(all).toBeChecked();
+    // Accepting takes only those still waiting for it.
+    fireEvent.click(bar().getByRole("button", { name: "采纳" }));
+    await waitFor(() =>
+      expect(mocks.reviewRequirements).toHaveBeenCalledWith("p1", 9, [
+        { id: "n5", kind: "logic_needs" },
+      ]),
+    );
+    await waitFor(() => expect(mocks.message.success).toHaveBeenCalledWith("已采纳 1 个动力需求"));
+    expect(screen.queryByText(/跨页保留/)).toBeNull();
+
+    // Some ticked make the header partial; removing asks once, naming how many.
+    fireEvent.click(screen.getByRole("checkbox", { name: "选择「延误率」" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "选择「催单排序」" }));
+    expect(all.closest(".ant-checkbox")).toHaveClass("ant-checkbox-indeterminate");
+    const ticked = within(screen.getByText("已选 2 条（跨页保留）").closest("div")!);
+    fireEvent.click(ticked.getByRole("button", { name: "删除" }));
+    expect(mocks.confirm).toHaveBeenCalledTimes(1);
+    const { onOk, title } = mocks.confirm.mock.calls[0][0] as {
+      onOk: () => Promise<unknown>;
+      title: string;
+    };
+    expect(title).toBe("删除所选的 2 个动力需求？");
+    expect(mocks.removeItem).not.toHaveBeenCalled();
+    await act(async () => {
+      await onOk();
+    });
+    // One after another, each on the version the last one replied.
+    expect(mocks.removeItem).toHaveBeenNthCalledWith(1, "p1", "logic_needs", "n1", 9);
+    expect(mocks.removeItem).toHaveBeenNthCalledWith(2, "p1", "logic_needs", "n2", 10);
+    expect(mocks.message.success).toHaveBeenCalledWith("已删除 2 个动力需求");
   });
 
   it("offers no edits to others", async () => {
