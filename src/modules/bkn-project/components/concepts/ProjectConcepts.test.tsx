@@ -594,6 +594,38 @@ describe("ProjectConcepts", () => {
     expect(screen.getByText('bknProject.concepts.selection.count:{"count":2}')).toBeTruthy();
   });
 
+  it("selects every concept the filter shows, across pages, from the header", async () => {
+    const many = Array.from({ length: 25 }, (_, index) =>
+      concept({
+        binding: table(`r_${index}`),
+        item: { adopted: true, id: `t${index}`, kind: "object_types" },
+        key: `object_types/t${index}`,
+        name: `Table ${index}`,
+      }),
+    );
+    service.getConcepts.mockResolvedValue(concepts({ concepts: many, requirements: [] }));
+    renderConcepts();
+
+    const all = await screen.findByRole("checkbox", {
+      name: 'bknProject.concepts.selection.all:{"count":25}',
+    });
+    fireEvent.click(all);
+    expect(screen.getByText('bknProject.concepts.selection.count:{"count":25}')).toBeTruthy();
+    expect(all).toBeChecked();
+
+    // One left out makes the header partial; ticking it again selects them all once more.
+    fireEvent.click((await row("Table 0")).getByRole("checkbox"));
+    expect(screen.getByText('bknProject.concepts.selection.count:{"count":24}')).toBeTruthy();
+    expect(all).not.toBeChecked();
+    expect(all.closest(".ant-checkbox")).toHaveClass("ant-checkbox-indeterminate");
+    fireEvent.click(all);
+    expect(screen.getByText('bknProject.concepts.selection.count:{"count":25}')).toBeTruthy();
+
+    // Unticking from the header clears what the filter shows.
+    fireEvent.click(all);
+    expect(screen.queryByText(/bknProject.concepts.selection.count/)).toBeNull();
+  });
+
   it("shows one notice, tables not understood before requirement concepts not in the data", async () => {
     service.getConcepts.mockResolvedValue(concepts({ notUnderstood: 2 }));
     const { unmount } = renderConcepts();

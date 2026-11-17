@@ -194,6 +194,19 @@ export function DataConcepts({
   const toggle = (key: string, on: boolean) =>
     onSelected(on ? [...selected, key] : selected.filter((other) => other !== key));
   const ticked = concepts.filter((concept) => selected.includes(concept.key));
+  // Select-all takes every tickable concept the filter shows, on every page; ticks made under
+  // other filters stay.
+  const tickable = shown
+    .filter((concept) => statusOf(concept) !== "candidate")
+    .map((concept) => concept.key);
+  const tickedShown = tickable.filter((key) => selected.includes(key)).length;
+  const allShownTicked = tickable.length > 0 && tickedShown === tickable.length;
+  const tickAll = (on: boolean) =>
+    onSelected(
+      on
+        ? [...selected, ...tickable.filter((key) => !selected.includes(key))]
+        : selected.filter((key) => !tickable.includes(key)),
+    );
 
   const mergeTicked = () => {
     if (ticked.length < 2) {
@@ -369,6 +382,15 @@ export function DataConcepts({
           />
         );
       },
+      title: (
+        <Checkbox
+          aria-label={t(`${PREFIX}.selection.all`, { count: tickable.length })}
+          checked={allShownTicked}
+          disabled={!tickable.length}
+          indeterminate={tickedShown > 0 && !allShownTicked}
+          onChange={(event) => tickAll(event.target.checked)}
+        />
+      ),
       width: 40,
     },
     {
