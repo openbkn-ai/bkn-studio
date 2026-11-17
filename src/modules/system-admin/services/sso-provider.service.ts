@@ -45,6 +45,9 @@ export async function saveSSOProvider(
 export async function testSSOProvider(input: SSOProviderInput): Promise<void> {
   await http.post(`${base}/test`, input);
 }
+export async function deleteSSOProvider(id: string): Promise<void> {
+  await http.delete(`${base}/${encodeURIComponent(id)}`);
+}
 
 export type DirectorySyncConfig = {
   provider_id: string;
