@@ -27,6 +27,9 @@ export const authEnUS = {
     callbackErrorTitle: "Sign-in failed",
     backToSignIn: "Back to sign-in",
     logout: "Sign out",
+    logoutFailed: "Sign-out could not be completed",
+    logoutFailedHint:
+      "Some credentials may still be valid. Check your connection and try signing out again.",
     devTokenAccessRequired: "Enter an access token",
     devTokenTitle: "Development token configuration",
     devTokenDescription:

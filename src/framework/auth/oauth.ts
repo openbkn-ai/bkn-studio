@@ -13,6 +13,7 @@ import {
   clearStoredTokens,
   getStoredAccessToken,
   getStoredIdToken,
+  getStoredRefreshToken,
   storeTokens,
 } from "@/framework/auth/token-store";
 
@@ -526,6 +527,26 @@ export async function completeLogin(search = window.location.search) {
 }
 
 let refreshInFlight: Promise<string | null> | null = null;
+let logoutInFlight: Promise<void> | null = null;
+let leavingForLogout = false;
+
+export function isLogoutInProgress() {
+  // Keep late 401 handlers from reloading while Hydra navigation is pending.
+  // A fresh session established in this document releases that guard.
+  if (leavingForLogout && (getStoredAccessToken() || getStoredRefreshToken())) {
+    leavingForLogout = false;
+  }
+  return logoutInFlight !== null || leavingForLogout;
+}
+
+// Cookies are shared across tabs. Serialize refresh and revocation so logout
+// sees the newest rotated credentials, including a refresh started in another tab.
+async function withTokenLock<T>(action: () => Promise<T>): Promise<T> {
+  if (navigator.locks) {
+    return await navigator.locks.request("bkn-oauth-tokens", action);
+  }
+  return action();
+}
 
 /**
  * hydra rotates refresh tokens, so two refreshes racing with the same token
@@ -533,7 +554,10 @@ let refreshInFlight: Promise<string | null> | null = null;
  * one request.
  */
 export function refreshOAuthTokens(): Promise<string | null> {
-  refreshInFlight ??= refreshOAuthTokensOnce().finally(() => {
+  if (isLogoutInProgress()) {
+    return Promise.resolve(null);
+  }
+  refreshInFlight ??= withTokenLock(refreshOAuthTokensOnce).finally(() => {
     refreshInFlight = null;
   });
   return refreshInFlight;
@@ -554,6 +578,11 @@ async function refreshOAuthTokensOnce(): Promise<string | null> {
       }),
     );
 
+    // Another tab may have cleared or replaced the session while the network
+    // request was pending (including browsers without the Web Locks API).
+    if (getDevRefreshToken() !== refreshToken) {
+      return null;
+    }
     storeTokens({
       accessToken: tokens.access_token,
       idToken: tokens.id_token,
@@ -567,22 +596,47 @@ async function refreshOAuthTokensOnce(): Promise<string | null> {
   }
 }
 
-export function logout(mode: "hosted" | "standalone") {
+export function logout(mode: "hosted" | "standalone"): Promise<void> {
+  logoutInFlight ??= performLogout(mode).finally(() => {
+    logoutInFlight = null;
+  });
+  return logoutInFlight;
+}
+
+async function performLogout(mode: "hosted" | "standalone") {
+  // Let our outstanding refresh persist its rotated pair before reading it.
+  await refreshInFlight;
+  await withTokenLock(() => revokeAndLeave(mode));
+}
+
+async function revokeAndLeave(mode: "hosted" | "standalone") {
   const idToken = getStoredIdToken();
   const accessToken = getStoredAccessToken();
+  const refreshToken = getStoredRefreshToken();
 
-  // Record only an explicit user sign-out. This is deliberately separate from
-  // Trace: it captures the platform access action and the server associates it
-  // with the authenticated user before the browser session is cleared.
-  if (shouldUseOAuthGate(mode) && accessToken) {
-    // Access auditing is best effort: it must never hold the session tokens or
-    // prevent the browser from completing the explicit logout.
+  if (shouldUseOAuthGate(mode) && (accessToken || refreshToken || idToken)) {
     const apiBaseUrl = getRuntimeConfig().apiBaseUrl.replace(/\/$/, "");
-    void fetch(`${apiBaseUrl}/safe/v1/me/logout`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      keepalive: true,
-    }).catch(() => {});
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), TOKEN_REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${apiBaseUrl}/safe/v1/me/logout`, {
+        method: "POST",
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken || undefined,
+          id_token: idToken || undefined,
+        }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error("Logout revocation was not confirmed");
+      }
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   clearStoredTokens();
@@ -606,6 +660,7 @@ export function logout(mode: "hosted" | "standalone") {
     params.set("id_token_hint", idToken);
   }
 
+  leavingForLogout = true;
   window.location.assign(`${gatewayOrigin()}${LOGOUT_PATH}?${params.toString()}`);
   return Promise.resolve();
 }

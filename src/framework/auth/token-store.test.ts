@@ -13,6 +13,7 @@ import {
   getStoredIdToken,
   getStoredRefreshToken,
   storeTokens,
+  subscribeAuthBroadcast,
 } from "@/framework/auth/token-store";
 
 function clearDocumentCookies() {
@@ -34,6 +35,7 @@ describe("token-store", () => {
     clearDocumentCookies();
     window.sessionStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("stores and reads tokens from cookies", () => {
@@ -101,6 +103,34 @@ describe("token-store", () => {
 
     expect(getStoredAccessToken()).toBe("");
     expect(getStoredRefreshToken()).toBe("");
-    expect(postMessage).toHaveBeenCalledWith({ type: "logout" });
+    expect(postMessage).toHaveBeenCalledWith({ type: "logout", source: expect.any(String) });
+  });
+  it("ignores its own document's logout broadcast but not another tab's", () => {
+    const listeners = new Set<(event: MessageEvent) => void>();
+    vi.stubGlobal(
+      "BroadcastChannel",
+      class {
+        postMessage(data: unknown) {
+          for (const listener of listeners) listener(new MessageEvent("message", { data }));
+        }
+        addEventListener(_type: string, listener: (event: MessageEvent) => void) {
+          listeners.add(listener);
+        }
+        removeEventListener(_type: string, listener: (event: MessageEvent) => void) {
+          listeners.delete(listener);
+        }
+        close() {}
+      },
+    );
+    const onLogout = vi.fn();
+    const unsubscribe = subscribeAuthBroadcast(onLogout);
+    clearStoredTokens();
+    expect(onLogout).not.toHaveBeenCalled();
+    for (const listener of listeners) {
+      listener(new MessageEvent("message", { data: { type: "logout", source: "other-tab" } }));
+    }
+    expect(onLogout).toHaveBeenCalledOnce();
+    unsubscribe();
+    expect(listeners.size).toBe(0);
   });
 });
