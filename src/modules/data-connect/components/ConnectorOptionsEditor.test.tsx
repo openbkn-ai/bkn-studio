@@ -137,7 +137,7 @@ describe("structured connector options in the configuration form", () => {
       name: "Whole-call timeout (seconds) (timeout_seconds)",
     });
     expect(timeout).toHaveValue("");
-    expect(timeout).toHaveAttribute("placeholder", "Platform default (initially 30 seconds)");
+    expect(timeout).toHaveAttribute("placeholder", "Leave empty to use the platform default");
     expect(editor.changed).not.toHaveBeenCalled();
     await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(true));
     fireEvent.change(timeout, { target: { value: "9007199254740993" } });
