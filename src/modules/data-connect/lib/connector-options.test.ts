@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import BigNumber from "bignumber.js";
 
 import {
   getConnectorOptionDefinitions,
@@ -15,7 +16,7 @@ import {
 import { resolveConnectorFieldControl } from "./connector-template";
 
 describe("connector option templates", () => {
-  it.each(["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "hana", "doris"])(
+  it.each(["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "hana", "doris", "http"])(
     "uses structured controls for %s",
     (type) => {
       expect(getConnectorOptionDefinitions(type)?.length).toBeGreaterThan(0);
@@ -60,6 +61,36 @@ describe("connector option templates", () => {
 });
 
 describe("validateConnectorOptions", () => {
+  it("validates HTTP limits as exact positive JSON numbers without applying database timeout semantics", () => {
+    expect(getConnectorOptionDefinitions("http")?.map(({ key }) => key)).toEqual([
+      "timeout_seconds",
+      "max_response_mib",
+    ]);
+    for (const key of ["timeout_seconds", "max_response_mib"]) {
+      for (const value of [1, 30, new BigNumber("9007199254740993")]) {
+        const options = { [key]: value };
+        expect(validateConnectorOptions("http", options)).toBeUndefined();
+        expect(options[key]).toBe(value);
+      }
+      for (const value of [
+        0,
+        -1,
+        0.5,
+        "30",
+        "",
+        null,
+        undefined,
+        true,
+        new BigNumber("NaN"),
+        new BigNumber("Infinity"),
+      ])
+        expect(validateConnectorOptions("http", { [key]: value })).toEqual({
+          key,
+          error: "positiveInteger",
+        });
+    }
+  });
+
   it.each([undefined, null, "", "   ", {}, "{}"])(
     "accepts omitted or empty options: %j",
     (value) => {

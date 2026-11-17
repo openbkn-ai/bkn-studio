@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import BigNumber from "bignumber.js";
+
 export type ConnectorOptionDefinition = {
   key: string;
   label: string;
@@ -13,6 +15,7 @@ export type ConnectorOptionDefinition = {
   | { kind: "boolean"; acceptsStrings?: boolean }
   | { kind: "enum"; values: readonly string[]; acceptsBoolean?: boolean }
   | { kind: "seconds"; signedString?: boolean }
+  | { kind: "positiveInteger"; omitWhenEmpty?: boolean; placeholder?: string }
   | { kind: "duration"; positive?: boolean }
   | { kind: "sessionTimeout" }
   | { kind: "text"; allowEmpty?: boolean; requiresTLS?: boolean }
@@ -45,6 +48,24 @@ const MYSQL_OPTIONS: readonly ConnectorOptionDefinition[] = [
 ];
 
 const OPTION_TEMPLATES: Record<string, readonly ConnectorOptionDefinition[]> = {
+  http: [
+    {
+      kind: "positiveInteger",
+      key: "timeout_seconds",
+      label: "httpTimeout",
+      hint: "httpTimeout",
+      placeholder: "httpTimeout",
+      omitWhenEmpty: true,
+    },
+    {
+      kind: "positiveInteger",
+      key: "max_response_mib",
+      label: "httpResponseLimit",
+      hint: "httpResponseLimit",
+      placeholder: "httpResponseLimit",
+      omitWhenEmpty: true,
+    },
+  ],
   mysql: MYSQL_OPTIONS,
   mariadb: MYSQL_OPTIONS,
   postgresql: [
@@ -174,6 +195,7 @@ export type ConnectorOptionError =
   | "boolean"
   | "enum"
   | "seconds"
+  | "positiveInteger"
   | "duration"
   | "positiveDuration"
   | "sessionTimeout"
@@ -199,6 +221,13 @@ export function validateConnectorOption(
         (definition.acceptsBoolean && typeof value === "boolean")
         ? undefined
         : "enum";
+    case "positiveInteger": {
+      if (typeof value !== "number" && !BigNumber.isBigNumber(value)) return "positiveInteger";
+      const integer = new BigNumber(value);
+      return integer.isFinite() && integer.isInteger() && integer.isGreaterThan(0)
+        ? undefined
+        : "positiveInteger";
+    }
     case "seconds": {
       const integer =
         typeof value === "number"

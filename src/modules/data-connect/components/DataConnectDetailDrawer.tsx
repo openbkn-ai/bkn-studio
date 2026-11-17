@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
-
 import { Alert, Descriptions, Drawer, Empty, Space, Spin, Tag } from "antd";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -33,6 +31,8 @@ import type {
 } from "@/modules/data-connect/types/data-connect";
 import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import { hasCatalogOperation } from "@/shared/catalog";
+import { buildApiCatalogPreview } from "@/modules/data-connect/lib/api-catalog-config";
+import apiStyles from "./ApiCatalogConfigEditor.module.css";
 
 import { ScheduleRunResultView } from "@/shared/schedule";
 
@@ -153,7 +153,8 @@ export function DataConnectDetailDrawer({
     () => connectorTypes.find((item) => item.type === record?.connectorType),
     [connectorTypes, record?.connectorType],
   );
-  const configEntries = record ? buildConfigEntries(record, t, selectedConnectorType) : [];
+  const configEntries =
+    record && record.category !== "api" ? buildConfigEntries(record, t, selectedConnectorType) : [];
 
   return (
     <Drawer
@@ -279,7 +280,11 @@ export function DataConnectDetailDrawer({
           </section>
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
-            {configEntries.length > 0 ? (
+            {record.category === "api" ? (
+              <pre className={apiStyles.preview}>
+                {buildApiCatalogPreview(record.connectorConfig)}
+              </pre>
+            ) : configEntries.length > 0 ? (
               <div className={styles.configGrid}>
                 {configEntries.map((item) => (
                   <div
@@ -541,7 +546,7 @@ function buildConfigEntries(
   t: TFunction,
   connectorType?: DataConnectConnectorType,
 ) {
-  const config = protectCatalogConfigVariables(record.connectorConfig ?? {}, "display");
+  const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
   const templateKeys = Object.keys(fieldConfig);
   const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort(

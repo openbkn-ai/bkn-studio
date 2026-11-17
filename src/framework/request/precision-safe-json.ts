@@ -12,6 +12,8 @@ import { isLosslessNumber, parse } from "lossless-json";
 const precisionPreservingJSON = JSONBig();
 const numericLiterals = new WeakMap<BigNumber, string>();
 
+type PrecisionJSONOptions = { allowSpecialKeys?: boolean };
+
 /** Keep the previous numeric/string boundary and preserve extreme exponents. */
 function preciseNumber(text: string): number | BigNumber {
   const number = Number(text);
@@ -32,12 +34,17 @@ export function precisionPreservingValueText(value: unknown): string {
     : String(value);
 }
 
-function parseWithNumbers(data: string, numberValue: (text: string) => unknown): unknown {
+function parseWithNumbers(
+  data: string,
+  numberValue: (text: string) => unknown,
+  { allowSpecialKeys = false }: PrecisionJSONOptions = {},
+): unknown {
   return parse(
     data,
     (key, value) => {
-      // Retain json-bigint's existing protection for special object keys.
-      if (key === "__proto__" || key === "constructor")
+      // LosslessJSON stores special keys as own data properties, like JSON.parse.
+      // Preserve the existing rejection unless a caller explicitly handles arbitrary JSON data.
+      if (!allowSpecialKeys && (key === "__proto__" || key === "constructor"))
         throw new SyntaxError("Unsupported JSON object key.");
       return isLosslessNumber(value) ? numberValue(value.value) : value;
     },
@@ -59,13 +66,16 @@ export function parsePrecisionSafeJSON(data: string): unknown {
 }
 
 /** Retain numeric literals as numbers or BigNumbers, distinct from quoted strings. */
-export function parsePrecisionPreservingJSON(data: string): unknown {
-  return parseWithNumbers(data, preciseNumber);
+export function parsePrecisionPreservingJSON(
+  data: string,
+  options?: PrecisionJSONOptions,
+): unknown {
+  return parseWithNumbers(data, preciseNumber, options);
 }
 
 /** Pretty-prints JSON while keeping precise numeric literals as JSON numbers. */
-export function formatPrecisionSafeJSON(data: string): string {
-  return precisionPreservingJSON.stringify(parsePrecisionPreservingJSON(data), null, 2);
+export function formatPrecisionSafeJSON(data: string, options?: PrecisionJSONOptions): string {
+  return precisionPreservingJSON.stringify(parsePrecisionPreservingJSON(data, options), null, 2);
 }
 
 /** Axios request transformer for bodies containing precise numeric literals. */

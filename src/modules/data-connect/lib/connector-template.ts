@@ -124,12 +124,15 @@ const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
   knownConnectorType("sqlserver", "SQL Server", "table"),
   knownConnectorType("oracle", "Oracle", "table"),
   knownConnectorType("hana", "SAP HANA", "table"),
+  knownConnectorType("doris", "Doris", "table"),
   knownConnectorType("opensearch", "OpenSearch", "index"),
+  knownConnectorType("http", "HTTP API", "api"),
 ];
 
 // Product metadata for local implementations omitted from Community binaries.
 // Backend requirements take precedence; this fallback never grants availability.
 const LOCAL_CONNECTOR_REQUIRED_EDITIONS = new Map<string, Edition>([
+  ["http", "professional"],
   ["sqlserver", "professional"],
   ["oracle", "professional"],
   ["doris", "professional"],

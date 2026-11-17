@@ -6,7 +6,7 @@
  */
 
 import { Form } from "antd";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -54,6 +54,100 @@ describe("DataConnectConfigForm", () => {
 
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
+  });
+
+  it("keeps the service-address error under its input and out of the variables tab without bypassing validation", async () => {
+    const onFinish = vi.fn();
+    render(
+      <Form
+        initialValues={{
+          name: "API connection",
+          healthCheckSchedule: { mode: "inherit" },
+          connectorConfig: {
+            base_url: "ftp://api.example.com/",
+            variables: { tenant: { value: "demo", sensitive: false } },
+          },
+        }}
+        onFinish={onFinish}
+      >
+        <DataConnectConfigForm
+          selectedConnectorType={{
+            ...mariaDbConnector,
+            type: "http",
+            name: "HTTP API",
+            category: "api",
+            fieldConfig: {},
+          }}
+        />
+        <button type="submit">Submit</button>
+      </Form>,
+    );
+    const message = "请填写不含账号、密码、Query 参数和片段的 HTTP 或 HTTPS 服务地址。";
+    fireEvent.click(screen.getByRole("tab", { name: "变量与凭据" }));
+    fireEvent.change(screen.getByLabelText("变量值 tenant"), { target: { value: "updated" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(screen.getByText(message)).not.toBeVisible());
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("变量值 tenant")).not.toHaveClass("ant-input-status-error");
+    fireEvent.click(screen.getByRole("tab", { name: "服务设置" }));
+    const group = screen.getByRole("group", { name: "连接参数" });
+    const error = within(group).getByText(message);
+    const address = screen.getByLabelText("服务地址");
+    expect(error).toBeVisible();
+    expect(address).toHaveAttribute("aria-invalid", "true");
+    expect(address.getAttribute("aria-describedby")?.split(" ")).toContain(error.id);
+    fireEvent.change(address, { target: { value: "https://api.example.com/" } });
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+    expect(address).not.toHaveAttribute("aria-invalid", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(onFinish).toHaveBeenCalled());
+    expect(getLastConnectorConfig(onFinish)).toMatchObject({
+      base_url: "https://api.example.com/",
+      variables: { tenant: { value: "updated", sensitive: false } },
+    });
+  });
+
+  it("keeps sensitive-variable validation visible only in the variables tab", async () => {
+    const onFinish = vi.fn();
+    render(
+      <Form
+        initialValues={{
+          name: "API connection",
+          healthCheckSchedule: { mode: "inherit" },
+          connectorConfig: {
+            base_url: "https://api.example.com/",
+            variables: { secret: { sensitive: true } },
+          },
+        }}
+        onFinish={onFinish}
+      >
+        <DataConnectConfigForm
+          isEdit
+          selectedConnectorType={{
+            ...mariaDbConnector,
+            type: "http",
+            name: "HTTP API",
+            category: "api",
+            fieldConfig: {},
+          }}
+        />
+        <button type="submit">Submit</button>
+      </Form>,
+    );
+    const message = "替换配置前，请重新填写所有保留的敏感变量，不能提交掩码占位符。";
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(screen.getByText(message)).not.toBeVisible());
+    expect(onFinish).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("tab", { name: "变量与凭据" }));
+    expect(screen.getByText(message)).toBeVisible();
+    const panel = screen.getByRole("tabpanel");
+    expect(panel).toContainElement(screen.getByText(message));
+    fireEvent.change(screen.getByLabelText("敏感值 secret"), {
+      target: { value: "synthetic-input" },
+    });
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(onFinish).toHaveBeenCalled());
   });
 
   it("updates connector group titles when the active locale changes", async () => {

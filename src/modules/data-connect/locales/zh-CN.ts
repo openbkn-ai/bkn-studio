@@ -5,8 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { apiCatalogZhCN } from "./api-catalog.zh-CN";
+import { apiEditorZhCN } from "./api-editor.zh-CN";
+
 export const dataConnectZhCN = {
   dataConnect: {
+    apiCatalog: apiCatalogZhCN,
+    apiEditor: apiEditorZhCN,
     title: "数据连接",
     description: "在 BKN 平台中统一管理由 Vega 后端提供的数据连接实例。",
     permissionRequired: "当前账号权限不足，请联系管理员授权后再试。",
@@ -301,6 +306,8 @@ export const dataConnectZhCN = {
         "当前 Studio 版本尚未定义此参数，其值会保留；如需删除，请显式移除。支持情况由后端校验。",
       repairJSON: "修复连接参数 JSON",
       labels: {
+        httpTimeout: "整次调用超时（秒）",
+        httpResponseLimit: "最大响应大小（MiB）",
         timeZone: "会话时区",
         charset: "字符集",
         collation: "排序规则",
@@ -325,6 +332,8 @@ export const dataConnectZhCN = {
         server: "服务器",
       },
       hints: {
+        httpTimeout: "登录、业务请求与响应处理共用此预算。",
+        httpResponseLimit: "登录与业务响应分别计量，受平台上限约束。",
         timeZone:
           "未配置时使用 Vega 服务时区；显式空值继承数据库会话默认时区。其他值按数据库原生规则解释，包括偏移符号，并由连接测试验证。",
         emptyString: "留空会提交空字符串；移除此参数才表示未配置。",
@@ -340,7 +349,12 @@ export const dataConnectZhCN = {
         hanaCertificate: "要求 tls=true；启用 TLS 且未配置此项时，默认使用连接主机名。",
         positiveDuration: "正时长，例如 30s；未配置时使用驱动默认行为。",
       },
+      placeholders: {
+        httpTimeout: "留空使用平台默认值",
+        httpResponseLimit: "留空使用平台默认值",
+      },
       errors: {
+        positiveInteger: "请输入正整数；留空时使用平台默认值。",
         json: "请输入有效的 JSON 对象。",
         duplicate: "此参数与另一参数在连接器规范化后重名。",
         boolean: "请选择启用或禁用。",

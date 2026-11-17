@@ -24,6 +24,7 @@ import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import apiLogo from "@/modules/data-connect/assets/connectors/api.svg";
 import dorisLogo from "@/modules/data-connect/assets/connectors/doris.svg";
 import hanaLogo from "@/modules/data-connect/assets/connectors/hana.png";
 import mariadbLogo from "@/modules/data-connect/assets/connectors/mariadb.png";
@@ -36,10 +37,12 @@ import type { DataConnectConnectorType } from "@/modules/data-connect/types/data
 
 import styles from "./ConnectorTypePicker.module.css";
 
-// Assets are copied from a pinned DBeaver revision; unknown types keep the generic icon.
+// Database logos use pinned DBeaver assets; HTTP API uses an original OpenBKN icon.
+// Unknown types keep the generic icon.
 const CONNECTOR_LOGOS = new Map([
   ["doris", dorisLogo],
   ["hana", hanaLogo],
+  ["http", apiLogo],
   ["mariadb", mariadbLogo],
   ["mysql", mysqlLogo],
   ["opensearch", opensearchLogo],

@@ -263,18 +263,41 @@ describe("DataConnectDetailDrawer", () => {
     ]);
   });
 
-  it("never echoes declared sensitive variables even without connector metadata", async () => {
+  it("shows non-API raw variables without interpreting business objects as HTTP metadata", async () => {
     getRecordMock.mockResolvedValue({
       ...record,
       connectorConfig: {
-        variables: { tenant: "public", api_key: "private-key", arbitrary: "private-option" },
-        sensitive_variables: ["api_key", "arbitrary"],
+        variables: {
+          tenant: "public",
+          business: { value: "domain-value", sensitive: true },
+        },
       },
     });
     render(
       <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
     );
     await screen.findByText("tenant: public");
+    expect(screen.getByText('business: {"value":"domain-value","sensitive":true}')).toBeVisible();
+  });
+
+  it("never echoes declared HTTP sensitive variables even without connector metadata", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      category: "api",
+      connectorType: "http",
+      connectorConfig: {
+        variables: {
+          tenant: { value: "public", sensitive: false },
+          api_key: { value: "private-key", sensitive: true },
+          arbitrary: { value: "private-option", sensitive: true },
+        },
+      },
+    });
+    render(
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
+    );
+    await screen.findByText(/"tenant":/);
+    expect(document.body.textContent).toContain('"value": "public"');
     expect(document.body.textContent).not.toContain("private-option");
     expect(document.body.textContent).not.toContain("private-key");
   });

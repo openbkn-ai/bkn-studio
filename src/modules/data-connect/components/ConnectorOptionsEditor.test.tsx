@@ -6,16 +6,22 @@
  */
 
 import { Form } from "antd";
+import { useState } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
+import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { DataConnectConfigForm } from "./DataConnectConfigForm";
 import { ConnectorOptionsEditor } from "./ConnectorOptionsEditor";
 import { getConnectorOptionDefinitions, validateConnectorOptions } from "../lib/connector-options";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
-function renderForm(type: string, options?: unknown, { fullConfigForm = false } = {}) {
+function renderForm(
+  type: string,
+  options?: unknown,
+  { fullConfigForm = false, disabled = false } = {},
+) {
   const onFinish = vi.fn<(values: { connectorConfig: Record<string, unknown> }) => void>();
   const connector: DataConnectConnectorType = {
     available: true,
@@ -29,6 +35,7 @@ function renderForm(type: string, options?: unknown, { fullConfigForm = false } 
   };
   render(
     <Form
+      disabled={disabled}
       initialValues={{
         name: "Catalog",
         enabled: true,
@@ -59,6 +66,32 @@ function renderForm(type: string, options?: unknown, { fullConfigForm = false } 
     </Form>,
   );
   return onFinish;
+}
+
+function renderHttpOptions(initial?: Record<string, unknown>, disabled = false) {
+  const changed = vi.fn<(value: unknown) => void>();
+  const validity = vi.fn<(valid: boolean) => void>();
+  function Harness() {
+    const [value, setValue] = useState<unknown>(initial);
+    return (
+      <Form>
+        <Form.Item>
+          <ConnectorOptionsEditor
+            connectorType="http"
+            value={value}
+            disabled={disabled}
+            onChange={(next) => {
+              setValue(next);
+              changed(next);
+            }}
+            onValidityChange={validity}
+          />
+        </Form.Item>
+      </Form>
+    );
+  }
+  render(<Harness />);
+  return { changed, validity };
 }
 
 async function selectOption(label: string, choice: string) {
@@ -92,6 +125,78 @@ describe("structured connector options in the configuration form", () => {
   });
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
+  });
+
+  it("adds HTTP limits without writing displayed defaults and preserves exact JSON numbers", async () => {
+    const editor = renderHttpOptions();
+    expect(editor.changed).not.toHaveBeenCalled();
+    expect(document.querySelector("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Added options (0)"));
+    await selectOption("Add parameter", "Whole-call timeout (seconds) (timeout_seconds)");
+    const timeout = screen.getByRole("textbox", {
+      name: "Whole-call timeout (seconds) (timeout_seconds)",
+    });
+    expect(timeout).toHaveValue("");
+    expect(timeout).toHaveAttribute("placeholder", "Leave empty to use the platform default");
+    expect(editor.changed).not.toHaveBeenCalled();
+    await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(true));
+    fireEvent.change(timeout, { target: { value: "9007199254740993" } });
+    expect(transformPrecisionSafeJSONRequest(editor.changed.mock.lastCall?.[0])).toBe(
+      '{"timeout_seconds":9007199254740993}',
+    );
+    const remove = screen.getByRole("button", { name: "Remove timeout_seconds" });
+    expect(remove).toHaveClass("ant-btn-text", "ant-btn-dangerous");
+    expect(remove).not.toHaveClass("ant-btn-sm");
+    fireEvent.click(remove);
+    expect(editor.changed).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("keeps incomplete HTTP drafts invalid across sibling changes and clears limits back to omission", async () => {
+    const editor = renderHttpOptions({ timeout_seconds: 30, max_response_mib: 10 });
+    const timeout = screen.getByRole("textbox", {
+      name: "Whole-call timeout (seconds) (timeout_seconds)",
+    });
+    fireEvent.change(timeout, { target: { value: "-" } });
+    await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(false));
+    expect(editor.changed).not.toHaveBeenCalled();
+    expect(timeout).toHaveAttribute("aria-invalid", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Remove max_response_mib" }));
+    expect(editor.changed).toHaveBeenLastCalledWith({ timeout_seconds: 30 });
+    expect(timeout).toHaveValue("-");
+    expect(editor.validity).toHaveBeenLastCalledWith(false);
+    fireEvent.change(timeout, { target: { value: "0" } });
+    await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(false));
+    fireEvent.change(timeout, { target: { value: "" } });
+    await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(true));
+    expect(editor.changed).toHaveBeenLastCalledWith(null);
+    expect(timeout).toHaveValue("");
+    expect(screen.getByText("Added option (1)")).toBeInTheDocument();
+  });
+
+  it("continues to inherit disabled state from database connector forms", () => {
+    renderForm(
+      "sqlserver",
+      { encrypt: true, tlsmin: "1.2", "connection timeout": 30 },
+      { disabled: true },
+    );
+    expect(screen.getByRole("combobox", { name: "Encrypt connection (encrypt)" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Minimum TLS version (tlsmin)" })).toBeDisabled();
+    expect(
+      screen.getByRole("spinbutton", { name: "Connect timeout (connection timeout)" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Remove encrypt" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Add parameter" })).toBeDisabled();
+  });
+
+  it("disables shared HTTP controls without discarding their saved values", () => {
+    const editor = renderHttpOptions({ timeout_seconds: 30 }, true);
+    expect(
+      screen.getByRole("textbox", { name: "Whole-call timeout (seconds) (timeout_seconds)" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Remove timeout_seconds" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Add parameter" })).toBeDisabled();
+    expect(editor.changed).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,0 +1,311 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.sectionCard {
+  background: var(--color-interface-panel-bg);
+}
+:global(:root[data-theme="dark"]) .sectionCard {
+  background: var(--color-bg-raised);
+}
+.memberHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.memberHeader > :first-child {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.conditionHeader {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.conditionHeader > :global(.ant-select) {
+  flex: 1;
+  min-width: 0;
+}
+.conditionHeader > :global(.ant-btn) {
+  flex-shrink: 0;
+}
+.responseTabBar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+/* Override rc-tabs' flex:none so its overflow controls use the available width. */
+.responseTabBar.responseTabBar > :global(.ant-tabs-nav) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.responseTabBar > :global(.ant-btn) {
+  flex-shrink: 0;
+  margin-block-start: 8px;
+}
+.responseEmptyActions {
+  display: flex;
+  justify-content: flex-end;
+}
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  min-width: 0;
+}
+.fieldTitle {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.inlineMemberHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.inlineField {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 6px 8px;
+  min-width: 0;
+}
+.inlineField > .fieldTitle {
+  line-height: 32px;
+  white-space: nowrap;
+}
+.inlineField > :global(.ant-typography) {
+  grid-column: 2;
+}
+.responseFields {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr) max-content;
+  gap: 10px 8px;
+  min-width: 0;
+}
+.conditionFields {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
+  gap: 10px 8px;
+  min-width: 0;
+}
+.conditionFields > .inlineField {
+  grid-column: 1 / -1;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.conditionFields > .inlineField > .fieldTitle {
+  text-align: end;
+  white-space: normal;
+}
+.conditionValue {
+  display: grid;
+  grid-template-columns: minmax(0, min(128px, 40%)) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  align-items: start;
+}
+.responseFields > .responseStatusHeader {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: subgrid;
+  align-items: start;
+}
+.responseStatusHeader > .inlineField {
+  grid-column: 1 / 3;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.responseStatusHeader > .inlineField > .fieldTitle {
+  white-space: normal;
+}
+.responseStatusHeader > .inlineField > .fieldTitle,
+.responseField > .fieldTitle {
+  text-align: end;
+}
+.responseField {
+  grid-column: 1 / -1;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.responseField > :last-child {
+  grid-column: 2 / -1;
+}
+.schemaProperties {
+  container: schema-properties / inline-size;
+}
+.schemaPropertyCard {
+  grid-template-columns: max-content minmax(0, 1fr) minmax(150px, 190px) max-content max-content;
+  column-gap: 8px;
+}
+.schemaPropertyHeader {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: subgrid;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.schemaPropertyHeader > :first-child {
+  grid-column: 1 / 3;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+  min-width: 0;
+}
+.schemaPropertyHeader > :global(.ant-btn) {
+  justify-self: end;
+}
+.schemaTypeField {
+  min-width: 0;
+}
+.schemaFields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 8px;
+  min-width: 0;
+}
+.schemaFields > .inlineField {
+  grid-column: 1 / -1;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.schemaFields > .inlineField > :last-child {
+  grid-column: 2 / -1;
+}
+.schemaFields > .inlineField > .fieldTitle,
+.schemaPropertyHeader > .inlineField > .fieldTitle {
+  text-align: end;
+}
+.schemaPropertyCard > .schemaPropertyNode {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.schemaPropertyNode > * {
+  grid-column: 1 / -1;
+}
+.schemaPropertyNode > .schemaFields {
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: subgrid;
+}
+.schemaPropertyHeader > :global(.ant-checkbox-wrapper) {
+  flex-shrink: 0;
+  min-height: 32px;
+  align-items: center;
+}
+@container schema-properties (max-width: 620px) {
+  .schemaPropertyCard {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+  .schemaPropertyHeader > .schemaTypeField {
+    grid-column: 1 / -1;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: subgrid;
+  }
+}
+.bodyToggle,
+.bodyFieldActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bodyFieldActions {
+  margin-inline-start: auto;
+  max-width: 100%;
+}
+.bodyMember .bodyFieldActions :global(.ant-select) {
+  width: 112px;
+  max-width: 100%;
+}
+.bodyChildren {
+  min-width: 0;
+}
+.bodyChildren > summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 32px;
+}
+.bodyChildren > summary > .fieldTitle {
+  margin-inline-end: 8px;
+}
+.bodyChildren > .stack {
+  margin-block-start: 6px;
+}
+.scalar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.requestTarget {
+  grid-template-columns: minmax(128px, 1fr) minmax(0, 2fr);
+}
+.full {
+  grid-column: 1 / -1;
+}
+.nested {
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--color-border);
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .conditionFields,
+  .conditionFields > .inlineField {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .conditionFields > .inlineField > .fieldTitle {
+    text-align: start;
+    line-height: 1.5;
+  }
+}
+@media (max-width: 768px) {
+  .responseStatusHeader > .inlineField > .fieldTitle {
+    line-height: 1.5;
+    white-space: normal;
+  }
+  .grid,
+  .requestTarget {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .member {
+    padding: 10px;
+  }
+  .nested {
+    padding-inline-start: 8px;
+  }
+}
