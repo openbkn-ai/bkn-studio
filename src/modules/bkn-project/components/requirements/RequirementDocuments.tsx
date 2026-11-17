@@ -23,6 +23,7 @@ import {
   DOC_TYPES,
   docTypeText,
   requirementErrorText,
+  selectWidthFor,
   uploadRefusalText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
 import { projectErrorCode } from "@/modules/bkn-project/services/publish.service";
@@ -92,6 +93,9 @@ export function RequirementDocuments({
     });
   };
 
+  const typeOptions = DOC_TYPES.map((value) => ({ label: docTypeText(t, value), value }));
+  const typeWidth = selectWidthFor(typeOptions.map((option) => option.label));
+
   const columns: ColumnsType<RequirementDocument> = [
     {
       dataIndex: "name",
@@ -112,8 +116,9 @@ export function RequirementDocuments({
             aria-label={t(`${PREFIX}.typeOf`, { name: document.name })}
             disabled={busyId === document.id}
             onChange={(value) => void changeType(document, value)}
-            options={DOC_TYPES.map((value) => ({ label: docTypeText(t, value), value }))}
+            options={typeOptions}
             size="small"
+            style={{ width: typeWidth }}
             value={docType}
           />
         ) : (
