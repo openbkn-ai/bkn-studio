@@ -788,7 +788,7 @@ describe("CypherQueryScene", () => {
     expect(request.message).toContain("Cypher.SyntaxError | unexpected token !=");
   });
 
-  it("sends the values typed for the statement's parameters, and a rerun sends them again", async () => {
+  it("runs a statement as written, with no parameter fields or 「设为参数」 on the query page", async () => {
     mocks.runCypherQuery.mockResolvedValue({
       ok: true,
       result: { columns: [{ name: "n" }], entries: [{ n: 3 }] },
@@ -797,44 +797,17 @@ describe("CypherQueryScene", () => {
     render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
     await screen.findByTestId("cypher-schema-object-teams");
 
-    const query = "MATCH (t:teams) WHERE t.team_id = $id AND t.rank < $rank RETURN count(t) AS n";
+    const query = "MATCH (t:teams) WHERE t.rank < $rank RETURN count(t) AS n";
     fireEvent.change(editor(), { target: { value: query } });
-    fireEvent.change(screen.getByLabelText("id"), { target: { value: "'76904023'" } });
-    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "10" } });
+    expect(screen.queryByTestId("cypher-parameters")).toBeNull();
+    expect(screen.queryByTestId("cypher-editor-parameterize")).toBeNull();
     fireEvent.keyDown(editor(), { key: "Enter", ctrlKey: true });
 
     await screen.findByText("3");
-    expect(mocks.runCypherQuery.mock.calls[0][0]).toMatchObject({
-      query,
-      parameters: { id: "76904023", rank: 10 },
-    });
-
-    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "99" } });
-    fireEvent.click(screen.getByTestId("cypher-frame-rerun"));
-    await waitFor(() => expect(mocks.runCypherQuery).toHaveBeenCalledTimes(2));
-    expect(mocks.runCypherQuery.mock.calls[1][0]).toMatchObject({
-      parameters: { id: "76904023", rank: 10 },
-    });
+    expect(mocks.runCypherQuery.mock.calls[0][0]).toMatchObject({ query, parameters: undefined });
   });
 
-  it("turns the selected value into a parameter, keeping it as the value", async () => {
-    render(<CypherQueryScene knId="worldcup" networkId="kn-1" />);
-    await screen.findByTestId("cypher-schema-object-teams");
-
-    const query = "MATCH (t:teams) WHERE t.team_name = 'Brazil' RETURN t";
-    fireEvent.change(editor(), { target: { value: query } });
-    fireEvent.click(screen.getByTestId("cypher-editor-parameterize"));
-    expect(screen.getByText("knowledgeNetwork.cypherQuery.parameters.selectValue")).toBeTruthy();
-
-    const start = query.indexOf("'Brazil'");
-    editor().setSelectionRange(start, start + "'Brazil'".length);
-    fireEvent.click(screen.getByTestId("cypher-editor-parameterize"));
-
-    expect(editor().value).toBe("MATCH (t:teams) WHERE t.team_name = $team_name RETURN t");
-    expect(screen.getByLabelText<HTMLInputElement>("team_name").value).toBe("'Brazil'");
-  });
-
-  it("publishes the statement to a chosen toolbox with inputs typed by their values", async () => {
+  it("publishes the statement to a chosen toolbox, its $name parameters as inputs", async () => {
     mocks.listToolboxes.mockResolvedValue({
       items: [{ boxId: "box-1", name: "supply_functions" }],
       total: 1,
@@ -850,7 +823,6 @@ describe("CypherQueryScene", () => {
     fireEvent.change(editor(), {
       target: { value: "MATCH (t:teams) WHERE t.rank < $rank RETURN count(t)" },
     });
-    fireEvent.change(screen.getByLabelText("rank"), { target: { value: "10" } });
     fireEvent.click(screen.getByTestId("cypher-editor-publish"));
 
     fireEvent.mouseDown(
@@ -865,7 +837,7 @@ describe("CypherQueryScene", () => {
     expect(onPublishFunction).toHaveBeenCalledWith("box-1", {
       query: "MATCH (t:teams) WHERE t.rank < $rank RETURN count(t)",
       knId: "kn-1",
-      inputs: [{ name: "rank", type: "number", required: true, description: "", example: 10 }],
+      inputs: [{ name: "rank", type: "string", required: true, description: "" }],
     });
   });
 

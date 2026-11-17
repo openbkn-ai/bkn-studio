@@ -7,6 +7,9 @@
 
 .field {
   display: grid;
+  /* A grid column grows to its widest item by default, so a long network name would widen the
+     select past the field and over whatever sits beside it; keep it inside and let it ellipsize. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   width: min(420px, 100%);
   min-width: 0;
