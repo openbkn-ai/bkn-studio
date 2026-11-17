@@ -1967,7 +1967,6 @@ describe("resource.service · mock SQL LIKE", () => {
         ["a_b", [3, 4, 9]],
         ["a\\%\\_b", [5]],
         ["a[.]b", [6]],
-        ["", [7]],
         ["%", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
         ["x\\\\y", [8]],
         ["a\\qb", [9]],
@@ -2025,6 +2024,134 @@ describe("resource.service · mock SQL LIKE", () => {
       }
     },
   );
+
+  it.each([
+    "like",
+    "not_like",
+    "regex",
+    "prefix",
+    "not_prefix",
+    "match",
+    "match_phrase",
+    "multi_match",
+  ])("rejects an empty %s before querying fixed or dynamic mock filters", async (operation) => {
+    const { previewCatalogResource } = await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const source = mockResources.find((resource) => resource.id === "res-query-source-table")!;
+    const view = mockResources.find((resource) => resource.id === "res-query-source-switch-view")!;
+    source.rowCount = 0;
+    const condition = {
+      operation: "and",
+      sub_conditions: [{ field: "content", operation, value: "" }],
+    };
+    for (const ignoreLocalIndex of [true, false]) {
+      for (const fixed of [true, false]) {
+        view.logicalViewDefinition!.filterCondition = fixed ? condition : undefined;
+        const result = previewCatalogResource(view.id, {
+          ignoreLocalIndex,
+          ...(fixed ? {} : { filterCondition: condition }),
+          limit: 10,
+          offset: 0,
+        }).catch((error: unknown) => error);
+        await vi.runAllTimersAsync();
+        expect(await result).toMatchObject({
+          response: {
+            status: 400,
+            data: {
+              error_code: fixed
+                ? "VegaBackend.LogicalView.DefinitionInvalid"
+                : "VegaBackend.Query.InvalidParameter",
+            },
+          },
+        });
+      }
+      const physicalResult = previewCatalogResource(source.id, {
+        ignoreLocalIndex,
+        filterCondition: condition,
+        limit: 10,
+        offset: 0,
+      }).catch((error: unknown) => error);
+      await vi.runAllTimersAsync();
+      expect(await physicalResult).toMatchObject({
+        response: {
+          status: 400,
+          data: { error_code: "VegaBackend.Resource.InvalidParameter" },
+        },
+      });
+    }
+  });
+
+  it("reports an invalid saved search before an invalid additional filter", async () => {
+    const { previewCatalogResource } = await import("./resource.service");
+    const { mockResources } = await import("./mock-db");
+    const view = mockResources.find((resource) => resource.id === "res-query-source-switch-view")!;
+    view.logicalViewDefinition!.filterCondition = {
+      operation: "and",
+      sub_conditions: [{ field: "content", operation: "like", value: "" }],
+    };
+    const result = previewCatalogResource(view.id, {
+      filterCondition: { field: "content", operation: "regex", value: "" },
+      limit: 10,
+      offset: 0,
+    }).catch((error: unknown) => error);
+    await vi.runAllTimersAsync();
+    expect(await result).toMatchObject({
+      response: {
+        status: 400,
+        data: { error_code: "VegaBackend.LogicalView.DefinitionInvalid" },
+      },
+    });
+  });
+
+  it.each([
+    "like",
+    "not_like",
+    "regex",
+    "prefix",
+    "not_prefix",
+    "match",
+    "match_phrase",
+    "multi_match",
+  ])("rejects an empty saved %s before creating or updating a mock view", async (operation) => {
+    const { createDerivedView, updateDerivedView } = await import("./resource.service");
+    const { mockResources, subscribeMockDb } = await import("./mock-db");
+    const view = mockResources.find((resource) => resource.id === "res-query-source-switch-view")!;
+    const before = structuredClone(mockResources);
+    const changed = vi.fn();
+    const unsubscribe = subscribeMockDb(changed);
+    const input = {
+      catalogId: view.catalogId,
+      name: view.name,
+      description: view.description,
+      enabled: true,
+      sourceResourceId: view.logicalViewDefinition!.sourceResourceId,
+      schema: view.schema,
+      tags: view.tags ?? [],
+      filterCondition: {
+        operation: "or",
+        sub_conditions: [{ field: "content", operation, value: "" }],
+      },
+    };
+    try {
+      for (const update of [false, true]) {
+        const pending = update
+          ? updateDerivedView(view.id, { ...input, expectedUpdateTime: view.expectedUpdateTime })
+          : createDerivedView(input);
+        const result = pending.catch((error: unknown) => error);
+        await vi.runAllTimersAsync();
+        expect(await result).toMatchObject({
+          response: {
+            status: 400,
+            data: { error_code: "VegaBackend.LogicalView.InvalidParameter.LogicDefinition" },
+          },
+        });
+        expect(mockResources).toEqual(before);
+        expect(changed).not.toHaveBeenCalled();
+      }
+    } finally {
+      unsubscribe();
+    }
+  });
 });
 
 describe("resource.service · mock filterability", () => {

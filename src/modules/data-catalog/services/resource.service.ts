@@ -19,6 +19,7 @@ import {
 } from "@/framework/request/precision-safe-json";
 import BigNumber from "bignumber.js";
 import {
+  filterRequiresNonEmptyString,
   isNumericFilterType,
   isTemporalFilterType,
   parseFilterCondition,
@@ -795,6 +796,10 @@ export async function updateCatalogResource(
 export async function createDerivedView(input: DerivedViewInput): Promise<CatalogResource> {
   validateFieldFilterability(input.schema);
   if (useMock) {
+    assertMockSearchValues(
+      input.filterCondition,
+      "VegaBackend.LogicalView.InvalidParameter.LogicDefinition",
+    );
     const source = mockResources.find((item) => item.id === input.sourceResourceId);
     if (!source || (source.category !== "table" && source.category !== "index")) {
       throwMockRequestError(
@@ -874,6 +879,10 @@ export async function updateDerivedView(
 ): Promise<CatalogResource | null> {
   validateFieldFilterability(input.schema);
   if (useMock) {
+    assertMockSearchValues(
+      input.filterCondition,
+      "VegaBackend.LogicalView.InvalidParameter.LogicDefinition",
+    );
     validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     const current = mockResources[index];
@@ -1124,6 +1133,17 @@ function mockBinaryContent(row: number, byteLength: number) {
   return btoa(String.fromCharCode(...bytes));
 }
 
+function assertMockSearchValues(condition: unknown, errorCode: string): void {
+  if (!condition || typeof condition !== "object" || Array.isArray(condition)) return;
+  const node = condition as Record<string, unknown>;
+  if (filterRequiresNonEmptyString(String(node.operation)) && node.value === "") {
+    throwMockRequestError(400, errorCode, "Search filter values must not be empty strings.");
+  }
+  if (Array.isArray(node.sub_conditions)) {
+    for (const child of node.sub_conditions) assertMockSearchValues(child, errorCode);
+  }
+}
+
 function assertMockFilterSupported(condition: unknown): void {
   if (!condition || typeof condition !== "object" || Array.isArray(condition)) return;
   const node = condition as Record<string, unknown>;
@@ -1282,6 +1302,13 @@ export async function previewCatalogResource(
       usesLocalIndex;
     const fixed = resource.logicalViewDefinition?.filterCondition;
     const dynamic = query.filterCondition;
+    assertMockSearchValues(fixed, "VegaBackend.LogicalView.DefinitionInvalid");
+    assertMockSearchValues(
+      dynamic,
+      resource.category === "logical_view"
+        ? "VegaBackend.Query.InvalidParameter"
+        : "VegaBackend.Resource.InvalidParameter",
+    );
     const fulltextDemo =
       resource.id === "res-query-source-fulltext-view" &&
       source?.id === "res-query-source-table" &&

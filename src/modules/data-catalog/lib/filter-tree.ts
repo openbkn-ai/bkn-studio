@@ -91,6 +91,12 @@ const fieldType = (type: string) => type.trim().toLowerCase();
 const hasOperation = (operations: readonly string[], operation: string) =>
   operations.includes(operation);
 
+export function filterRequiresNonEmptyString(operation: string): boolean {
+  return ["like", "not_like", "regex", "prefix", "not_prefix", ...FULLTEXT, "multi_match"].includes(
+    operation,
+  );
+}
+
 export function sqlLikePatternRegex(pattern: string): RegExp | null {
   let source = "";
   let escaped = false;
@@ -331,6 +337,7 @@ export function filterValidationError(
         : "incompatibleField";
     }
     if (kind === "none") return null;
+    if (filterRequiresNonEmptyString(node.operation) && node.value === "") return "missingValue";
     if (
       ["like", "not_like"].includes(node.operation) &&
       typeof node.value === "string" &&
