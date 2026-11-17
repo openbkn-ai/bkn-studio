@@ -7,7 +7,7 @@
 
 import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
 
-import { Alert, Form, Result, Spin, Steps } from "antd";
+import { Alert, Form, Modal, Result, Spin, Steps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -16,13 +16,36 @@ import type { DataConnectFormSceneProps } from "@/modules/data-connect/contracts
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { atLeast } from "@/framework/entitlement/edition";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import {
+  ApiCatalogConnectionTestModal,
+  ApiCatalogTestResultNotice,
+  type ApiCatalogTestScope,
+  type ApiCatalogTestKind,
+  type ApiCatalogTestResult,
+  type ApiCatalogBusinessTestInput,
+} from "@/modules/data-connect/components/ApiCatalogConnectionTestModal";
+import {
+  buildApiCatalogPreview,
+  prepareApiCatalogConfigForEdit,
+  validateApiCatalogConfig,
+} from "@/modules/data-connect/lib/api-catalog-config";
+import { validateApiLoginDefinition } from "@/shared/api-definition";
+import {
+  canTestApiCatalogResource,
+  getApiCatalogTestResource,
+} from "@/modules/data-connect/services/api-catalog-test.service";
+import type { CatalogConnectionTestResult } from "@/shared/catalog";
+import apiStyles from "@/modules/data-connect/components/ApiCatalogConfigEditor.module.css";
+import {
   getConnectorConfigDefaults,
+  getConnectorRequiredEdition,
   isConnectorFieldVisible,
   mergeKnownConnectorTypes,
 } from "@/modules/data-connect/lib/connector-template";
@@ -56,7 +79,9 @@ export function DataConnectFormScene({
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
+  const { snapshot } = useEntitlementContext();
   const [form] = Form.useForm<DataConnectMutationInput>();
+  const apiDraftConfig = Form.useWatch<Record<string, unknown>>("connectorConfig", form);
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +93,15 @@ export function DataConnectFormScene({
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [hasConnectorConfigChanges, setHasConnectorConfigChanges] = useState(false);
+  const [apiEditorValid, setApiEditorValid] = useState(true);
+  const [apiTestOpen, setApiTestOpen] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<ApiCatalogTestResult | null>(null);
+  const [apiPreview, setApiPreview] = useState<string | null>(null);
+  const [apiConflict, setApiConflict] = useState(false);
+  const [configRevision, setConfigRevision] = useState(0);
+  const configRevisionRef = useRef(0);
+  const apiTestSequence = useRef(0);
+  const apiTestController = useRef<AbortController | null>(null);
   const selectedConnectorTypeRef = useRef<string | undefined>(undefined);
   const configuredConnectorTypeRef = useRef<string | undefined>(undefined);
   const recordIdentityKey = mode === "edit" ? (recordId ?? "") : "";
@@ -117,6 +151,14 @@ export function DataConnectFormScene({
     void (async () => {
       setLoading(true);
       setLoadError(null);
+      setApiTestOpen(false);
+      setApiTestResult(null);
+      setApiPreview(null);
+      setApiConflict(false);
+      setApiEditorValid(true);
+      configRevisionRef.current = 0;
+      setConfigRevision(0);
+      apiTestSequence.current++;
 
       try {
         const types = await listDataConnectConnectorTypes();
@@ -143,11 +185,15 @@ export function DataConnectFormScene({
             );
             selectConnectorType(currentRecord.connectorType);
             configuredConnectorTypeRef.current = currentRecord.connectorType;
-            form.setFieldsValue({
-              connectorConfig: sanitizeConnectorConfig(
+            form.setFieldValue(
+              "connectorConfig",
+              sanitizeConnectorConfig(
                 currentRecord.connectorConfig,
                 connector?.fieldConfig,
+                connector?.category === "api",
               ),
+            );
+            form.setFieldsValue({
               connectorType: currentRecord.connectorType,
               description: currentRecord.description,
               enabled: currentRecord.enabled,
@@ -183,6 +229,7 @@ export function DataConnectFormScene({
 
     return () => {
       active = false;
+      apiTestController.current?.abort();
     };
   }, [form, mode, recordId]);
 
@@ -192,6 +239,11 @@ export function DataConnectFormScene({
     submittedRecordIdentity: typeof recordIdentityRef.current,
   ) => {
     if (mode !== "edit" || !submittedRecordId || !isRequestConflict(error)) {
+      return;
+    }
+
+    if (connectorTypes.find((item) => item.type === selectedConnectorType)?.category === "api") {
+      setApiConflict(true);
       return;
     }
 
@@ -206,11 +258,11 @@ export function DataConnectFormScene({
         const connector = connectorTypes.find((item) => item.type === latestRecord.connectorType);
         selectConnectorType(latestRecord.connectorType);
         configuredConnectorTypeRef.current = latestRecord.connectorType;
+        form.setFieldValue(
+          "connectorConfig",
+          sanitizeConnectorConfig(latestRecord.connectorConfig, connector?.fieldConfig),
+        );
         form.setFieldsValue({
-          connectorConfig: sanitizeConnectorConfig(
-            latestRecord.connectorConfig,
-            connector?.fieldConfig,
-          ),
           connectorType: latestRecord.connectorType,
           description: latestRecord.description,
           enabled: latestRecord.enabled,
@@ -230,6 +282,17 @@ export function DataConnectFormScene({
   const selectedConnector = useMemo(
     () => connectorTypes.find((item) => item.type === selectedConnectorType),
     [connectorTypes, selectedConnectorType],
+  );
+  const isApiConnector = selectedConnector?.category === "api";
+  const apiRequiredEdition = selectedConnector
+    ? getConnectorRequiredEdition(selectedConnector)
+    : undefined;
+  const apiUnavailable = !!(
+    isApiConnector &&
+    selectedConnector &&
+    (!selectedConnector.available ||
+      !selectedConnector.enabled ||
+      (snapshot !== null && apiRequiredEdition && !atLeast(snapshot.edition, apiRequiredEdition)))
   );
   const canTestUnsavedConfig = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -285,6 +348,9 @@ export function DataConnectFormScene({
       if (selectedConnectorTypeRef.current !== selectedConnectorType) {
         return;
       }
+      if (connector.category === "api" && (!connector.available || !connector.enabled)) {
+        throw new Error(t("dataConnect.apiCatalog.unavailable"));
+      }
       setConnectorTypes((currentTypes) =>
         currentTypes.map((item) => (item.type === connector.type ? connector : item)),
       );
@@ -296,7 +362,9 @@ export function DataConnectFormScene({
       const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
         ...defaults,
         ...(configuredConnectorTypeRef.current === selectedConnectorType
-          ? sanitizeConnectorConfig(currentConfig, connector.fieldConfig)
+          ? connector.category === "api"
+            ? currentConfig
+            : sanitizeConnectorConfig(currentConfig, connector.fieldConfig)
           : {}),
       };
 
@@ -318,7 +386,11 @@ export function DataConnectFormScene({
   };
 
   const buildMutationPayload = async () => {
+    if (apiUnavailable) throw new Error(t("dataConnect.apiCatalog.unavailable"));
     const includeConnection = mode === "create" || hasConnectorConfigChanges;
+    if (isApiConnector && includeConnection && !apiEditorValid) {
+      throw new Error(t("dataConnect.apiCatalog.errors.incompleteInput"));
+    }
     const values = await form.validateFields(
       includeConnection ? undefined : ["name", "description", "tags"],
     );
@@ -327,24 +399,9 @@ export function DataConnectFormScene({
           values.connectorConfig ?? {},
           selectedConnector?.fieldConfig,
           selectedConnector?.type,
+          isApiConnector,
         )
       : {};
-    if (includeConnection && Array.isArray(connectorConfig.sensitive_variables)) {
-      const variables = connectorConfig.variables;
-      const missing = connectorConfig.sensitive_variables.filter(
-        (name: unknown) =>
-          typeof name === "string" &&
-          (!variables ||
-            typeof variables !== "object" ||
-            Array.isArray(variables) ||
-            typeof (variables as Record<string, unknown>)[name] !== "string"),
-      );
-      if (missing.length > 0) {
-        throw new Error(
-          t("dataConnect.sensitiveVariablesRequired", { fields: missing.join(", ") }),
-        );
-      }
-    }
 
     return {
       connectorConfig,
@@ -380,6 +437,7 @@ export function DataConnectFormScene({
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
         selectedConnector?.type,
+        isApiConnector,
       ),
       connectorType: selectedConnectorType ?? currentValues.connectorType,
     };
@@ -531,7 +589,159 @@ export function DataConnectFormScene({
     }
   };
 
-  if (mode === "edit" && !loading && record && !hasCatalogOperation(record, "modify")) {
+  const handleApiTest = async (
+    scope: ApiCatalogTestScope,
+    kind: ApiCatalogTestKind,
+    input?: ApiCatalogBusinessTestInput,
+  ) => {
+    if (apiUnavailable) return;
+    if (
+      (scope === "draft" && !canTestUnsavedConfig) ||
+      (scope === "saved" && (!recordId || !record || !hasCatalogOperation(record, "modify")))
+    )
+      return;
+    const identity = recordIdentityRef.current;
+    const revision = configRevisionRef.current;
+    const sequence = ++apiTestSequence.current;
+    apiTestController.current?.abort();
+    const controller = new AbortController();
+    apiTestController.current = controller;
+    setApiTestResult(null);
+    setTestingConnection(true);
+    try {
+      let response: CatalogConnectionTestResult | undefined;
+      let resourceName: string | undefined;
+      if (kind === "resource") {
+        if (scope !== "saved" || !recordId || !record?.enabled || !input?.resourceId)
+          throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
+        const resource = await getApiCatalogTestResource(input.resourceId, {
+          signal: controller.signal,
+        });
+        if (!resource || !canTestApiCatalogResource(resource, recordId))
+          throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
+        resourceName = resource.name;
+      }
+      if (scope === "draft" && !apiEditorValid)
+        throw new Error(t("dataConnect.apiCatalog.errors.incompleteInput"));
+      if (kind === "local") {
+        const config =
+          scope === "saved"
+            ? record!.connectorConfig
+            : (form.getFieldValue("connectorConfig") as Record<string, unknown>);
+        const error =
+          validateApiCatalogConfig(config, { requireSecrets: scope === "draft" }) ??
+          (config.login_request ? validateApiLoginDefinition(config.login_request) : undefined);
+        if (error) throw new Error(t(error));
+      } else if (scope === "saved") {
+        response = await testDataConnectRecord(recordId!, {
+          signal: controller.signal,
+          ...(kind === "transport" ? {} : { scope: kind }),
+          ...(kind === "resource"
+            ? { resourceId: input?.resourceId, ...(input?.paging ? { paging: input.paging } : {}) }
+            : {}),
+        });
+      } else {
+        const payload = await buildConnectionTestPayload();
+        if (
+          identity !== recordIdentityRef.current ||
+          revision !== configRevisionRef.current ||
+          controller.signal.aborted
+        )
+          return;
+        if (kind === "resource") throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
+        response = await testDataConnectConfig(
+          { ...payload, ...(kind === "login" ? { scope: "login" as const } : {}) },
+          { signal: controller.signal },
+        );
+      }
+      if (
+        identity !== recordIdentityRef.current ||
+        sequence !== apiTestSequence.current ||
+        controller.signal.aborted
+      )
+        return;
+      setApiTestResult({
+        scope,
+        revision,
+        type: "success",
+        message: t(
+          `dataConnect.apiCatalog.${kind === "local" ? "localSuccess" : kind === "login" ? "loginSuccess" : kind === "resource" ? "resourceSuccess" : "transportSuccess"}`,
+        ),
+        resourceName,
+        preview:
+          kind === "resource" && response
+            ? buildApiCatalogPreview(
+                (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>,
+                {
+                  entries: response.entries,
+                  ...(response.paging ? { paging: response.paging } : {}),
+                },
+              )
+            : undefined,
+      });
+    } catch (error) {
+      if (
+        identity !== recordIdentityRef.current ||
+        sequence !== apiTestSequence.current ||
+        controller.signal.aborted
+      )
+        return;
+      if (typeof error === "object" && error !== null && "errorFields" in error) {
+        setApiTestOpen(false);
+        return;
+      }
+      setApiTestResult({
+        scope,
+        revision,
+        type: "error",
+        message: extractRequestErrorMessage(error),
+      });
+    } finally {
+      if (identity === recordIdentityRef.current && sequence === apiTestSequence.current)
+        setTestingConnection(false);
+    }
+  };
+
+  const reloadApiRecord = () => {
+    const identity = recordIdentityRef.current;
+    const id = recordId;
+    void modal.confirm({
+      title: t("dataConnect.apiCatalog.reloadTitle"),
+      content: t("dataConnect.apiCatalog.reloadHint"),
+      okText: t("dataConnect.apiCatalog.reload"),
+      cancelText: t("common.cancel"),
+      onOk: async () => {
+        if (!id) return;
+        const latest = await getDataConnectRecord(id);
+        if (identity !== recordIdentityRef.current || !latest) return;
+        setRecord(latest);
+        form.setFieldValue(
+          "connectorConfig",
+          prepareApiCatalogConfigForEdit(latest.connectorConfig),
+        );
+        form.setFieldsValue({
+          connectorType: latest.connectorType,
+          description: latest.description,
+          enabled: latest.enabled,
+          name: latest.name,
+          tags: latest.tags,
+        });
+        configRevisionRef.current++;
+        setConfigRevision(configRevisionRef.current);
+        setApiTestResult(null);
+        setApiConflict(false);
+        setHasUnsavedChanges(false);
+        setHasConnectorConfigChanges(false);
+      },
+    });
+  };
+
+  if (
+    mode === "edit" &&
+    !loading &&
+    record &&
+    (record.builtin || !hasCatalogOperation(record, "modify"))
+  ) {
     return <Result status="403" subTitle={t("dataConnect.permissionRequired")} title="403" />;
   }
 
@@ -570,16 +780,52 @@ export function DataConnectFormScene({
             <Alert message={t("common.notFound")} showIcon type="warning" />
           ) : (
             <div className={styles.stepPanel}>
+              {isApiConnector ? (
+                <div className={`${apiStyles.section} ${apiStyles.context}`}>
+                  {apiUnavailable ? (
+                    <Alert
+                      showIcon
+                      type="warning"
+                      message={t("dataConnect.apiCatalog.unavailable")}
+                    />
+                  ) : null}
+                  <Alert
+                    showIcon
+                    type={hasConnectorConfigChanges && mode === "edit" ? "warning" : "info"}
+                    message={t(
+                      `dataConnect.apiCatalog.${mode === "create" ? "newConfig" : hasConnectorConfigChanges ? "replacement" : "metadataPreserved"}`,
+                    )}
+                  />
+                  {apiConflict ? (
+                    <Alert
+                      showIcon
+                      type="warning"
+                      message={t("dataConnect.apiCatalog.conflict")}
+                      action={
+                        <AppButton onClick={reloadApiRecord}>
+                          {t("dataConnect.apiCatalog.reload")}
+                        </AppButton>
+                      }
+                    />
+                  ) : null}
+                  {apiTestResult ? (
+                    <ApiCatalogTestResultNotice result={apiTestResult} revision={configRevision} />
+                  ) : null}
+                </div>
+              ) : null}
               <Form
                 className={
                   currentStep === 0 && mode === "create" ? undefined : styles.configFormHorizontal
                 }
                 colon={false}
+                disabled={apiUnavailable}
                 form={form}
                 onValuesChange={(changedValues) => {
                   setHasUnsavedChanges(true);
                   if (Object.prototype.hasOwnProperty.call(changedValues, "connectorConfig")) {
                     setHasConnectorConfigChanges(true);
+                    configRevisionRef.current++;
+                    setConfigRevision(configRevisionRef.current);
                   }
                 }}
                 labelAlign="right"
@@ -599,6 +845,8 @@ export function DataConnectFormScene({
                   <DataConnectConfigForm
                     isEdit={mode === "edit"}
                     selectedConnectorType={selectedConnector}
+                    onApiValidityChange={setApiEditorValid}
+                    apiDisabled={apiUnavailable}
                   />
                 )}
               </Form>
@@ -607,6 +855,19 @@ export function DataConnectFormScene({
         </div>
         <div className={styles.footerBar}>
           <div className={styles.actionsRight}>
+            {isApiConnector && currentStep === 1 ? (
+              <AppButton
+                onClick={() =>
+                  setApiPreview(
+                    buildApiCatalogPreview(
+                      (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>,
+                    ),
+                  )
+                }
+              >
+                {t("dataConnect.apiCatalog.preview")}
+              </AppButton>
+            ) : null}
             {currentStep === 1 && mode === "create" ? (
               <AppButton
                 onClick={() => {
@@ -618,13 +879,17 @@ export function DataConnectFormScene({
             ) : null}
             {(currentStep === 1 && mode === "create") || (mode === "edit" && record) ? (
               <AppButton
-                disabled={mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges}
+                disabled={
+                  apiUnavailable ||
+                  (!isApiConnector && mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges)
+                }
                 loading={testingConnection}
                 onClick={() => {
-                  void handleTestConnection();
+                  if (isApiConnector) setApiTestOpen(true);
+                  else void handleTestConnection();
                 }}
                 title={
-                  mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges
+                  !isApiConnector && mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges
                     ? t("dataConnect.saveBeforeTesting")
                     : undefined
                 }
@@ -633,6 +898,7 @@ export function DataConnectFormScene({
               </AppButton>
             ) : null}
             <AppButton
+              disabled={apiUnavailable || (isApiConnector && apiConflict)}
               loading={submitting || loadingConnectorDefinition}
               onClick={() => {
                 void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
@@ -647,6 +913,44 @@ export function DataConnectFormScene({
             </AppButton>
           </div>
         </div>
+        {apiPreview !== null ? (
+          <Modal
+            open
+            title={t("dataConnect.apiCatalog.preview")}
+            footer={null}
+            width={800}
+            onCancel={() => setApiPreview(null)}
+          >
+            <p className={apiStyles.hint}>{t("dataConnect.apiCatalog.previewHint")}</p>
+            <pre className={apiStyles.preview}>{apiPreview}</pre>
+          </Modal>
+        ) : null}
+        {apiTestOpen && isApiConnector ? (
+          <ApiCatalogConnectionTestModal
+            saved={!!record}
+            catalogId={recordId}
+            catalogEnabled={record?.enabled}
+            draftLogin={!!apiDraftConfig?.login_request}
+            savedLogin={!!record?.connectorConfig.login_request}
+            defaultScope={
+              record && (!hasConnectorConfigChanges || !canTestUnsavedConfig) ? "saved" : "draft"
+            }
+            canTestDraft={canTestUnsavedConfig}
+            canTestSaved={!!record && hasCatalogOperation(record, "modify")}
+            loading={testingConnection}
+            result={apiTestResult}
+            revision={configRevision}
+            onRun={(scope, kind, input) => {
+              void handleApiTest(scope, kind, input);
+            }}
+            onClose={() => {
+              apiTestController.current?.abort();
+              apiTestSequence.current++;
+              setTestingConnection(false);
+              setApiTestOpen(false);
+            }}
+          />
+        ) : null}
       </section>
     </PermissionGate>
   );
@@ -655,7 +959,9 @@ export function DataConnectFormScene({
 function sanitizeConnectorConfig(
   config: Record<string, unknown>,
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
+  api = false,
 ) {
+  if (api) return prepareApiCatalogConfigForEdit(config);
   return Object.fromEntries(
     Object.entries(protectCatalogConfigVariables(config, "edit"))
       .filter(([key, value]) => !shouldOmitConnectorConfigValue(fieldConfig[key], value))
@@ -677,7 +983,9 @@ function normalizeConnectorConfig(
   config: Record<string, unknown>,
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
   connectorType?: string,
+  api = false,
 ) {
+  if (api) return config;
   return Object.fromEntries(
     Object.entries(config)
       .filter(

@@ -6,61 +6,63 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
+import { isCatalogVariable, protectCatalogConfigVariables } from "./config-security";
 
-describe("Catalog sensitive variables", () => {
-  it("masks declared names with internal underscores without changing the source", () => {
+describe("Catalog sensitive variable metadata", () => {
+  it("hides only the sensitive value while retaining its name and metadata", () => {
     const config = {
       variables: {
-        token: "private-token",
-        api_key: "private-key",
-        client_key: "private-option",
-        tenant: "public",
+        arbitrary: { value: "private-fixture", sensitive: true },
+        tenant: { value: "public" },
       },
-      sensitive_variables: ["token", "api_key", "client_key"],
-      options: { timeout_seconds: 30, max_response_mib: 10 },
+      options: { timeout_seconds: 30 },
     };
     expect(protectCatalogConfigVariables(config, "display")).toEqual({
-      variables: {
-        token: "••••••••",
-        api_key: "••••••••",
-        client_key: "••••••••",
-        tenant: "public",
-      },
-      sensitive_variables: ["token", "api_key", "client_key"],
-      options: { timeout_seconds: 30, max_response_mib: 10 },
+      ...config,
+      variables: { arbitrary: { value: "••••••••", sensitive: true }, tenant: { value: "public" } },
     });
     expect(protectCatalogConfigVariables(config, "edit")).toEqual({
-      variables: { tenant: "public" },
-      sensitive_variables: ["token", "api_key", "client_key"],
-      options: { timeout_seconds: 30, max_response_mib: 10 },
+      ...config,
+      variables: { arbitrary: { sensitive: true }, tenant: { value: "public" } },
     });
-    expect(config.variables.token).toBe("private-token");
-    expect(config.variables.client_key).toBe("private-option");
-    expect(config.variables.api_key).toBe("private-key");
+    expect(config.variables.arbitrary.value).toBe("private-fixture");
   });
   it.each([
     null,
-    "arbitrary",
-    [42],
-    ["arbitrary", "arbitrary"],
-    ["variables.arbitrary"],
-    ["_secret"],
-    ["__paging"],
-  ])("hides all variables when declaration is invalid: %j", (sensitive_variables) => {
-    const config = {
-      variables: { arbitrary: "private-option" },
-      sensitive_variables,
-      options: { encrypt: true },
-    };
-    expect(JSON.stringify(protectCatalogConfigVariables(config, "display"))).not.toContain(
-      "private-option",
-    );
-    expect(protectCatalogConfigVariables(config, "edit").variables).toEqual({});
-    expect(protectCatalogConfigVariables(config, "display").options).toEqual({ encrypt: true });
-    expect(protectCatalogConfigVariables(config, "edit").options).toEqual({ encrypt: true });
+    "private-fixture",
+    { value: "private-fixture", sensitive: "true" },
+    { value: "private-fixture", sensitive: null },
+    { value: "private-fixture", type: "string" },
+    { value: null },
+    { value: undefined },
+    {},
+  ])("hides malformed definitions without turning them into editable values: %j", (variable) => {
+    const config = { variables: { arbitrary: variable }, options: { encrypt: true } };
+    for (const mode of ["display", "edit"] as const) {
+      const result = protectCatalogConfigVariables(config, mode);
+      expect(JSON.stringify(result)).not.toContain("private-fixture");
+      expect(result.variables).toEqual({ arbitrary: "••••••••" });
+      expect(result.options).toEqual({ encrypt: true });
+      expect(isCatalogVariable((result.variables as Record<string, unknown>).arbitrary)).toBe(
+        false,
+      );
+    }
   });
-  it("leaves ordinary connector options intact when no declaration is present", () => {
+  it("preserves false, zero, empty strings and nested null without interpreting business keys as metadata", () => {
+    const config = {
+      variables: {
+        zero: { value: 0 },
+        flag: { value: false },
+        empty: { value: "" },
+        object: { value: { value: "business", sensitive: true } },
+        array: { value: [false, null] },
+        secret: { sensitive: true },
+      },
+    };
+    expect(protectCatalogConfigVariables(config, "edit")).toEqual(config);
+    expect(Object.values(config.variables).every(isCatalogVariable)).toBe(true);
+  });
+  it("leaves ordinary connector options unchanged", () => {
     const config = { options: { encrypt: true, timeout: 30 } };
     expect(protectCatalogConfigVariables(config, "display")).toEqual(config);
     expect(protectCatalogConfigVariables(config, "edit")).toEqual(config);

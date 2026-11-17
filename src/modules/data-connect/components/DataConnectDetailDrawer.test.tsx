@@ -267,8 +267,11 @@ describe("DataConnectDetailDrawer", () => {
     getRecordMock.mockResolvedValue({
       ...record,
       connectorConfig: {
-        variables: { tenant: "public", api_key: "private-key", arbitrary: "private-option" },
-        sensitive_variables: ["api_key", "arbitrary"],
+        variables: {
+          tenant: { value: "public", sensitive: false },
+          api_key: { value: "private-key", sensitive: true },
+          arbitrary: { value: "private-option", sensitive: true },
+        },
       },
     });
     render(

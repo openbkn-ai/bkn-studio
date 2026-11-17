@@ -5,8 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { apiCatalogEnUS } from "./api-catalog.en-US";
+import { apiEditorEnUS } from "./api-editor.en-US";
+
 export const dataConnectEnUS = {
   dataConnect: {
+    apiCatalog: apiCatalogEnUS,
+    apiEditor: apiEditorEnUS,
     title: "Data Connections",
     description:
       "Manage connector instances provided by the Vega backend within the BKN platform console.",
@@ -322,6 +327,8 @@ export const dataConnectEnUS = {
         "This parameter is not described by this Studio version. Its value is preserved; remove it explicitly if needed. The backend validates support.",
       repairJSON: "Repair connection options JSON",
       labels: {
+        httpTimeout: "Whole-call timeout (seconds)",
+        httpResponseLimit: "Maximum response size (MiB)",
         timeZone: "Session time zone",
         charset: "Character set",
         collation: "Collation",
@@ -346,6 +353,9 @@ export const dataConnectEnUS = {
         server: "Server",
       },
       hints: {
+        httpTimeout: "Login, the business request and response processing share this budget.",
+        httpResponseLimit:
+          "Measured separately for login and business responses; platform limits apply.",
         timeZone:
           "Omitted: use the Vega service time zone. Empty: inherit the database session default. Other values use the database's native interpretation, including offset signs; the connection test validates them.",
         emptyString:
@@ -368,7 +378,12 @@ export const dataConnectEnUS = {
         positiveDuration:
           "Positive duration such as 30s. Omitted parameters use the driver default.",
       },
+      placeholders: {
+        httpTimeout: "Platform default (initially 30 seconds)",
+        httpResponseLimit: "Platform default (initially 10 MiB)",
+      },
       errors: {
+        positiveInteger: "Enter a positive integer. Leave it empty to use the platform default.",
         json: "Enter a valid JSON object.",
         duplicate: "This parameter duplicates another key after connector normalization.",
         boolean: "Choose enabled or disabled.",

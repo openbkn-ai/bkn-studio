@@ -55,6 +55,26 @@ describe("precision-safe JSON", () => {
       formatPrecisionSafeJSON('{"decimal":0.12345678901234,"unsafeInteger":110101199001152345}'),
     ).toBe('{\n  "decimal": 0.12345678901234,\n  "unsafeInteger": 110101199001152345\n}');
   });
+
+  it.each(["constructor", "__proto__"])(
+    "preserves %s as an own data property only when explicitly requested",
+    (key) => {
+      const raw = `{"${key}":{"prototype":{"polluted":true},"amount":9007199254740993}}`;
+      expect(() => parsePrecisionPreservingJSON(raw)).toThrow();
+      const parsed = parsePrecisionPreservingJSON(raw, { allowSpecialKeys: true }) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);
+      expect(Object.hasOwn(parsed, key)).toBe(true);
+      expect(String(parsed[key].amount)).toBe("9007199254740993");
+      expect(Object.getPrototypeOf(parsed[key])).toBe(Object.prototype);
+      expect(Object.hasOwn(Object.prototype, "polluted")).toBe(false);
+      expect(transformPrecisionSafeJSONRequest(parsed)).toBe(raw);
+      expect(formatPrecisionSafeJSON(raw, { allowSpecialKeys: true })).toContain(`"${key}": {`);
+      expect(() => formatPrecisionSafeJSON(raw)).toThrow();
+    },
+  );
 });
 
 describe("Decimal exponent preservation", () => {

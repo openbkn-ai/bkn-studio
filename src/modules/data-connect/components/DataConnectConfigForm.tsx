@@ -7,7 +7,7 @@
 
 import { Form, Input, InputNumber, Select, Switch } from "antd";
 import type { Rule } from "antd/es/form";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
@@ -38,14 +38,19 @@ import type {
 } from "@/modules/data-connect/types/data-connect";
 import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 import { validateConnectorOptions } from "@/modules/data-connect/lib/connector-options";
+import { validateApiCatalogConfig } from "@/modules/data-connect/lib/api-catalog-config";
+import { validateApiLoginDefinition } from "@/shared/api-definition";
 
 import { ConnectorOptionsEditor } from "./ConnectorOptionsEditor";
+import { ApiCatalogConfigEditor } from "./ApiCatalogConfigEditor";
 
 import styles from "./DataConnectConfigForm.module.css";
 
 type DataConnectConfigFormProps = {
   isEdit?: boolean;
   selectedConnectorType?: DataConnectConnectorType;
+  onApiValidityChange?: (valid: boolean) => void;
+  apiDisabled?: boolean;
 };
 
 type SafeNamePath = string | number | Array<string | number>;
@@ -61,6 +66,8 @@ const unicodeCount = (max: number) => ({
 export function DataConnectConfigForm({
   isEdit = false,
   selectedConnectorType,
+  onApiValidityChange,
+  apiDisabled = false,
 }: DataConnectConfigFormProps) {
   const { t } = useTranslation();
   const healthCheckScheduleMode = Form.useWatch<DataConnectHealthCheckScheduleMode>([
@@ -201,17 +208,38 @@ export function DataConnectConfigForm({
 
       <section className={styles.section}>
         <div className={styles.sectionTitle}>{t("dataConnect.connectorConfigSection")}</div>
-        <div className={styles.groupStack}>
-          {groupedFields.map((group) => (
-            <ConnectorFieldGroup
-              connectorConfig={connectorConfig}
-              connectorType={selectedConnectorType?.type}
-              group={group}
+        {selectedConnectorType?.category === "api" ? (
+          <Form.Item
+            name="connectorConfig"
+            help={false}
+            rules={[
+              {
+                validator: (_: unknown, value: Record<string, unknown>) => {
+                  const error = apiCatalogConfigValidationError(value);
+                  return error ? Promise.reject(new Error(t(error))) : Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <ApiCatalogConfigField
               isEdit={isEdit}
-              key={group.key}
+              disabled={apiDisabled}
+              onValidityChange={onApiValidityChange}
             />
-          ))}
-        </div>
+          </Form.Item>
+        ) : (
+          <div className={styles.groupStack}>
+            {groupedFields.map((group) => (
+              <ConnectorFieldGroup
+                connectorConfig={connectorConfig}
+                connectorType={selectedConnectorType?.type}
+                group={group}
+                isEdit={isEdit}
+                key={group.key}
+              />
+            ))}
+          </div>
+        )}
       </section>
       {!isEdit ? (
         <section className={styles.section}>
@@ -261,6 +289,25 @@ export function DataConnectConfigForm({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function apiCatalogConfigValidationError(value: Record<string, unknown> = {}) {
+  return (
+    validateApiCatalogConfig(value) ??
+    (value.login_request ? validateApiLoginDefinition(value.login_request) : undefined)
+  );
+}
+
+function ApiCatalogConfigField(props: ComponentProps<typeof ApiCatalogConfigEditor>) {
+  const { errors } = Form.Item.useStatus();
+  return (
+    <Form.Item noStyle validateStatus="">
+      <ApiCatalogConfigEditor
+        {...props}
+        validationError={errors.length ? apiCatalogConfigValidationError(props.value) : undefined}
+      />
+    </Form.Item>
   );
 }
 

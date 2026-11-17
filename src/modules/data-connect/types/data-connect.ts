@@ -39,7 +39,7 @@ export type DataConnectConnectorType = {
 };
 
 export type DataConnectMutationInput = {
-  connectorConfig: Record<string, boolean | number | string | string[]>;
+  connectorConfig: Record<string, unknown>;
   connectorType: string;
   description: string;
   enabled: boolean;

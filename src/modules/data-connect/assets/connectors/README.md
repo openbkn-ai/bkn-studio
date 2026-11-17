@@ -1,6 +1,12 @@
 # 连接器品牌素材
 
-本目录的八种品牌素材均直接复制自 [DBeaver Community](https://github.com/dbeaver/dbeaver/tree/0ccf31d149e81cd989b07a66c0018884e6737042)，用于标识连接器对应的数据源。
+本目录包含 HTTP API 原创图标，以及八种直接复制自 [DBeaver Community](https://github.com/dbeaver/dbeaver/tree/0ccf31d149e81cd989b07a66c0018884e6737042) 的数据库与搜索引擎品牌素材，用于标识连接器对应的数据源。
+
+## HTTP API 图标
+
+`api.svg` 是用户确认的 OpenBKN 原创图标，按本仓库 LICENSE 授权，不属于 DBeaver 素材。使用蓝色花括号和青色请求／响应箭头，64 × 64 viewBox、透明背景，浅深色共用同一 SVG；展示复用既有 60 × 60px 区域。设计记录见 [API Catalog 设计](https://github.com/openbkn-ai/bkn-docs/blob/main/docs/studio/data-resource-network/api-catalog-management/design.md#http-api-专属图标)。运行时只使用本目录资产，不依赖文档仓库。
+
+## 第三方品牌素材
 
 - 固定来源 commit：`0ccf31d149e81cd989b07a66c0018884e6737042`。
 - 上游许可证原文：[DBeaver-LICENSE.txt](./DBeaver-LICENSE.txt)，按原始字节保留。

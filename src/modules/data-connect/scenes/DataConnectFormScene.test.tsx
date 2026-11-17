@@ -11,7 +11,15 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
-import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
+import type {
+  DataConnectConnectorType,
+  DataConnectMutationPayload,
+  DataConnectUpdatePayload,
+} from "@/modules/data-connect/types/data-connect";
+import {
+  parsePrecisionPreservingJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -19,7 +27,7 @@ const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
 }));
 type ModalConfirmOptions = {
-  onOk?: () => void;
+  onOk?: () => void | Promise<void>;
 };
 /** 集群档位。默认没有快照——社区部署,也是卖点该出现的那一侧。 */
 const entitlementState = vi.hoisted(() => ({
@@ -33,6 +41,14 @@ const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
 const testDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
+const listApiTestResourcesMock = vi.hoisted(() => vi.fn());
+const getApiTestResourceMock = vi.hoisted(() => vi.fn());
+vi.mock("@/modules/data-connect/services/api-catalog-test.service", () => ({
+  listApiCatalogTestResources: listApiTestResourcesMock,
+  getApiCatalogTestResource: getApiTestResourceMock,
+  canTestApiCatalogResource: (resource: { operations: string[] }) =>
+    resource.operations.includes("query_data"),
+}));
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn<(options: ModalConfirmOptions) => void>());
@@ -158,6 +174,10 @@ describe("DataConnectFormScene · connection preflight", () => {
   beforeEach(() => {
     vi.useRealTimers();
     permissionState.values = new Set(["catalog:modify"]);
+    listApiTestResourcesMock.mockReset();
+    listApiTestResourcesMock.mockResolvedValue({ items: [], total: 0 });
+    getApiTestResourceMock.mockReset();
+    getApiTestResourceMock.mockResolvedValue(null);
     entitlementState.snapshot = null;
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
@@ -291,7 +311,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       if (!onOk) {
         throw new Error("Expected the discard confirmation to provide an onOk callback");
       }
-      onOk();
+      await onOk();
       expect(onBack).toHaveBeenCalledOnce();
     },
     HEAVY_SCENE_TIMEOUT_MS,
@@ -590,30 +610,11 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("omits declared sensitive variables when hydrating an existing connector form", async () => {
-    mockSQLServerEditCatalog(
-      {},
-      {
-        variables: { api_key: "private-key", arbitrary: "private-option", public_value: "public" },
-        sensitive_variables: ["api_key", "arbitrary"],
-      },
-      "custom",
-    );
-    getDataConnectConnectorTypeMock.mockResolvedValue({
-      available: true,
-      category: "api",
-      description: "",
-      enabled: true,
-      fieldConfig: {
-        variables: connectorField("Variables", "object", false),
-        sensitive_variables: connectorField("Sensitive variables", "array", false),
-      },
-      mode: "local",
-      name: "Custom",
-      type: "custom",
-    });
+    mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
     await screen.findByDisplayValue("sqlserver-orders");
-    await screen.findByDisplayValue(/public/);
+    fireEvent.click(screen.getByRole("tab", { name: "dataConnect.apiCatalog.variables" }));
+    await screen.findByLabelText("dataConnect.apiCatalog.variableValue public_value");
     const values = Array.from(
       document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input,textarea"),
       (element) => element.value,
@@ -660,12 +661,16 @@ describe("DataConnectFormScene · connection preflight", () => {
   it("requires declared sensitive variables when replacing connection configuration", async () => {
     mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
-    const variables = await screen.findByDisplayValue(/public_value/);
-    fireEvent.change(variables, { target: { value: JSON.stringify({ public_value: "changed" }) } });
-    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
-    await waitFor(() =>
-      expect(messageErrorMock).toHaveBeenCalledWith("dataConnect.sensitiveVariablesRequired"),
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(screen.getByRole("tab", { name: "dataConnect.apiCatalog.variables" }));
+    const variables = await screen.findByLabelText(
+      "dataConnect.apiCatalog.variableValue public_value",
     );
+    fireEvent.change(variables, { target: { value: "changed" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    expect(
+      await screen.findByText("dataConnect.apiCatalog.errors.missingSensitiveValue"),
+    ).toBeTruthy();
     expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
     expect(testDataConnectConfigMock).not.toHaveBeenCalled();
   });
@@ -673,17 +678,315 @@ describe("DataConnectFormScene · connection preflight", () => {
   it("submits complete replacement variables when new credentials are entered", async () => {
     mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
-    const variables = await screen.findByDisplayValue(/public_value/);
-    const replacement = { api_key: "new-key", arbitrary: "new-option", public_value: "changed" };
-    fireEvent.change(variables, { target: { value: JSON.stringify(replacement) } });
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(screen.getByRole("tab", { name: "dataConnect.apiCatalog.variables" }));
+    const variables = await screen.findByLabelText(
+      "dataConnect.apiCatalog.variableValue public_value",
+    );
+    const replacement = {
+      api_key: { value: "new-key", sensitive: true },
+      arbitrary: { value: "new-option", sensitive: true },
+      public_value: { value: "changed", sensitive: false },
+    };
+    fireEvent.change(variables, { target: { value: "changed" } });
+    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.sensitiveValue api_key"), {
+      target: { value: "new-key" },
+    });
+    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.sensitiveValue arbitrary"), {
+      target: { value: "new-option" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
     await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
     expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
       connectorConfig: {
         variables: replacement,
-        sensitive_variables: ["api_key", "arbitrary"],
       },
     });
+  });
+
+  it("creates an API Catalog graphically without persisting displayed platform defaults", async () => {
+    permissionState.values.add("catalog:create");
+    mockSensitiveVariableEditCatalog([]);
+    render(<DataConnectFormScene mode="create" />);
+    fireEvent.click(await findConnectorCard("HTTP API"));
+    fireEvent.click(getFormAction("common.next"));
+    const address = await screen.findByLabelText("dataConnect.apiCatalog.baseUrl");
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "API service" },
+    });
+    fireEvent.change(address, { target: { value: "https://api.example.com/" } });
+    fireEvent.click(getFormAction("common.confirm"));
+    await waitFor(() => expect(createDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    expect(createDataConnectRecordMock.mock.lastCall?.[0]).toMatchObject({
+      connectorType: "http",
+      connectorConfig: { base_url: "https://api.example.com/" },
+    });
+    expect(
+      (createDataConnectRecordMock.mock.lastCall?.[0] as DataConnectMutationPayload)
+        .connectorConfig,
+    ).not.toHaveProperty("options");
+    expect(document.querySelector(".monaco-editor")).toBeNull();
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps exact nested API configuration when replacing an unrelated field", async () => {
+    const exact = parsePrecisionPreservingJSON("9007199254740993.00000000001");
+    mockSensitiveVariableEditCatalog([], {
+      variables: {
+        exact: { value: exact, sensitive: false },
+        nested: { value: { flag: false, absent: null }, sensitive: false },
+      },
+    });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    const address = await screen.findByLabelText("dataConnect.apiCatalog.baseUrl");
+    fireEvent.change(address, { target: { value: "https://api.example.com/v2/" } });
+    fireEvent.click(getFormAction("common.save"));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    const text = transformPrecisionSafeJSONRequest(
+      (updateDataConnectRecordMock.mock.lastCall?.[1] as DataConnectUpdatePayload).connectorConfig,
+    );
+    expect(text).toContain('"exact":{"value":9007199254740993.00000000001,"sensitive":false}');
+    expect(text).toContain('"nested":{"value":{"flag":false,"absent":null},"sensitive":false}');
+  });
+
+  it("retains newly entered API credentials when returning through connector selection", async () => {
+    permissionState.values.add("catalog:create");
+    mockSensitiveVariableEditCatalog([]);
+    render(<DataConnectFormScene mode="create" />);
+    fireEvent.click(await findConnectorCard("HTTP API"));
+    fireEvent.click(getFormAction("common.next"));
+    await screen.findByLabelText("dataConnect.apiCatalog.baseUrl");
+    fireEvent.click(screen.getByRole("tab", { name: "dataConnect.apiCatalog.variables" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.addVariable" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataConnect.apiCatalog.sensitive" }));
+    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.sensitiveValue variable1"), {
+      target: { value: "synthetic-new-credential" },
+    });
+    fireEvent.click(getFormAction("common.previous"));
+    fireEvent.click(getFormAction("common.next"));
+    await screen.findByLabelText("dataConnect.apiCatalog.baseUrl");
+    fireEvent.click(screen.getByRole("tab", { name: "dataConnect.apiCatalog.variables" }));
+    expect(screen.getByLabelText("dataConnect.apiCatalog.sensitiveValue variable1")).toHaveValue(
+      "synthetic-new-credential",
+    );
+    expect(createDataConnectRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("retains the API draft on conflict and reloads only after explicit confirmation", async () => {
+    mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
+    updateDataConnectRecordMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409 },
+    });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "API draft" },
+    });
+    fireEvent.click(getFormAction("common.save"));
+    await screen.findByText("dataConnect.apiCatalog.conflict");
+    expect(screen.getByDisplayValue("API draft")).toBeTruthy();
+    expect(getDataConnectRecordMock).toHaveBeenCalledTimes(1);
+    expect(getFormAction("common.save")).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.reload" }));
+    expect(getDataConnectRecordMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await modalConfirmMock.mock.lastCall?.[0].onOk?.();
+    });
+    expect(getDataConnectRecordMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByDisplayValue("sqlserver-orders")).toBeTruthy();
+  });
+
+  it("tests only saved API configuration for a modify-only user and labels the result", async () => {
+    mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "Unsaved name" },
+    });
+    fireEvent.click(getFormAction("common.testConnection"));
+    await screen.findByText("dataConnect.apiCatalog.backendScopeHint");
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
+    await screen.findAllByText("dataConnect.apiCatalog.transportSuccess");
+    expect(testDataConnectRecordMock.mock.lastCall?.[0]).toBe("catalog-sqlserver");
+    expect(
+      (testDataConnectRecordMock.mock.lastCall?.[1] as { signal: AbortSignal }).signal,
+    ).toBeInstanceOf(AbortSignal);
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+    expect(screen.getAllByText("dataConnect.apiCatalog.savedResult").length).toBeGreaterThan(0);
+    expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("aborts a closed API test and ignores its late success", async () => {
+    mockSensitiveVariableEditCatalog([]);
+    let resolve: () => void = () => {};
+    testDataConnectRecordMock.mockReturnValueOnce(
+      new Promise<void>((done) => {
+        resolve = done;
+      }),
+    );
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(getFormAction("common.testConnection"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "dataConnect.apiCatalog.startTest" }),
+    );
+    await waitFor(() => expect(testDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    const signal = (testDataConnectRecordMock.mock.lastCall?.[1] as { signal: AbortSignal }).signal;
+    fireEvent.click(screen.getByRole("button", { name: "common.close" }));
+    await waitFor(() => expect(signal.aborted).toBe(true));
+    await act(async () => {
+      resolve();
+      await Promise.resolve();
+    });
+    expect(screen.queryByText("dataConnect.apiCatalog.transportSuccess")).toBeNull();
+  });
+
+  it("uses the explicit saved-login scope without sending the unsaved Catalog configuration", async () => {
+    mockSensitiveVariableEditCatalog(["api_key"], {
+      login_request: {
+        request: { method: "POST", path: "login" },
+        response: {
+          content_type: "application/json",
+          statuses: { "200": { description: "Login", schema: { type: "object" } } },
+        },
+        success_rule: { http_status: [200] },
+      },
+    });
+    testDataConnectRecordMock.mockResolvedValue({ success: true, scope: "login" });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByDisplayValue("sqlserver-orders");
+    fireEvent.click(getFormAction("common.testConnection"));
+    fireEvent.mouseDown(
+      screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
+    );
+    fireEvent.click(await screen.findByText("dataConnect.apiCatalog.loginScope"));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
+    await screen.findAllByText("dataConnect.apiCatalog.loginSuccess");
+    expect(testDataConnectRecordMock.mock.lastCall?.[0]).toBe("catalog-sqlserver");
+    const options = testDataConnectRecordMock.mock.lastCall?.[1] as {
+      scope: string;
+      signal: AbortSignal;
+    };
+    expect(options.scope).toBe("login");
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(options).not.toHaveProperty("connectorConfig");
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+    expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "refreshes selected Resource authorization before business testing (permitted: %s)",
+    async (permitted) => {
+      mockSensitiveVariableEditCatalog([]);
+      const resource = {
+        id: "orders",
+        name: "Orders",
+        catalogId: "catalog-sqlserver",
+        category: "api",
+        effectType: "read",
+        enabled: true,
+        status: "active",
+        operations: ["query_data"],
+      };
+      listApiTestResourcesMock.mockResolvedValue({ items: [resource], total: 1 });
+      getApiTestResourceMock
+        .mockResolvedValueOnce(resource)
+        .mockResolvedValueOnce({ ...resource, operations: permitted ? ["query_data"] : [] });
+      testDataConnectRecordMock.mockResolvedValue({
+        success: true,
+        scope: "resource",
+        entries: [],
+        paging: { has_more: false },
+      });
+      render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+      await screen.findByDisplayValue("sqlserver-orders");
+      fireEvent.click(getFormAction("common.testConnection"));
+      fireEvent.mouseDown(
+        screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
+      );
+      fireEvent.click(await screen.findByText("dataConnect.apiCatalog.resourceScope"));
+      await waitFor(() => expect(listApiTestResourcesMock).toHaveBeenCalledTimes(1));
+      fireEvent.mouseDown(
+        screen.getByRole("combobox", { name: "dataConnect.apiCatalog.resource" }),
+      );
+      fireEvent.click(await screen.findByText("Orders"));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }),
+        ).not.toBeDisabled(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
+      if (permitted) {
+        await screen.findAllByText("dataConnect.apiCatalog.resourceSuccess");
+        expect(testDataConnectRecordMock.mock.lastCall?.[0]).toBe("catalog-sqlserver");
+        const options = testDataConnectRecordMock.mock.lastCall?.[1] as {
+          scope: string;
+          resourceId: string;
+        };
+        expect(options.scope).toBe("resource");
+        expect(options.resourceId).toBe("orders");
+        const previews = document.querySelectorAll("details pre");
+        expect(
+          [...previews].some((preview) => preview.textContent?.includes('"entries": []')),
+        ).toBe(true);
+      } else {
+        await screen.findAllByText("dataConnect.apiCatalog.resourceRequired");
+        expect(testDataConnectRecordMock).not.toHaveBeenCalled();
+      }
+      expect(getApiTestResourceMock).toHaveBeenCalledTimes(2);
+      expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+      expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps an unsupported API configuration read-only while allowing metadata edits", async () => {
+    mockSensitiveVariableEditCatalog([], { future_fixed_field: { retain: true } });
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByText("dataConnect.apiCatalog.readonly");
+    expect(screen.queryByLabelText("dataConnect.apiCatalog.baseUrl")).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "Metadata only" },
+    });
+    fireEvent.click(getFormAction("common.save"));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    expect(
+      (updateDataConnectRecordMock.mock.lastCall?.[1] as DataConnectUpdatePayload).connectorConfig,
+    ).toBeUndefined();
+  });
+
+  it("blocks API editing for an insufficient edition", async () => {
+    mockSensitiveVariableEditCatalog([]);
+    entitlementState.snapshot = { edition: "community", capabilities: [], extensions: [] };
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    await screen.findByText("dataConnect.apiCatalog.unavailable");
+    expect(getFormAction("common.save")).toBeDisabled();
+    expect(getFormAction("common.testConnection")).toBeDisabled();
+    expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
+  });
+
+  it("marks a draft test result stale after a subsequent API configuration edit", async () => {
+    permissionState.values.add("catalog:create");
+    mockSensitiveVariableEditCatalog([]);
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    const address = await screen.findByLabelText("dataConnect.apiCatalog.baseUrl");
+    fireEvent.change(address, { target: { value: "https://api.example.com/v2/" } });
+    fireEvent.click(getFormAction("common.testConnection"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "dataConnect.apiCatalog.startTest" }),
+    );
+    await screen.findAllByText("dataConnect.apiCatalog.transportSuccess");
+    expect(
+      (testDataConnectConfigMock.mock.lastCall?.[0] as DataConnectMutationPayload).connectorConfig
+        .base_url,
+    ).toBe("https://api.example.com/v2/");
+    expect(
+      (testDataConnectConfigMock.mock.lastCall?.[1] as { signal: AbortSignal }).signal,
+    ).toBeInstanceOf(AbortSignal);
+    fireEvent.click(screen.getByRole("button", { name: "common.close" }));
+    fireEvent.change(address, { target: { value: "https://api.example.com/v3/" } });
+    await screen.findByText("dataConnect.apiCatalog.staleResult");
+    expect(updateDataConnectRecordMock).not.toHaveBeenCalled();
   });
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
@@ -1397,7 +1700,9 @@ describe("DataConnectFormScene · connection preflight", () => {
 
       const onOk = modalConfirmMock.mock.calls[0]?.[0]?.onOk;
       if (!onOk) throw new Error("Expected connector change confirmation");
-      act(() => onOk());
+      await act(async () => {
+        await onOk();
+      });
       fireEvent.click(await findConnectorCard("SAP HANA"));
       expect(modalConfirmMock).toHaveBeenCalledTimes(1);
       fireEvent.click(getFormAction("common.next"));
@@ -1411,7 +1716,9 @@ describe("DataConnectFormScene · connection preflight", () => {
       fireEvent.click(await findConnectorCard("PostgreSQL"));
       const confirmSwitch = modalConfirmMock.mock.calls[1]?.[0]?.onOk;
       if (!confirmSwitch) throw new Error("Expected connector change confirmation");
-      act(() => confirmSwitch());
+      await act(async () => {
+        await confirmSwitch();
+      });
       fireEvent.click(getFormAction("common.next"));
       await screen.findByPlaceholderText("dataConnect.namePlaceholder");
       expect(screen.getByDisplayValue("Shared name")).toBeTruthy();
@@ -1529,27 +1836,55 @@ function mockSQLServerEditCatalog(
   });
 }
 
-function mockSensitiveVariableEditCatalog(declaration: unknown) {
-  mockSQLServerEditCatalog(
-    {},
-    {
-      password: undefined,
-      variables: { api_key: "private-key", arbitrary: "private-option", public_value: "public" },
-      sensitive_variables: declaration,
-    },
-    "custom",
-  );
-  getDataConnectConnectorTypeMock.mockResolvedValue({
+function mockSensitiveVariableEditCatalog(
+  declaration: unknown,
+  overrides: Record<string, unknown> = {},
+) {
+  const connector: DataConnectConnectorType = {
     available: true,
     category: "api",
     description: "",
     enabled: true,
     fieldConfig: {
+      base_url: connectorField("Service address", "string", true),
       variables: connectorField("Variables", "object", false),
-      sensitive_variables: connectorField("Sensitive variables", "array", false),
+      options: connectorField("Options", "object", false),
+      login_request: connectorField("Login request", "object", false),
     },
     mode: "local",
-    name: "Custom",
-    type: "custom",
+    name: "HTTP API",
+    type: "http",
+    requiredEdition: "professional",
+  };
+  listDataConnectConnectorTypesMock.mockResolvedValue([connector]);
+  getDataConnectConnectorTypeMock.mockResolvedValue(connector);
+  getDataConnectRecordMock.mockResolvedValue({
+    category: "api",
+    connectorConfig: {
+      base_url: "https://api.example.com/",
+      variables: {
+        api_key: {
+          value: "private-key",
+          sensitive: Array.isArray(declaration) ? declaration.includes("api_key") : declaration,
+        },
+        arbitrary: {
+          value: "private-option",
+          sensitive: Array.isArray(declaration) ? declaration.includes("arbitrary") : declaration,
+        },
+        public_value: { value: "public", sensitive: false },
+      },
+      ...overrides,
+    },
+    connectorType: "http",
+    id: "catalog-sqlserver",
+    name: "sqlserver-orders",
+    description: "",
+    enabled: true,
+    builtin: false,
+    expectedUpdateTime: 100,
+    operations: ["modify", "view_detail"],
+    tags: [],
+    mode: "local",
+    type: "physical",
   });
 }

@@ -6,6 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import {
+  parsePrecisionPreservingJSON,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { filterMockOperations } from "@/framework/runtime/mock-user";
 import {
   throwMockRequestError,
@@ -32,6 +36,7 @@ import {
 } from "@/shared/catalog/catalog-mapper";
 import type {
   CatalogConnectionTestInput,
+  CatalogConnectionTestOptions,
   CatalogConnectionTestResult,
   CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
@@ -88,6 +93,49 @@ type BackendCatalogDeletionImpact = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const mockHealthCheckSchedules = new Map<string, CatalogHealthCheckSchedule>();
+
+function transformCatalogDetailResponse(data: unknown): unknown {
+  if (typeof data !== "string" || data.length === 0) return data;
+  let response: { entries?: BackendCatalog[] };
+  try {
+    // Keep envelope metadata on the existing Axios number boundary. Only stored
+    // connector configuration requires precise numeric literals for replacement.
+    response = JSON.parse(data) as { entries?: BackendCatalog[] };
+  } catch {
+    return data;
+  }
+  if (!response || !Array.isArray(response.entries)) return response;
+  if (!response.entries.some((entry) => entry.connector_type === "http")) return response;
+  const precise = parsePrecisionPreservingJSON(data, { allowSpecialKeys: true }) as {
+    entries?: BackendCatalog[];
+  };
+  response.entries.forEach((entry, index) => {
+    if (entry.connector_type !== "http") return;
+    const config = precise.entries?.[index]?.connector_config;
+    if (config !== undefined) entry.connector_config = config;
+  });
+  return response;
+}
+
+function apiConfigRequestOptions(connectorType: string) {
+  return connectorType === "http"
+    ? {
+        headers: { "Content-Type": "application/json" },
+        transformRequest: transformPrecisionSafeJSONRequest,
+      }
+    : {};
+}
+
+function transformResourceTestResponse(data: unknown): unknown {
+  if (typeof data !== "string" || data.length === 0) return data;
+  try {
+    return parsePrecisionPreservingJSON(data, { allowSpecialKeys: true });
+  } catch {
+    // Keep non-JSON errors on the normal HTTP error path without truncating
+    // resource numbers through a fallback JSON.parse.
+    return data;
+  }
+}
 
 const wait = async <T>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
@@ -215,7 +263,10 @@ export async function getCatalog(id: string, options?: { skipErrorToast?: boolea
 
   const response = await http.get<{ entries: BackendCatalog[] }>(
     `/vega-backend/v1/catalogs/${id}`,
-    { skipErrorToast: options?.skipErrorToast },
+    {
+      skipErrorToast: options?.skipErrorToast,
+      transformResponse: transformCatalogDetailResponse,
+    },
   );
 
   const catalog = response.data.entries?.[0];
@@ -428,6 +479,7 @@ export async function updateCatalog(
         allow_unhealthy: options.allowUnhealthy || undefined,
       },
       skipErrorToast: options.skipErrorToast,
+      ...apiConfigRequestOptions(input.connectorType),
     },
   );
 }
@@ -499,6 +551,7 @@ export async function createPhysicalCatalog(
         allow_unhealthy: options.allowUnhealthy || undefined,
       },
       skipErrorToast: options.skipErrorToast,
+      ...apiConfigRequestOptions(input.connectorType),
     },
   );
 
@@ -507,6 +560,7 @@ export async function createPhysicalCatalog(
 
 export async function testCatalogConnectionConfig(
   input: CatalogConnectionTestInput,
+  options?: { signal?: AbortSignal },
 ): Promise<CatalogConnectionTestResult> {
   if (useMock) {
     return wait({
@@ -520,14 +574,26 @@ export async function testCatalogConnectionConfig(
     {
       connector_config: input.connectorConfig,
       connector_type: input.connectorType,
+      ...(input.scope === undefined ? {} : { scope: input.scope }),
     },
-    { skipErrorToast: true, timeout: 60_000 },
+    {
+      skipErrorToast: true,
+      timeout: 60_000,
+      ...apiConfigRequestOptions(input.connectorType),
+      ...(options?.signal ? { signal: options.signal } : {}),
+    },
   );
 
   return response.data;
 }
 
-export async function testCatalogConnection(id: string): Promise<CatalogConnectionTestResult> {
+export async function testCatalogConnection(
+  id: string,
+  options?: CatalogConnectionTestOptions,
+): Promise<CatalogConnectionTestResult> {
+  const scope = options?.scope ?? (options?.resourceId !== undefined ? "resource" : "transport");
+  if (scope === "resource" && !options?.resourceId?.trim())
+    throw new Error("Resource validation requires a saved Resource.");
   if (useMock) {
     return wait({
       message: "Connection test succeeded.",
@@ -535,10 +601,32 @@ export async function testCatalogConnection(id: string): Promise<CatalogConnecti
     });
   }
 
+  const body =
+    options?.scope !== undefined ||
+    options?.resourceId !== undefined ||
+    options?.paging !== undefined
+      ? {
+          ...(options.scope === undefined ? {} : { scope: options.scope }),
+          ...(options.resourceId === undefined ? {} : { resource_id: options.resourceId }),
+          ...(options.paging === undefined ? {} : { paging: options.paging }),
+        }
+      : undefined;
+
   const response = await http.post<CatalogConnectionTestResult>(
     `/vega-backend/v1/catalogs/${id}/test-connection`,
-    undefined,
-    { skipErrorToast: true, timeout: 60_000 },
+    body,
+    {
+      skipErrorToast: true,
+      timeout: 60_000,
+      ...(options?.signal ? { signal: options.signal } : {}),
+      ...(scope === "resource"
+        ? {
+            headers: { "Content-Type": "application/json" },
+            transformRequest: transformPrecisionSafeJSONRequest,
+            transformResponse: transformResourceTestResponse,
+          }
+        : {}),
+    },
   );
 
   return response.data;

@@ -6,8 +6,11 @@
  */
 
 export type {
+  CatalogVariable,
   CatalogConnectionTestInput,
+  CatalogConnectionTestOptions,
   CatalogConnectionTestResult,
+  CatalogConnectionTestScope,
   CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
   CatalogDeletionImpact,

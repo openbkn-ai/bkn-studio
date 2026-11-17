@@ -7,6 +7,11 @@
 
 import type { ScheduleLastStatus } from "@/shared/schedule";
 
+export type CatalogVariable = {
+  value?: unknown;
+  sensitive?: boolean;
+};
+
 export type CatalogRecordStatus = "disabled" | "enabled";
 
 export type CatalogHealthStatus = "degraded" | "healthy" | "offline" | "unchecked" | "unhealthy";
@@ -14,11 +19,24 @@ export type CatalogHealthStatus = "degraded" | "healthy" | "offline" | "unchecke
 export type CatalogConnectionTestInput = {
   connectorConfig: Record<string, unknown>;
   connectorType: string;
+  scope?: "transport" | "login";
+};
+
+export type CatalogConnectionTestScope = "transport" | "login" | "resource";
+
+export type CatalogConnectionTestOptions = {
+  scope?: CatalogConnectionTestScope;
+  resourceId?: string;
+  paging?: Record<string, unknown>;
+  signal?: AbortSignal;
 };
 
 export type CatalogConnectionTestResult = {
   message?: string;
   success: boolean;
+  scope?: CatalogConnectionTestScope;
+  entries?: unknown[];
+  paging?: Record<string, unknown>;
 };
 
 export type CatalogHealthCheckScheduleMode = "disabled" | "enabled" | "inherit";

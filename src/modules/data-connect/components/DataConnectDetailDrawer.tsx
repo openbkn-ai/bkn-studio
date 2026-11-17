@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
+import { isCatalogVariable, protectCatalogConfigVariables } from "@/shared/catalog/config-security";
 
 import { Alert, Descriptions, Drawer, Empty, Space, Spin, Tag } from "antd";
 import type { TFunction } from "i18next";
@@ -33,6 +33,8 @@ import type {
 } from "@/modules/data-connect/types/data-connect";
 import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import { hasCatalogOperation } from "@/shared/catalog";
+import { buildApiCatalogPreview } from "@/modules/data-connect/lib/api-catalog-config";
+import apiStyles from "./ApiCatalogConfigEditor.module.css";
 
 import { ScheduleRunResultView } from "@/shared/schedule";
 
@@ -279,7 +281,11 @@ export function DataConnectDetailDrawer({
           </section>
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
-            {configEntries.length > 0 ? (
+            {record.category === "api" ? (
+              <pre className={apiStyles.preview}>
+                {buildApiCatalogPreview(record.connectorConfig)}
+              </pre>
+            ) : configEntries.length > 0 ? (
               <div className={styles.configGrid}>
                 {configEntries.map((item) => (
                   <div
@@ -571,7 +577,19 @@ function buildConfigEntries(
         ? "••••••••"
         : hasValue
           ? formatConfigValue(
-              config[key],
+              key === "variables" &&
+                config[key] &&
+                typeof config[key] === "object" &&
+                !Array.isArray(config[key])
+                ? Object.fromEntries(
+                    Object.entries(config[key] as Record<string, unknown>).map(
+                      ([name, variable]) => [
+                        name,
+                        isCatalogVariable(variable) ? variable.value : "••••••••",
+                      ],
+                    ),
+                  )
+                : config[key],
               t,
               key.trim().toLowerCase() === "schemas" || key.trim().toLowerCase() === "schema_list",
             )
