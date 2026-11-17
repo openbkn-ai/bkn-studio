@@ -104,7 +104,7 @@ describe("response status tabs", () => {
     };
     const editor = renderEditor({ "200": original });
     expect(editor.changed).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("200 application/json Schema.description"), {
+    fireEvent.change(screen.getByLabelText(`200 ${title("response")} ${title("description")}`), {
       target: { value: "Updated Schema" },
     });
     expect(editor.latest()).toEqual({
@@ -176,7 +176,7 @@ describe("response status tabs", () => {
       }),
       "400": response("Failure"),
     });
-    const label = `200 application/json Schema.properties ${title("propertyName")} count`;
+    const label = `200 ${title("response")}.properties ${title("propertyName")} count`;
     const input = screen.getByLabelText(label);
     fireEvent.change(input, { target: { value: "other" } });
     fireEvent.blur(input);

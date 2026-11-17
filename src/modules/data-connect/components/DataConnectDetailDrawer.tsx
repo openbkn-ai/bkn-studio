@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { isCatalogVariable, protectCatalogConfigVariables } from "@/shared/catalog/config-security";
-
 import { Alert, Descriptions, Drawer, Empty, Space, Spin, Tag } from "antd";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -155,7 +153,8 @@ export function DataConnectDetailDrawer({
     () => connectorTypes.find((item) => item.type === record?.connectorType),
     [connectorTypes, record?.connectorType],
   );
-  const configEntries = record ? buildConfigEntries(record, t, selectedConnectorType) : [];
+  const configEntries =
+    record && record.category !== "api" ? buildConfigEntries(record, t, selectedConnectorType) : [];
 
   return (
     <Drawer
@@ -547,7 +546,7 @@ function buildConfigEntries(
   t: TFunction,
   connectorType?: DataConnectConnectorType,
 ) {
-  const config = protectCatalogConfigVariables(record.connectorConfig ?? {}, "display");
+  const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
   const templateKeys = Object.keys(fieldConfig);
   const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort(
@@ -577,19 +576,7 @@ function buildConfigEntries(
         ? "••••••••"
         : hasValue
           ? formatConfigValue(
-              key === "variables" &&
-                config[key] &&
-                typeof config[key] === "object" &&
-                !Array.isArray(config[key])
-                ? Object.fromEntries(
-                    Object.entries(config[key] as Record<string, unknown>).map(
-                      ([name, variable]) => [
-                        name,
-                        isCatalogVariable(variable) ? variable.value : "••••••••",
-                      ],
-                    ),
-                  )
-                : config[key],
+              config[key],
               t,
               key.trim().toLowerCase() === "schemas" || key.trim().toLowerCase() === "schema_list",
             )

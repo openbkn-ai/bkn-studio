@@ -350,8 +350,8 @@ export const dataConnectZhCN = {
         positiveDuration: "正时长，例如 30s；未配置时使用驱动默认行为。",
       },
       placeholders: {
-        httpTimeout: "平台默认（初始 30 秒）",
-        httpResponseLimit: "平台默认（初始 10 MiB）",
+        httpTimeout: "留空使用平台默认值",
+        httpResponseLimit: "留空使用平台默认值",
       },
       errors: {
         positiveInteger: "请输入正整数；留空时使用平台默认值。",

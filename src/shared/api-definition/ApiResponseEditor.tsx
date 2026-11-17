@@ -160,7 +160,7 @@ export function ApiResponseEditor({
                       <ApiSchemaEditor
                         value={r.schema}
                         disabled={disabled}
-                        label={`${status} application/json Schema`}
+                        label={`${status} ${t("dataConnect.apiEditor.response")}`}
                         onChange={(schema) => next({ ...r, schema })}
                       />
                     </div>

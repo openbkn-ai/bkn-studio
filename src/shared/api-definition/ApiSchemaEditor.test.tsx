@@ -58,7 +58,7 @@ describe("Schema property cards", () => {
       expect(editor.changed).not.toHaveBeenCalled();
       expect(screen.queryByRole("button", { name: title("addProperty") })).toBeNull();
       expect(screen.queryByText(title("arrayElement"))).toBeNull();
-      fireEvent.change(screen.getByLabelText("Schema.description"), {
+      fireEvent.change(screen.getByLabelText(`Schema ${title("description")}`), {
         target: { value: "After" },
       });
       expect(editor.latest()).toEqual({
@@ -183,7 +183,9 @@ describe("Schema property cards", () => {
     const editor = renderEditor({ properties: { name: { type: "string" } }, required: ["name"] });
     expect(screen.getByRole("button", { name: title("addProperty") })).toBeVisible();
     expect(editor.changed).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Schema.description"), { target: { value: "Untyped" } });
+    fireEvent.change(screen.getByLabelText(`Schema ${title("description")}`), {
+      target: { value: "Untyped" },
+    });
     expect(editor.latest()).toEqual({
       properties: { name: { type: "string" } },
       required: ["name"],
@@ -204,7 +206,7 @@ describe("Schema property cards", () => {
     expect(
       within(card).getByRole("checkbox", { name: `Schema.field ${title("required")}` }),
     ).not.toBeChecked();
-    expect(within(card).getByLabelText("Schema.field.description")).toBeVisible();
+    expect(within(card).getByLabelText(`Schema.field ${title("description")}`)).toBeVisible();
     expect(
       within(card).getAllByRole("combobox", { name: `Schema.field ${title("schemaType")}` }),
     ).toHaveLength(1);
@@ -287,7 +289,7 @@ describe("Schema property cards", () => {
     fireEvent.blur(input);
     await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(false));
     expect(editor.changed).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Schema.other.description"), {
+    fireEvent.change(screen.getByLabelText(`Schema.other ${title("description")}`), {
       target: { value: "Flag" },
     });
     expect(input).toHaveValue("other");
@@ -356,7 +358,7 @@ describe("Schema property cards", () => {
     };
     const editor = renderEditor(initial);
     expect(editor.changed).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Schema.description"), {
+    fireEvent.change(screen.getByLabelText(`Schema ${title("description")}`), {
       target: { value: "Response" },
     });
     expect(editor.latest()).toEqual({ ...initial, description: "Response" });
@@ -403,7 +405,7 @@ describe("Schema property cards", () => {
     expect(
       screen.getByRole("checkbox", { name: `Schema.token ${title("required")}` }),
     ).toBeDisabled();
-    expect(screen.getByLabelText("Schema.token.description")).toBeDisabled();
+    expect(screen.getByLabelText(`Schema.token ${title("description")}`)).toBeDisabled();
     expect(screen.getByRole("button", { name: title("addProperty") })).toBeDisabled();
     expect(screen.getByRole("button", { name: title("remove") })).toBeDisabled();
     expect(editor.changed).not.toHaveBeenCalled();

@@ -609,6 +609,51 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
+  it("preserves non-API raw variables through editing, connection testing and replacement", async () => {
+    permissionState.values.add("catalog:create");
+    const variables = {
+      tenant: "public",
+      count: 0,
+      flag: false,
+      empty: "",
+      nested: [null, { value: "business", sensitive: true }],
+      business: { value: "domain-value", sensitive: true },
+    };
+    mockSQLServerEditCatalog({}, { variables });
+    const connector: DataConnectConnectorType = {
+      available: true,
+      category: "table",
+      description: "",
+      enabled: true,
+      fieldConfig: {
+        host: connectorField("Host", "string", true),
+        variables: connectorField("Variables", "object", false),
+      },
+      mode: "local",
+      name: "SQL Server",
+      type: "sqlserver",
+    };
+    listDataConnectConnectorTypesMock.mockResolvedValue([connector]);
+    getDataConnectConnectorTypeMock.mockResolvedValue(connector);
+    render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
+    expect(await screen.findByDisplayValue(JSON.stringify(variables))).toHaveValue(
+      JSON.stringify(variables),
+    );
+    fireEvent.click(getFormAction("common.testConnection"));
+    await waitFor(() => expect(testDataConnectConfigMock).toHaveBeenCalledTimes(1));
+    expect(testDataConnectConfigMock.mock.lastCall?.[0]).toMatchObject({
+      connectorConfig: { variables },
+    });
+    fireEvent.change(screen.getByDisplayValue("sqlserver.example.com"), {
+      target: { value: "sqlserver-updated.example.com" },
+    });
+    fireEvent.click(getFormAction("common.save"));
+    await waitFor(() => expect(updateDataConnectRecordMock).toHaveBeenCalledTimes(1));
+    expect(updateDataConnectRecordMock.mock.lastCall?.[1]).toMatchObject({
+      connectorConfig: { host: "sqlserver-updated.example.com", variables },
+    });
+  });
+
   it("omits declared sensitive variables when hydrating an existing connector form", async () => {
     mockSensitiveVariableEditCatalog(["api_key", "arbitrary"]);
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);

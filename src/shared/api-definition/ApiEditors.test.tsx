@@ -250,7 +250,7 @@ describe("graphical API definition editors", () => {
         }}
       />,
     );
-    fireEvent.change(screen.getByLabelText("Schema.description"), {
+    fireEvent.change(screen.getByLabelText(`Schema ${title("description")}`), {
       target: { value: "New description" },
     });
     expect(result).toEqual({ ...schema, description: "New description" });

@@ -230,7 +230,7 @@ export function SchemaNodeEditor({
             <span className={styles.fieldTitle}>{t("dataConnect.apiEditor.description")}</span>
             <Input
               id={descriptionId}
-              aria-label={`${label}.description`}
+              aria-label={`${label} ${t("dataConnect.apiEditor.description")}`}
               value={typeof schema.description === "string" ? schema.description : ""}
               disabled={disabled}
               onChange={(event) => update("description", event.target.value)}

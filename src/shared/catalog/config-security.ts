@@ -21,7 +21,7 @@ export function isCatalogVariable(value: unknown): value is CatalogVariable {
   );
 }
 
-/** Never expose protected or malformed variable definitions in a view or edit form. */
+/** Protect HTTP Catalog variable definitions; other connectors retain their own value semantics. */
 export function protectCatalogConfigVariables(
   config: Record<string, unknown>,
   mode: "display" | "edit",

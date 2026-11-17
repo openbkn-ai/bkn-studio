@@ -5,8 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { protectCatalogConfigVariables } from "@/shared/catalog/config-security";
-
 import { Alert, Form, Modal, Result, Spin, Steps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -963,7 +961,7 @@ function sanitizeConnectorConfig(
 ) {
   if (api) return prepareApiCatalogConfigForEdit(config);
   return Object.fromEntries(
-    Object.entries(protectCatalogConfigVariables(config, "edit"))
+    Object.entries(config)
       .filter(([key, value]) => !shouldOmitConnectorConfigValue(fieldConfig[key], value))
       .map(([key, value]) => {
         if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {

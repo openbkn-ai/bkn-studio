@@ -379,8 +379,8 @@ export const dataConnectEnUS = {
           "Positive duration such as 30s. Omitted parameters use the driver default.",
       },
       placeholders: {
-        httpTimeout: "Platform default (initially 30 seconds)",
-        httpResponseLimit: "Platform default (initially 10 MiB)",
+        httpTimeout: "Leave empty to use the platform default",
+        httpResponseLimit: "Leave empty to use the platform default",
       },
       errors: {
         positiveInteger: "Enter a positive integer. Leave it empty to use the platform default.",
