@@ -465,6 +465,20 @@ export function ProjectModel({
     () => (draft?.status === "ready" ? relationsWithUnadoptedEnds(draft) : []),
     [draft],
   );
+  // The graph re-lays out whenever these change identity: keep them stable while their content is
+  // the same, so a diagnosis poll or hovering a card without a preview keeps the reader's view.
+  const islandKey =
+    diagnosing && draft ? JSON.stringify([...islandIds(diagnosis, draft)].sort()) : "";
+  const islands = useMemo(
+    () => (islandKey ? new Set<string>(JSON.parse(islandKey) as string[]) : undefined),
+    [islandKey],
+  );
+  const previewKey = diagnosing && draft ? JSON.stringify(previewEdges(previewed, draft)) : "";
+  const preview = useMemo(
+    () =>
+      previewKey ? (JSON.parse(previewKey) as ReturnType<typeof previewEdges>) : undefined,
+    [previewKey],
+  );
 
   if (loadError && draft === undefined) {
     return (
@@ -906,11 +920,11 @@ export function ProjectModel({
         <>
           <DraftConceptGraph
             draft={draft}
-            highlightedIds={diagnosing ? islandIds(diagnosis, draft) : undefined}
+            highlightedIds={islands}
             networkId={project.knId}
             onOpen={editable ? openEditor : setOpenId}
             onOpenRelation={editable ? openRelation : undefined}
-            previewEdges={diagnosing ? previewEdges(previewed, draft) : undefined}
+            previewEdges={preview}
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />

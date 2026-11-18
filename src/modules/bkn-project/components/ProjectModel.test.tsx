@@ -110,9 +110,14 @@ vi.mock("@/modules/bkn-project/services/project.service", async (importOriginal)
   setProjectCatalogs: setProjectCatalogsMock,
 }));
 
-// G6 cannot draw in jsdom; the concept model's graph keeps its toolbar and draws nothing.
+// G6 cannot draw in jsdom; the concept model's graph keeps its toolbar and draws nothing. The
+// structures it is given are kept: a new one makes G6 lay the graph out again.
+const canvasStructures = vi.hoisted(() => [] as unknown[]);
 vi.mock("@/modules/knowledge-network/components/preview/OntologyG6Canvas", () => ({
-  OntologyG6Canvas: () => <div data-testid="ontology-graph-canvas" />,
+  OntologyG6Canvas: ({ structure }: { structure: unknown }) => {
+    canvasStructures.push(structure);
+    return <div data-testid="ontology-graph-canvas" />;
+  },
 }));
 
 vi.mock("@/shared/catalog", async (importOriginal) => ({
@@ -1311,5 +1316,43 @@ describe("ProjectModel", () => {
     const dialog = await openDialog();
     expect(dialog.getByRole("checkbox", { name: /^bom_material_code/ })).toBeChecked();
     expect(dialog.getByRole("checkbox", { name: /^material_code/ })).not.toBeChecked();
+  });
+
+  it("keeps the graph as laid out while the diagnosis panel re-renders", async () => {
+    getDraftMock.mockResolvedValue(ready());
+    getDiagnosisMock.mockResolvedValue({
+      components: [["sales_orders", "customers"], ["material_bom"]],
+      computedAt: 1,
+      draftUpdateTime: 0,
+      error: "",
+      metrics: null,
+      runId: "r1",
+      stale: false,
+      state: "ready",
+      suggestions: [
+        {
+          apply: null,
+          evidence: { quotes: [] },
+          group: "data",
+          id: "s1",
+          impact: { connects: [], questions: [] },
+          kind: "data_quality",
+          rank: 1,
+          reason: "",
+          status: "open",
+          title: "Most work orders have no source",
+        },
+      ],
+    });
+    renderModel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "bknProject.diagnosis.open" }));
+    await screen.findByText('bknProject.diagnosis.graph.islands:{"count":1}');
+    const card = await screen.findByRole("article", { name: "Most work orders have no source" });
+    const laidOut = canvasStructures.at(-1);
+    // Hovering a card without a preview re-renders the page, not the graph.
+    fireEvent.mouseEnter(card);
+    fireEvent.mouseLeave(card);
+    await waitFor(() => expect(canvasStructures.at(-1)).toBe(laidOut));
   });
 });
