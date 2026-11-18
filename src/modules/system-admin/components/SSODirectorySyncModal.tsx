@@ -18,9 +18,11 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import styles from "../scenes/admin.module.css";
+import { authzPoints } from "../permissions";
 import {
   getDirectorySync,
   saveDirectorySync,
@@ -38,7 +40,11 @@ export function SSODirectorySyncModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
+  const canSyncRoles = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: [authzPoints.roleCreate, authzPoints.roleEdit],
+  });
   const label = (key: string) => t(`systemAdmin.sso.sync.${key}`);
   const [form] = Form.useForm<DirectorySyncInput>();
   const [view, setView] = useState<DirectorySyncView>();
@@ -61,6 +67,7 @@ export function SSODirectorySyncModal({
         if (initial)
           form.setFieldsValue({
             enabled: value.config.enabled,
+            role_sync_enabled: value.config.role_sync_enabled ?? false,
             organization: value.config.organization,
             interval_seconds: value.config.interval_seconds,
           });
@@ -82,7 +89,11 @@ export function SSODirectorySyncModal({
     setOperationError("");
     setBusy(true);
     try {
-      setView(await saveDirectorySync(provider.id, input));
+      const payload = { ...input };
+      // A directory administrator without role-management permissions can
+      // update the schedule without changing the saved role-sync setting.
+      if (!canSyncRoles) delete payload.role_sync_enabled;
+      setView(await saveDirectorySync(provider.id, payload));
       form.setFieldValue("webhook_secret", undefined);
       void message.success(label("saved"));
     } catch (e) {
@@ -126,7 +137,12 @@ export function SSODirectorySyncModal({
             {label("close")}
           </AppButton>
           <AppButton
-            disabled={!view?.config.enabled || !provider?.enabled || !view || view.running}
+            disabled={
+              (!view?.config.enabled && !view?.config.role_sync_enabled) ||
+              !provider?.enabled ||
+              !view ||
+              view.running
+            }
             loading={busy}
             onClick={() => {
               void run();
@@ -153,9 +169,6 @@ export function SSODirectorySyncModal({
                 void save(values);
               }}
             >
-              <Form.Item name="enabled" label={label("enabled")} valuePropName="checked">
-                <Switch />
-              </Form.Item>
               <Form.Item
                 name="organization"
                 label={label("organization")}
@@ -192,6 +205,19 @@ export function SSODirectorySyncModal({
               >
                 {label("generate")}
               </AppButton>
+              <div style={{ display: "flex", flexWrap: "wrap", columnGap: 48, marginTop: 24 }}>
+                <Form.Item name="enabled" label={label("enabled")} valuePropName="checked">
+                  <Switch />
+                </Form.Item>
+                <Form.Item
+                  name="role_sync_enabled"
+                  label={label("roleSyncEnabled")}
+                  valuePropName="checked"
+                >
+                  <Switch disabled={!canSyncRoles} />
+                </Form.Item>
+              </div>
+              <Typography.Paragraph type="secondary">{label("roleSyncHint")}</Typography.Paragraph>
             </Form>
             <Typography.Paragraph copyable={{ text: origin + view.webhook_path }}>
               {label("webhook")}: {origin + view.webhook_path}
@@ -226,6 +252,9 @@ export function SSODirectorySyncModal({
                   label: label("departments"),
                   children: view.config.departments,
                 },
+                ...(view.config.roles == null
+                  ? []
+                  : [{ key: "roles", label: label("roles"), children: view.config.roles }]),
                 {
                   key: "disabled",
                   label: label("disabledUsers"),

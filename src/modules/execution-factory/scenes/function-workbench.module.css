@@ -357,10 +357,23 @@
   color: var(--color-text-tertiary);
 }
 
+/*
+  Everything below the function head. When the editor's least height and the console do not fit,
+  this scrolls. The editor area used to shrink below its content (min-height: 0): its toolbar,
+  settings and editor spilled out under the console, which then drew over them (#1441).
+*/
+.workArea {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* No min-height: 0 — it keeps its toolbar, settings and the editor's least height; .workArea scrolls. */
 .editorArea {
   display: flex;
   flex: 1 1 auto;
-  min-height: 0;
 }
 
 .editor {
@@ -427,9 +440,16 @@
   color: var(--color-text-tertiary);
 }
 
+/*
+  The editor fills this and scrolls within: whatever height is left, at least 160px (about seven
+  lines). height: 0 leaves its height to the flex layout alone; Monaco writes the pixel height it
+  measured onto itself, and sized by content that height would hold this open as the window shrinks.
+*/
 .editorSurface {
   flex: 1 1 auto;
-  min-height: 0;
+  height: 0;
+  min-height: 160px;
+  overflow: hidden;
 }
 
 /* ---------- 右 dock ---------- */

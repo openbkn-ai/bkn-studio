@@ -60,6 +60,8 @@ export const systemAdminPermissions: Record<
 // rolePermissions controls the role itself (roles/:id/permissions). The backend separates these
 // concerns into different permission points, so the frontend must not combine their checks.
 export const authzPoints = {
+  roleCreate: "admin-role:create",
+  roleEdit: "admin-role:edit",
   /** Grant an object - POST /admin/object-grants. */
   grant: "admin-authz:grant",
   /** Revoke an object grant - DELETE /admin/object-grants. */

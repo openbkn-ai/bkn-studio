@@ -11,13 +11,19 @@ export const systemAdminEnUS = {
       sync: {
         title: "Directory sync",
         scopeHint:
-          "Synchronize users and departments from one Casdoor organization. Deleted users are disabled locally. Local administrative disablement and memberships from other sources are preserved. This workflow does not immediately revoke existing tokens.",
+          "Choose to sync users and departments, roles, or both from one Casdoor organization. User sync does not immediately revoke existing tokens.",
         close: "Close",
         run: "Sync now",
         save: "Save sync configuration",
         saved: "Sync configuration saved. Enabling it schedules an initial full sync.",
         queued: "Sync queued. Refresh the status to see the result.",
-        enabled: "Enable directory sync",
+        enabled: "Sync users and departments",
+        roleSyncEnabled: "Sync roles",
+        roleSyncHint:
+          "Import role names and descriptions only; synchronization overwrites local edits to those fields. Users, memberships and permissions are not imported. Turning this off or deleting a role at the source retains imported roles. Existing same-name roles are not merged. Changing this setting requires role creation and editing permissions.",
+        roles: "Roles synchronized in this run",
+        SSO_ROLE_NAME_CONFLICT:
+          "A role name conflicts with an existing role. No changes were committed. Rename the Casdoor display name or local role, then retry.",
         organization: "Casdoor organization name",
         organizationFormat: "Use up to 100 letters, digits, underscores, dots or hyphens.",
         interval: "Reconciliation interval (seconds, 60–86400)",
@@ -947,7 +953,7 @@ export const systemAdminEnUS = {
       builtinRolePermissionCannotModify: "Built-in role permissions cannot be modified.",
     },
     users: {
-      identitySources: { local: "Local", ldap: "LDAP", sso: "SSO", external: "External" },
+      identitySources: { local: "Local", ldap: "LDAP", sso: "External", external: "External" },
       externalProfileHint:
         "This user's name, email, phone and password are managed by the identity provider. Update them there.",
       externalDepartmentHint:

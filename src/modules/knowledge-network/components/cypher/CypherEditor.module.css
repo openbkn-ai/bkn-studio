@@ -14,3 +14,8 @@
   color: var(--color-text-accent);
   font-weight: 600;
 }
+
+/* Fills its container: the container's height is the editor's, however long the statement. */
+.fill {
+  height: 100%;
+}
