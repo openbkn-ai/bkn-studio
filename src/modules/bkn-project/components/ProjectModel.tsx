@@ -475,8 +475,7 @@ export function ProjectModel({
   );
   const previewKey = diagnosing && draft ? JSON.stringify(previewEdges(previewed, draft)) : "";
   const preview = useMemo(
-    () =>
-      previewKey ? (JSON.parse(previewKey) as ReturnType<typeof previewEdges>) : undefined,
+    () => (previewKey ? (JSON.parse(previewKey) as ReturnType<typeof previewEdges>) : undefined),
     [previewKey],
   );
 
