@@ -311,6 +311,8 @@ export function NetworkDiagnosisPanel({
       settle({ ...suggestion, status: "dismissed" });
       onPreview?.(null);
       message.success(t(done));
+      // The dismissal is a decision kept in the draft: read the draft again so the next apply is on it.
+      await onDraftChanged();
       return true;
     } catch (error) {
       message.error(requestFailureText(t, error));

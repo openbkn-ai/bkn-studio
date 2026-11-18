@@ -389,8 +389,8 @@ describe("NetworkDiagnosisPanel", () => {
     );
   });
 
-  it("dismisses a suggestion with an optional reason", async () => {
-    renderPanel();
+  it("dismisses a suggestion with an optional reason and reads the draft again", async () => {
+    const handlers = renderPanel();
     const first = await card(relation.title);
     fireEvent.click(
       within(first).getByRole("button", { name: "bknProject.diagnosis.actions.dismiss" }),
@@ -402,6 +402,8 @@ describe("NetworkDiagnosisPanel", () => {
     );
     await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledWith("p1", "s-relation", "不需要"));
     await waitFor(() => expect(screen.queryByRole("article", { name: relation.title })).toBeNull());
+    // The dismissal changed the draft: the next apply must be on the draft read again.
+    await waitFor(() => expect(handlers.onDraftChanged).toHaveBeenCalled());
   });
 
   it("acknowledges a data quality note without asking for a reason", async () => {
