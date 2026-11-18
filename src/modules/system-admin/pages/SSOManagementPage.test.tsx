@@ -37,6 +37,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: api.error, success: api.success },
     modal: { confirm: api.confirm },
+    runtimeConfig: { currentUser: { permissions: [] } },
   }),
 }));
 vi.mock("@/modules/system-admin/services/sso-provider.service", () => ({
