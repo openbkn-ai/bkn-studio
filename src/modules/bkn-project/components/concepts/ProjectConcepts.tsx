@@ -17,6 +17,7 @@ import {
   extensionProjectKnowledgeBaseModel,
   type ProjectKnowledgeBaseModelStatus,
 } from "@/framework/extension/registry";
+import { useOpenedOnce } from "@/framework/hooks/use-opened-once";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import {
@@ -159,6 +160,8 @@ export function ProjectConcepts({
   // The AI assistant opens when asked for, as on kinetic modeling and business scenarios: docked
   // open, it would squeeze the list.
   const [asking, setAsking] = useState(false);
+  // Hidden, the AI panel stays mounted and keeps its conversation while the page is open.
+  const askKept = useOpenedOnce(asking);
   // What failed in the last run, by source, as words.
   const [runFailed, setRunFailed] = useState<Partial<Record<ConceptSourceKey, string>>>({});
   const [kbStatus, setKbStatus] = useState<ProjectKnowledgeBaseModelStatus | null>(null);
@@ -922,8 +925,8 @@ export function ProjectConcepts({
           />
         </section>
       </div>
-      {asking && askReady ? (
-        <div className={ask.side} data-ask-side>
+      {askKept && askReady ? (
+        <div className={ask.side} data-ask-side hidden={!asking}>
           <AskAiSidebar<ConceptRevision>
             adopt={adoptRevision}
             askWith={(request) =>

@@ -36,6 +36,8 @@ type AiConversationPanelProps = {
   children?: ReactNode;
   className?: string;
   contentTestId?: string;
+  /** Hidden by its header's button: kept mounted, so the conversation is kept. */
+  hidden?: boolean;
   as?: "aside" | "section" | "div";
 };
 
@@ -62,6 +64,7 @@ export function AiConversationPanel({
   children,
   className,
   contentTestId,
+  hidden = false,
   as: Root = "section",
 }: AiConversationPanelProps) {
   const empty = messages.length === 0 && !generating;
@@ -69,7 +72,7 @@ export function AiConversationPanel({
   const rootClassName = className ? `${styles.frame} ${className}` : styles.frame;
 
   return (
-    <Root aria-label={ariaLabel} className={rootClassName}>
+    <Root aria-label={ariaLabel} className={rootClassName} hidden={hidden}>
       <header className={styles.header}>
         <div className={styles.title}>
           <span className={styles.titleIcon} aria-hidden="true">

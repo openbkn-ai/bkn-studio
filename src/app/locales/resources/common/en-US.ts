@@ -20,6 +20,11 @@ export const commonEnUS = {
       },
     },
 
+    aiPanel: {
+      newChat: "New conversation",
+      history: "Earlier conversations",
+    },
+
     search: "Search",
     reset: "Reset",
     refresh: "Refresh",

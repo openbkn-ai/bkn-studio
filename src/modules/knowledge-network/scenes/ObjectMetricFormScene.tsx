@@ -6,7 +6,6 @@
  */
 
 import {
-  CloseOutlined,
   CompressOutlined,
   DeleteOutlined,
   ExpandOutlined,
@@ -38,6 +37,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
+import { AiPanelActions } from "@/framework/ui/common/AiPanelActions";
 import {
   AiConversationPanel,
   type AiConversationMessage,
@@ -3354,9 +3354,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
             aria-expanded={aiOpen}
             icon={<ThunderboltOutlined />}
             onClick={() => {
+              // Hidden, as by the AI panel's own button: an answer still being written is kept.
               if (aiOpen) {
-                if (aiGenerating) stopAiGeneration();
                 setAiExpanded(false);
+                setAiPromptRequest(undefined);
               }
               setAiOpen((open) => !open);
             }}
@@ -5448,43 +5449,37 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           generating={aiGenerating}
           generatingText={objectMetricText("m800e5eb6c8b5")}
           headerActions={
-            <>
-              {aiConversation.length ? (
-                <Button
-                  disabled={aiGenerating || aiChecking}
-                  onClick={() => {
-                    aiThreadRef.current = null;
-                    setAiConversation([]);
-                    setAiProposal(undefined);
-                    setAiUndo(undefined);
-                    setAiDiagnostic(undefined);
-                  }}
-                  size="small"
-                  type="text"
-                >
-                  {objectMetricText("aiNewConversation")}
-                </Button>
-              ) : null}
+            <AiPanelActions
+              collapse={{
+                label: objectMetricText("aiCollapsePane"),
+                // Hidden, the conversation and an answer still being written are kept.
+                onClick: () => {
+                  setAiExpanded(false);
+                  setAiPromptRequest(undefined);
+                  setAiOpen(false);
+                },
+              }}
+              newChat={{
+                disabled: !aiConversation.length || aiGenerating || aiChecking,
+                onClick: () => {
+                  aiThreadRef.current = null;
+                  setAiConversation([]);
+                  setAiProposal(undefined);
+                  setAiUndo(undefined);
+                  setAiDiagnostic(undefined);
+                },
+              }}
+            >
               <Button
                 aria-label={objectMetricText(aiExpanded ? "aiRestorePane" : "aiExpandPane")}
                 aria-pressed={aiExpanded}
                 className={styles.aiExpandButton}
                 icon={aiExpanded ? <CompressOutlined /> : <ExpandOutlined />}
                 onClick={() => setAiExpanded((expanded) => !expanded)}
+                size="small"
                 type="text"
               />
-              <Button
-                aria-label={objectMetricText("m406b2bdda3ce")}
-                icon={<CloseOutlined />}
-                onClick={() => {
-                  if (aiGenerating) stopAiGeneration();
-                  setAiExpanded(false);
-                  setAiPromptRequest(undefined);
-                  setAiOpen(false);
-                }}
-                type="text"
-              />
-            </>
+            </AiPanelActions>
           }
           messages={aiConversation}
           onExample={(example) =>

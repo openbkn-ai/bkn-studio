@@ -8,12 +8,13 @@
 import { EvalHelpTooltip } from "./EvalFieldLabel";
 import { evalTerm } from "./eval-terminology";
 
-import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ReloadOutlined } from "@ant-design/icons";
 import { Alert, Button, Space, Tag } from "antd";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { AiPanelActions } from "@/framework/ui/common/AiPanelActions";
 import {
   AiConversationPanel,
   type AiConversationMessage,
@@ -417,25 +418,6 @@ export function EvalAssistantDrawer({
     };
   }, [open, loadCatalog, repairRequest]);
 
-  useEffect(() => {
-    if (open) return;
-    setCatalogLoading(false);
-    setCatalogError("");
-    setScan(undefined);
-    setRules([]);
-    aiAbortRef.current?.abort();
-    aiAbortRef.current = null;
-    threadIdRef.current = undefined;
-    setAiGenerating(false);
-    setConversation([]);
-    setPromptRequest(undefined);
-    setAssistantActions([]);
-    setProposal(undefined);
-    setPreview(undefined);
-    setSelectedPreviewKeys([]);
-    setError("");
-  }, [open]);
-
   const refreshCatalog = () => {
     void loadCatalog().then((loaded) => {
       if (!loaded) return;
@@ -718,12 +700,13 @@ export function EvalAssistantDrawer({
     onNavigate?.(destination.tab, destination.caseSection);
   };
 
-  if (!open) return null;
-
+  // Hidden, the panel stays mounted: the conversation, a repair under way and an answer still
+  // being written are kept.
   return (
     <AiConversationPanel
       as="aside"
       className={styles.assistantPanel}
+      hidden={!open}
       ariaLabel={workspaceUi("qualityEvaluationAIAssistant")}
       composer={
         <AiPromptComposer
@@ -766,27 +749,23 @@ export function EvalAssistantDrawer({
           : workspaceUi("analyzingTheCurrentQualityEvaluationContext")
       }
       headerActions={
-        <>
-          {conversation.length || repairRequest ? (
-            <Button disabled={locked} onClick={startNewConversation} size="small" type="text">
-              {workspaceUi("newConversation")}
-            </Button>
-          ) : null}
+        <AiPanelActions
+          collapse={{ label: workspaceUi("hideTheQualityEvaluationAIAssistant"), onClick: onClose }}
+          newChat={{
+            disabled: locked || (!conversation.length && !repairRequest),
+            onClick: startNewConversation,
+          }}
+        >
           <Button
             aria-label={workspaceUi("refreshQualityEvaluationContext")}
             disabled={locked || Boolean(repairRequest)}
             icon={<ReloadOutlined />}
             loading={catalogLoading}
             onClick={refreshCatalog}
+            size="small"
             type="text"
           />
-          <Button
-            aria-label={workspaceUi("closeTheQualityEvaluationAIAssistant")}
-            icon={<CloseOutlined />}
-            onClick={onClose}
-            type="text"
-          />
-        </>
+        </AiPanelActions>
       }
       messages={repairRequest ? (activeRepairView?.messages ?? []) : conversation}
       notice={

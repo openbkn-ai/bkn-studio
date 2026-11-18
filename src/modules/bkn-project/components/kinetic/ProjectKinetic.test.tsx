@@ -858,6 +858,23 @@ describe("ProjectKinetic", () => {
     expect(mocks.listConversations).toHaveBeenCalledWith("p1", "kinetic");
   });
 
+  it("keeps the AI assistant mounted when hidden, so opening it again reads nothing anew", async () => {
+    mocks.getRequirements.mockResolvedValue(null);
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: "问 AI" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    const panel = await screen.findByRole("complementary", { name: "AI 助手" });
+    await waitFor(() => expect(mocks.listConversations).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(within(panel).getByRole("button", { name: "收起 AI 助手" }));
+    expect(screen.queryByRole("complementary", { name: "AI 助手" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "问 AI" }));
+    expect(screen.getByRole("complementary", { name: "AI 助手" })).toBe(panel);
+    expect(mocks.listConversations).toHaveBeenCalledTimes(1);
+  });
+
   it("analyses, and asks before starting over", async () => {
     const analysed = requirements({
       runs: {

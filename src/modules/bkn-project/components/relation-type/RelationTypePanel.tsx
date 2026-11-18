@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extensionProjectRelationSourceEditor } from "@/framework/extension/registry";
+import { useOpenedOnce } from "@/framework/hooks/use-opened-once";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { requestFailureText } from "@/modules/bkn-project/components/publish/messages";
 import { AskAiSidebar, type UndoApply } from "@/modules/bkn-project/components/ai/AskAiSidebar";
@@ -162,6 +163,8 @@ export function RelationTypePanel({
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<SaveProblem | null>(null);
   const [asking, setAsking] = useState(false);
+  // Hidden, the AI panel stays mounted and keeps its conversation until the editor closes.
+  const askKept = useOpenedOnce(asking);
 
   // Starts over from a draft: the one just saved, or the one read again after it moved.
   const reset = (from: Draft, id: string | null) => {
@@ -542,8 +545,9 @@ export function RelationTypePanel({
               )}
             </div>
           </div>
-          {asking ? (
+          {askKept ? (
             <AskAiSidebar
+              hidden={!asking}
               itemId={relation?.id ?? null}
               kind="relation_types"
               onApply={apply}

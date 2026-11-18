@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ObjectMetricFormScene } from "./ObjectMetricFormScene";
@@ -318,16 +318,61 @@ describe("ObjectMetricFormScene object properties", () => {
     fireEvent.click(screen.getByLabelText("发送对象指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
     expect(mocks.runObjectMetricDesigner.mock.calls[0][0].modelId).toBe("model-1");
-    expect(await screen.findByText("新对话")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "新对话" })).toBeEnabled());
     expect(modelSelect).toBeDisabled();
     fireEvent.change(screen.getByLabelText("对象指标名称"), {
       target: { value: "人工填写" },
     });
-    fireEvent.click(getButtonByText("新对话"));
+    fireEvent.click(screen.getByRole("button", { name: "新对话" }));
     expect(modelSelect).not.toBeDisabled();
     expect(screen.getByLabelText("对象指标名称")).toHaveValue("人工填写");
     expect(screen.queryByText("待应用的修改建议")).not.toBeInTheDocument();
   }, 90_000);
+
+  it("keeps an answer still being written when the AI panel is hidden", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=atomic";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    let answer: (value: ObjectMetricDesignResult) => void = () => undefined;
+    let signal: AbortSignal | undefined;
+    mocks.runObjectMetricDesigner.mockImplementation((params: RunObjectMetricDesignParams) => {
+      signal = params.signal;
+      return new Promise<ObjectMetricDesignResult>((resolve) => {
+        answer = resolve;
+      });
+    });
+
+    render(<ObjectMetricFormScene mode="create" />);
+    fireEvent.change(await screen.findByLabelText("描述要创建的对象指标"), {
+      target: { value: "统计订单数" },
+    });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "收起 AI 对话" }));
+    expect(screen.queryByLabelText("AI 生成对象指标")).not.toBeInTheDocument();
+    expect(signal?.aborted).toBe(false);
+    act(() => {
+      answer({
+        answer: "已生成修改建议",
+        proposal: {
+          kind: "metric_design_proposal",
+          base_form_revision: "",
+          summary: "建议更新对象指标名称",
+          questions: [],
+          changes: [],
+        },
+        runId: "run-1",
+        threadId: "thread-1",
+      });
+    });
+
+    // Opened again, the question and the answer that came while hidden are both there.
+    fireEvent.click(getButtonByText("AI 生成"));
+    const panel = await screen.findByLabelText("AI 生成对象指标");
+    expect(within(panel).getByText("统计订单数")).toBeInTheDocument();
+    expect(await within(panel).findByText("建议更新对象指标名称")).toBeInTheDocument();
+  });
 
   it("opens the AI designer by default on the create page", async () => {
     mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
@@ -1044,7 +1089,7 @@ describe("ObjectMetricFormScene object properties", () => {
     fireEvent.click(screen.getByLabelText("返回双栏视图"));
     expect(page).toHaveAttribute("data-ai-layout", "docked");
     expect(screen.getByLabelText("对象指标名称")).toHaveValue("订单数量");
-    fireEvent.click(screen.getByLabelText("查看表单"));
+    fireEvent.click(screen.getByLabelText("收起 AI 对话"));
     expect(page).toHaveAttribute("data-ai-layout", "closed");
     expect(screen.queryByLabelText("AI 生成对象指标")).not.toBeInTheDocument();
     expect(getButtonByText("保存草稿")).toBeVisible();

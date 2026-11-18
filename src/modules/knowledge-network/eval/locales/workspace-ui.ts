@@ -307,9 +307,8 @@ export const workspaceUiResources = {
       "可以咨询和使用整个质量评测模块。涉及生成用例或发起运行时，助手会先展示操作计划并等待确认。",
     examples: "示例",
     analyzingTheCurrentQualityEvaluationContext: "正在分析当前质量评测上下文…",
-    newConversation: "新对话",
     refreshQualityEvaluationContext: "刷新质量评测上下文",
-    closeTheQualityEvaluationAIAssistant: "关闭质量评测 AI 助手",
+    hideTheQualityEvaluationAIAssistant: "收起质量评测 AI 助手",
     loadingTheCurrentKnowledgeNetwork: "{{value0}} · 正在读取当前知识网络",
     couldNotLoadEvaluationContext: "{{value0}} · 评测上下文读取失败",
     resourcesEnabledRules: "{{value0}} · {{value1}}/{{value2}} 个资源 · {{value3}} 条启用规则",
@@ -816,9 +815,8 @@ export const workspaceUiResources = {
     examples: "Examples",
     analyzingTheCurrentQualityEvaluationContext:
       "Analyzing the current quality evaluation context…",
-    newConversation: "New conversation",
     refreshQualityEvaluationContext: "Refresh quality evaluation context",
-    closeTheQualityEvaluationAIAssistant: "Close the quality evaluation AI assistant",
+    hideTheQualityEvaluationAIAssistant: "Hide the quality evaluation AI assistant",
     loadingTheCurrentKnowledgeNetwork: "{{value0}} · Loading the current knowledge network",
     couldNotLoadEvaluationContext: "{{value0}} · Could not load evaluation context",
     resourcesEnabledRules:

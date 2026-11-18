@@ -954,6 +954,28 @@ describe("ProjectConcepts", () => {
     await waitFor(() => expect(assistant.askConcepts).toHaveBeenCalled());
   });
 
+  it("keeps the conversation when the assistant is hidden and opened again", async () => {
+    assistant.askConcepts.mockResolvedValue({
+      answer: "Merge these two.",
+      dropped: [],
+      revisions: [],
+    });
+    renderConcepts();
+    await row("Customer");
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.ask\.button\.label/ }));
+    const input = await screen.findByRole("textbox", { name: "bknProject.model.ask.question" });
+    fireEvent.change(input, { target: { value: "which data?" } });
+    fireEvent.keyDown(input, { code: "Enter", key: "Enter", keyCode: 13 });
+    expect(await screen.findByText("Merge these two.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "bknProject.model.ask.close" }));
+    expect(screen.queryByRole("complementary", { name: "bknProject.model.ask.title" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /bknProject\.ask\.button\.label/ }));
+    const panel = screen.getByRole("complementary", { name: "bknProject.model.ask.title" });
+    expect(within(panel).getByText("Merge these two.")).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "common.aiPanel.newChat" })).toBeEnabled();
+  });
+
   it("is read only for others", async () => {
     renderConcepts(false);
 
