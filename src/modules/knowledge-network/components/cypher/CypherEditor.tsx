@@ -33,6 +33,25 @@ const MARKER_OWNER = "cypher-run";
 /** Two lines: a short query needs no more room than that. */
 const MIN_HEIGHT = 48;
 
+/** How tall the editor is. */
+type CypherEditorSize =
+  | {
+      height?: undefined;
+      /** The editor grows with its text up to this height, then scrolls. */
+      maxHeight: number;
+      /** The least height it takes, however short the text; enlarged editors start taller. */
+      minHeight?: number;
+    }
+  | {
+      /**
+       * Takes the height its container gives it and scrolls within, so a container that shrinks
+       * never has the editor spill over what lies below it.
+       */
+      height: "fill";
+      maxHeight?: undefined;
+      minHeight?: undefined;
+    };
+
 /**
  * Cypher editor on Monaco: highlighting, completion of the network's labels, relationship types
  * and properties, `$name` parameters set apart, Ctrl/⌘ + Enter to run, Ctrl/⌘ + ↑ / ↓ through history, and a squiggle where
@@ -47,10 +66,6 @@ export const CypherEditor = forwardRef<
     onHistory: (older: boolean) => void;
     schema: CypherCompletionSchema;
     errorMark?: CypherErrorMark | null;
-    /** The editor grows with its text up to this height, then scrolls. */
-    maxHeight: number;
-    /** The least height it takes, however short the text; enlarged editors start taller. */
-    minHeight?: number;
     ariaLabel: string;
     /** Shows the statement without letting it be changed, for a reader without edit rights. */
     readOnly?: boolean;
@@ -59,7 +74,7 @@ export const CypherEditor = forwardRef<
      * label is read when the editor mounts.
      */
     parameterize?: { label: string; run: () => void };
-  }
+  } & CypherEditorSize
 >(function CypherEditor(
   {
     value,
@@ -68,7 +83,8 @@ export const CypherEditor = forwardRef<
     onHistory,
     schema,
     errorMark,
-    maxHeight,
+    height: sizing,
+    maxHeight = Infinity,
     minHeight = MIN_HEIGHT,
     ariaLabel,
     readOnly = false,
@@ -77,7 +93,8 @@ export const CypherEditor = forwardRef<
   ref,
 ) {
   const [contentHeight, setContentHeight] = useState(MIN_HEIGHT);
-  const height = Math.min(Math.max(contentHeight, minHeight), maxHeight);
+  const fill = sizing === "fill";
+  const height = fill ? "100%" : Math.min(Math.max(contentHeight, minHeight), maxHeight);
   const editorRef = useRef<EditorInstance | null>(null);
   const monacoRef = useRef<MonacoApi | null>(null);
   const schemaRef = useRef(schema);
@@ -229,7 +246,11 @@ export const CypherEditor = forwardRef<
   };
 
   return (
-    <div aria-label={ariaLabel} data-testid="cypher-editor">
+    <div
+      aria-label={ariaLabel}
+      className={fill ? styles.fill : undefined}
+      data-testid="cypher-editor"
+    >
       <MonacoEditor
         height={height}
         language="cypher"
@@ -241,6 +262,9 @@ export const CypherEditor = forwardRef<
           lineNumbersMinChars: 2,
           fontSize: 13,
           scrollBeyondLastLine: false,
+          // Indentation is no scope in Cypher: lines pinned over a scrolled statement read as the
+          // statement drawn over itself.
+          stickyScroll: { enabled: false },
           wordWrap: "on",
           automaticLayout: true,
           renderLineHighlight: "none",
