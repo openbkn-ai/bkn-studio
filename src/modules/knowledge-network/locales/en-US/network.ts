@@ -416,8 +416,6 @@ export const networkPart = {
   workspaceRiskControl: "Risk control",
   riskActionControlNav: "Action control",
   riskActionPending: "Coming later",
-  riskEvalNav: "Evaluation",
-  riskVersionNav: "Versions",
   workspaceAnalysis: "Analysis",
   workspaceExperienceAgent: "Q&A verification",
   workspaceExperienceMcp: "MCP integration",

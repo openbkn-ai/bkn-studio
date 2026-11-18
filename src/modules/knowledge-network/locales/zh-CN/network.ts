@@ -384,8 +384,6 @@ export const networkPart = {
   workspaceRiskControl: "风险管控",
   riskActionControlNav: "行动管控",
   riskActionPending: "待实现",
-  riskEvalNav: "评测",
-  riskVersionNav: "版本",
   workspaceAnalysis: "分析",
   workspaceExperienceAgent: "智能问答",
   workspaceExperienceMcp: "MCP 调试",
