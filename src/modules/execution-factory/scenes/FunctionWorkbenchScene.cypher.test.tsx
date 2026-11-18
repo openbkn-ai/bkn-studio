@@ -67,12 +67,16 @@ vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", async () =
     CypherEditor: forwardRef(function MockCypherEditor(
       {
         ariaLabel,
+        height,
+        maxHeight,
         onChange,
         parameterize,
         readOnly,
         value,
       }: {
         ariaLabel: string;
+        height?: "fill";
+        maxHeight?: number;
         onChange: (value: string) => void;
         parameterize?: { label: string; run: () => void };
         readOnly?: boolean;
@@ -103,6 +107,7 @@ vi.mock("@/modules/knowledge-network/components/cypher/CypherEditor", async () =
         <>
           <textarea
             aria-label={ariaLabel}
+            data-height={height ?? `grows to ${maxHeight}`}
             onChange={(event) => onChange(event.target.value)}
             readOnly={readOnly}
             ref={area}
@@ -297,6 +302,19 @@ describe("FunctionWorkbenchScene Cypher functions", () => {
         { name: "min", type: "string", required: true, description: "最小数量" },
       ],
     });
+  });
+
+  it("sizes the statement editor by its surface, inside the area that scrolls above the console", async () => {
+    router.state = { cypherDraft: { query: STATEMENT, knId: "kn-1", inputs: [] } };
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+    await waitFor(() => expect(statementEditor().value).toBe(STATEMENT));
+
+    // #1441: sized by its text, the editor spilled over the console where the surface was short.
+    expect(statementEditor().dataset.height).toBe("fill");
+    expect(screen.getByTestId("function-editor-surface").contains(statementEditor())).toBe(true);
+    const workArea = screen.getByTestId("function-work-area");
+    expect(workArea.contains(screen.getByTestId("function-editor-surface"))).toBe(true);
+    expect(workArea.contains(screen.getByTestId("function-console"))).toBe(true);
   });
 
   it("runs the statement with the test input converted and the result shaped as the function would", async () => {

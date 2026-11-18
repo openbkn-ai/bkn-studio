@@ -95,6 +95,24 @@ let mockToolboxes: ToolboxRecord[] = [
     updateTime: Date.now() - 7_200_000,
     isInternal: false,
   },
+  // A function toolbox, so the function workbench opens without a backend: its functions are
+  // drafted on the page.
+  {
+    operations: ["*"],
+    boxId: "tb_functions",
+    name: "Order Functions",
+    description: "Python and Cypher functions over the order network.",
+    serviceUrl: "",
+    status: "unpublish",
+    categoryType: "box_category",
+    categoryName: "Custom",
+    metadataType: "function",
+    toolCount: 0,
+    tools: [],
+    createUser: "test",
+    updateTime: Date.now() - 3_600_000,
+    isInternal: false,
+  },
 ];
 
 function mapTool(item: BackendToolInfo): ToolboxToolRecord {
