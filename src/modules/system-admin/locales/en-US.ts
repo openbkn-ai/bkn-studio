@@ -11,7 +11,7 @@ export const systemAdminEnUS = {
       sync: {
         title: "Directory sync",
         scopeHint:
-          "Sync users and departments from one Casdoor organization, with optional role sync. User sync does not immediately revoke existing tokens.",
+          "Choose to sync users and departments, roles, or both from one Casdoor organization. User sync does not immediately revoke existing tokens.",
         close: "Close",
         run: "Sync now",
         save: "Save sync configuration",

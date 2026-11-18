@@ -66,6 +66,7 @@ export function SSODirectorySyncModal({
         setError("");
         if (initial)
           form.setFieldsValue({
+            enabled: value.config.enabled,
             role_sync_enabled: value.config.role_sync_enabled ?? false,
             organization: value.config.organization,
             interval_seconds: value.config.interval_seconds,
@@ -88,7 +89,7 @@ export function SSODirectorySyncModal({
     setOperationError("");
     setBusy(true);
     try {
-      const payload = { ...input, enabled: true };
+      const payload = { ...input };
       // A directory administrator without role-management permissions can
       // update the schedule without changing the saved role-sync setting.
       if (!canSyncRoles) delete payload.role_sync_enabled;
@@ -204,15 +205,19 @@ export function SSODirectorySyncModal({
               >
                 {label("generate")}
               </AppButton>
-              <Form.Item
-                name="role_sync_enabled"
-                label={label("roleSyncEnabled")}
-                valuePropName="checked"
-                extra={label("roleSyncHint")}
-                style={{ marginTop: 24 }}
-              >
-                <Switch disabled={!canSyncRoles} />
-              </Form.Item>
+              <div style={{ display: "flex", flexWrap: "wrap", columnGap: 48, marginTop: 24 }}>
+                <Form.Item name="enabled" label={label("enabled")} valuePropName="checked">
+                  <Switch />
+                </Form.Item>
+                <Form.Item
+                  name="role_sync_enabled"
+                  label={label("roleSyncEnabled")}
+                  valuePropName="checked"
+                >
+                  <Switch disabled={!canSyncRoles} />
+                </Form.Item>
+              </div>
+              <Typography.Paragraph type="secondary">{label("roleSyncHint")}</Typography.Paragraph>
             </Form>
             <Typography.Paragraph copyable={{ text: origin + view.webhook_path }}>
               {label("webhook")}: {origin + view.webhook_path}

@@ -11,7 +11,7 @@ export const systemAdminZhCN = {
       sync: {
         title: "目录同步",
         scopeHint:
-          "同步指定 Casdoor 组织的用户和部门，也可选择同步角色。用户同步不包含已有 Token 的即时撤销。",
+          "选择同步指定 Casdoor 组织的用户和部门、角色，或同时同步两者。用户同步不包含已有 Token 的即时撤销。",
         close: "关闭",
         run: "立即同步",
         save: "保存同步配置",
