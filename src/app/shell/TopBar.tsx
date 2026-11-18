@@ -24,6 +24,12 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate, useParams } from "react-router-dom";
 
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { extensionAccountPendingCount } from "@/framework/extension/registry";
+import {
+  capabilityMinEdition,
+  capabilityReportedByEndpoint,
+} from "@/modules/subscription/capability-catalog";
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
 import { UserPill } from "@/app/shell/UserPill";
 import { ShellTrailSlotContext } from "@/app/shell/workspace-slots-context";
@@ -73,19 +79,37 @@ export function TopBar() {
   const isProjectRoute = routeHandle?.console?.menuKey === "bkn-project";
   const permissionRequestsAvailable = !isCommunityBuild(entitlement);
 
+  const workOrderSummary = extensionAccountPendingCount();
+  const summaryEdition = workOrderSummary && capabilityMinEdition(workOrderSummary.capability);
+  const summaryEnabled = Boolean(
+    workOrderSummary &&
+    summaryEdition &&
+    capabilitySatisfied(
+      workOrderSummary.capability,
+      snapshot,
+      summaryEdition,
+      capabilityReportedByEndpoint(workOrderSummary.capability),
+    ),
+  );
+  const summaryLoader = summaryEnabled ? workOrderSummary?.load : undefined;
   useEffect(() => {
     if (!permissionRequestsAvailable) {
       setPendingPermissionRequestCount(null);
       return;
     }
+    setPendingPermissionRequestCount(null);
     let disposed = false;
     let loading = false;
     const refresh = () => {
       if (document.visibilityState !== "visible" || loading) return;
       loading = true;
-      void getPermissionRequestTodoSummary()
-        .then((summary) => {
-          if (!disposed) setPendingPermissionRequestCount(summary?.pending_count ?? null);
+      void (
+        summaryLoader
+          ? summaryLoader()
+          : getPermissionRequestTodoSummary().then((summary) => summary?.pending_count ?? null)
+      )
+        .then((count) => {
+          if (!disposed) setPendingPermissionRequestCount(count);
         })
         .catch(() => {
           if (!disposed) setPendingPermissionRequestCount(null);
@@ -104,7 +128,11 @@ export function TopBar() {
       document.removeEventListener("visibilitychange", refresh);
       removeSummaryListener();
     };
-  }, [permissionRequestsAvailable]);
+  }, [
+    permissionRequestsAvailable,
+    summaryLoader,
+    runtimeConfig.currentUser.id,
+  ]);
 
   useEffect(() => {
     if (!isKnowledgeNetworkRoute || !networkId) {

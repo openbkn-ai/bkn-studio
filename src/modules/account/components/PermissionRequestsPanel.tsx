@@ -137,7 +137,17 @@ function resourceDetailPath(request: PermissionRequest) {
   return undefined;
 }
 
-export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boolean }) {
+export function PermissionRequestsPanel({
+  hideMine = false,
+  requestId,
+  onDetailClose,
+  detailOnly = false,
+}: {
+  hideMine?: boolean;
+  requestId?: string;
+  onDetailClose?: () => void;
+  detailOnly?: boolean;
+}) {
   const { message, runtimeConfig } = useAppServices();
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
@@ -434,6 +444,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
   }, [filters]);
 
   useEffect(() => {
+    if (detailOnly) return;
     setOffset(0);
     void load(tab, 0);
 
@@ -451,7 +462,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refreshTodo);
     };
-  }, [load, tab]);
+  }, [detailOnly, load, tab]);
 
   const openDetail = async (id: string) => {
     if (submittingRef.current) return;
@@ -470,6 +481,11 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       message.error(t("account.permissionRequests.detailsFailed"));
     }
   };
+  useEffect(() => {
+    if (requestId) void openDetail(requestId);
+    // The host changes requestId when a different work order is selected.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId]);
   const closeDetail = () => {
     if (submittingRef.current) return;
     setComment("");
@@ -477,6 +493,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
     resourceCheckRef.current = null;
     setResourceCheck(null);
     setDetail(null);
+    onDetailClose?.();
   };
   const mutationError = (error: unknown) => {
     if (isRequestConflict(error)) return "account.permissionRequests.requestChanged";
@@ -753,6 +770,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
 
   return (
     <Tabs
+      style={detailOnly ? { display: "none" } : undefined}
       activeKey={tab}
       destroyOnHidden
       onChange={(key) => setTab(key as Tab)}

@@ -115,7 +115,7 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
 
 export async function listKnowledgeNetworkActionTypes(
   networkId: string,
-  options: { skipErrorToast?: boolean } = {},
+  options: { skipErrorToast?: boolean; publishedOnly?: boolean } = {},
 ) {
   if (useMock) {
     return wait(
@@ -137,7 +137,9 @@ export async function listKnowledgeNetworkActionTypes(
         limit: -1,
         offset: 0,
         sort: "update_time",
+        ...(options.publishedOnly ? { branch: "main" } : {}),
       },
+      ...(options.publishedOnly ? { _knSkip: true } : {}),
       skipErrorToast: options.skipErrorToast,
     },
   );

@@ -74,6 +74,10 @@ export const subscriptionZhCN = {
         description: "接入对象存储、文件服务等来源的文件，管理内容版本，完成解析、切片与原文定位",
         name: "本体知识库",
       },
+      action_governance: {
+        name: "行动管控",
+        description: "配置行动执行的确认、禁止与业务审批规则。",
+      },
       object_metrics: {
         bullets: {
           b1: "按对象类统一管理原子、衍生和复合对象指标",

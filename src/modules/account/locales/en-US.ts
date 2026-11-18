@@ -28,8 +28,8 @@ export const accountEnUS = {
           "Issue and manage API keys for external systems and agent access, and review or disconnect connected agent clients.",
       },
       permissionRequests: {
-        title: "Permission tickets",
-        description: "View and process resource permission tickets.",
+        title: "My work orders",
+        description: "View and process permission and action requests.",
       },
     },
     profileSoon: "Profile editing is coming soon.",

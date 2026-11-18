@@ -34,7 +34,7 @@ import type { Edition } from "@/framework/entitlement/edition";
 import type { CapabilityState } from "@/framework/entitlement/types";
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
-import { extensionWorkspacePage } from "@/framework/extension/registry";
+import { extensionWorkspaceNavItems, extensionWorkspacePage } from "@/framework/extension/registry";
 import { capabilityReportedByEndpoint } from "@/modules/subscription";
 import type {
   KnowledgeNetworkWorkspaceSceneProps,
@@ -217,7 +217,12 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "action-control",
         label: t("knowledgeNetwork.riskActionControlNav"),
         icon: <ControlOutlined />,
-        disabled: true,
+        path: extensionWorkspaceNavItems("risk-control")
+          .find((item) => item.id === "action-control")
+          ?.path(activeNetworkId),
+        disabled: !extensionWorkspaceNavItems("risk-control").some(
+          (item) => item.id === "action-control",
+        ),
       },
       {
         key: "concept-groups",

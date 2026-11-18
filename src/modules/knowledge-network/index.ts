@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+export { listKnowledgeNetworkActionTypes } from "./services/action-type.service";
 export { knowledgeNetworkModuleManifest } from "@/modules/knowledge-network/module.manifest";
 export type {
   KnowledgeNetworkListSceneProps,

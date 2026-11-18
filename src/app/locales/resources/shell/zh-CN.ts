@@ -76,9 +76,9 @@ export const shellZhCN = {
       apiKeys: "API Key",
       account: "个人中心",
       aboutOpenBkn: "关于 OpenBKN",
-      permissionReviews: "权限工单",
-      pendingPermissionRequests_one: "有 {{count}} 项待处理权限工单",
-      pendingPermissionRequests_other: "有 {{count}} 项待处理权限工单",
+      permissionReviews: "我的工单",
+      pendingPermissionRequests_one: "有 {{count}} 项待处理工单",
+      pendingPermissionRequests_other: "有 {{count}} 项待处理工单",
       installStatus: "后端服务状态",
     },
     aboutOpenBkn: {

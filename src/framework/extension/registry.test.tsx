@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionAccountWorkOrders,
   extensionProjectConceptSource,
   extensionKnowledgeNetworkResourcePanel,
   extensionProjectObjectSourceEditor,
@@ -373,4 +374,15 @@ describe("project document modeling extension", () => {
     });
     expect(extensionProjectKnowledgeBaseModel()).toBe(Panel);
   });
+});
+
+it("keeps the account work-order extension optional for community builds", () => {
+  expect(extensionAccountWorkOrders()).toBeUndefined();
+  const WorkOrders = () => null;
+  registerExtension({
+    id: "governance",
+    capability: "action_governance",
+    accountWorkOrders: WorkOrders,
+  });
+  expect(extensionAccountWorkOrders()).toBe(WorkOrders);
 });

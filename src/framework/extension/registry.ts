@@ -43,6 +43,10 @@ export type StudioExtension = {
    * licence that falls short gets the upgrade page instead.
    */
   capability: string;
+  /** Optional account work-order scene. The community permission panel remains the fallback. */
+  accountWorkOrders?: ComponentType;
+  /** Optional aggregate count; the shell checks this extension's entitlement before calling. */
+  accountPendingCount?: () => Promise<number | null>;
   /** Routes inside the app shell, beside the module routes. */
   routes?: RouteObject[];
   /** Routes without the shell, like the knowledge-network workspace pages. */
@@ -346,7 +350,7 @@ export type WorkspaceNavEntry = {
   page?: WorkspaceNavPage;
 };
 
-export type WorkspaceNavSection = "verification" | "analysis";
+export type WorkspaceNavSection = "verification" | "analysis" | "risk-control";
 
 /**
  * A sidebar entry's page, shown inside the knowledge-network workspace. Studio registers its
@@ -400,6 +404,17 @@ export function handOverLimit(handOver: InstanceHandOver): number {
   return typeof handOver.maxInstances === "function"
     ? handOver.maxInstances()
     : handOver.maxInstances;
+}
+
+export function extensionAccountPendingCount() {
+  const extension = installed.find((item) => item.accountPendingCount);
+  return extension?.accountPendingCount
+    ? { capability: extension.capability, load: extension.accountPendingCount }
+    : undefined;
+}
+
+export function extensionAccountWorkOrders() {
+  return installed.find((extension) => extension.accountWorkOrders)?.accountWorkOrders;
 }
 
 const installed: StudioExtension[] = [];

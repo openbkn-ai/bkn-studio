@@ -107,6 +107,9 @@ export default defineConfig(({ mode }) => {
           }
         : {}),
       proxy: {
+        ...(env.VITE_GOVERNANCE_TARGET
+          ? { "/api/governance": { changeOrigin: true, target: env.VITE_GOVERNANCE_TARGET } }
+          : {}),
         // Gateway install-status page (same path as production). Dev-only: forwards
         // to VITE_DEV_AUTH_ORIGIN so local联调 can open the remote status page.
         "/install-status": {

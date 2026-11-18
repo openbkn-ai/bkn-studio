@@ -66,6 +66,12 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   {
     category: "permission",
+    key: CAPABILITIES.ACTION_GOVERNANCE,
+    minEdition: "professional",
+    reportedByEndpoint: false,
+  },
+  {
+    category: "permission",
     key: CAPABILITIES.SSO,
     minEdition: "professional",
     reportedByEndpoint: true,

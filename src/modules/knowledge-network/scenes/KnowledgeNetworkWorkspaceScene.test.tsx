@@ -646,3 +646,34 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
   ).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByTitle("评测")).toBeTruthy();
 });
+
+it("connects the existing action-control entry to the installed risk-control page", () => {
+  resetExtensionsForTesting();
+  registerExtension({
+    id: "governance",
+    capability: CAPABILITIES.ACTION_GOVERNANCE,
+    workspaceNavItems: [
+      {
+        id: "action-control",
+        section: "risk-control",
+        labelKey: "governance.actionControl",
+        path: (id) => `/knowledge-network/workspace/${id}/action-control`,
+      },
+    ],
+  });
+  render(
+    <EntitlementContext.Provider
+      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+    >
+      <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
+    </EntitlementContext.Provider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }));
+  const item = screen.getByTitle("行动管控");
+  expect(item).not.toBeDisabled();
+  fireEvent.click(item);
+  expect(mocks.navigate).toHaveBeenCalledWith(
+    "/knowledge-network/workspace/network-1/action-control",
+  );
+  resetExtensionsForTesting();
+});
