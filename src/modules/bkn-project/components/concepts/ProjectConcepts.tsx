@@ -647,6 +647,7 @@ export function ProjectConcepts({
         pending: pendingOf("knowledgeBase"),
         produced: produced("knowledgeBase"),
         running: kbStatus?.state === "running",
+        stale: Boolean(kbStatus?.samplesChanged),
       }
     : null;
   const network = data.filter(inNetwork);

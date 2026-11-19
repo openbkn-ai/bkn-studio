@@ -294,6 +294,9 @@ export const bknProjectZhCN = {
           knowledgeBase_one: " · 产出 {{count}} 个概念",
           knowledgeBase_other: " · 产出 {{count}} 个概念",
         },
+        stale: {
+          knowledgeBase: "。调试文件换过了，这是按之前的文件抽取的结果，请重新抽取",
+        },
         unmatched: "，{{count}} 个暂未匹配",
         unmatched_one: "，{{count}} 个暂未匹配",
         unmatched_other: "，{{count}} 个暂未匹配",

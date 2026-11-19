@@ -273,6 +273,8 @@ export type ProjectKnowledgeBaseModelStatus = {
   added: number;
   /** The last `runRequest` the panel acted on, started or refused; 0 before any. */
   handledRequest: number;
+  /** The last extraction read debug files changed since: what it made is of the old files. */
+  samplesChanged?: boolean;
 };
 export function extensionProjectKnowledgeBaseModel() {
   return installed.find((e) => e.capability === "knowledge_base" && e.projectKnowledgeBaseModel)

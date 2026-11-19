@@ -43,6 +43,8 @@ export type SourceFacts = {
   pending?: number;
   /** Why its last extraction failed, as words; empty when it did not. */
   failed: string;
+  /** What it holds changed since it was last extracted from: what it made is of before. */
+  stale?: boolean;
 };
 
 /**
@@ -175,6 +177,7 @@ export function ConceptSources({
             </AppButton>
           </>
         ) : null}
+        {facts.stale ? <span className={styles.warning}>{t(`${PREFIX}.stale.${key}`)}</span> : null}
         {key === "document" && unmatched ? (
           <span className={styles.warning}>{t(`${PREFIX}.unmatched`, { count: unmatched })}</span>
         ) : null}

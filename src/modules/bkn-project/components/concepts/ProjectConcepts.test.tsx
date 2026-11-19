@@ -788,6 +788,32 @@ describe("ProjectConcepts", () => {
     expect(screen.queryByText("bknProject.concepts.empty.title")).toBeNull();
   });
 
+  it("says the knowledge-base concepts are of earlier debug files once the files changed", async () => {
+    kb.mode = "enabled";
+    slots.kbModel = function Panel({ onStatus }: ProjectKnowledgeBaseModelProps) {
+      useEffect(() => {
+        onStatus?.({
+          added: 3,
+          debugFiles: 4,
+          finishTime: 5,
+          handledRequest: 0,
+          phase: null,
+          samplesChanged: true,
+          state: "succeeded",
+        });
+      }, [onStatus]);
+      return <span>panel</span>;
+    };
+    renderConcepts();
+
+    const sources = await screen.findByRole("region", {
+      name: "bknProject.concepts.sources.title",
+    });
+    expect(
+      await within(sources).findByText("bknProject.concepts.sources.stale.knowledgeBase"),
+    ).toBeTruthy();
+  });
+
   it("names a knowledge-base concept's files, and warns of one named as a table's object", async () => {
     const base = concepts();
     base.concepts.push(
