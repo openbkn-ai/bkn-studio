@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AxiosAdapter } from "axios";
 
+import { logout } from "@/framework/auth/oauth";
 import { AUTH_REFRESH_TIMEOUT_MS, http, setRequestErrorHandler } from "@/framework/request/http";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
@@ -222,6 +223,55 @@ describe("http request headers", () => {
       expect(onAuthFailure).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it("handles a later 401 after logout fails while another request receives 401", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_access_token=expired-for-logout; path=/";
+    document.cookie = "bkn_refresh_token=refresh-for-logout; path=/";
+    const runtime = createRuntimeConfig();
+    setRuntimeConfig(runtime);
+    const refresh = vi
+      .spyOn(runtime.auth.tokenManager, "refreshAccessToken")
+      .mockResolvedValue(null);
+    const onAuthFailure = vi
+      .spyOn(runtime.auth.tokenManager, "onAuthFailure")
+      .mockImplementation(() => {});
+    let finishLogout!: (response: Response) => void;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishLogout = resolve;
+        }),
+    );
+    const rejected: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("HTTP 401"), {
+          isAxiosError: true,
+          config,
+          response: { status: 401 },
+        }),
+      );
+
+    try {
+      const leaving = logout("standalone");
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+      expect(onAuthFailure).not.toHaveBeenCalled();
+
+      finishLogout(new Response(null, { status: 503 }));
+      await expect(leaving).rejects.toThrow("Logout revocation was not confirmed");
+      expect(document.cookie).toContain("bkn_access_token=expired-for-logout");
+
+      await expect(http.get("/safe/v1/me", { adapter: rejected })).rejects.toThrow("HTTP 401");
+      expect(refresh).toHaveBeenCalledTimes(2);
+      expect(onAuthFailure).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      document.cookie = "bkn_access_token=; path=/; max-age=0";
+      document.cookie = "bkn_refresh_token=; path=/; max-age=0";
     }
   });
 

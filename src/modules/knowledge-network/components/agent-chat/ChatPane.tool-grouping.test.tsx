@@ -350,6 +350,68 @@ describe("ChatPane 工具调用折叠", () => {
     expect(screen.getByText("1 个失败")).toBeTruthy();
   });
 
+  // bkn-foundry issue 3282: an older Agent service reported the thread's kept history
+  // again after summarizing it; each call must still count once.
+  const failedWith = (id: string, durationMs = 5): ExecutionEvent => ({
+    type: "tool_finished",
+    id,
+    name: "run_cypher",
+    status: "failed",
+    output: "boom",
+    errorKind: "error",
+    durationMs,
+  });
+
+  it("a call reported twice in a turn is one call with its first result", async () => {
+    streams([
+      call("c1", "run_cypher"),
+      call("c2", "run_cypher"),
+      done("c1", "run_cypher"),
+      failedWith("c2"),
+      call("c1", "run_cypher"),
+      failedWith("c1", 900),
+      call("c2", "run_cypher"),
+      failedWith("c2", 900),
+      token("答复"),
+    ]);
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("已调用工具 2 次")).toBeTruthy();
+    expect(screen.getByText(/其中 1 次失败/)).toBeTruthy();
+    expect(screen.queryByText(/900/)).toBeNull();
+  });
+
+  it("an earlier turn's calls reported again are not this turn's calls or failures", async () => {
+    streams([call("old", "run_cypher"), failedWith("old"), token("第一题答复")]);
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("第一题");
+      await Promise.resolve();
+    });
+
+    streams([
+      call("old", "run_cypher"),
+      failedWith("old"),
+      call("new", "run_cypher"),
+      done("new", "run_cypher"),
+      token("第二题答复"),
+    ]);
+    await act(async () => {
+      ref.current?.send("第二题");
+      await Promise.resolve();
+    });
+
+    // Two cards in all, one per turn, and only the first turn's failed.
+    expect(screen.getAllByText("run_cypher")).toHaveLength(2);
+    expect(screen.queryByText(/已调用工具/)).toBeNull();
+    expect(screen.getAllByText(/返回错误/)).toHaveLength(1);
+  });
+
   it("history saved before error_kind keeps its failures red", async () => {
     const legacy = (id: string) => ({
       id,

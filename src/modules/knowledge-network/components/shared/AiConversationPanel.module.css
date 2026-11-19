@@ -5,6 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/* Hidden by its header's button, kept mounted so the conversation is kept. */
+.frame[hidden] {
+  display: none;
+}
+
 .frame {
   display: flex;
   flex-direction: column;

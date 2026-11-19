@@ -112,17 +112,19 @@ vi.mock("./m0-run.service", () => ({
 }));
 vi.mock("./EvalTemplateGenerationDrawer", () => ({
   EvalAssistantDrawer: ({
+    open,
     repairRequest,
     workspace,
     onClose,
   }: {
+    open: boolean;
     repairRequest?: {
       cases: { id: string; latest_run_id?: string; latest_case_run_id?: string }[];
     };
     workspace?: unknown;
     onClose: () => void;
   }) => (
-    <aside aria-label="质量评测 AI 助手">
+    <aside aria-label="质量评测 AI 助手" hidden={!open}>
       <output data-testid="repair-request">{JSON.stringify(repairRequest)}</output>
       <output data-testid="assistant-workspace">{JSON.stringify(workspace)}</output>
       <button onClick={onClose}>关闭助手</button>
@@ -2790,6 +2792,12 @@ it("keeps the exact run and selected Case visible beside AI repair", async () =>
   fireEvent.click(within(assistant).getByRole("button", { name: "关闭助手" }));
   expect(page).toBeVisible();
   expect(within(page).getByText("Multi Run panel · repair-run")).toBeVisible();
+  // Hidden, the assistant stays mounted with the repair under way; opened again, it is there.
+  expect(screen.queryByRole("complementary", { name: "质量评测 AI 助手" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "AI 助手" }));
+  const reopened = screen.getByRole("complementary", { name: "质量评测 AI 助手" });
+  expect(reopened).toBe(assistant);
+  expect(within(reopened).getByTestId("repair-request")).toHaveTextContent("repair-case");
 });
 it("restores full run pages through browser back and forward location changes", async () => {
   routerMocks.search = "?tab=runs&run_id=history-run&case_run_id=history-case";

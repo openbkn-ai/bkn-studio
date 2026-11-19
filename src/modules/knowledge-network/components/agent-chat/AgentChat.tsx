@@ -11,12 +11,13 @@
  * input composer.
  */
 
-import { ClearOutlined, ExclamationCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { ExclamationCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { normalizeSupportedLocale } from "@/framework/i18n/locale";
+import { AiPanelActions } from "@/framework/ui/common/AiPanelActions";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
@@ -338,14 +339,8 @@ export function AgentChat({
           <button type="button" className={styles.barBtn} onClick={() => setConfigOpen(true)}>
             <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}
           </button>
-          <button
-            type="button"
-            className={styles.barBtn}
-            onClick={() => paneRef.current?.clear()}
-            disabled={busy}
-          >
-            <ClearOutlined /> {t("knowledgeNetwork.agentChat.composer.clear")}
-          </button>
+          {/* The page is the conversation: nothing to hide, and no earlier ones are kept. */}
+          <AiPanelActions newChat={{ disabled: busy, onClick: () => paneRef.current?.clear() }} />
         </div>
       </header>
 

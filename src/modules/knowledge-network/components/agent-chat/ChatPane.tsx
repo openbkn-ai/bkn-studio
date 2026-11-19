@@ -596,26 +596,37 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + event.content }));
           break;
         case "tool_started":
-          updateAssistant((m) => ({
-            ...m,
-            parts: appendToolPart(m.parts, event.id),
-            toolCalls: [
-              ...(m.toolCalls ?? []),
-              {
-                id: event.id,
-                name: event.name,
-                args: event.input,
-                status: "running",
-                startedAt: performance.now(),
-              },
-            ],
-          }));
+          // A call is shown once. One already on screen, in this turn or an earlier
+          // one, is a replay of the thread (bkn-foundry issue 3282), not a new call.
+          setMessages((prev) => {
+            if (prev.length === 0) return prev;
+            if (event.id && prev.some((m) => m.toolCalls?.some((tc) => tc.id === event.id)))
+              return prev;
+            const next = [...prev];
+            const m = next[next.length - 1];
+            next[next.length - 1] = {
+              ...m,
+              parts: appendToolPart(m.parts, event.id),
+              toolCalls: [
+                ...(m.toolCalls ?? []),
+                {
+                  id: event.id,
+                  name: event.name,
+                  args: event.input,
+                  status: "running",
+                  startedAt: performance.now(),
+                },
+              ],
+            };
+            return next;
+          });
           break;
         case "tool_finished":
           updateAssistant((m) => ({
             ...m,
             toolCalls: (m.toolCalls ?? []).map((tc) =>
-              tc.id === event.id
+              // The first result stands: a repeat would restart its time.
+              tc.id === event.id && tc.status === "running"
                 ? {
                     ...tc,
                     status: event.status === "failed" ? "error" : "done",

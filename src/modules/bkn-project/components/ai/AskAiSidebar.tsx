@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CloseOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { ThunderboltOutlined } from "@ant-design/icons";
 import { Button, Checkbox, Space } from "antd";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { AiPanelActions } from "@/framework/ui/common/AiPanelActions";
 import {
   AskError,
   ASK_HISTORY_TURNS,
@@ -119,8 +120,8 @@ type Proposal<R extends Revision> = {
  * Ask AI beside an editor, as a conversation like the knowledge network's object metric
  * designer: a question about what is being edited, unsaved changes included, gets an answer and
  * the changes it proposes, each from what it is now to what it would be. Chosen changes go into
- * the editor only when applied, can be taken back, and are written only by saving. Closing the
- * editor forgets the conversation.
+ * the editor only when applied, can be taken back, and are written only by saving. Hiding the
+ * panel keeps the conversation and an answer still being written; closing the editor forgets it.
  *
  * Beside a page that writes each change as it is adopted, such as the concepts, `askWith` asks and
  * each change is adopted or declined on its own, or all of them at once; `adopt` writes one, one
@@ -129,6 +130,7 @@ type Proposal<R extends Revision> = {
 export function AskAiSidebar<R extends Revision = AskRevision>({
   adopt,
   askWith,
+  hidden = false,
   itemId = null,
   kind,
   onApply,
@@ -143,11 +145,14 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
   adopt?: (revision: R) => Promise<boolean>;
   /** Asks in place of asking about the item being edited. */
   askWith?: AskWith<R>;
+  /** Hidden by its header's button: kept mounted, so the conversation is kept. */
+  hidden?: boolean;
   /** The item asked about; null for one being made. */
   itemId?: string | null;
   kind: AskKind | "concepts";
   /** Puts the changes into the editor; replies how to take them back. */
   onApply?: (revisions: R[]) => UndoApply;
+  /** Hides the panel; the page keeps it mounted, see `hidden`. */
   onClose: () => void;
   /** How a change reads against the editor as it is now. */
   preview: (revision: R) => RevisionPreview;
@@ -346,7 +351,7 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
   const topic = itemId === null && kind !== "concepts" ? `${kind}_new` : kind;
   const empty = !messages.length && !generating;
   return (
-    <aside aria-label={t(`${PREFIX}.title`)} className={styles.panel}>
+    <aside aria-label={t(`${PREFIX}.title`)} className={styles.panel} hidden={hidden}>
       <div className={styles.header}>
         <div className={styles.title}>
           <span aria-hidden="true" className={styles.titleIcon}>
@@ -358,21 +363,12 @@ export function AskAiSidebar<R extends Revision = AskRevision>({
           </div>
         </div>
         <div className={styles.actions}>
-          {messages.length ? (
-            <Button
-              disabled={generating || adopting !== null}
-              onClick={restart}
-              size="small"
-              type="text"
-            >
-              {t(`${PREFIX}.newConversation`)}
-            </Button>
-          ) : null}
-          <Button
-            aria-label={t(`${PREFIX}.close`)}
-            icon={<CloseOutlined />}
-            onClick={onClose}
-            type="text"
+          <AiPanelActions
+            collapse={{ label: t(`${PREFIX}.close`), onClick: onClose }}
+            newChat={{
+              disabled: !messages.length || generating || adopting !== null,
+              onClick: restart,
+            }}
           />
         </div>
       </div>

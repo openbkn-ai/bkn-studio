@@ -58,6 +58,7 @@ import "dayjs/locale/zh-cn";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useOpenedOnce } from "@/framework/hooks/use-opened-once";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { EvalCaseResourceSidebar } from "./EvalCaseResourceSidebar";
 import { buildReturnToState } from "@/modules/execution-factory/utils/back-navigation";
@@ -471,6 +472,8 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
   const [caseInitialResource, setCaseInitialResource] = useState<EvalCaseResource>();
   const [ruleApplication, setRuleApplication] = useState<RuleApplicationSeed>();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  // Hidden, the AI assistant stays mounted and keeps its conversation.
+  const assistantKept = useOpenedOnce(assistantOpen);
   const [repairRequest, setRepairRequest] = useState<EvalRepairRequest>();
   const repairNavigation = useRef(0);
   useEffect(
@@ -3337,7 +3340,7 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
         />
       )}
       {assistantOpen && <EvalAssistantResizeHandle containerRef={workspaceRef} />}
-      {assistantOpen ? (
+      {assistantKept ? (
         <EvalAssistantDrawer
           repairRequest={repairRequest}
           onClearRepair={() => setRepairRequest(undefined)}
@@ -3355,7 +3358,7 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
             setRuleApplication(seed);
           }}
           networkId={networkId}
-          open
+          open={assistantOpen}
           onNavigate={(tab, caseSection) => {
             if (tab === "cases") {
               openCaseLibrary({ view: caseSection || "library" });
@@ -3370,10 +3373,8 @@ export function EvalWorkspaceScene({ networkId, activeTab, onTabChange }: Props)
             }
             onTabChange(tab);
           }}
-          onClose={() => {
-            setAssistantOpen(false);
-            setRepairRequest(undefined);
-          }}
+          // Hidden, the assistant keeps its conversation and a repair under way.
+          onClose={() => setAssistantOpen(false)}
           onAdopted={() => setCaseListRevision((revision) => revision + 1)}
           onCreateCase={() => {
             setAssistantOpen(false);

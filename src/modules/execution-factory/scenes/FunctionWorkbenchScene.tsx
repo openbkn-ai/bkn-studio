@@ -1773,285 +1773,291 @@ export function FunctionWorkbenchScene({
                 </div>
               </div>
               {/*
+                Below the head the column scrolls as one when it is too short for the editor and
+                the console, rather than letting one draw over the other (#1441). The head stays
+                out of it, level with the rail's head across the dividing line.
+              */}
+              <div className={styles.workArea} data-testid="function-work-area">
+                {/*
                 停用横幅移出 .fnHead：头部高度被那条贯穿分隔线钉死了（见
                 --entity-rail-head-height），横幅留在里面会把内容顶到线下面去。
               */}
-              {active.status === "disabled" ? (
-                <Alert
-                  banner
-                  message={t("executionFactory.workbenchDisabledBanner")}
-                  type="warning"
-                />
-              ) : null}
+                {active.status === "disabled" ? (
+                  <Alert
+                    banner
+                    message={t("executionFactory.workbenchDisabledBanner")}
+                    type="warning"
+                  />
+                ) : null}
 
-              <div className={styles.editorArea}>
-                <div className={styles.editor}>
-                  <div className={styles.editorBar}>
-                    <span className={styles.editorIcon}>
-                      <ThunderboltOutlined />
-                    </span>
-                    <span className={styles.editorTitle}>
-                      {t(
-                        isCypher
-                          ? "executionFactory.cypherFunction.logic"
-                          : "executionFactory.functionLogic",
-                      )}
-                    </span>
-                    <div className={styles.editorTools}>
-                      {/* Templates write Python; a Cypher function's AI writes its statement. */}
-                      <PermissionGate permissions="execution-factory:function:edit">
-                        {isCypher ? (
-                          // The Cypher Agent checks its own permission; the statement lands in
-                          // the draft, so editing is all this page asks for.
-                          canEditFunction ? (
-                            <>
-                              <Tooltip
-                                title={t("executionFactory.cypherFunction.parameterize.hint")}
-                              >
-                                <AppButton
-                                  data-testid="cypher-function-parameterize"
-                                  disabled={!active.code.trim()}
-                                  icon={<DollarOutlined />}
-                                  onClick={parameterizeSelection}
-                                >
-                                  {t("executionFactory.cypherFunction.parameterize.make")}
-                                </AppButton>
-                              </Tooltip>
-                              <AppButton
-                                icon={<ThunderboltOutlined />}
-                                onClick={() => setCypherAiOpen(true)}
-                                type="primary"
-                              >
-                                {t("executionFactory.cypherFunction.ai.open")}
-                              </AppButton>
-                            </>
-                          ) : null
-                        ) : (
-                          <>
-                            <Dropdown
-                              menu={{
-                                items: (["standard", "pydantic"] as FunctionTemplateId[]).map(
-                                  (id) => ({
-                                    key: id,
-                                    label: (
-                                      <span className={styles.templateOption}>
-                                        <span className={styles.templateOptionTitle}>
-                                          {t(`executionFactory.functionTemplates.${id}.title`)}
-                                        </span>
-                                        <span className={styles.templateOptionDesc}>
-                                          {t(`executionFactory.functionTemplates.${id}.desc`)}
-                                        </span>
-                                      </span>
-                                    ),
-                                    onClick: () => applyTemplate(id),
-                                  }),
-                                ),
-                              }}
-                            >
-                              <AppButton icon={<FileTextOutlined />}>
-                                {t("executionFactory.functionInsertTemplate")}
-                              </AppButton>
-                            </Dropdown>
-                            {hasDefaultLlm && canGenerateFunction ? (
-                              <AppButton
-                                icon={<ThunderboltOutlined />}
-                                onClick={() => setAiOpen(true)}
-                                type="primary"
-                              >
-                                {t("executionFactory.functionAiGenerate")}
-                              </AppButton>
-                            ) : null}
-                          </>
+                <div className={styles.editorArea}>
+                  <div className={styles.editor}>
+                    <div className={styles.editorBar}>
+                      <span className={styles.editorIcon}>
+                        <ThunderboltOutlined />
+                      </span>
+                      <span className={styles.editorTitle}>
+                        {t(
+                          isCypher
+                            ? "executionFactory.cypherFunction.logic"
+                            : "executionFactory.functionLogic",
                         )}
-                      </PermissionGate>
-                      <span className={styles.toolsDivider} />
-                      <AppButton
-                        icon={<ProfileOutlined />}
-                        onClick={() => {
-                          setDockTab("params");
-                          if (canDeriveParams && needsDerive(active)) {
-                            void handleDeriveParams();
-                          }
-                        }}
-                      >
-                        {t("executionFactory.workbenchParamsTab")}
-                        <span
-                          className={`${styles.toolCount} ${
-                            active.inputs.length === 0 ? styles.toolCountEmpty : ""
-                          }`}
+                      </span>
+                      <div className={styles.editorTools}>
+                        {/* Templates write Python; a Cypher function's AI writes its statement. */}
+                        <PermissionGate permissions="execution-factory:function:edit">
+                          {isCypher ? (
+                            // The Cypher Agent checks its own permission; the statement lands in
+                            // the draft, so editing is all this page asks for.
+                            canEditFunction ? (
+                              <>
+                                <Tooltip
+                                  title={t("executionFactory.cypherFunction.parameterize.hint")}
+                                >
+                                  <AppButton
+                                    data-testid="cypher-function-parameterize"
+                                    disabled={!active.code.trim()}
+                                    icon={<DollarOutlined />}
+                                    onClick={parameterizeSelection}
+                                  >
+                                    {t("executionFactory.cypherFunction.parameterize.make")}
+                                  </AppButton>
+                                </Tooltip>
+                                <AppButton
+                                  icon={<ThunderboltOutlined />}
+                                  onClick={() => setCypherAiOpen(true)}
+                                  type="primary"
+                                >
+                                  {t("executionFactory.cypherFunction.ai.open")}
+                                </AppButton>
+                              </>
+                            ) : null
+                          ) : (
+                            <>
+                              <Dropdown
+                                menu={{
+                                  items: (["standard", "pydantic"] as FunctionTemplateId[]).map(
+                                    (id) => ({
+                                      key: id,
+                                      label: (
+                                        <span className={styles.templateOption}>
+                                          <span className={styles.templateOptionTitle}>
+                                            {t(`executionFactory.functionTemplates.${id}.title`)}
+                                          </span>
+                                          <span className={styles.templateOptionDesc}>
+                                            {t(`executionFactory.functionTemplates.${id}.desc`)}
+                                          </span>
+                                        </span>
+                                      ),
+                                      onClick: () => applyTemplate(id),
+                                    }),
+                                  ),
+                                }}
+                              >
+                                <AppButton icon={<FileTextOutlined />}>
+                                  {t("executionFactory.functionInsertTemplate")}
+                                </AppButton>
+                              </Dropdown>
+                              {hasDefaultLlm && canGenerateFunction ? (
+                                <AppButton
+                                  icon={<ThunderboltOutlined />}
+                                  onClick={() => setAiOpen(true)}
+                                  type="primary"
+                                >
+                                  {t("executionFactory.functionAiGenerate")}
+                                </AppButton>
+                              ) : null}
+                            </>
+                          )}
+                        </PermissionGate>
+                        <span className={styles.toolsDivider} />
+                        <AppButton
+                          icon={<ProfileOutlined />}
+                          onClick={() => {
+                            setDockTab("params");
+                            if (canDeriveParams && needsDerive(active)) {
+                              void handleDeriveParams();
+                            }
+                          }}
                         >
-                          {active.inputs.length + (isCypher ? 0 : active.outputs.length)}
-                        </span>
-                      </AppButton>
-                      {SHOW_DEPENDENCY_DOCK ? (
-                        <AppButton icon={<AppstoreOutlined />} onClick={() => setDockTab("deps")}>
-                          {t("executionFactory.workbenchDepsTab")}
-                          <span className={styles.toolCount}>{active.dependencies.length}</span>
+                          {t("executionFactory.workbenchParamsTab")}
+                          <span
+                            className={`${styles.toolCount} ${
+                              active.inputs.length === 0 ? styles.toolCountEmpty : ""
+                            }`}
+                          >
+                            {active.inputs.length + (isCypher ? 0 : active.outputs.length)}
+                          </span>
                         </AppButton>
-                      ) : null}
-                      {/*
+                        {SHOW_DEPENDENCY_DOCK ? (
+                          <AppButton icon={<AppstoreOutlined />} onClick={() => setDockTab("deps")}>
+                            {t("executionFactory.workbenchDepsTab")}
+                            <span className={styles.toolCount}>{active.dependencies.length}</span>
+                          </AppButton>
+                        ) : null}
+                        {/*
                         保存挪到这里：改动几乎都发生在代码区，原来放在页头意味着每写完
                         一段就要把视线甩到屏幕最上面。注意它保存的是整个工具箱（箱名、
                         分类和全部函数），不是当前这一个函数——所以「未保存」角标跟着它，
                         统计的也是全部函数。
                       */}
-                      <span className={styles.toolsDivider} />
-                      {hasUnsavedChanges ? (
-                        <span className={styles.dirtyBadge}>
-                          {t("executionFactory.workbenchDirty")}
-                        </span>
-                      ) : null}
-                      <PermissionGate permissions="execution-factory:function:edit">
-                        <AppButton
-                          disabled={!hasUnsavedChanges}
-                          loading={saving}
-                          onClick={() => void handleSaveDraft()}
-                          type={hasUnsavedChanges ? "primary" : "default"}
-                        >
-                          {t("common.save")}
-                        </AppButton>
-                      </PermissionGate>
-                    </div>
-                  </div>
-                  {isCypher ? (
-                    <CypherFunctionSettings
-                      knId={active.knId ?? ""}
-                      network={cypher.network}
-                      onNetworkChange={(network) => {
-                        cypher.setNetwork(network);
-                        patchActive({ knId: network?.id ?? "" });
-                      }}
-                      onResultShapeChange={(resultShape) => patchActive({ resultShape })}
-                      notices={cypherNotices}
-                      readOnly={!canEditFunction}
-                      resultShape={active.resultShape ?? "value"}
-                    />
-                  ) : null}
-                  <div className={styles.editorSurface}>
-                    {isCypher ? (
-                      <CypherEditor
-                        ariaLabel={t("executionFactory.cypherFunction.logic")}
-                        key={active.key}
-                        maxHeight={640}
-                        minHeight={240}
-                        onChange={handleCypherCodeChange}
-                        onHistory={() => undefined}
-                        onRun={() => void handleRun()}
-                        parameterize={{
-                          label: t("executionFactory.cypherFunction.parameterize.make"),
-                          run: parameterizeSelection,
-                        }}
-                        readOnly={!canEditFunction}
-                        ref={cypherEditorRef}
-                        schema={cypher.schema}
-                        value={active.code}
-                      />
-                    ) : (
-                      <CodeEditor
-                        height="fill"
-                        language="python"
-                        onChange={(code) => patchActive({ code })}
-                        readOnly={!canEditFunction}
-                        value={active.code}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.console}>
-                <div
-                  className={styles.consoleHead}
-                  onClick={() => setConsoleCollapsed((current) => !current)}
-                  role="presentation"
-                >
-                  {consoleCollapsed ? <DownOutlined /> : <UpOutlined />}
-                  <span className={styles.consoleTitle}>
-                    {t("executionFactory.workbenchConsoleTitle")}
-                  </span>
-                  <span className={styles.consoleNote}>
-                    {t(
-                      isCypher
-                        ? "executionFactory.cypherFunction.consoleNote"
-                        : "executionFactory.workbenchConsoleNote",
-                    )}
-                  </span>
-                  <span className={styles.consoleRun}>
-                    {/* A Cypher trial run is a data query as the viewer, not sandbox code. */}
-                    {isCypher || canExecuteAdhocFunction ? (
-                      <Tooltip title={t("executionFactory.workbenchRunShortcut")}>
-                        <AppButton
-                          className={styles.runButton}
-                          icon={<PlayCircleFilled />}
-                          loading={running}
-                          onClick={(clickEvent) => {
-                            clickEvent.stopPropagation();
-                            void handleRun();
-                          }}
-                          type="primary"
-                        >
-                          {t("executionFactory.workbenchRun")}
-                        </AppButton>
-                      </Tooltip>
-                    ) : null}
-                  </span>
-                </div>
-                {consoleCollapsed ? null : (
-                  <div className={styles.consoleInner}>
-                    <div className={styles.consolePane}>
-                      <span className={styles.consoleCaption}>
-                        {t("executionFactory.workbenchEventCaption")}
-                        <span className={styles.consoleCaptionHint}>
-                          {t(
-                            active.inputs.length > 0
-                              ? "executionFactory.workbenchEventAuto"
-                              : "executionFactory.workbenchEventEmpty",
-                          )}
-                        </span>
-                        <AppButton
-                          disabled={running}
-                          loading={deriving}
-                          onClick={() => void handleFillSampleEvent()}
-                          size="small"
-                          type="link"
-                        >
-                          {t("executionFactory.workbenchEventFill")}
-                        </AppButton>
-                      </span>
-                      <div className={styles.eventEditor}>
-                        <CodeEditor
-                          height={200}
-                          jsonSchema={eventSchema}
-                          language="json"
-                          onChange={setEventText}
-                          value={eventText}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.consolePane}>
-                      <div className={styles.tabStrip}>
-                        {(isCypher
-                          ? (["result", "stderr", "metrics"] as OutputTab[])
-                          : (["result", "stdout", "stderr", "metrics"] as OutputTab[])
-                        ).map((tab) => (
-                          <button
-                            className={`${styles.tab} ${outTab === tab ? styles.tabActive : ""}`}
-                            key={tab}
-                            onClick={() => setOutTab(tab)}
-                            type="button"
+                        <span className={styles.toolsDivider} />
+                        {hasUnsavedChanges ? (
+                          <span className={styles.dirtyBadge}>
+                            {t("executionFactory.workbenchDirty")}
+                          </span>
+                        ) : null}
+                        <PermissionGate permissions="execution-factory:function:edit">
+                          <AppButton
+                            disabled={!hasUnsavedChanges}
+                            loading={saving}
+                            onClick={() => void handleSaveDraft()}
+                            type={hasUnsavedChanges ? "primary" : "default"}
                           >
-                            <span
-                              className={styles.tabDot}
-                              style={{ background: OUT_TAB_COLORS[tab] }}
-                            />
-                            {t(`executionFactory.workbenchOutTabs.${tab}`)}
-                          </button>
-                        ))}
+                            {t("common.save")}
+                          </AppButton>
+                        </PermissionGate>
                       </div>
-                      <RunOutput error={runError} result={runResult} tab={outTab} />
+                    </div>
+                    {isCypher ? (
+                      <CypherFunctionSettings
+                        knId={active.knId ?? ""}
+                        network={cypher.network}
+                        onNetworkChange={(network) => {
+                          cypher.setNetwork(network);
+                          patchActive({ knId: network?.id ?? "" });
+                        }}
+                        onResultShapeChange={(resultShape) => patchActive({ resultShape })}
+                        notices={cypherNotices}
+                        readOnly={!canEditFunction}
+                        resultShape={active.resultShape ?? "value"}
+                      />
+                    ) : null}
+                    <div className={styles.editorSurface} data-testid="function-editor-surface">
+                      {isCypher ? (
+                        <CypherEditor
+                          ariaLabel={t("executionFactory.cypherFunction.logic")}
+                          height="fill"
+                          key={active.key}
+                          onChange={handleCypherCodeChange}
+                          onHistory={() => undefined}
+                          onRun={() => void handleRun()}
+                          parameterize={{
+                            label: t("executionFactory.cypherFunction.parameterize.make"),
+                            run: parameterizeSelection,
+                          }}
+                          readOnly={!canEditFunction}
+                          ref={cypherEditorRef}
+                          schema={cypher.schema}
+                          value={active.code}
+                        />
+                      ) : (
+                        <CodeEditor
+                          height="fill"
+                          language="python"
+                          onChange={(code) => patchActive({ code })}
+                          readOnly={!canEditFunction}
+                          value={active.code}
+                        />
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+
+                <div className={styles.console} data-testid="function-console">
+                  <div
+                    className={styles.consoleHead}
+                    onClick={() => setConsoleCollapsed((current) => !current)}
+                    role="presentation"
+                  >
+                    {consoleCollapsed ? <DownOutlined /> : <UpOutlined />}
+                    <span className={styles.consoleTitle}>
+                      {t("executionFactory.workbenchConsoleTitle")}
+                    </span>
+                    <span className={styles.consoleNote}>
+                      {t(
+                        isCypher
+                          ? "executionFactory.cypherFunction.consoleNote"
+                          : "executionFactory.workbenchConsoleNote",
+                      )}
+                    </span>
+                    <span className={styles.consoleRun}>
+                      {/* A Cypher trial run is a data query as the viewer, not sandbox code. */}
+                      {isCypher || canExecuteAdhocFunction ? (
+                        <Tooltip title={t("executionFactory.workbenchRunShortcut")}>
+                          <AppButton
+                            className={styles.runButton}
+                            icon={<PlayCircleFilled />}
+                            loading={running}
+                            onClick={(clickEvent) => {
+                              clickEvent.stopPropagation();
+                              void handleRun();
+                            }}
+                            type="primary"
+                          >
+                            {t("executionFactory.workbenchRun")}
+                          </AppButton>
+                        </Tooltip>
+                      ) : null}
+                    </span>
+                  </div>
+                  {consoleCollapsed ? null : (
+                    <div className={styles.consoleInner}>
+                      <div className={styles.consolePane}>
+                        <span className={styles.consoleCaption}>
+                          {t("executionFactory.workbenchEventCaption")}
+                          <span className={styles.consoleCaptionHint}>
+                            {t(
+                              active.inputs.length > 0
+                                ? "executionFactory.workbenchEventAuto"
+                                : "executionFactory.workbenchEventEmpty",
+                            )}
+                          </span>
+                          <AppButton
+                            disabled={running}
+                            loading={deriving}
+                            onClick={() => void handleFillSampleEvent()}
+                            size="small"
+                            type="link"
+                          >
+                            {t("executionFactory.workbenchEventFill")}
+                          </AppButton>
+                        </span>
+                        <div className={styles.eventEditor}>
+                          <CodeEditor
+                            height={200}
+                            jsonSchema={eventSchema}
+                            language="json"
+                            onChange={setEventText}
+                            value={eventText}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.consolePane}>
+                        <div className={styles.tabStrip}>
+                          {(isCypher
+                            ? (["result", "stderr", "metrics"] as OutputTab[])
+                            : (["result", "stdout", "stderr", "metrics"] as OutputTab[])
+                          ).map((tab) => (
+                            <button
+                              className={`${styles.tab} ${outTab === tab ? styles.tabActive : ""}`}
+                              key={tab}
+                              onClick={() => setOutTab(tab)}
+                              type="button"
+                            >
+                              <span
+                                className={styles.tabDot}
+                                style={{ background: OUT_TAB_COLORS[tab] }}
+                              />
+                              {t(`executionFactory.workbenchOutTabs.${tab}`)}
+                            </button>
+                          ))}
+                        </div>
+                        <RunOutput error={runError} result={runResult} tab={outTab} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           ) : (

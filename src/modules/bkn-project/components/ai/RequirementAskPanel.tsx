@@ -5,13 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CloseOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { CloseOutlined, DeleteOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Alert, Button, Tag } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { AiPanelActions } from "@/framework/ui/common/AiPanelActions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { InNetworkDot } from "@/modules/bkn-project/components/kinetic/KineticNeedPanel";
 import {
@@ -114,7 +115,7 @@ export function RequirementAskPanel({
   const [conversations, setConversations] = useState<AskConversation[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [history, setHistory] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [deciding, setDeciding] = useState<Deciding>(null);
   const [pollFailures, setPollFailures] = useState(0);
@@ -177,10 +178,10 @@ export function RequirementAskPanel({
   const lastStatus = last?.status;
   useEffect(() => {
     const box = content.current;
-    if (box && !history) {
+    if (box) {
       box.scrollTop = box.scrollHeight;
     }
-  }, [history, turnsShown, lastStatus, currentId]);
+  }, [turnsShown, lastStatus, currentId]);
 
   const ask = async (question: string, with_: AskRef[], again = false) => {
     if (with_.length > ASK_MAX_REFS) {
@@ -297,12 +298,12 @@ export function RequirementAskPanel({
 
   const startNew = () => {
     setCurrentId(null);
-    setHistory(false);
+    setHistoryOpen(false);
   };
 
   const pick = (id: string) => {
     setCurrentId(id);
-    setHistory(false);
+    setHistoryOpen(false);
     setPollFailures(0);
   };
 
@@ -408,6 +409,52 @@ export function RequirementAskPanel({
     );
   };
 
+  // The conversations kept for the page, opened under the header's history button.
+  const historyList = (
+    <div className={styles.historyPopover}>
+      <p className={styles.note}>{t(`${PREFIX}.historyHint`)}</p>
+      {conversations?.length ? (
+        <ul className={styles.history}>
+          {conversations.map((conversation) => (
+            <li
+              className={`${styles.historyItem} ${
+                conversation.id === currentId ? styles.historyCurrent : ""
+              }`}
+              key={conversation.id}
+            >
+              <button
+                className={styles.historyTitle}
+                onClick={() => pick(conversation.id)}
+                type="button"
+              >
+                <span>{conversation.title}</span>
+                <span className={styles.note}>
+                  {t(`${PREFIX}.historyMeta`, {
+                    count: conversation.turns.length,
+                    time: dayjs(conversation.updateTime).format("YYYY/MM/DD HH:mm"),
+                  })}
+                  {conversation.id === currentId ? t(`${PREFIX}.historyCurrentMark`) : ""}
+                </span>
+              </button>
+              <Button
+                aria-label={t(`${PREFIX}.deleteItem`, { name: conversation.title })}
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  setHistoryOpen(false);
+                  remove(conversation);
+                }}
+                size="small"
+                type="text"
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.note}>{t(`${PREFIX}.historyNone`)}</p>
+      )}
+    </div>
+  );
+
   return (
     <aside aria-label={t(`${PREFIX}.title`)} className={sidebar.panel}>
       <div className={sidebar.header}>
@@ -421,24 +468,12 @@ export function RequirementAskPanel({
           </div>
         </div>
         <div className={sidebar.actions}>
-          <Button
-            aria-label={t(`${PREFIX}.close`)}
-            icon={<CloseOutlined />}
-            onClick={onClose}
-            type="text"
+          <AiPanelActions
+            collapse={{ label: t(`${PREFIX}.close`), onClick: onClose }}
+            history={{ content: historyList, onOpenChange: setHistoryOpen, open: historyOpen }}
+            newChat={{ disabled: sending || empty, onClick: startNew }}
           />
         </div>
-      </div>
-      {/* The conversations kept for the page, and a new one, under the title. */}
-      <div className={styles.toolbar}>
-        <Button onClick={() => setHistory(!history)} size="small">
-          {history
-            ? t(`${PREFIX}.backToChat`)
-            : t(`${PREFIX}.history`, { count: conversations?.length ?? 0 })}
-        </Button>
-        <Button disabled={sending} onClick={startNew} size="small">
-          {t(`${PREFIX}.newConversation`)}
-        </Button>
       </div>
       <div className={`${sidebar.content} ${empty ? sidebar.contentEmpty : ""}`} ref={content}>
         {loadFailed ? (
@@ -453,132 +488,84 @@ export function RequirementAskPanel({
             type="error"
           />
         ) : null}
-        {history ? (
-          <>
-            <p className={styles.note}>{t(`${PREFIX}.historyHint`)}</p>
-            {conversations?.length ? (
-              <ul className={styles.history}>
-                {conversations.map((conversation) => (
-                  <li
-                    className={`${styles.historyItem} ${
-                      conversation.id === currentId ? styles.historyCurrent : ""
-                    }`}
-                    key={conversation.id}
-                  >
-                    <button
-                      className={styles.historyTitle}
-                      onClick={() => pick(conversation.id)}
-                      type="button"
-                    >
-                      <span>{conversation.title}</span>
-                      <span className={styles.note}>
-                        {t(`${PREFIX}.historyMeta`, {
-                          count: conversation.turns.length,
-                          time: dayjs(conversation.updateTime).format("YYYY/MM/DD HH:mm"),
-                        })}
-                        {conversation.id === currentId ? t(`${PREFIX}.historyCurrentMark`) : ""}
-                      </span>
-                    </button>
-                    <AppButton
-                      aria-label={t(`${PREFIX}.deleteItem`, { name: conversation.title })}
-                      danger
-                      onClick={() => remove(conversation)}
-                      size="small"
-                      type="text"
-                    >
-                      {t(`${PREFIX}.delete`)}
-                    </AppButton>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.note}>{t(`${PREFIX}.historyNone`)}</p>
-            )}
-          </>
+        {empty ? (
+          <p className={sidebar.intro}>{t(`${PREFIX}.intro.${page}`)}</p>
         ) : (
-          <>
-            {empty ? (
-              <p className={sidebar.intro}>{t(`${PREFIX}.intro.${page}`)}</p>
-            ) : (
-              <div aria-live="polite" className={styles.conversation}>
-                {current?.turns.map((turn, index) =>
-                  renderTurn(turn, index === current.turns.length - 1),
-                )}
-                {waiting && pollStalled ? (
-                  <Alert
-                    action={
-                      <AppButton onClick={() => setPollFailures(0)} size="small">
-                        {t("common.retry")}
-                      </AppButton>
-                    }
-                    message={t(`${PREFIX}.pollStalled`)}
-                    showIcon
-                    type="warning"
-                  />
-                ) : null}
-              </div>
+          <div aria-live="polite" className={styles.conversation}>
+            {current?.turns.map((turn, index) =>
+              renderTurn(turn, index === current.turns.length - 1),
             )}
-            {empty ? (
-              <div className={sidebar.examples}>
-                <span>{t(`${PREFIX}.examplesTitle`)}</span>
-                {Array.from({ length: EXAMPLES }, (_, index) => {
-                  const example = t(`${PREFIX}.examples.${page}.${index}`);
-                  return (
-                    <button
-                      key={index}
-                      onClick={() =>
-                        setPromptRequest((request) => ({
-                          revision: (request?.revision ?? 0) + 1,
-                          value: example,
-                        }))
-                      }
-                      type="button"
-                    >
-                      {example}
-                    </button>
-                  );
-                })}
-              </div>
+            {waiting && pollStalled ? (
+              <Alert
+                action={
+                  <AppButton onClick={() => setPollFailures(0)} size="small">
+                    {t("common.retry")}
+                  </AppButton>
+                }
+                message={t(`${PREFIX}.pollStalled`)}
+                showIcon
+                type="warning"
+              />
             ) : null}
-          </>
+          </div>
         )}
-      </div>
-      {history ? null : (
-        <div className={sidebar.composer}>
-          {refs.length ? (
-            <div className={styles.refs}>
-              <span className={styles.note}>{t(`${PREFIX}.refs`)}</span>
-              {refs.map((ref) => (
-                <Tag
-                  className={styles.refTag}
-                  closable
-                  closeIcon={<CloseOutlined aria-label={t(`${PREFIX}.removeRef`)} />}
-                  key={`${ref.kind}-${ref.id}`}
-                  onClose={(event) => {
-                    event.preventDefault();
-                    onRemoveRef(ref);
-                  }}
+        {empty ? (
+          <div className={sidebar.examples}>
+            <span>{t(`${PREFIX}.examplesTitle`)}</span>
+            {Array.from({ length: EXAMPLES }, (_, index) => {
+              const example = t(`${PREFIX}.examples.${page}.${index}`);
+              return (
+                <button
+                  key={index}
+                  onClick={() =>
+                    setPromptRequest((request) => ({
+                      revision: (request?.revision ?? 0) + 1,
+                      value: example,
+                    }))
+                  }
+                  type="button"
                 >
-                  {ref.name}
-                </Tag>
-              ))}
-            </div>
-          ) : null}
-          <AiPromptComposer
-            // Nothing is asked while an answer is awaited or a decision written.
-            checking={busy || deciding !== null}
-            generating={false}
-            inputLabel={t(`${PREFIX}.question`)}
-            onStop={() => undefined}
-            onSubmit={(question) => void ask(question, refs)}
-            placeholder={t(`${PREFIX}.placeholder.${page}`)}
-            promptRequest={promptRequest}
-            sendLabel={t(`${PREFIX}.submit`)}
-            stopLabel={t(`${PREFIX}.submit`)}
-          />
-          <p className={styles.note}>{t(`${PREFIX}.carries`)}</p>
-        </div>
-      )}
+                  {example}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+      <div className={sidebar.composer}>
+        {refs.length ? (
+          <div className={styles.refs}>
+            <span className={styles.note}>{t(`${PREFIX}.refs`)}</span>
+            {refs.map((ref) => (
+              <Tag
+                className={styles.refTag}
+                closable
+                closeIcon={<CloseOutlined aria-label={t(`${PREFIX}.removeRef`)} />}
+                key={`${ref.kind}-${ref.id}`}
+                onClose={(event) => {
+                  event.preventDefault();
+                  onRemoveRef(ref);
+                }}
+              >
+                {ref.name}
+              </Tag>
+            ))}
+          </div>
+        ) : null}
+        <AiPromptComposer
+          // Nothing is asked while an answer is awaited or a decision written.
+          checking={busy || deciding !== null}
+          generating={false}
+          inputLabel={t(`${PREFIX}.question`)}
+          onStop={() => undefined}
+          onSubmit={(question) => void ask(question, refs)}
+          placeholder={t(`${PREFIX}.placeholder.${page}`)}
+          promptRequest={promptRequest}
+          sendLabel={t(`${PREFIX}.submit`)}
+          stopLabel={t(`${PREFIX}.submit`)}
+        />
+        <p className={styles.note}>{t(`${PREFIX}.carries`)}</p>
+      </div>
     </aside>
   );
 }

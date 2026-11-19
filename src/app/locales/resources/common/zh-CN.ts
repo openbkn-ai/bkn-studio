@@ -20,6 +20,11 @@ export const commonZhCN = {
       },
     },
 
+    aiPanel: {
+      newChat: "新对话",
+      history: "历史对话",
+    },
+
     search: "搜索",
     reset: "重置",
     refresh: "刷新",

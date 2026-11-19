@@ -184,7 +184,7 @@ export function KnowledgeNetworkWorkspaceScene({
       },
       {
         key: "versions",
-        label: t("knowledgeNetwork.riskVersionNav"),
+        label: t("knowledgeNetwork.versions.nav"),
         icon: <BranchesOutlined />,
       },
       {
@@ -201,7 +201,7 @@ export function KnowledgeNetworkWorkspaceScene({
       },
       {
         key: "evals",
-        label: t("knowledgeNetwork.riskEvalNav"),
+        label: t("knowledgeNetwork.evalNav"),
         icon: <ExperimentOutlined />,
         path: `/knowledge-network/workspace/${activeNetworkId}/evals`,
         paidCapability: CAPABILITIES.EVAL,
@@ -307,8 +307,11 @@ export function KnowledgeNetworkWorkspaceScene({
     t,
   ]);
 
-  const primaryNavItems = navigationItems.filter((item) => item.key === "overview");
+  const primaryNavItems = navigationItems.filter(
+    (item) => item.key === "overview" || item.key === "versions",
+  );
   const developmentNavItems = navigationItems.filter((item) => item.key === "develop");
+  const evaluationNavItems = navigationItems.filter((item) => item.key === "evals");
   const experienceNavItems = navigationItems.filter(
     (item) => item.key === "experience-agent" || item.key === "experience-cypher",
   );
@@ -328,9 +331,9 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "skills" ||
       item.key === "knowledge-bases",
   );
-  const governanceNavItems = (
-    ["permissions", "action-control", "evals", "versions"] as const
-  ).flatMap((key) => navigationItems.filter((item) => item.key === key));
+  const governanceNavItems = (["permissions", "action-control"] as const).flatMap((key) =>
+    navigationItems.filter((item) => item.key === key),
+  );
 
   const extensionEntries = visibleWorkspaceExtensionEntries(hiddenNavigation);
   const activeExtensionKey = section === "extension" ? extensionKey : undefined;
@@ -339,19 +342,23 @@ export function KnowledgeNetworkWorkspaceScene({
   const hasAbilityVerification =
     experienceNavItems.length > 0 ||
     developmentNavItems.length > 0 ||
+    evaluationNavItems.length > 0 ||
     extensionEntries.items.length > 0 ||
     extensionEntries.upgrades.length > 0;
   const activeGroup: WorkspaceNavGroup | undefined =
     section === "extension"
-      ? analysisEntries.items.some((item) => item.key === activeExtensionKey)
-        ? "analysis"
-        : governanceNavItems.some((item) => item.path === location.pathname)
-          ? "governance"
-          : "verification"
+      ? evaluationNavItems.some((item) => item.path === location.pathname)
+        ? "verification"
+        : analysisEntries.items.some((item) => item.key === activeExtensionKey)
+          ? "analysis"
+          : governanceNavItems.some((item) => item.path === location.pathname)
+            ? "governance"
+            : "verification"
       : section === "experience-agent" ||
           section === "experience-mcp" ||
           section === "experience-cypher" ||
-          section === "develop"
+          section === "develop" ||
+          section === "evals"
         ? "verification"
         : resourceNavItems.some((item) => item.key === section)
           ? "concept"
@@ -591,6 +598,9 @@ export function KnowledgeNetworkWorkspaceScene({
                       networkId={activeNetworkId}
                     />
                     {developmentNavItems.map((item) =>
+                      renderSideNavItem(item, { showCount: false }),
+                    )}
+                    {evaluationNavItems.map((item) =>
                       renderSideNavItem(item, { showCount: false }),
                     )}
                   </div>
