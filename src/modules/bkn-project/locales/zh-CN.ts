@@ -3434,6 +3434,7 @@ export const bknProjectZhCN = {
         answerError: {
           forbidden: "问答助手没有权限查询这个业务知识网络。",
           assistantMissing: "问答助手还没有发布，没能提问。",
+          signInExpired: "提问时你的登录已过期，没能提问。重新运行回归即可。",
           interrupted: "回答被中断了。",
           cancelled: "提问被取消了。",
           judgeInvalid: "评判结果无效，没能判断这次回答。",

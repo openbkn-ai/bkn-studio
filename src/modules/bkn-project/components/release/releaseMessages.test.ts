@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import {
+  answerErrorText,
   checkReasonText,
   releaseFailureText,
   releaseNotes,
@@ -115,5 +116,19 @@ describe("a release request the page stopped waiting for", () => {
       "more than 5 minutes",
     );
     await i18n.changeLanguage("zh-CN");
+  });
+});
+
+describe("a regression question that could not be asked", () => {
+  it("says a sign-in that expired while asking, and to run again", async () => {
+    await i18n.changeLanguage("zh-CN");
+    expect(answerErrorText(i18n.t, "BknAgent.Auth.TokenRequired")).toBe(
+      "提问时你的登录已过期，没能提问。重新运行回归即可。",
+    );
+    expect(answerErrorText(i18n.t, "something.else")).toBe("没能完成这次提问。");
+    await i18n.changeLanguage("en-US");
+    expect(answerErrorText(i18n.t, "BknAgent.Auth.TokenRequired")).toBe(
+      "Your sign-in expired while asking, so nothing was asked. Run the regression again.",
+    );
   });
 });

@@ -446,6 +446,7 @@ const EXPECTS = new Set(["exists", "not_exists", "same_record"]);
 const ANSWER_ERRORS = new Map([
   ["BknAgent.Execution.Forbidden", "forbidden"],
   ["BknAgent.NotFound", "assistantMissing"],
+  ["BknAgent.Auth.TokenRequired", "signInExpired"],
   ["answer_interrupted", "interrupted"],
   ["cancelled", "cancelled"],
   ["judge_invalid", "judgeInvalid"],
