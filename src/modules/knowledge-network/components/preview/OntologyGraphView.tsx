@@ -31,7 +31,11 @@ import {
   type OntologyLayoutMode,
 } from "@/modules/knowledge-network/utils/ontology-graph-layout";
 
-import { buildOntologyDecorations, buildOntologyStructure } from "./ontology-graph-data";
+import {
+  arrangedGraph,
+  buildOntologyDecorations,
+  buildOntologyStructure,
+} from "./ontology-graph-data";
 import type { OntologyCanvasHandle } from "./OntologyG6Canvas";
 import styles from "./OntologyGraphView.module.css";
 
@@ -119,13 +123,7 @@ export function OntologyGraphView({
 
   // Recompute layout when graph or arrangement changes, not when selecting a node.
   // Previewed relations are drawn where the types already are: showing one moves nothing.
-  const arranged = useMemo(
-    () =>
-      graph.edges.some((edge) => edge.preview)
-        ? { ...graph, edges: graph.edges.filter((edge) => !edge.preview) }
-        : graph,
-    [graph],
-  );
+  const arranged = useMemo(() => arrangedGraph(graph), [graph]);
   // The arrangement is deterministic: the same types and relations land in the same places.
   const layout = useMemo(
     () => layoutOntologyGraph(arranged, renderMode, groupOf),

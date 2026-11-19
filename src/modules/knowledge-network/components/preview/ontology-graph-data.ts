@@ -50,11 +50,11 @@ export function typeColors(nodes: readonly { id: string; color?: string }[]): Ma
   }
   return out;
 }
-/** Relations per type, previewed ones aside: showing one changes no dot's size. */
+/** Relations per type, added previews aside: showing one changes no dot's size. */
 function drawnDegree(graph: KnowledgeNetworkPreviewGraph): Map<string, number> {
   const degree = new Map<string, number>();
   graph.edges
-    .filter((edge) => !edge.preview)
+    .filter((edge) => !edge.added)
     .forEach((edge) => {
       degree.set(edge.sourceId, (degree.get(edge.sourceId) ?? 0) + 1);
       degree.set(edge.targetId, (degree.get(edge.targetId) ?? 0) + 1);
@@ -554,7 +554,14 @@ export function withPreviewEdges<
         .filter(
           (edge) => !edgeIds.has(edge.id) && drawn.has(edge.sourceId) && drawn.has(edge.targetId),
         )
-        .map((edge) => ({ ...edge, preview: true })),
+        .map((edge) => ({ ...edge, added: true, preview: true })),
     ],
   };
+}
+
+/** The graph as it is arranged: added previews aside, so showing one moves no type. */
+export function arrangedGraph<G extends { edges: KnowledgeNetworkPreviewEdge[] }>(graph: G): G {
+  return graph.edges.some((edge) => edge.added)
+    ? { ...graph, edges: graph.edges.filter((edge) => !edge.added) }
+    : graph;
 }

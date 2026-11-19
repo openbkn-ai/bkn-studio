@@ -12,6 +12,7 @@ import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/t
 import { layoutOntologyGraph } from "@/modules/knowledge-network/utils/ontology-graph-layout";
 
 import {
+  arrangedGraph,
   buildOntologyDecorations,
   buildOntologyStructure,
   withPreviewEdges,
@@ -36,8 +37,33 @@ describe("withPreviewEdges", () => {
     ]);
     expect(previewed.edges).toEqual([
       { id: "ab", name: "ab", preview: true, sourceId: "a", targetId: "b" },
-      { id: "preview:1", name: "New", preview: true, sourceId: "c", targetId: "a" },
+      { added: true, id: "preview:1", name: "New", preview: true, sourceId: "c", targetId: "a" },
     ]);
+  });
+
+  it("arranges a graph previewing a drawn relation in place as it was, dots sized as before", () => {
+    const previewed = withPreviewEdges(graph, [
+      { id: "ab", name: "ab", sourceId: "a", targetId: "b" },
+    ]);
+    const before = layoutOntologyGraph(arrangedGraph(graph), "force", undefined);
+    const after = layoutOntologyGraph(arrangedGraph(previewed), "force", undefined);
+    expect(after.positions).toEqual(before.positions);
+    const sizes = (input: KnowledgeNetworkPreviewGraph, layout: typeof before) =>
+      buildOntologyStructure({
+        graph: input,
+        layout,
+        renderMode: "force",
+        tokens,
+        ungroupedLabel: "",
+      }).nodes.map((node) => node.style?.size);
+    expect(sizes(previewed, after)).toEqual(sizes(graph, before));
+  });
+
+  it("arranges a graph previewing a new relation without it", () => {
+    const previewed = withPreviewEdges(graph, [
+      { id: "preview:1", name: "New", sourceId: "c", targetId: "a" },
+    ]);
+    expect(arrangedGraph(previewed).edges.map((edge) => edge.id)).toEqual(["ab"]);
   });
 });
 

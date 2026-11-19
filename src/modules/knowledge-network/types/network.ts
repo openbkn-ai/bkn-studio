@@ -107,11 +107,13 @@ export type KnowledgeNetworkPreviewEdge = {
   declarations?: DefinitionDeclarations;
   /** Drawn dashed and faint, as a faded node is. */
   faded?: boolean;
-  /**
-   * A relation previewed before it is made: drawn dashed in the success colour and named, and
-   * left out of the arrangement so showing it moves nothing.
-   */
+  /** A relation previewed before it is made: drawn dashed in the success colour and named. */
   preview?: boolean;
+  /**
+   * A previewed relation not drawn before: left out of the arrangement and of dot sizes, so
+   * showing it moves nothing. A drawn one previewed in place keeps its part in both.
+   */
+  added?: boolean;
   id: string;
   mappingMode?: "direct" | "resource";
   name: string;
