@@ -2924,6 +2924,8 @@ export const bknProjectZhCN = {
         unknown_document: "引用了不存在的文档",
         number_not_in_quote: "其中的数字原文里没有",
         too_few_options: "选项不足两个",
+        missing_basis: "既没有引用资料原文，也没有说明为什么需要",
+        background_not_basis: "只引用了网络说明，不能作为需求依据",
         same_name_measured_otherwise:
           "和已有的同名指标口径不同（一个是原子指标，一个是衍生指标），没有合并；需要的话请另建一条",
         other: "没有通过检查",

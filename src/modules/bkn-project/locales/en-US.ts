@@ -3122,6 +3122,9 @@ export const bknProjectEnUS = {
         unknown_document: "It quotes a document that does not exist",
         number_not_in_quote: "A number in it is not in the quote",
         too_few_options: "It has fewer than two options",
+        missing_basis: "It quotes nothing and gives no reason it is needed",
+        background_not_basis:
+          "It quotes only the network's description, which is no basis for a need",
         same_name_measured_otherwise:
           "An existing metric has this name but is measured another way (atomic against derived), so it was not merged; add it as a new need if you want it",
         other: "It did not pass the checks",

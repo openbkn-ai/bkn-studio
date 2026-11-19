@@ -11,6 +11,7 @@ import i18n from "@/app/locales/i18n";
 import {
   conceptsRunErrorText,
   draftErrorText,
+  rejectedReasonText,
   requirementErrorText,
   runningWork,
   testCheckReasonText,
@@ -99,6 +100,21 @@ describe("the kinetic left-out note", () => {
     );
     expect(en("bknProject.requirements.rejectedByRun.kinetic", { count: 3 })).toBe(
       "The analysis left out 3 suggestions",
+    );
+  });
+});
+
+describe("why the analysis left a suggestion out", () => {
+  it("tells no basis at all and a quote of the network's description apart from a quote not found", () => {
+    expect(rejectedReasonText(zh, "missing_basis")).toBe(
+      "既没有引用资料原文，也没有说明为什么需要",
+    );
+    expect(rejectedReasonText(zh, "background_not_basis")).toBe(
+      "只引用了网络说明，不能作为需求依据",
+    );
+    expect(rejectedReasonText(zh, "quote_not_found")).toBe("资料里找不到它引用的原文");
+    expect(rejectedReasonText(en, "missing_basis")).toBe(
+      "It quotes nothing and gives no reason it is needed",
     );
   });
 });

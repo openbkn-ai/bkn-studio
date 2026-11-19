@@ -112,6 +112,8 @@ const rejectedReasonWord = word("rejectedReason", [
   "too_few_options",
   "window_without_reference_time",
   "same_name_measured_otherwise",
+  "missing_basis",
+  "background_not_basis",
 ]);
 
 /** Why drafting dropped an item; a dropped input says it as an input's refusal does. */
