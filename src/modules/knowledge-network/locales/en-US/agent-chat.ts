@@ -144,7 +144,6 @@ export const agentChatPart = {
       stop: "Stop",
       send: "Send",
       settings: "Q&A settings",
-      clear: "Clear",
       validationOnly: "Smart Q&A is for capability validation only, not for production use.",
     },
     chatPane: {

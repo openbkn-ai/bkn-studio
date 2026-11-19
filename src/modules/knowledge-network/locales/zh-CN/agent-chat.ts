@@ -137,7 +137,6 @@ export const agentChatPart = {
       stop: "停止",
       send: "发送",
       settings: "问答配置",
-      clear: "清空",
       validationOnly: "智能问答仅供能力验证使用，不能用于生产。",
     },
     chatPane: {

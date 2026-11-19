@@ -19,8 +19,9 @@
   position: relative;
 }
 
-/* Ask AI open beside a page covers the content area's right: the page scrolls in what is left. */
-.content:has([data-ask-side]) > div {
+/* Ask AI open beside a page covers the content area's right: the page scrolls in what is left.
+   Hidden, it is kept mounted for its conversation and leaves the page its width. */
+.content:has([data-ask-side]:not([hidden])) > div {
   width: calc(100% - 380px);
 }
 

@@ -342,12 +342,10 @@ describe("RequirementAskPanel", () => {
     mocks.deleteConversation.mockResolvedValue(undefined);
     render();
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: `${PANEL}.history:${JSON.stringify({ count: 2 })}`,
-      }),
-    );
-    expect(screen.getByText("Why this function?")).toBeInTheDocument();
+    // The earlier conversations open under the header's history button, as in every AI panel.
+    await screen.findByText("Here is what I suggest.");
+    fireEvent.click(screen.getByRole("button", { name: "common.aiPanel.history" }));
+    expect(await screen.findByText("Why this function?")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", {
         name: `${PANEL}.deleteItem:${JSON.stringify({ name: "Why this function?" })}`,
@@ -363,7 +361,25 @@ describe("RequirementAskPanel", () => {
       await (mocks.confirm.mock.calls[0][0] as { onOk: () => Promise<void> }).onOk();
     });
     expect(mocks.deleteConversation).toHaveBeenCalledWith("p1", "c0");
-    expect(screen.queryByText("Why this function?")).toBeNull();
     expect(mocks.message.success).toHaveBeenCalledWith(`${PANEL}.deleted`);
+    fireEvent.click(screen.getByRole("button", { name: "common.aiPanel.history" }));
+    expect(await screen.findByText("Add a load metric", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByText("Why this function?")).toBeNull();
+  });
+
+  it("starts a new conversation and hides from the header, as every AI panel does", async () => {
+    mocks.listConversations.mockResolvedValue([conversation([turn({})])]);
+    const onClose = vi.fn();
+    render({ onClose });
+
+    await screen.findByText("Here is what I suggest.");
+    fireEvent.click(screen.getByRole("button", { name: "common.aiPanel.newChat" }));
+    expect(screen.queryByText("Here is what I suggest.")).toBeNull();
+    expect(screen.getByText(`${PANEL}.intro.kinetic`)).toBeInTheDocument();
+    // Nothing to start over from in a conversation not begun.
+    expect(screen.getByRole("button", { name: "common.aiPanel.newChat" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: `${PANEL}.close` }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
