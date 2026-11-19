@@ -2481,6 +2481,8 @@ export const bknProjectZhCN = {
       knowledgeDocument: "知识库中的规则和概念",
       rejectedByRun: {
         kinetic: "本次分析有 {{count}} 条建议没有采纳",
+        kinetic_one: "本次分析有 {{count}} 条建议没有采纳",
+        kinetic_other: "本次分析有 {{count}} 条建议没有采纳",
       },
       document: "文档",
       documentLoadFailed: "文档暂时读取不到",
