@@ -2650,6 +2650,12 @@ export const bknProjectEnUS = {
       catalogsUnlisted_other:
         "{{count}} data catalogs could not be read, so drafting left them out.",
       removedDocument: "A removed document",
+      knowledgeDocument: "Rules and concepts of the knowledge base",
+      rejectedByRun: {
+        kinetic: "The analysis left out {{count}} suggestions",
+        kinetic_one: "The analysis left out {{count}} suggestion",
+        kinetic_other: "The analysis left out {{count}} suggestions",
+      },
       document: "Document",
       documentLoadFailed: "The document cannot be read right now",
       from: "From {{name}}",
@@ -3107,6 +3113,7 @@ export const bknProjectEnUS = {
         rule: "Rule",
         conflict: "Conflict",
         choice: "Modelling choice",
+        logic_need: "Kinetic need",
         other: "Item",
       },
       rejectedReason: {
@@ -3115,6 +3122,8 @@ export const bknProjectEnUS = {
         unknown_document: "It quotes a document that does not exist",
         number_not_in_quote: "A number in it is not in the quote",
         too_few_options: "It has fewer than two options",
+        same_name_measured_otherwise:
+          "An existing metric has this name but is measured another way (atomic against derived), so it was not merged; add it as a new need if you want it",
         other: "It did not pass the checks",
       },
     },

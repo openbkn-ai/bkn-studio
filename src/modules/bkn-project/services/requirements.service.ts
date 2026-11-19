@@ -456,6 +456,12 @@ export async function getDocument(
 export const NETWORK_DOCUMENT_ID = "network";
 
 /**
+ * The id of the knowledge base's rules and concepts as a document, read only: kinetic analysis and
+ * scenario drafting cite a rule there.
+ */
+export const KNOWLEDGE_DOCUMENT_ID = "knowledge";
+
+/**
  * The network's own background, which runs read and cite beside the documents; null when the
  * network has none, as a new network does.
  */

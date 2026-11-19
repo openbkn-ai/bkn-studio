@@ -2478,6 +2478,12 @@ export const bknProjectZhCN = {
       catalogsUnlisted_one: "有 {{count}} 个数据目录读不到表，起草时没有参考它们。",
       catalogsUnlisted_other: "有 {{count}} 个数据目录读不到表，起草时没有参考它们。",
       removedDocument: "已删除的文档",
+      knowledgeDocument: "知识库中的规则和概念",
+      rejectedByRun: {
+        kinetic: "本次分析有 {{count}} 条建议没有采纳",
+        kinetic_one: "本次分析有 {{count}} 条建议没有采纳",
+        kinetic_other: "本次分析有 {{count}} 条建议没有采纳",
+      },
       document: "文档",
       documentLoadFailed: "文档暂时读取不到",
       from: "出自「{{name}}」",
@@ -2909,6 +2915,7 @@ export const bknProjectZhCN = {
         rule: "规则",
         conflict: "冲突",
         choice: "建模选择",
+        logic_need: "动力需求",
         other: "内容",
       },
       rejectedReason: {
@@ -2917,6 +2924,8 @@ export const bknProjectZhCN = {
         unknown_document: "引用了不存在的文档",
         number_not_in_quote: "其中的数字原文里没有",
         too_few_options: "选项不足两个",
+        same_name_measured_otherwise:
+          "和已有的同名指标口径不同（一个是原子指标，一个是衍生指标），没有合并；需要的话请另建一条",
         other: "没有通过检查",
       },
     },

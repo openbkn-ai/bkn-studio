@@ -15,6 +15,7 @@ import {
   runningWork,
   testCheckReasonText,
 } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import { citedDocumentName } from "@/modules/bkn-project/components/requirements/citing";
 import type { Requirements } from "@/modules/bkn-project/types/requirements";
 
 const zh = i18n.getFixedT("zh-CN");
@@ -73,5 +74,31 @@ describe("runningWork", () => {
     expect(runningWork(requirements("ready", "failed", "running"))).toBe("kinetic");
     expect(runningWork(requirements("ready", "ready"))).toBeNull();
     expect(runningWork(null)).toBeNull();
+  });
+});
+
+describe("citedDocumentName", () => {
+  it("names the network's background and the knowledge base's rules by what they are", () => {
+    const documents = [{ id: "d1", name: "采购制度.md" }];
+    expect(citedDocumentName(zh, "knowledge", documents, "已删除的文档")).toBe(
+      "知识库中的规则和概念",
+    );
+    expect(citedDocumentName(en, "knowledge", documents, "gone")).toBe(
+      "Rules and concepts of the knowledge base",
+    );
+    expect(citedDocumentName(zh, "network", documents, "已删除的文档")).not.toBe("已删除的文档");
+    expect(citedDocumentName(zh, "d1", documents, "已删除的文档")).toBe("采购制度.md");
+    expect(citedDocumentName(zh, "d9", documents, "已删除的文档")).toBe("已删除的文档");
+  });
+});
+
+describe("the kinetic left-out note", () => {
+  it("says one suggestion in the singular in English", () => {
+    expect(en("bknProject.requirements.rejectedByRun.kinetic", { count: 1 })).toBe(
+      "The analysis left out 1 suggestion",
+    );
+    expect(en("bknProject.requirements.rejectedByRun.kinetic", { count: 3 })).toBe(
+      "The analysis left out 3 suggestions",
+    );
   });
 });

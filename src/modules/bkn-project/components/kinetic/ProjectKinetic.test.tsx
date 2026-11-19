@@ -424,6 +424,36 @@ describe("ProjectKinetic", () => {
     expect(screen.queryByText(/object_metric|mcp_tool|action_type|analysis/)).toBeNull();
   });
 
+  it("says what the last analysis left out and why; scenario drafting's are not counted here", async () => {
+    mocks.getRequirements.mockResolvedValue(
+      requirements({
+        rejected: [
+          {
+            kind: "logic_need",
+            reason: "same_name_measured_otherwise",
+            run: "kinetic",
+            text: "场所设备数量: 固定场所 ST03 的设备数量",
+          },
+          {
+            kind: "logic_need",
+            reason: "number_not_in_quote",
+            run: "kinetic",
+            text: "生成设备维护建议",
+          },
+          { kind: "rule", reason: "quote_not_found", text: "两天内发货。" },
+        ],
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByText("本次分析有 2 条建议没有采纳"));
+    expect(screen.getByText("场所设备数量: 固定场所 ST03 的设备数量")).toBeInTheDocument();
+    expect(screen.getByText(/和已有的同名指标口径不同/)).toBeInTheDocument();
+    expect(screen.getByText("其中的数字原文里没有")).toBeInTheDocument();
+    expect(screen.getAllByText("动力需求")).not.toHaveLength(0);
+    expect(screen.queryByText("两天内发货。")).toBeNull();
+  });
+
   it("on a network the project created, lists every need and nothing as already in the network", async () => {
     renderPage();
 

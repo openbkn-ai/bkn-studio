@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { TFunction } from "i18next";
 import { createContext } from "react";
+
+import {
+  KNOWLEDGE_DOCUMENT_ID,
+  NETWORK_DOCUMENT_ID,
+} from "@/modules/bkn-project/services/requirements.service";
 
 import type {
   RequirementChoice,
@@ -19,6 +25,25 @@ export type CitationContext = {
   documentName: (documentId: string) => string;
   openDocument: (documentId: string, range?: { end: number; start: number }) => void;
 };
+
+/**
+ * The name a citation shows for a document: the network's background and the knowledge base's
+ * rules by what they are, an uploaded document by its name, and `missing` for one no longer there.
+ */
+export function citedDocumentName(
+  t: TFunction,
+  documentId: string,
+  documents: { id: string; name: string }[] | null | undefined,
+  missing: string,
+) {
+  if (documentId === NETWORK_DOCUMENT_ID) {
+    return t("bknProject.networkExisting.background.name");
+  }
+  if (documentId === KNOWLEDGE_DOCUMENT_ID) {
+    return t("bknProject.requirements.knowledgeDocument");
+  }
+  return documents?.find((document) => document.id === documentId)?.name ?? missing;
+}
 
 export const Citing = createContext<CitationContext>({
   documentName: (documentId) => documentId,

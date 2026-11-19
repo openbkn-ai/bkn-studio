@@ -27,7 +27,7 @@ import { UnderstandingTag } from "@/modules/bkn-project/components/model/Underst
 import { ProjectCatalogsModal } from "@/modules/bkn-project/components/ProjectCatalogsModal";
 import { tableCount } from "@/modules/bkn-project/components/stepCounts";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
-import { Citing } from "@/modules/bkn-project/components/requirements/citing";
+import { citedDocumentName, Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { RequirementDocuments } from "@/modules/bkn-project/components/requirements/RequirementDocuments";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getUnderstanding } from "@/modules/bkn-project/services/publish.service";
@@ -310,10 +310,7 @@ export function ProjectResources({
     <Citing.Provider
       value={{
         documentName: (documentId) =>
-          documentId === NETWORK_DOCUMENT_ID
-            ? t("bknProject.networkExisting.background.name")
-            : (documents?.find((document) => document.id === documentId)?.name ??
-              t(`${PREFIX}.tabs.documents`)),
+          citedDocumentName(t, documentId, documents, t(`${PREFIX}.tabs.documents`)),
         openDocument: (documentId, range) => setViewing({ documentId, range }),
       }}
     >
