@@ -56,7 +56,7 @@ export const objectMetricV1Part = {
   selectMetricOwner: "Select the metric owner object class",
   aiAnswerModel: "Answer model",
   aiPlatformDefaultModel: "Platform default model",
-  aiNewConversation: "New conversation",
+  aiCollapsePane: "Hide AI chat",
   aiModelListUnavailable: "The model list is unavailable. You can still use the platform default.",
   aiDesignerInvalidProposal: "The metric designer returned an invalid proposal.",
   aiDesignerRequestFailed: "Metric design request failed (HTTP {{p0}}).",
@@ -402,7 +402,6 @@ export const objectMetricV1Part = {
   m3fbb6c3fc51f:
     "Charts only change how results are presented; they do not change the metric calculation.",
   m4061607ab144: 'Currently continue to press "',
-  m406b2bdda3ce: "View form",
   m408ce7a76a40: "Accuracy",
   m4093b8d5ac81: "Select an object class to view the object metrics graph",
   m40e232fef99f: "Queryable time dimension",

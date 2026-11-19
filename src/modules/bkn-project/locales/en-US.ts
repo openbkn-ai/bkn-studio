@@ -1165,7 +1165,6 @@ export const bknProjectEnUS = {
         settling: "Putting the suggested changes together…",
         onlySuggestions: "AI suggested the changes below.",
         noAnswer: "AI gave no answer or suggestion this time; try asking another way.",
-        newConversation: "New conversation",
         retry: "Ask again",
         proposalTitle: "Suggested changes to apply",
         proposalHint:
@@ -2121,9 +2120,6 @@ export const bknProjectEnUS = {
           kinetic_other: "Kinetic modeling · {{count}} kinetic needs",
           scenarios: "Business scenarios · {{scenarios}} scenarios, {{questions}} questions",
         },
-        history: "Conversations ({{count}})",
-        backToChat: "Back to the conversation",
-        newConversation: "New conversation",
         historyHint:
           "Conversations are kept in the project, so you can go on asking. Deleting one does not take back what was adopted.",
         historyNone: "No conversations yet.",

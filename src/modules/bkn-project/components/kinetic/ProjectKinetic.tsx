@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { useOpenedOnce } from "@/framework/hooks/use-opened-once";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
@@ -145,6 +146,8 @@ export function ProjectKinetic({
   const [background, setBackground] = useState(false);
   // Ask AI beside the list, with the needs ticked to ask about.
   const [asking, setAsking] = useState(false);
+  // Hidden, the AI panel stays mounted and keeps its conversation while the page is open.
+  const askKept = useOpenedOnce(asking);
   const [selected, setSelected] = useState<string[]>([]);
   const [flash, flashItems] = useFlash();
   // The network's own object types, to name those its items act on that the draft does not have.
@@ -1076,8 +1079,8 @@ export function ProjectKinetic({
             />
           ) : null}
         </div>
-        {asking && canAsk ? (
-          <div className={ask.side} data-ask-side>
+        {askKept && canAsk ? (
+          <div className={ask.side} data-ask-side hidden={!asking}>
             <RequirementAskPanel
               names={{
                 logicNeed: (id) => spec?.logicNeeds.find((need) => need.id === id)?.name ?? "",

@@ -19,6 +19,11 @@
   background: var(--color-bg-surface);
 }
 
+/* Hidden by its header's button, kept mounted so the conversation is kept. */
+.panel[hidden] {
+  display: none;
+}
+
 .header {
   display: flex;
   flex: 0 0 auto;

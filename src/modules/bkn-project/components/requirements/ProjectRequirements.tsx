@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useOpenedOnce } from "@/framework/hooks/use-opened-once";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { LightStatusTag } from "@/framework/ui/common/LightStatusTag";
 import { AskEntry } from "@/modules/bkn-project/components/ai/AskEntry";
@@ -151,6 +152,8 @@ export function ProjectRequirements({
   const [background, setBackground] = useState(false);
   // Ask AI beside the lists, with the scenarios and questions ticked to ask about.
   const [asking, setAsking] = useState(false);
+  // Hidden, the AI panel stays mounted and keeps its conversation while the page is open.
+  const askKept = useOpenedOnce(asking);
   const [selected, setSelected] = useState<{ id: string; kind: "questions" | "scenarios" }[]>([]);
   const [flash, flashItems] = useFlash();
   // Reads failed in a row: following a drafting stops at the limit and the page offers to refresh.
@@ -750,8 +753,8 @@ export function ProjectRequirements({
                 />
               ) : null}
             </div>
-            {asking && canAsk ? (
-              <div className={ask.side} data-ask-side>
+            {askKept && canAsk ? (
+              <div className={ask.side} data-ask-side hidden={!asking}>
                 <RequirementAskPanel
                   names={{
                     logicNeed: (id) => spec?.logicNeeds.find((need) => need.id === id)?.name ?? "",

@@ -134,7 +134,7 @@ it("opens targeted repair in the shared assistant without starting a catalogue s
   expect(listEvalCaseResourcesPage).not.toHaveBeenCalled();
   expect(screen.queryByRole("navigation", { name: "质量评测快捷入口" })).toBeNull();
   expect(screen.getByLabelText("向质量评测 AI 助手提问")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "新对话" }));
+  fireEvent.click(screen.getByRole("button", { name: "common.aiPanel.newChat" }));
   expect(onClearRepair).toHaveBeenCalledOnce();
 });
 
@@ -159,6 +159,31 @@ it("answers workspace questions without forcing them into case generation", asyn
 
   expect(await screen.findByText("当前应先检查失败运行，再决定回归范围。")).toBeTruthy();
   expect(screen.getByText(/运行与诊断 ·/)).toBeTruthy();
+});
+
+it("keeps the conversation when hidden from its header and opened again", async () => {
+  vi.mocked(runEvalAssistant).mockResolvedValueOnce({
+    answer: "当前应先检查失败运行，再决定回归范围。",
+    threadId: "thread-guide",
+  });
+  const onClose = vi.fn();
+  const props = { activeTab: "runs" as const, networkId: "kn-1", onAdopted: vi.fn(), onClose };
+  const { rerender } = render(<EvalAssistantDrawer {...props} open />);
+
+  const input = await screen.findByLabelText("向质量评测 AI 助手提问");
+  fireEvent.change(input, { target: { value: "接下来应该处理什么？" } });
+  fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+  expect(await screen.findByText("当前应先检查失败运行，再决定回归范围。")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "收起质量评测 AI 助手" }));
+  expect(onClose).toHaveBeenCalledOnce();
+  rerender(<EvalAssistantDrawer {...props} open={false} />);
+  expect(screen.queryByRole("complementary", { name: "质量评测 AI 助手" })).toBeNull();
+
+  rerender(<EvalAssistantDrawer {...props} open />);
+  expect(screen.getByRole("complementary", { name: "质量评测 AI 助手" })).toBeTruthy();
+  expect(screen.getByText("当前应先检查失败运行，再决定回归范围。")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "common.aiPanel.newChat" })).toBeEnabled();
 });
 
 it("refreshes real overview, suite and run statistics before asking the assistant", async () => {

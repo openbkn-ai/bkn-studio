@@ -38,6 +38,11 @@
   padding-top: 24px;
 }
 
+/* The AI panel hidden by its header's button, kept mounted so the conversation is kept. */
+.side[hidden] {
+  display: none;
+}
+
 /* An item just changed from the conversation: marked for a moment. */
 .flash {
   animation: flash 2.4s ease-out;
@@ -56,13 +61,6 @@
 .flash > td:first-child {
   box-shadow: inset 3px 0 0 var(--color-primary-600);
   animation: flash 2.4s ease-out forwards;
-}
-
-.toolbar {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .conversation {
@@ -119,6 +117,16 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* The conversations kept for the page, under the header's history button. */
+.historyPopover {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 300px;
+  max-height: 360px;
+  overflow: auto;
 }
 
 .history {
