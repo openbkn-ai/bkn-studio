@@ -55,8 +55,9 @@ import {
 } from "@/modules/bkn-project/components/kinetic/needs";
 import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledNotice";
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
-import { Citing } from "@/modules/bkn-project/components/requirements/citing";
+import { citedDocumentName, Citing } from "@/modules/bkn-project/components/requirements/citing";
 import { requirementErrorText } from "@/modules/bkn-project/components/requirements/requirementMessages";
+import { RejectedNote } from "@/modules/bkn-project/components/requirements/RequirementSpecViews";
 import { useListPage } from "@/modules/bkn-project/components/useListPage";
 import { getDraft, getExistingDefinitions } from "@/modules/bkn-project/services/draft.service";
 import {
@@ -371,8 +372,7 @@ export function ProjectKinetic({
   const citing = useMemo(
     () => ({
       documentName: (documentId: string) =>
-        documents?.find((document) => document.id === documentId)?.name ??
-        t("bknProject.requirements.removedDocument"),
+        citedDocumentName(t, documentId, documents, t("bknProject.requirements.removedDocument")),
       openDocument: (documentId: string, range?: { end: number; start: number }) =>
         setViewing({ documentId, range }),
     }),
@@ -880,6 +880,8 @@ export function ProjectKinetic({
               reason={logic?.networkItemsReason ?? ""}
             />
           ) : null}
+          {/* What the last analysis left out, and why, so a run that adds nothing says so. */}
+          {spec ? <RejectedNote run="kinetic" spec={spec} /> : null}
           {needs.length > 0 && newNeeds === 0 ? (
             <p className={styles.muted}>{t(`${KINETIC}.allCovered`)}</p>
           ) : needs.length ? (

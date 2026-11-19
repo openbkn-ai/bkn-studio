@@ -111,6 +111,7 @@ const rejectedReasonWord = word("rejectedReason", [
   "number_not_in_quote",
   "too_few_options",
   "window_without_reference_time",
+  "same_name_measured_otherwise",
 ]);
 
 /** Why drafting dropped an item; a dropped input says it as an input's refusal does. */
@@ -141,6 +142,7 @@ export const rejectedKindText = word("rejectedKind", [
   "rule",
   "conflict",
   "choice",
+  "logic_need",
 ]);
 
 /** Why a file was refused, from the code after its area: `Requirement.NotText` alike. */

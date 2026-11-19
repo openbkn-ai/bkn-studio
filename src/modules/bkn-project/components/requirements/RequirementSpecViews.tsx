@@ -639,12 +639,12 @@ function ChoiceCard({ choice }: { choice: RequirementChoice }) {
 }
 
 /**
- * What scenario drafting dropped and why, so nothing is dropped unseen; what the concepts and
- * kinetic runs dropped is no part of the scenarios, and is not counted here.
+ * What a run dropped and why, so nothing is dropped unseen: scenario drafting's by default, or
+ * those of the run named, such as kinetic analysis on its page.
  */
-export function RejectedNote({ spec }: { spec: RequirementSpec }) {
+export function RejectedNote({ run, spec }: { run?: "kinetic"; spec: RequirementSpec }) {
   const { t } = useTranslation();
-  const rejected = spec.rejected.filter((item) => !item.run);
+  const rejected = spec.rejected.filter((item) => (run ? item.run === run : !item.run));
   if (!rejected.length) {
     return null;
   }
@@ -665,7 +665,9 @@ export function RejectedNote({ spec }: { spec: RequirementSpec }) {
             </ul>
           ),
           key: "rejected",
-          label: t(`${PREFIX}.rejected`, { count: rejected.length }),
+          label: t(run ? `${PREFIX}.rejectedByRun.${run}` : `${PREFIX}.rejected`, {
+            count: rejected.length,
+          }),
         },
       ]}
       size="small"

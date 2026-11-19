@@ -27,6 +27,7 @@ import { ReadStalledNotice } from "@/modules/bkn-project/components/ReadStalledN
 import { DocumentViewer } from "@/modules/bkn-project/components/requirements/Citations";
 import {
   Asking,
+  citedDocumentName,
   Citing,
   Editing,
   type SpecAsking,
@@ -327,10 +328,7 @@ export function ProjectRequirements({
     () => ({
       // The network's own background is cited as such, never as a removed document.
       documentName: (documentId: string) =>
-        documentId === NETWORK_DOCUMENT_ID
-          ? t("bknProject.networkExisting.background.name")
-          : (documents?.find((document) => document.id === documentId)?.name ??
-            t(`${PREFIX}.removedDocument`)),
+        citedDocumentName(t, documentId, documents, t(`${PREFIX}.removedDocument`)),
       openDocument: (documentId: string, range?: { end: number; start: number }) =>
         setViewing({ documentId, range }),
     }),
