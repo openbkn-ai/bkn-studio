@@ -73,7 +73,7 @@ export const subscriptionEnUS = {
       bkn_project: {
         bullets: {
           b1: "Requirements, ontology modelling and network releases in one place",
-          b2: "Extract concepts from tables and documents",
+          b2: "Extract concepts from data tables",
           b3: "Kinetic modelling and business scenarios",
         },
         description:
@@ -82,7 +82,7 @@ export const subscriptionEnUS = {
       },
       knowledge_base: {
         bullets: {
-          b1: "Extract concepts, properties, relations and events",
+          b1: "Extract concepts, properties, relations and events from documents",
           b2: "Entity recognition, linking and fusion",
           b3: "File ingestion, chunking and source location",
         },
@@ -118,7 +118,7 @@ export const subscriptionEnUS = {
       version_mgmt: {
         bullets: {
           b1: "Multiple versions",
-          b2: "Version history, and running on a past version",
+          b2: "Version history; query and run on a past version",
           b3: "Version comparison and rollback",
         },
         description: "Version history, comparison and rollback for knowledge networks.",
@@ -147,7 +147,7 @@ export const subscriptionEnUS = {
           b3: "Audit of row and column permission changes",
         },
         description: "Enterprise object-rule compatibility and property-level controls",
-        name: "Fine-grained permission control",
+        name: "Row- and column-level permission control",
       },
       rbac_basic: {
         description: "Custom departments, roles and permission control",
@@ -228,7 +228,7 @@ export const subscriptionEnUS = {
       },
       enterprise: {
         audience:
-          "For organisations running their enterprise AI agents on OpenBKN. Adds Workshop, the analysis canvas, risk control, knowledge network versions, SAP HANA connectivity, fine-grained permission control and business provenance on top of Professional.",
+          "For organisations running their enterprise AI agents on OpenBKN. Adds Workshop, the analysis canvas, risk control, knowledge network versions, SAP HANA connectivity, row- and column-level permission control and business provenance on top of Professional.",
         hanaConnector: "SAP HANA",
         price: "Contact us",
         unit: "Per contract",
@@ -251,6 +251,6 @@ export const subscriptionEnUS = {
       "Full capability comparison, service terms and current discounts are in the pricing page; for sales, business@openbkn.ai.",
     title: "Editions & subscription",
     subtitle:
-      "Knowledge network and data capabilities are complete in every edition. Permission boundaries, audit and compliance scale with the edition.",
+      "Knowledge network modelling, common data connections and queries are open in every edition. Projects and the knowledge base, permission control, versions and business apps scale with the edition.",
   },
 } as const;

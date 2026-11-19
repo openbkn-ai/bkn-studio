@@ -50,8 +50,10 @@ const SUBSCRIPTION_DETAIL_URL = "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
 export function SubscriptionScene() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
+  // 三句拼成一段:英文句间要空格,中文句号后不留空格。
+  const sentenceGap = i18n.language.startsWith("zh") ? "" : " ";
   const entitlement = useEntitlement();
   const runtimeConfig = useRuntimeConfig();
 
@@ -144,11 +146,12 @@ export function SubscriptionScene() {
           <h2 className={styles.title}>{t("subscription.title")}</h2>
         </div>
         <p className={styles.subtitle}>
-          {t("subscription.subtitle")}{" "}
+          {t("subscription.subtitle")}
+          {sentenceGap}
           {t("subscription.current.edition", {
             edition: editionName(entitlement.edition),
           })}
-          {entitlement.licensed ? null : ` ${t("subscription.current.unlicensed")}`}
+          {entitlement.licensed ? null : `${sentenceGap}${t("subscription.current.unlicensed")}`}
         </p>
       </header>
 

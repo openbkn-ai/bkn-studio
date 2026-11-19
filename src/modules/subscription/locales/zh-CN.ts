@@ -36,14 +36,14 @@ export const subscriptionZhCN = {
         name: "业务溯源",
       },
       bkn_trace: {
-        description: "技术 Trace 与运行诊断:调用链、耗时与错误定位(不含业务正文与证据链)",
+        description: "技术 Trace 与运行诊断：调用链、耗时与错误定位（不含业务正文与证据链）",
         name: "运行诊断 Trace",
       },
       connector_certified: {
         bullets: {
           b1: "SQL Server、Oracle、Doris 直连，并支持以 API 方式连接数据；SAP HANA 需企业版及以上",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
-          b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
+          b3: "与社区连接器同一套建模、索引与查询链路，切换不改模型",
           b4: "使用连接器需要有效的对应版本授权，以及包含对应连接器实现的 Vega 部署镜像",
         },
         // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
@@ -67,13 +67,13 @@ export const subscriptionZhCN = {
           b2: "实例间路径查找，多种布局",
           b3: "探索历史、画布导出与分享链接",
         },
-        description: "从具体实例出发,在画布上展开邻居、追踪路径;也能打开 Agent 给出的图谱链接",
+        description: "从具体实例出发，在画布上展开邻居、追踪路径；也能打开 Agent 给出的图谱链接",
         name: "图探索",
       },
       bkn_project: {
         bullets: {
           b1: "需求输入、本体建模与知识网络发布一站式管理",
-          b2: "从数据表和文档抽取概念",
+          b2: "从数据表抽取概念",
           b3: "动力建模与业务场景",
         },
         description: "以项目组织知识网络的需求、本体建模与发布",
@@ -82,7 +82,7 @@ export const subscriptionZhCN = {
       // 上游登记表仍是 planned,产品先按专业档在售;遮罩与升级弹窗(含 BKN 项目里的知识库扩展)同用这份。
       knowledge_base: {
         bullets: {
-          b1: "从资料抽取概念、属性、关系与事件",
+          b1: "从文档抽取概念、属性、关系与事件",
           b2: "实体识别、链接与知识融合",
           b3: "文件接入、解析切片与原文定位",
         },
@@ -114,7 +114,7 @@ export const subscriptionZhCN = {
       version_mgmt: {
         bullets: {
           b1: "多版本管理",
-          b2: "版本历史和基于历史执行",
+          b2: "版本历史，按历史版本查询与执行",
           b3: "版本比较与回退",
         },
         description: "知识网络的版本历史、比较与回退",
@@ -143,7 +143,7 @@ export const subscriptionZhCN = {
           b3: "行列权限变更审计",
         },
         description: "企业对象规则兼容层与属性级权限",
-        name: "细粒度权限管控",
+        name: "行列级权限管控",
       },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       // 登记表里这一行叫「运营看板」;产品页按运维的口径命名。
@@ -164,7 +164,7 @@ export const subscriptionZhCN = {
       commonSources: "MySQL、PostgreSQL、MariaDB、OpenSearch",
       executionFactory: "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
       indexing: "数据发现、批量索引与向量化",
-      localAuth: "本地登录,用户、部门与内置角色管理",
+      localAuth: "本地登录，用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "Studio、CLI、SDK 与 Skill 建模",
       modelingTypes: "对象、关系与行动建模",
@@ -184,15 +184,15 @@ export const subscriptionZhCN = {
     },
     cta: {
       import: "导入授权文件",
-      importHint: "已有授权文件?前往授权管理导入,补证下一个请求即生效,无需重启。",
-      needAdmin: "导入授权文件需要授权管理权限,请联系管理员。",
+      importHint: "已有授权文件？前往授权管理导入，补证下一个请求即生效，无需重启。",
+      needAdmin: "导入授权文件需要授权管理权限，请联系管理员。",
       apply: "申请授权",
       details: "查看详情",
     },
     current: {
       badge: "当前",
-      edition: "当前工作区运行在 {{edition}}。",
-      unlicensed: "当前没有生效授权,按社区能力运行。",
+      edition: "当前工作区运行在{{edition}}。",
+      unlicensed: "当前没有生效授权，按社区能力运行。",
     },
     matrix: {
       capability: "能力",
@@ -209,13 +209,13 @@ export const subscriptionZhCN = {
       // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
         audience:
-          "面向开发者、技术团队和生态伙伴,免费构建和验证业务知识网络,适合 Demo 验证和 POC。",
+          "面向开发者、技术团队和生态伙伴，免费构建和验证业务知识网络，适合 Demo 验证和 POC。",
         price: "免费",
         unit: "自部署 · 无限期",
       },
       enterprise: {
         audience:
-          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加应用工坊、分析画布、风险管控、知识网络版本管理、SAP HANA 数据连接、细粒度权限管控和业务溯源。",
+          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织，在专业版基础上增加应用工坊、分析画布、风险管控、知识网络版本管理、SAP HANA 数据连接、行列级权限管控和业务溯源。",
         hanaConnector: "SAP HANA",
         price: "洽谈",
         unit: "按合同授权",
@@ -223,7 +223,7 @@ export const subscriptionZhCN = {
       inheritsFrom: "{{edition}}全部能力",
       professional: {
         audience:
-          "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、对象授权、高级数据连接(含 API 方式连接)、项目管理与知识库。",
+          "面向快速成长的 AI 原生团队，在社区版基础上增加自定义角色与权限、对象授权、高级数据连接（含 API 方式连接）、项目管理与知识库。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },
@@ -234,8 +234,9 @@ export const subscriptionZhCN = {
         unlimited: "不限",
       },
     },
-    contact: "完整能力对比、服务条款与优惠计划见版本说明;商务咨询 business@openbkn.ai。",
+    contact: "完整能力对比、服务条款与优惠计划见版本说明；商务咨询 business@openbkn.ai。",
     title: "版本与订阅",
-    subtitle: "BKN 的知识网络与数据能力在所有版本中完整开放;权限边界、审计与合规能力随版本递进。",
+    subtitle:
+      "知识网络建模、常用数据接入与查询在所有版本中开放；项目与知识库、权限管控、版本管理与业务应用随版本递进。",
   },
 } as const;

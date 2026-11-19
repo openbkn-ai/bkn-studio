@@ -106,38 +106,52 @@ describe("subscription capability copy", () => {
     expect(subscriptionZhCN.subscription.capabilities.bkn_project.name).toBe("项目管理");
   });
 
-  // 应用工坊整体在企业档,方案推演、模型试算与执行行动仍写在它自己的卖点里,不另起一行。
-  // 2026-11-19 改名:专业档 perm_fine_grained 叫「对象授权」,企业档 perm_object_level 叫「细粒度权限管控」。
-  it("names Professional object authorization and Enterprise fine-grained permission control", () => {
+  // 2026-11-19 改名:专业档 perm_fine_grained 叫「对象授权」,企业档 perm_object_level 叫「行列级权限管控」。
+  it("names Professional object authorization and Enterprise row- and column-level permission control", () => {
     expect(subscriptionZhCN.subscription.capabilities.perm_fine_grained.name).toBe("对象授权");
     expect(subscriptionZhCN.subscription.capabilities.perm_object_level.name).toBe(
-      "细粒度权限管控",
+      "行列级权限管控",
     );
     expect(subscriptionEnUS.subscription.capabilities.perm_fine_grained.name).toBe(
       "Object authorization",
     );
     expect(subscriptionEnUS.subscription.capabilities.perm_object_level.name).toBe(
-      "Fine-grained permission control",
+      "Row- and column-level permission control",
     );
   });
 
-  // 2026-11-19:草稿与运行版本随社区版提供;企业档版本管理列多版本管理、版本历史和基于历史执行、版本比较与回退三条。
+  // 2026-11-19:草稿与运行版本随社区版提供;企业档版本管理列多版本管理、版本历史与按历史版本查询执行、版本比较与回退三条。
   it("lists draft and running version in Community and history, comparison, rollback in Enterprise", () => {
     expect(COMMUNITY_CAPABILITIES).toContainEqual(
       expect.objectContaining({ category: "modeling", id: "draftAndRunning", onCard: true }),
     );
     expect(Object.values(subscriptionZhCN.subscription.capabilities.version_mgmt.bullets)).toEqual([
       "多版本管理",
-      "版本历史和基于历史执行",
+      "版本历史，按历史版本查询与执行",
       "版本比较与回退",
     ]);
     expect(Object.values(subscriptionEnUS.subscription.capabilities.version_mgmt.bullets)).toEqual([
       "Multiple versions",
-      "Version history, and running on a past version",
+      "Version history; query and run on a past version",
       "Version comparison and rollback",
     ]);
   });
 
+  // 中文文案统一用全角标点;页头三句拼接时中文句号后不留空格。
+  it("uses full-width punctuation in the Chinese copy", () => {
+    const strings: string[] = [];
+    const walk = (value: unknown) => {
+      if (typeof value === "string") strings.push(value);
+      else if (value && typeof value === "object") Object.values(value).forEach(walk);
+    };
+    walk(subscriptionZhCN);
+    for (const text of strings.filter((value) => /[\u4e00-\u9fff]/.test(value))) {
+      expect(text).not.toMatch(/[\u4e00-\u9fff][,;:?()]|[,;:?()][\u4e00-\u9fff]/);
+    }
+    expect(subscriptionZhCN.subscription.current.edition).toBe("当前工作区运行在{{edition}}。");
+  });
+
+  // 应用工坊整体在企业档,方案推演、模型试算与执行行动仍写在它自己的卖点里,不另起一行。
   it("keeps scenarios, model trials and action execution in the Workshop copy", () => {
     expect(Object.values(subscriptionZhCN.subscription.capabilities.workshop.bullets)).toContain(
       "方案推演、模型试算与执行行动",
