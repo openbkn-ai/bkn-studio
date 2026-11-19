@@ -160,7 +160,7 @@ describe("filterNavByCapability", () => {
   });
 
   // Installed but not licensed: the entry stays and names the edition that unlocks it.
-  it("Workshop 入口:装了没买 → 保留并标出专业版", () => {
+  it("Workshop 入口:装了没买 → 保留并标出专业版(今天的实际门控,不跟版本页的企业档)", () => {
     const workshop = consoleNavigation.filter((item) => item.key === "workshop");
     const result = filterNavByCapability(
       workshop,

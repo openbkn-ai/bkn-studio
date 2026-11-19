@@ -16,16 +16,12 @@ describe("subscription permission terminology", () => {
   it("describes row filtering and the supported column permission options", () => {
     expect(
       Object.values(subscriptionZhCN.subscription.capabilities.perm_object_level.bullets),
-    ).toEqual([
-      "对象类支持行过滤",
-      "对象类支持列过滤（支持配置属性列不可见、仅属性名称、列掩码-内容脱敏）",
-      "行列权限变更审计",
-    ]);
+    ).toEqual(["对象类行过滤", "对象类列过滤：隐藏、仅列名、脱敏", "行列权限变更审计"]);
     expect(
       Object.values(subscriptionEnUS.subscription.capabilities.perm_object_level.bullets),
     ).toEqual([
-      "Object types support row filtering",
-      "Object types support column filtering (hide property columns, show property names only, or use column masking to redact content)",
+      "Row filtering on object types",
+      "Column filtering: hide, names only, or mask",
       "Audit of row and column permission changes",
     ]);
   });
@@ -56,7 +52,7 @@ describe("subscription capability copy", () => {
       expect.arrayContaining(["commonSources", "executionFactory", "oneClickExperience"]),
     );
     expect(subscriptionZhCN.subscription.community.commonSources).toBe(
-      "MySQL、PostgreSQL、MariaDB、Opensearch 作为数据源接入",
+      "MySQL、PostgreSQL、MariaDB、OpenSearch",
     );
     expect(subscriptionZhCN.subscription.community.executionFactory).toBe(
       "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
@@ -78,10 +74,10 @@ describe("subscription capability copy", () => {
   it("lists Doris in Professional and SAP HANA in Enterprise without version labels", () => {
     expect(
       Object.values(subscriptionZhCN.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle", "Doris"]);
+    ).toEqual(["SQL Server", "Oracle", "Doris", "以 API 方式连接数据"]);
     expect(
       Object.values(subscriptionEnUS.subscription.capabilities.connector_certified.cardBullets),
-    ).toEqual(["SQL Server", "Oracle", "Doris"]);
+    ).toEqual(["SQL Server", "Oracle", "Doris", "Data through APIs"]);
     expect(subscriptionZhCN.subscription.capabilities.connector_certified.name).toBe(
       "高级数据连接",
     );
@@ -98,5 +94,69 @@ describe("subscription capability copy", () => {
       expect(copy.description).not.toContain("0.2.0");
       expect(Object.values(copy.bullets).join(" ")).not.toContain("0.2.0");
     }
+  });
+
+  // 对象指标与项目管理都是专业档能力,社区版清单不该再提它们。
+  it("keeps object metrics and project management off the Community list", () => {
+    expect(subscriptionZhCN.subscription.community.modelingTypes).not.toContain("指标");
+    expect(subscriptionEnUS.subscription.community.modelingTypes).not.toContain("metric");
+    for (const text of Object.values(subscriptionZhCN.subscription.community)) {
+      expect(text).not.toContain("项目");
+    }
+    expect(subscriptionZhCN.subscription.capabilities.bkn_project.name).toBe("项目管理");
+  });
+
+  // 2026-11-19 改名:专业档 perm_fine_grained 叫「对象授权」,企业档 perm_object_level 叫「行列级权限管控」。
+  it("names Professional object authorization and Enterprise row- and column-level permission control", () => {
+    expect(subscriptionZhCN.subscription.capabilities.perm_fine_grained.name).toBe("对象授权");
+    expect(subscriptionZhCN.subscription.capabilities.perm_object_level.name).toBe(
+      "行列级权限管控",
+    );
+    expect(subscriptionEnUS.subscription.capabilities.perm_fine_grained.name).toBe(
+      "Object authorization",
+    );
+    expect(subscriptionEnUS.subscription.capabilities.perm_object_level.name).toBe(
+      "Row- and column-level permission control",
+    );
+  });
+
+  // 2026-11-19:草稿与运行版本随社区版提供;企业档版本管理列多版本管理、版本历史与按历史版本查询执行、版本比较与回退三条。
+  it("lists draft and running version in Community and history, comparison, rollback in Enterprise", () => {
+    expect(COMMUNITY_CAPABILITIES).toContainEqual(
+      expect.objectContaining({ category: "modeling", id: "draftAndRunning", onCard: true }),
+    );
+    expect(Object.values(subscriptionZhCN.subscription.capabilities.version_mgmt.bullets)).toEqual([
+      "多版本管理",
+      "版本历史，按历史版本查询与执行",
+      "版本比较与回退",
+    ]);
+    expect(Object.values(subscriptionEnUS.subscription.capabilities.version_mgmt.bullets)).toEqual([
+      "Multiple versions",
+      "Version history; query and run on a past version",
+      "Version comparison and rollback",
+    ]);
+  });
+
+  // 中文文案统一用全角标点;页头三句拼接时中文句号后不留空格。
+  it("uses full-width punctuation in the Chinese copy", () => {
+    const strings: string[] = [];
+    const walk = (value: unknown) => {
+      if (typeof value === "string") strings.push(value);
+      else if (value && typeof value === "object") Object.values(value).forEach(walk);
+    };
+    walk(subscriptionZhCN);
+    for (const text of strings.filter((value) => /[\u4e00-\u9fff]/.test(value))) {
+      expect(text).not.toMatch(/[\u4e00-\u9fff][,;:?()]|[,;:?()][\u4e00-\u9fff]/);
+    }
+    expect(subscriptionZhCN.subscription.current.edition).toBe("当前工作区运行在{{edition}}。");
+  });
+
+  // 应用工坊整体在企业档,方案推演、模型试算与执行行动仍写在它自己的卖点里,不另起一行。
+  it("keeps scenarios, model trials and action execution in the Workshop copy", () => {
+    expect(Object.values(subscriptionZhCN.subscription.capabilities.workshop.bullets)).toContain(
+      "方案推演、模型试算与执行行动",
+    );
+    expect(subscriptionZhCN.subscription.capabilities).not.toHaveProperty("scenario");
+    expect(subscriptionEnUS.subscription.capabilities).not.toHaveProperty("scenario");
   });
 });
