@@ -156,6 +156,41 @@ async function selectRole() {
 }
 
 describe("WorkspacePermissionMatrixSection", () => {
+  it.each(["user", "role"] as const)(
+    "keeps the selected %s in its original position",
+    async (type) => {
+      const subjects = [
+        { id: "first", name: "First subject" },
+        { id: "second", name: "Second subject" },
+      ];
+      mocks.users.mockResolvedValue(subjects);
+      mocks.roles.mockResolvedValue(subjects);
+      mocks.effective.mockResolvedValue([
+        {
+          accessorId: "second",
+          accessorType: type,
+          accessorName: "Second subject",
+          objId: "network-1/orders",
+          objType: "object_type",
+          operations: ["view_detail"],
+          deniedOperations: [],
+          effectiveDecisions: [],
+          grants: [],
+        },
+      ]);
+
+      renderMatrix();
+      if (type === "role") {
+        fireEvent.click(screen.getByText("knowledgeNetwork.permissionMatrix.subjectTypes.role"));
+      }
+      const first = await screen.findByRole("button", { name: "First subject" });
+      const second = screen.getByRole("button", { name: "Second subject" });
+      fireEvent.click(second);
+      await waitFor(() => expect(mocks.effective).toHaveBeenCalled());
+
+      expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    },
+  );
   it("does not request or display metrics when the capability is unavailable", async () => {
     renderMatrix(true, undefined, false);
     await selectRole();
