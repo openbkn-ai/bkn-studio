@@ -195,6 +195,45 @@ describe("extension registry", () => {
     expect(screen.getByText("demo page")).toBeInTheDocument();
   });
 
+  // The edition page sells Workshop in Enterprise, but the service still lets Professional in.
+  // The route guard follows today's gate, so a Professional licence keeps the page (#1453).
+  it("lets a Professional licence into Workshop although the edition page sells it in Enterprise", () => {
+    registerExtension({
+      capability: "workshop",
+      id: "demo",
+      standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
+    });
+    renderStandalone(
+      "/demo",
+      entitlement({
+        capabilities: ["workshop"],
+        edition: "professional",
+        extensions: ["workshop"],
+        licensed: true,
+        state: "valid",
+      }),
+    );
+
+    expect(screen.getByText("demo page")).toBeInTheDocument();
+  });
+
+  // Entering the catalog does not move the knowledge base off its capability guard: without the
+  // licence it gets the plain guard, not the edition upgrade page.
+  it("keeps the knowledge base on its capability guard", () => {
+    registerExtension({
+      capability: "knowledge_base",
+      id: "demo",
+      standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
+    });
+    renderStandalone(
+      "/demo",
+      entitlement({ edition: "community", extensions: ["knowledge_base"], state: "valid" }),
+    );
+
+    expect(screen.queryByText("demo page")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "升级到专业版" })).not.toBeInTheDocument();
+  });
+
   it("keeps shell routes and standalone routes apart", () => {
     registerExtension({
       capability: "demo_capability",

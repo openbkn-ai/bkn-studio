@@ -64,6 +64,15 @@ export type CapabilityCatalogEntry = {
    * 也不该被任何入口拿去门控。
    */
   planned?: true;
+  /**
+   * 入口今天实际按哪一档门控,只在它与售卖档位 `minEdition` 不同时写。
+   *
+   * 版本页按售卖档位展示;扩展路由守卫(`gated()`)与锁定徽标按这里判。两者分开是因为版本页先于
+   * 门控改档(2026-11-19 版本划分只改了展示):直接拿 minEdition 去守路由,服务端仍按专业档放行的
+   * 能力会把已授权的客户锁在外面。`null` = 入口不按档位,保持进目录之前的能力守卫
+   * (`RequireCapability`,三态与许可提示页照旧)。门控跟上售卖档位时删掉这一项。
+   */
+  gateEdition?: Edition | null;
 };
 
 /** 分组展示顺序。与登记表的 `sort_order` 同序:先专业档,后企业档。 */
@@ -148,6 +157,8 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     key: CAPABILITIES.KNOWLEDGE_BASE,
     reportedByEndpoint: false,
     minEdition: "professional",
+    // 进目录之前扩展路由走能力守卫(未授权给 KnowledgeBaseLicensePage),保持不变。
+    gateEdition: null,
     sinceVersion: "0.2.2",
   },
   {
@@ -218,6 +229,7 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     key: CAPABILITIES.WORKSHOP,
     reportedByEndpoint: true,
     minEdition: "enterprise",
+    gateEdition: "professional",
     sinceVersion: "0.2.2",
   },
   {
@@ -227,6 +239,8 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     key: "analysis_canvas",
     reportedByEndpoint: true,
     minEdition: "enterprise",
+    // 进目录之前扩展路由走能力守卫,保持不变。
+    gateEdition: null,
     sinceVersion: "0.2.2",
   },
   {
@@ -258,13 +272,21 @@ export function capabilitiesByCategory(category: CapabilityCategory): Capability
 }
 
 /**
- * 某个能力的最低档位,用于给锁定入口标徽标(「专业版」/「企业版」)。
+ * 入口按哪一档门控:扩展路由守卫用它决定走 RequireEdition 还是 RequireCapability,锁定入口用它
+ * 标徽标(「专业版」/「企业版」)。条目写了 `gateEdition` 就以它为准(`null` = 不按档位),否则就是
+ * 售卖档位。版本页展示售卖档位,读 `minEdition`,不走这里。
  *
- * **只用于展示。** 能不能用由服务端算好的 `capabilities[]` 决定,前端不比档位
- * (ee-design.md §3.2)。这里回答的是另一个问题:客户要买哪一档才能解锁它。
+ * 能不能用仍由服务端算好的 `capabilities[]` 决定,前端不比档位(ee-design.md §3.2)。这里回答的
+ * 是另一个问题:客户今天要买哪一档才能解锁它。
  */
 export function capabilityMinEdition(key: string): Edition | null {
-  return CAPABILITY_CATALOG.find((entry) => entry.key === key)?.minEdition ?? null;
+  const entry = CAPABILITY_CATALOG.find((item) => item.key === key);
+
+  if (!entry) {
+    return null;
+  }
+
+  return entry.gateEdition === undefined ? entry.minEdition : entry.gateEdition;
 }
 
 /**

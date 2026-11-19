@@ -11,6 +11,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import {
   CAPABILITY_CATALOG,
   capabilitiesIntroducedBy,
+  capabilityMinEdition,
 } from "@/modules/subscription/capability-catalog";
 import { resolveQuota } from "@/modules/subscription/subscription-plans";
 
@@ -121,6 +122,16 @@ describe("capability catalog", () => {
     for (const key of [CAPABILITIES.WORKSHOP, "risk_control", "version_mgmt", "analysis_canvas"]) {
       expect(tierOf(key)).toBe("enterprise");
     }
+  });
+
+  // 版本页先于门控改档:入口守卫与锁定徽标按今天的实际门控走,不随售卖档位变。应用工坊售卖档是
+  // 企业版,服务端仍按专业档放行,守卫用企业档会把专业证客户锁在外面(#1453 评审阻塞项)。
+  it("入口门控沿用今天的档位,不随版本页改档", () => {
+    expect(capabilityMinEdition(CAPABILITIES.WORKSHOP)).toBe("professional");
+    expect(capabilityMinEdition(CAPABILITIES.KNOWLEDGE_BASE)).toBeNull();
+    expect(capabilityMinEdition("analysis_canvas")).toBeNull();
+    expect(capabilityMinEdition(CAPABILITIES.GRAPH_EXPLORER)).toBe("professional");
+    expect(capabilityMinEdition("risk_control")).toBe("enterprise");
   });
 
   it("将 Vega 逻辑视图列为专业版能力，并通过档位判断可用性", () => {
