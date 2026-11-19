@@ -327,7 +327,11 @@ export function ConfirmDraft({
         setOpen(false);
         message.warning(refusalText(t, error));
         onShowPending();
-      } else if (code === "Draft.DocumentDataNotReady" || code === "Draft.DocumentDataItemFailed") {
+      } else if (
+        code === "Draft.DocumentDataNotReady" ||
+        code === "Draft.DocumentDataItemFailed" ||
+        code === "Draft.DocumentSamplesChanged"
+      ) {
         // The dialog stays: it says which item stopped and why, and offers the tables first.
         setDocumentsProblem(refusalText(t, error));
         onStale();
@@ -518,7 +522,17 @@ export function ConfirmDraft({
                 : t("bknProject.confirm.dialog.conflictsAcceptUncounted")}
             </Checkbox>
           ) : null}
-          <span className={styles.summary}>{t("bknProject.confirm.dialog.after")}</span>
+          {/* What follows confirming depends on where the objects come from: tables are checked
+              and indexed, knowledge-base objects are built from their files. */}
+          <span className={styles.summary}>
+            {t(
+              !documents.length
+                ? "bknProject.confirm.dialog.after"
+                : tablesLeft
+                  ? "bknProject.confirm.dialog.afterMixed"
+                  : "bknProject.confirm.dialog.afterDocuments",
+            )}
+          </span>
         </div>
       </Modal>
     </>

@@ -41,6 +41,7 @@ import {
   whoDecided,
 } from "@/modules/bkn-project/components/draft/changes";
 import { DataSourceHealth } from "@/modules/bkn-project/components/DataSourceHealth";
+import { useMountedKnowledgeBases } from "@/modules/bkn-project/components/resources/useMountedKnowledgeBases";
 import { ProjectEditModal } from "@/modules/bkn-project/components/manage/ProjectEditModal";
 import { namingLanguageLabelKey } from "@/modules/bkn-project/components/manage/projectLanguage";
 import { ExistingLine } from "@/modules/bkn-project/components/existing/ExistingMark";
@@ -234,6 +235,9 @@ export function ProjectOverview({
     };
   }, [catalogKey, project.id]);
   const tables = understanding ? tableCount(understanding) : undefined;
+  // Knowledge bases are sources as catalogs are: a project may start from them alone.
+  const knowledgeBases = useMountedKnowledgeBases(project.knId);
+  const bases = knowledgeBases?.length ?? 0;
   const networkTables = understanding
     ? understanding
         .flatMap((catalog) => catalog.tables)
@@ -340,7 +344,7 @@ export function ProjectOverview({
       // A project starts from its catalogs: without one, the tile leads to choosing them.
       action: {
         label: t(
-          project.catalogIds.length
+          project.catalogIds.length || bases
             ? "bknProject.overview.tiles.sourcesAction"
             : "bknProject.overview.tiles.sourcesChoose",
         ),
@@ -351,16 +355,29 @@ export function ProjectOverview({
       ...(existing?.background ? { existing: t("bknProject.networkExisting.tiles.sources") } : {}),
       key: "sources",
       label: t("bknProject.workspace.sections.resources"),
-      ...(documents === undefined
+      ...(documents === undefined && !(project.catalogIds.length && bases)
         ? {}
-        : { note: t("bknProject.overview.tiles.sourcesDocuments", { count: documents }) }),
+        : {
+            note: [
+              ...(project.catalogIds.length && bases
+                ? [t("bknProject.overview.tiles.sourcesKnowledgeBases", { count: bases })]
+                : []),
+              ...(documents === undefined
+                ? []
+                : [t("bknProject.overview.tiles.sourcesDocuments", { count: documents })]),
+            ].join(t("bknProject.overview.tiles.sourcesSeparator")),
+          }),
       sub: t("bknProject.overview.tiles.sourcesSub"),
       value:
         tables === undefined
           ? PLACEHOLDER
           : project.catalogIds.length
             ? t("bknProject.overview.tiles.sourcesValue", { count: tables })
-            : t("bknProject.overview.tiles.notStarted"),
+            : bases
+              ? t("bknProject.overview.tiles.sourcesKnowledgeBases", { count: bases })
+              : knowledgeBases === undefined
+                ? PLACEHOLDER
+                : t("bknProject.overview.tiles.notStarted"),
     },
     {
       action: {

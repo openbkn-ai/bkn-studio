@@ -795,6 +795,8 @@ export const bknProjectEnUS = {
         title: "Choose the identity of {{name}}",
         intro:
           "The identity tells records apart; records with the same value become one instance. With a single property, its duplicates and empty values are counted over the whole table.",
+        introDocument:
+          "The identity tells records apart; records with the same value become one instance. This object is read from documents: choose the business number in the documents that tells its records apart.",
         none: "This object type has no property that can identify its records; an identity needs text or whole numbers.",
         composite:
           "Several properties: records are told apart by their combination, and duplicates and empty values are not counted.",
@@ -1405,12 +1407,16 @@ export const bknProjectEnUS = {
         sourcesValue: "{{count}} tables",
         sourcesValue_one: "{{count}} table",
         sourcesValue_other: "{{count}} tables",
+        sourcesKnowledgeBases: "{{count}} knowledge bases",
+        sourcesKnowledgeBases_one: "{{count}} knowledge base",
+        sourcesKnowledgeBases_other: "{{count}} knowledge bases",
+        sourcesSeparator: " · ",
         sourcesDocuments: "{{count}} requirement documents",
         sourcesDocuments_one: "{{count}} requirement document",
         sourcesDocuments_other: "{{count}} requirement documents",
         notStarted: "Not started",
         sourcesSub: "Referenced, never copied",
-        sourcesAction: "Manage catalogs and documents",
+        sourcesAction: "Manage sources",
         sourcesChoose: "Choose data catalogs",
         conceptsSub: "Concepts drawn from tables, knowledge-base samples and requirement documents",
         conceptsSubCore: "Concepts drawn from tables and requirement documents",
@@ -1489,7 +1495,7 @@ export const bknProjectEnUS = {
       open: "Network diagnosis",
       title: "Network diagnosis",
       close: "Close",
-      hint: "The system first counts connections, references and reachable questions over the full tables, then AI weighs and ranks them by ontology rules. AI only suggests and never changes the model; you decide to apply or dismiss each one.",
+      hint: "The system first counts connections, references and reachable questions over the data there is, then AI weighs and ranks them by ontology rules. AI only suggests and never changes the model; you decide to apply or dismiss each one.",
       start: "Start diagnosis",
       rerun: "Diagnose again",
       ownerOnly: "Only the project owner can run a diagnosis.",
@@ -1912,6 +1918,10 @@ export const bknProjectEnUS = {
           "Replaces what the last confirmation wrote; the project's other definitions stay as they are.",
         after:
           "After confirming, the data is checked and the tables get local indexes. See the data check under “Release” and the indexes under “Build”.",
+        afterDocuments:
+          "After confirming, the knowledge-base objects are made ready for what is extracted. Extraction runs under “Build”: check it on the debug and acceptance files first, then process every file.",
+        afterMixed:
+          "After confirming, the tables' data is checked and indexed locally, and the knowledge-base objects are made ready for what is extracted. See the data check under “Release”; the indexes and knowledge-base extraction run under “Build”.",
         undecidedTitle: "{{count}} items were not adopted in drafting and nobody decided on them",
         undecidedTitle_one: "{{count}} item was not adopted in drafting and nobody decided on it",
         undecidedTitle_other:
@@ -3673,6 +3683,8 @@ export const bknProjectEnUS = {
         answerError: {
           forbidden: "The question assistant may not query this business knowledge network.",
           assistantMissing: "The question assistant is not published, so nothing was asked.",
+          signInExpired:
+            "Your sign-in expired while asking, so nothing was asked. Run the regression again.",
           interrupted: "The answer was interrupted.",
           cancelled: "The question was cancelled.",
           judgeInvalid: "The judgement was not valid, so the answer was not judged.",
@@ -3809,7 +3821,7 @@ export const bknProjectEnUS = {
         DocumentDataNotReady:
           "Knowledge-base objects are not ready to hold what is extracted from files. Confirm the model again to continue where it stopped; reviewed candidates are kept.",
         DocumentSamplesChanged:
-          "The debug samples changed after the knowledge-base concepts were extracted, and the knowledge-base objects come from the earlier debug samples, so the model cannot be confirmed yet. On the Knowledge base tab of Requirements and sources, set the debug samples back to the files used for extraction, then confirm again.",
+          "The debug samples changed after the knowledge-base concepts were extracted, and the knowledge-base objects come from the earlier debug samples, so the model cannot be confirmed yet. In concept extraction, extract the knowledge-base debug files again, then confirm the model.",
         DocumentSamplesUnknown:
           "Which debug samples the knowledge-base concepts were extracted from can no longer be told, so the model cannot be confirmed yet. On Concept extraction, extract the knowledge-base debug files again, then confirm the model.",
         DocumentDataItemFailed:

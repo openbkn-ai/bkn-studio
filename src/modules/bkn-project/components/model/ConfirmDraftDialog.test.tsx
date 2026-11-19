@@ -492,6 +492,31 @@ describe("ConfirmDraft", () => {
     expect(screen.queryByRole("button", { name: "先确认表的部分" })).toBeNull();
   });
 
+  it("speaks of knowledge-base objects for a model read from documents, and keeps a refusal in view", async () => {
+    const documentsOnly = {
+      ...draft,
+      items: {
+        ...draft.items,
+        objectTypes: draft.items.objectTypes.map((item) => ({
+          ...item,
+          document: { role: "entity" },
+        })),
+      },
+    } as typeof draft;
+    getProjectStatusMock.mockResolvedValue(status({}));
+    confirmDraftMock.mockRejectedValueOnce(refusal("Draft.DocumentSamplesChanged"));
+    renderConfirm(documentsOnly);
+    fireEvent.click(await screen.findByRole("button", { name: "确认模型" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText(/确认后会为知识库对象准备好存放抽取内容的位置/)).toBeInTheDocument();
+    expect(dialog.queryByText(/为这些表构建本地索引/)).toBeNull();
+    fireEvent.click(okButton());
+    expect(
+      await dialog.findByText(/请在概念抽取里对知识库调试文件重新抽取一次，再确认模型/),
+    ).toBeInTheDocument();
+    expect(onConfirmed).not.toHaveBeenCalled();
+  });
+
   it("confirms the tables first, leaving the knowledge-base objects out with the reason noted", async () => {
     const table = draft.items.objectTypes[0];
     const withDocument = {

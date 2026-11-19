@@ -38,6 +38,7 @@ import {
   getDraft,
   getExistingDefinitions,
 } from "@/modules/bkn-project/services/draft.service";
+import { useMountedKnowledgeBases } from "@/modules/bkn-project/components/resources/useMountedKnowledgeBases";
 import { getUnderstanding } from "@/modules/bkn-project/services/publish.service";
 import { getLogicNeeds } from "@/modules/bkn-project/services/kinetic.service";
 import { getRequirements } from "@/modules/bkn-project/services/requirements.service";
@@ -112,9 +113,11 @@ export function ProjectWorkspaceScene({
 
   // What the navigation counts: the items each step holds, counted as the overview's step cards
   // and the pages count them (the tables, the concepts, the object types of the model, the kinetic
-  // items and the scenario questions), read again on each page so a change made on one shows when
+  // items and the scenario questions; the sources count the tables with the knowledge bases), read again on each page so a change made on one shows when
   // moving on. A failed read leaves the count off.
   const [counts, setCounts] = useState<Partial<Record<ProjectSection, number>>>({});
+  // The sources count the knowledge bases mounted on the network with the catalogs' tables.
+  const knowledgeBases = useMountedKnowledgeBases(loaded?.project.knId);
   // Kinetic modeling counts what it reads itself; elsewhere the count is read here.
   const [kineticCount, setKineticCount] = useState<number | undefined>(undefined);
   // Read once the project is, after the page's own reads: the counts only add to it.
@@ -222,6 +225,9 @@ export function ProjectWorkspaceScene({
             active={section}
             counts={{
               ...counts,
+              ...(counts.resources === undefined
+                ? {}
+                : { resources: counts.resources + (knowledgeBases?.length ?? 0) }),
               ...(kineticCount === undefined ? {} : { kinetic: kineticCount }),
             }}
             projectId={project.id}

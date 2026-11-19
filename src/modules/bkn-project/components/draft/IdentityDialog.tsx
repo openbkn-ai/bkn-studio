@@ -34,6 +34,8 @@ export function IdentityDialog({
 }) {
   const { t } = useTranslation();
   const candidates = identityCandidates(objectType);
+  // An object read from documents has no table whose values could be counted.
+  const fromDocuments = Boolean(objectType.document);
   const suggested = objectType.needsIdentity ? suggestedIdentity(objectType) : null;
   const [selected, setSelected] = useState<string[]>(() => {
     if (
@@ -82,14 +84,20 @@ export function IdentityDialog({
       title={t("bknProject.model.identity.title", { name: objectType.name })}
     >
       <div className={styles.stack}>
-        <p className={styles.muted}>{t("bknProject.model.identity.intro")}</p>
+        <p className={styles.muted}>
+          {t(
+            fromDocuments
+              ? "bknProject.model.identity.introDocument"
+              : "bknProject.model.identity.intro",
+          )}
+        </p>
         {suggested ? (
           <span>
             {t("bknProject.model.identity.suggested", {
               properties: suggested.map(label).join(t("bknProject.listSeparator")),
             })}
           </span>
-        ) : objectType.needsIdentity && candidates.length ? (
+        ) : objectType.needsIdentity && candidates.length && !fromDocuments ? (
           <span className={styles.muted}>{t("bknProject.model.identity.noSuggestion")}</span>
         ) : null}
         {candidates.length ? (
@@ -115,10 +123,10 @@ export function IdentityDialog({
           <span className={styles.muted}>{t("bknProject.model.identity.none")}</span>
         )}
         {/* The suggestion was counted; only another combination goes uncounted. */}
-        {selected.length > 1 && !isSuggested ? (
+        {selected.length > 1 && !isSuggested && !fromDocuments ? (
           <span className={styles.warning}>{t("bknProject.model.identity.composite")}</span>
         ) : null}
-        {saving && selected.length === 1 ? (
+        {saving && selected.length === 1 && !fromDocuments ? (
           <span className={styles.muted}>{t("bknProject.model.identity.counting")}</span>
         ) : null}
       </div>
