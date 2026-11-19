@@ -2653,6 +2653,8 @@ export const bknProjectEnUS = {
       knowledgeDocument: "Rules and concepts of the knowledge base",
       rejectedByRun: {
         kinetic: "The analysis left out {{count}} suggestions",
+        kinetic_one: "The analysis left out {{count}} suggestion",
+        kinetic_other: "The analysis left out {{count}} suggestions",
       },
       document: "Document",
       documentLoadFailed: "The document cannot be read right now",

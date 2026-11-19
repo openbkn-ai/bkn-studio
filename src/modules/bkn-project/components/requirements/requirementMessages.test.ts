@@ -91,3 +91,14 @@ describe("citedDocumentName", () => {
     expect(citedDocumentName(zh, "d9", documents, "已删除的文档")).toBe("已删除的文档");
   });
 });
+
+describe("the kinetic left-out note", () => {
+  it("says one suggestion in the singular in English", () => {
+    expect(en("bknProject.requirements.rejectedByRun.kinetic", { count: 1 })).toBe(
+      "The analysis left out 1 suggestion",
+    );
+    expect(en("bknProject.requirements.rejectedByRun.kinetic", { count: 3 })).toBe(
+      "The analysis left out 3 suggestions",
+    );
+  });
+});
