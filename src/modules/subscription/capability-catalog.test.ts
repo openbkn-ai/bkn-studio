@@ -11,6 +11,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import {
   CAPABILITY_CATALOG,
   capabilitiesIntroducedBy,
+  capabilityMinEdition,
 } from "@/modules/subscription/capability-catalog";
 import { resolveQuota } from "@/modules/subscription/subscription-plans";
 
@@ -18,8 +19,8 @@ describe("capability catalog", () => {
   // 登记表里 planned 的行(explorer 等)对客户不可见——写进版本对比页就是在卖
   // 还没有的东西。business_provenance 不在此列:产品决定按企业能力在售(2026-08-06),
   // 上游登记表转 active 之前,页面先按在售展示。
-  it("不收录任何 planned 能力", () => {
-    const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
+  it("planned 能力要么不收录,要么明确标「规划中」", () => {
+    const listed = CAPABILITY_CATALOG.filter((entry) => !entry.planned).map((entry) => entry.key);
 
     for (const planned of [
       // 上游 e8fdf2f 退回 planned:EE 侧从未实现,页面不该在卖
@@ -29,10 +30,26 @@ describe("capability catalog", () => {
       "bigdata_connect",
       "multi_tenant",
       "offline_bundle",
-      "version_mgmt",
     ]) {
-      expect(keys).not.toContain(planned);
+      expect(listed).not.toContain(planned);
     }
+  });
+
+  // 2026-11-19:企业档运维看板按「规划中」摆出来,排在所有在售能力之后。规划中的行不标「新增」,
+  // 也不报端点。
+  it("规划中的能力只有运维看板,且排在最后", () => {
+    const planned = CAPABILITY_CATALOG.filter((entry) => entry.planned);
+
+    expect(planned.map((entry) => entry.key)).toEqual(["ops_dashboard"]);
+    expect(planned[0]).toMatchObject({
+      category: "operations",
+      minEdition: "enterprise",
+      reportedByEndpoint: false,
+    });
+    expect(planned[0]?.sinceVersion).toBeUndefined();
+
+    const firstPlanned = CAPABILITY_CATALOG.findIndex((entry) => entry.planned);
+    expect(CAPABILITY_CATALOG.slice(firstPlanned).every((entry) => entry.planned)).toBe(true);
   });
 
   it("key 不重复,档位分布与上游登记表一致", () => {
@@ -41,8 +58,8 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(9);
-    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(10);
+    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(7);
     expect(CAPABILITY_CATALOG.find((entry) => entry.key === CAPABILITIES.EVAL)).toMatchObject({
       minEdition: "professional",
       reportedByEndpoint: false,
@@ -64,6 +81,7 @@ describe("capability catalog", () => {
     );
 
     expect(served.sort()).toEqual([
+      "analysis_canvas",
       "connector_certified",
       "graph_explorer",
       "object_metrics",
@@ -80,7 +98,7 @@ describe("capability catalog", () => {
   // 时才收,否则版本页就在卖还没有的东西。发布时把它加进目录,并从这里移出。
   it("覆盖 CAPABILITIES 里的每个 key", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
-    const inDevelopment: string[] = [CAPABILITIES.KNOWLEDGE_BASE];
+    const inDevelopment: string[] = [];
 
     for (const key of Object.values(CAPABILITIES)) {
       if (inDevelopment.includes(key)) {
@@ -89,6 +107,31 @@ describe("capability catalog", () => {
       }
       expect(keys).toContain(key);
     }
+  });
+
+  // 2026-11-19 版本划分:项目管理(含知识库)整体在专业档;应用工坊整体、分析画布、风险管控、
+  // 知识网络版本管理在企业档。
+  it("按 2026-11-19 的版本划分列出专业档与企业档能力", () => {
+    const tierOf = (key: string) =>
+      CAPABILITY_CATALOG.find((entry) => entry.key === key)?.minEdition;
+
+    expect(tierOf("bkn_project")).toBe("professional");
+    expect(tierOf(CAPABILITIES.KNOWLEDGE_BASE)).toBe("professional");
+    expect(tierOf(CAPABILITIES.OBJECT_METRICS)).toBe("professional");
+    expect(tierOf("scenario")).toBeUndefined();
+    for (const key of [CAPABILITIES.WORKSHOP, "risk_control", "version_mgmt", "analysis_canvas"]) {
+      expect(tierOf(key)).toBe("enterprise");
+    }
+  });
+
+  // 版本页先于门控改档:入口守卫与锁定徽标按今天的实际门控走,不随售卖档位变。应用工坊售卖档是
+  // 企业版,服务端仍按专业档放行,守卫用企业档会把专业证客户锁在外面(#1453 评审阻塞项)。
+  it("入口门控沿用今天的档位,不随版本页改档", () => {
+    expect(capabilityMinEdition(CAPABILITIES.WORKSHOP)).toBe("professional");
+    expect(capabilityMinEdition(CAPABILITIES.KNOWLEDGE_BASE)).toBeNull();
+    expect(capabilityMinEdition("analysis_canvas")).toBeNull();
+    expect(capabilityMinEdition(CAPABILITIES.GRAPH_EXPLORER)).toBe("professional");
+    expect(capabilityMinEdition("risk_control")).toBe("enterprise");
   });
 
   it("将 Vega 逻辑视图列为专业版能力，并通过档位判断可用性", () => {
