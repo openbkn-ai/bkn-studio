@@ -737,6 +737,8 @@ export const bknProjectZhCN = {
         title: "选择「{{name}}」的唯一标识",
         intro:
           "唯一标识用来区分每一条记录，值相同的记录会合并成一个实例。只选一个属性时，会统计它在整张表里的重复值和空值。",
+        introDocument:
+          "唯一标识用来区分每一条记录，值相同的记录会合并成一个实例。这个对象从文档中抽取，请选业务上能区分每条记录的编号，比如合同编号、发票号码。",
         none: "这个对象类没有可作唯一标识的属性，唯一标识需要文本或整数。",
         composite: "选了多个属性：会按它们的组合区分记录，不统计重复值和空值。",
         suggested:
@@ -1318,12 +1320,16 @@ export const bknProjectZhCN = {
         sourcesValue: "{{count}} 张表",
         sourcesValue_one: "{{count}} 张表",
         sourcesValue_other: "{{count}} 张表",
+        sourcesKnowledgeBases: "知识库 {{count}} 个",
+        sourcesKnowledgeBases_one: "知识库 {{count}} 个",
+        sourcesKnowledgeBases_other: "知识库 {{count}} 个",
+        sourcesSeparator: " · ",
         sourcesDocuments: "需求文档 {{count}} 份",
         sourcesDocuments_one: "需求文档 {{count}} 份",
         sourcesDocuments_other: "需求文档 {{count}} 份",
         notStarted: "未开始",
         sourcesSub: "项目只引用，不复制",
-        sourcesAction: "管理数据目录和文档",
+        sourcesAction: "管理资料来源",
         sourcesChoose: "去选择数据目录",
         conceptsSub: "从表、知识库样本和需求文档抽取的概念",
         conceptsSubCore: "从表和需求文档中抽取的概念",
@@ -1398,7 +1404,7 @@ export const bknProjectZhCN = {
       open: "网络诊断",
       title: "网络诊断",
       close: "关闭",
-      hint: "系统先按全表取值计算连通、引用和可达性，再由 AI 按本体规则判断、排序。AI 只给建议，不会直接改模型；每条都由你决定应用还是忽略。",
+      hint: "系统先按已有的数据计算连通、引用和可达性，再由 AI 按本体规则判断、排序。AI 只给建议，不会直接改模型；每条都由你决定应用还是忽略。",
       start: "开始诊断",
       rerun: "重新诊断",
       ownerOnly: "只有项目负责人可以运行诊断。",
@@ -1785,6 +1791,10 @@ export const bknProjectZhCN = {
         replaces: "会替换上次确认写入的内容，项目中的其他定义不受影响。",
         after:
           "确认后会自动校验数据，并为这些表构建本地索引，数据检查在“发布”中查看，索引在“构建”中查看。",
+        afterDocuments:
+          "确认后会为知识库对象准备好存放抽取内容的位置，抽取在“构建”中进行：先用调试文件和验收文件检查效果，再处理全部文件。",
+        afterMixed:
+          "确认后会自动校验表的数据并构建本地索引，同时为知识库对象准备好存放抽取内容的位置。数据检查在“发布”中查看，索引和知识库抽取在“构建”中进行。",
         undecidedTitle: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedTitle_one: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
         undecidedTitle_other: "以下 {{count}} 项起草时没有采纳，也还没有人决定",
@@ -3554,7 +3564,7 @@ export const bknProjectZhCN = {
         DocumentDataNotReady:
           "知识库对象还没准备好存放从文件抽取的内容，再次确认模型会从中断处继续；已审核的候选会保留。",
         DocumentSamplesChanged:
-          "抽取知识库概念之后，调试样本有了变化，现在的知识库对象是从原来的调试样本中得出的，暂时无法确认模型。请在需求与来源的知识库页签把调试样本改回抽取时的那些文件，再重新确认。",
+          "抽取知识库概念之后，调试样本有了变化，现在的知识库对象还是按原来的调试样本得出的，暂时无法确认模型。请在概念抽取里对知识库调试文件重新抽取一次，再确认模型。",
         DocumentSamplesUnknown:
           "抽取知识库概念时用的是哪些调试样本，现在已经无法确定，暂时无法确认模型。请在概念抽取里对知识库调试文件重新抽取一次，再确认模型。",
         DocumentDataItemFailed:

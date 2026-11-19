@@ -82,4 +82,21 @@ describe("IdentityDialog", () => {
     ).toBeInTheDocument();
     expect(save()).toBeDisabled();
   });
+
+  it("speaks of documents, not of a table, for an object read from documents", async () => {
+    renderWithoutAntdStyles(
+      <IdentityDialog
+        objectType={{ ...waiting(), document: { role: "entity" } } as unknown as DraftObjectType}
+        onCancel={vi.fn()}
+        onSave={vi.fn(() => Promise.resolve())}
+      />,
+    );
+
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText(/这个对象从文档中抽取/)).toBeInTheDocument();
+    expect(dialog.queryByText(/整张表/)).not.toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("checkbox", { name: /单号 id/ }));
+    fireEvent.click(dialog.getByRole("checkbox", { name: /分录号 entry_id/ }));
+    await waitFor(() => expect(dialog.queryByText(/不统计重复值/)).not.toBeInTheDocument());
+  });
 });

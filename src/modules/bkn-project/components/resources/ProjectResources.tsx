@@ -40,11 +40,11 @@ import type { Draft } from "@/modules/bkn-project/types/draft";
 import type { Project } from "@/modules/bkn-project/types/project";
 import type { UnderstandingCatalog, UnderstandingTable } from "@/modules/bkn-project/types/publish";
 import type { RequirementDocument } from "@/modules/bkn-project/types/requirements";
-import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import { RESOURCE_TABS, type ResourceTab } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
 import styles from "./ProjectResources.module.css";
+import { useMountedKnowledgeBases } from "./useMountedKnowledgeBases";
 
 const PREFIX = "bknProject.resources";
 const PAGE_SIZE = 20;
@@ -150,26 +150,7 @@ export function ProjectResources({
   }, [project.id]);
 
   // The knowledge bases mounted on the network, which are the project's sources too.
-  const [networkBases, setNetworkBases] = useState<string[]>([]);
-  useEffect(() => {
-    if (kbMode !== "enabled") {
-      return undefined;
-    }
-    let active = true;
-    listKnowledgeNetworkCapabilities(project.knId, {
-      limit: 100,
-      mountedOnly: true,
-      type: "knowledge_base",
-    })
-      .then(
-        (result) =>
-          active && setNetworkBases(result.entries.map((item) => item.name || item.capabilityId)),
-      )
-      .catch(() => active && setNetworkBases([]));
-    return () => {
-      active = false;
-    };
-  }, [kbMode, project.knId]);
+  const networkBases = useMountedKnowledgeBases(project.knId) ?? [];
   // The catalogs' tables change with the catalogs.
   useEffect(() => {
     void loadUnderstanding();
