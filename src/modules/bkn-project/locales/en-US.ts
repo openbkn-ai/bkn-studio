@@ -319,6 +319,10 @@ export const bknProjectEnUS = {
           knowledgeBase_one: " · {{count}} concept",
           knowledgeBase_other: " · {{count}} concepts",
         },
+        stale: {
+          knowledgeBase:
+            ". The debug files have changed since; this is what the earlier files gave. Extract again.",
+        },
         unmatched: ", {{count}} not matched",
         unmatched_one: ", {{count}} not matched",
         unmatched_other: ", {{count}} not matched",
