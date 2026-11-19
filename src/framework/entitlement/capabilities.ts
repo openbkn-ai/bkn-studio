@@ -63,7 +63,7 @@ export const CAPABILITIES = {
    */
   KNOWLEDGE_BASE: "knowledge_base",
   /**
-   * 应用工坊(Workshop):在知识网络上搭建业务应用。专业档起。
+   * 应用工坊(Workshop):在知识网络上搭建业务应用。企业档起。
    *
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
    * bkn-safe-ee 登记装配表,`/api/safe/v1/capabilities` 报得出它,入口按 `capabilityState()` 判。

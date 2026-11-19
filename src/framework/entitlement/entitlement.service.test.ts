@@ -141,21 +141,13 @@ describe("fetchEntitlement", () => {
   it("mock 模式按 VITE_MOCK_EDITION 生成对应档位的快照", async () => {
     const professional = await (await importFetchEntitlement("true", "professional"))();
     expect(professional).toEqual({
-      capabilities: [
-        "rbac_basic",
-        "perm_fine_grained",
-        "graph_explorer",
-        "object_metrics",
-        "workshop",
-        "eval",
-      ],
+      capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "object_metrics", "eval"],
       edition: "professional",
       extensions: [
         "rbac_basic",
         "perm_fine_grained",
         "graph_explorer",
         "object_metrics",
-        "workshop",
         "eval",
         "perm_object_level",
       ],
@@ -164,7 +156,6 @@ describe("fetchEntitlement", () => {
         "perm_fine_grained",
         "graph_explorer",
         "object_metrics",
-        "workshop",
         "eval",
         "perm_object_level",
         "source_sync",
