@@ -10,6 +10,7 @@ export type SupportedLocale = "zh-CN" | "en-US";
 export type TokenManager = {
   getAccessToken: () => string | null;
   refreshAccessToken: () => Promise<string | null>;
+  shouldHandleAuthFailure?: () => boolean;
   onAuthFailure?: () => void;
 };
 

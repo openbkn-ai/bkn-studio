@@ -25,6 +25,7 @@ import { defaultDevRuntimeUser, getDevRuntimeUser } from "@/framework/runtime/de
 const storageTokenManager: TokenManager = {
   getAccessToken: () => getDevAccessToken(),
   refreshAccessToken: () => refreshOAuthTokens(),
+  shouldHandleAuthFailure: () => !isLogoutInProgress(),
   onAuthFailure: () => {
     // Requests still settling during logout must not reload the page or erase
     // credentials needed to retry a partially completed revocation.

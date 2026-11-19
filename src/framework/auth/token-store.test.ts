@@ -103,7 +103,10 @@ describe("token-store", () => {
 
     expect(getStoredAccessToken()).toBe("");
     expect(getStoredRefreshToken()).toBe("");
-    expect(postMessage).toHaveBeenCalledWith({ type: "logout", source: expect.any(String) });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: "logout",
+      source: expect.any(String) as unknown,
+    });
   });
   it("ignores its own document's logout broadcast but not another tab's", () => {
     const listeners = new Set<(event: MessageEvent) => void>();

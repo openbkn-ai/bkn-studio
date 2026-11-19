@@ -106,7 +106,7 @@ async function refreshAccessToken(tokenManager: TokenManager) {
 }
 
 function endSession(tokenManager: TokenManager) {
-  if (isSessionEnded(tokenManager)) {
+  if (isSessionEnded(tokenManager) || tokenManager.shouldHandleAuthFailure?.() === false) {
     return;
   }
   endedSession = { accessToken: tokenManager.getAccessToken(), tokenManager };

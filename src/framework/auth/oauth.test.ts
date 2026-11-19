@@ -202,7 +202,7 @@ describe("oauth", () => {
         method: "POST",
         headers: { Authorization: "Bearer access-for-logout", "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: "refresh-for-logout" }),
-        signal: expect.any(AbortSignal),
+        signal: expect.any(AbortSignal) as unknown,
       }),
     );
     expect(isLogoutInProgress()).toBe(true);
@@ -378,7 +378,7 @@ describe("oauth", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(
       "/api/safe/v1/me/logout",
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer new-access" }),
+        headers: expect.objectContaining({ Authorization: "Bearer new-access" }) as unknown,
         body: JSON.stringify({ refresh_token: "new-refresh" }),
       }),
     );
