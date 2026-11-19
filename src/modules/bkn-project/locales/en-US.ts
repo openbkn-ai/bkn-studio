@@ -796,7 +796,7 @@ export const bknProjectEnUS = {
         intro:
           "The identity tells records apart; records with the same value become one instance. With a single property, its duplicates and empty values are counted over the whole table.",
         introDocument:
-          "The identity tells records apart; records with the same value become one instance. This object is read from documents: choose the number that tells its records apart in the business, such as a contract or invoice number.",
+          "The identity tells records apart; records with the same value become one instance. This object is read from documents: choose the business number in the documents that tells its records apart.",
         none: "This object type has no property that can identify its records; an identity needs text or whole numbers.",
         composite:
           "Several properties: records are told apart by their combination, and duplicates and empty values are not counted.",
