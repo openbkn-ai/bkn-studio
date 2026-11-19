@@ -22,6 +22,7 @@ import { OntologyInspectorPanel } from "@/modules/knowledge-network/components/p
 import {
   spreadParallelEdges,
   typeColors,
+  withPreviewEdges,
 } from "@/modules/knowledge-network/components/preview/ontology-graph-data";
 import {
   getKnowledgeNetworkConceptGroup,
@@ -33,6 +34,7 @@ import {
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkObjectTypeRecord,
+  KnowledgeNetworkPreviewEdge,
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
@@ -50,6 +52,13 @@ type OntologyGraphCardProps = {
   fadedIds?: ReadonlySet<string>;
   /** Types drawn with a small dot at their top left, such as what a draft's network already has. */
   markedIds?: ReadonlySet<string>;
+  /** Types ringed in the warning colour, such as those a diagnosis finds cut off. */
+  highlightedIds?: ReadonlySet<string>;
+  /**
+   * Relations previewed before they are made, drawn dashed in the success colour. One whose id is
+   * a relation already drawn previews that one instead, such as a relation not adopted yet.
+   */
+  previewEdges?: readonly KnowledgeNetworkPreviewEdge[];
   fillAvailableHeight?: boolean;
   /** A click opens something over the page: the graph leaves the maximized view first. */
   leaveMaximizedOnSelect?: boolean;
@@ -76,6 +85,8 @@ export function OntologyGraphCard({
   eventClassIds,
   fadedIds,
   markedIds,
+  highlightedIds,
+  previewEdges,
   fillAvailableHeight = false,
   leaveMaximizedOnSelect,
   legend,
@@ -150,20 +161,32 @@ export function OntologyGraphCard({
   const relationTypes = controlled ? relationTypesProp : fetchedRelationTypes;
 
   const graph = useMemo(() => {
-    const drawn = buildModelingPreviewGraph(objectTypes, relationTypes);
+    const modeled = buildModelingPreviewGraph(objectTypes, relationTypes);
+    const drawn = previewEdges?.length ? withPreviewEdges(modeled, previewEdges) : modeled;
     const built = parallelEdges ? spreadParallelEdges(drawn) : drawn;
-    if (!fadedIds?.size && !markedIds?.size) {
+    if (!fadedIds?.size && !markedIds?.size && !highlightedIds?.size) {
       return built;
     }
     return {
-      edges: built.edges.map((edge) => (fadedIds?.has(edge.id) ? { ...edge, faded: true } : edge)),
+      edges: built.edges.map((edge) =>
+        fadedIds?.has(edge.id) && !edge.preview ? { ...edge, faded: true } : edge,
+      ),
       nodes: built.nodes.map((node) => ({
         ...node,
         ...(fadedIds?.has(node.id) ? { faded: true } : {}),
         ...(markedIds?.has(node.id) ? { marked: true } : {}),
+        ...(highlightedIds?.has(node.id) ? { highlighted: true } : {}),
       })),
     };
-  }, [fadedIds, markedIds, objectTypes, parallelEdges, relationTypes]);
+  }, [
+    fadedIds,
+    highlightedIds,
+    markedIds,
+    objectTypes,
+    parallelEdges,
+    previewEdges,
+    relationTypes,
+  ]);
 
   const hasDeprecated = useMemo(
     () => graph.nodes.some(isDeprecated) || graph.edges.some(isDeprecated),

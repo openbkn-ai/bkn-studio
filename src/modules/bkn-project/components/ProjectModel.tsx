@@ -27,6 +27,9 @@ import { RelationTypePanel } from "@/modules/bkn-project/components/relation-typ
 import { ConfirmDraft } from "@/modules/bkn-project/components/model/ConfirmDraftDialog";
 import { UnderstandingBar } from "@/modules/bkn-project/components/model/UnderstandingBar";
 import { SourceChangesNotice } from "@/modules/bkn-project/components/model/SourceChanges";
+import { islandIds, previewEdges } from "@/modules/bkn-project/components/diagnosis/diagnosis";
+import { NetworkDiagnosisPanel } from "@/modules/bkn-project/components/diagnosis/NetworkDiagnosisPanel";
+import type { Diagnosis, DiagnosisSuggestion } from "@/modules/bkn-project/types/diagnosis";
 import {
   adoptBlocker,
   draftErrorCode,
@@ -75,6 +78,7 @@ import {
 } from "@/modules/bkn-project/types/workspace";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 
+import ask from "./ai/RequirementAsk.module.css";
 import styles from "./ProjectModel.module.css";
 import { extensionProjectKnowledgeBaseModel } from "@/framework/extension/registry";
 import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
@@ -183,6 +187,12 @@ export function ProjectModel({
   const [editing, setEditing] = useState<{ item: EditableItem; kind: DraftItemKind } | null>(null);
   const [saving, setSaving] = useState(false);
   const [choosingIdentity, setChoosingIdentity] = useState<DraftObjectType | null>(null);
+  // The identity a diagnosis suggestion proposes, to start the chooser from.
+  const [identityInitial, setIdentityInitial] = useState<string[] | undefined>(undefined);
+  // The network diagnosis beside the page, what it last read and the suggestion pointed at.
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [previewed, setPreviewed] = useState<DiagnosisSuggestion | null>(null);
   const [neededBy, setNeededBy] = useState<ReadonlyMap<string, PendingQuestion[]>>(new Map());
   // Adopted object types that could refresh their local index by an update field, and have none.
   const [updateFields, setUpdateFields] = useState<PendingItem[]>([]);
@@ -455,6 +465,19 @@ export function ProjectModel({
     () => (draft?.status === "ready" ? relationsWithUnadoptedEnds(draft) : []),
     [draft],
   );
+  // The graph re-lays out whenever these change identity: keep them stable while their content is
+  // the same, so a diagnosis poll or hovering a card without a preview keeps the reader's view.
+  const islandKey =
+    diagnosing && draft ? JSON.stringify([...islandIds(diagnosis, draft)].sort()) : "";
+  const islands = useMemo(
+    () => (islandKey ? new Set<string>(JSON.parse(islandKey) as string[]) : undefined),
+    [islandKey],
+  );
+  const previewKey = diagnosing && draft ? JSON.stringify(previewEdges(previewed, draft)) : "";
+  const preview = useMemo(
+    () => (previewKey ? (JSON.parse(previewKey) as ReturnType<typeof previewEdges>) : undefined),
+    [previewKey],
+  );
 
   if (loadError && draft === undefined) {
     return (
@@ -676,7 +699,10 @@ export function ProjectModel({
     archived: project.archived,
     busy: saving,
     onAdopt: (kind, item, adopted) => void sendEdit(kind, item.id, { adopted }),
-    onChooseIdentity: setChoosingIdentity,
+    onChooseIdentity: (objectType) => {
+      setIdentityInitial(undefined);
+      setChoosingIdentity(objectType);
+    },
     onEdit: (kind, item) => setEditing({ item, kind }),
     onRestore: (field) => restore(field, objectNames[field.objectType] ?? field.objectType),
     networkId: project.knId,
@@ -818,6 +844,17 @@ export function ProjectModel({
           ) : null}
         </span>
         <span className={styles.spacer} />
+        {draft.status === "ready" ? (
+          <AppButton
+            aria-pressed={diagnosing}
+            onClick={() => {
+              setDiagnosing(!diagnosing);
+              setPreviewed(null);
+            }}
+          >
+            {t("bknProject.diagnosis.open")}
+          </AppButton>
+        ) : null}
         {projectMissing.length ? null : catalogsLink("bknProject.model.catalogs.manage")}
         {generateButton}
         {draft.status === "ready" && !project.archived ? (
@@ -882,9 +919,11 @@ export function ProjectModel({
         <>
           <DraftConceptGraph
             draft={draft}
+            highlightedIds={islands}
             networkId={project.knId}
             onOpen={editable ? openEditor : setOpenId}
             onOpenRelation={editable ? openRelation : undefined}
+            previewEdges={preview}
             title={t("bknProject.model.graph.title")}
           />
           <Segmented<Tab> onChange={setTab} options={tabs} value={activeTab} />
@@ -1011,8 +1050,35 @@ export function ProjectModel({
               project={project}
             />
           ) : null}
+          {diagnosing && draft.status === "ready" ? (
+            <div className={ask.side} data-ask-side>
+              <NetworkDiagnosisPanel
+                draft={draft}
+                editable={editable}
+                onChooseIdentity={(objectTypeId, candidates) => {
+                  const objectType = items.objectTypes.find((item) => item.id === objectTypeId);
+                  if (!objectType) {
+                    return false;
+                  }
+                  setIdentityInitial(candidates[0]);
+                  setChoosingIdentity(objectType);
+                  return true;
+                }}
+                onClose={() => {
+                  setDiagnosing(false);
+                  setPreviewed(null);
+                }}
+                onDiagnosis={setDiagnosis}
+                onDraftChanged={loadDraft}
+                onPreview={setPreviewed}
+                ownerIsCaller={ownerIsCaller}
+                projectId={project.id}
+              />
+            </div>
+          ) : null}
           {choosingIdentity ? (
             <IdentityDialog
+              initial={identityInitial}
               objectType={choosingIdentity}
               onCancel={() => setChoosingIdentity(null)}
               onSave={async (properties) => {

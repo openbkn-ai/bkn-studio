@@ -41,6 +41,10 @@ export type GraphTokens = {
   link: string;
   surface: string;
   border: string;
+  /** Rings around types that need attention, such as ones cut off from the rest. */
+  warning: string;
+  /** Relations previewed before they are made. */
+  success: string;
 };
 
 /** The light theme's values, for when the document carries no tokens (tests, early render). */
@@ -55,6 +59,8 @@ const FALLBACK: GraphTokens = {
   link: "#1d4ed8",
   surface: "#ffffff",
   border: "#e5eaf2",
+  warning: "#b45309",
+  success: "#15803d",
 };
 
 const TOKEN_NAMES: Record<keyof GraphTokens, string> = {
@@ -68,6 +74,8 @@ const TOKEN_NAMES: Record<keyof GraphTokens, string> = {
   link: "--color-text-link",
   surface: "--color-bg-raised",
   border: "--color-border",
+  warning: "--color-warning-text",
+  success: "--color-success-text",
 };
 
 /** The current theme's graph colours. Read again after the theme changes. */

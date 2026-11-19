@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { GraphData } from "@antv/g6";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,6 +50,9 @@ const created: {
   layerRender: ReturnType<typeof vi.fn>;
   resize: ReturnType<typeof vi.fn>;
   fitView: ReturnType<typeof vi.fn>;
+  setData: ReturnType<typeof vi.fn>;
+  addEdgeData: ReturnType<typeof vi.fn>;
+  removeEdgeData: ReturnType<typeof vi.fn>;
 }[] = [];
 vi.mock("@antv/g6", () => {
   class Graph {
@@ -57,6 +61,9 @@ vi.mock("@antv/g6", () => {
     layerRender = vi.fn();
     resize = vi.fn();
     fitView = vi.fn(() => Promise.resolve());
+    setData = vi.fn();
+    addEdgeData = vi.fn();
+    removeEdgeData = vi.fn();
     constructor(options: { behaviors: Behavior[]; plugins: Plugin[] }) {
       created.push({
         options,
@@ -64,6 +71,9 @@ vi.mock("@antv/g6", () => {
         layerRender: this.layerRender,
         resize: this.resize,
         fitView: this.fitView,
+        setData: this.setData,
+        addEdgeData: this.addEdgeData,
+        removeEdgeData: this.removeEdgeData,
       });
     }
     getCanvas() {
@@ -74,7 +84,6 @@ vi.mock("@antv/g6", () => {
     }
     setNode() {}
     setEdge() {}
-    setData() {}
     updateNodeData() {}
     updateEdgeData() {}
     render = () => Promise.resolve();
@@ -100,7 +109,7 @@ const STRUCTURE = { nodes: [], edges: [], combos: [] };
 const DECORATIONS = { nodes: [], edges: [], states: {} };
 const TOKENS = readGraphTokens();
 
-function canvasElement(onNodeClick = vi.fn(), maximized = false) {
+function canvasElement(onNodeClick = vi.fn(), maximized = false, structure: GraphData = STRUCTURE) {
   return (
     <OntologyG6Canvas
       ariaLabel="graph"
@@ -109,7 +118,7 @@ function canvasElement(onNodeClick = vi.fn(), maximized = false) {
       onBlankClick={vi.fn()}
       onNodeClick={onNodeClick}
       onZoom={vi.fn()}
-      structure={STRUCTURE}
+      structure={structure}
       tokens={TOKENS}
       totalNodes={0}
     />
@@ -200,6 +209,45 @@ describe("OntologyG6Canvas", () => {
     rerender(canvasElement(onNodeClick, true));
     reportSize(1400, 900);
     await waitFor(() => expect(graph.fitView).toHaveBeenCalledTimes(2));
+  });
+
+  it("adds and removes edges in place when only edges change, keeping the user's view", async () => {
+    const nodes = [
+      { id: "a", style: { x: 0, y: 0 } },
+      { id: "b", style: { x: 100, y: 0 } },
+    ];
+    const plain: GraphData = { nodes, edges: [{ id: "ab", source: "a", target: "b" }], combos: [] };
+    const previewed: GraphData = {
+      nodes: nodes.map((node) => ({ ...node })),
+      edges: [...(plain.edges ?? []), { id: "preview:ba", source: "b", target: "a" }],
+      combos: [],
+    };
+    const onNodeClick = vi.fn();
+    const { rerender } = render(canvasElement(onNodeClick, false, plain));
+    const graph = created[created.length - 1];
+    await waitFor(() => expect(graph.fitView).toHaveBeenCalledTimes(1));
+
+    // A previewed relation comes and goes: only that edge is drawn, the view stays.
+    rerender(canvasElement(onNodeClick, false, previewed));
+    await waitFor(() =>
+      expect(graph.addEdgeData).toHaveBeenCalledWith([
+        { id: "preview:ba", source: "b", target: "a" },
+      ]),
+    );
+    rerender(canvasElement(onNodeClick, false, plain));
+    await waitFor(() => expect(graph.removeEdgeData).toHaveBeenCalledWith(["preview:ba"]));
+    expect(graph.setData).toHaveBeenCalledTimes(1);
+    expect(graph.fitView).toHaveBeenCalledTimes(1);
+
+    // Another arrangement of the types is drawn anew and fitted.
+    rerender(
+      canvasElement(onNodeClick, false, {
+        ...plain,
+        nodes: [nodes[0], { id: "b", style: { x: 200, y: 0 } }],
+      }),
+    );
+    await waitFor(() => expect(graph.fitView).toHaveBeenCalledTimes(2));
+    expect(graph.setData).toHaveBeenCalledTimes(2);
   });
 
   it("names the hovered type in full, escaped, with its concept group", async () => {

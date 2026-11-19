@@ -89,6 +89,8 @@ export type KnowledgeNetworkPreviewNode = {
   faded?: boolean;
   /** Drawn with a small dot at its top left, such as a type a draft holds from its network. */
   marked?: boolean;
+  /** Drawn with a ring in the warning colour, such as a type a diagnosis finds cut off. */
+  highlighted?: boolean;
   icon?: string;
   id: string;
   indexStatus?: ObjectTypeIndexStatus;
@@ -105,6 +107,13 @@ export type KnowledgeNetworkPreviewEdge = {
   declarations?: DefinitionDeclarations;
   /** Drawn dashed and faint, as a faded node is. */
   faded?: boolean;
+  /** A relation previewed before it is made: drawn dashed in the success colour and named. */
+  preview?: boolean;
+  /**
+   * A previewed relation not drawn before: left out of the arrangement and of dot sizes, so
+   * showing it moves nothing. A drawn one previewed in place keeps its part in both.
+   */
+  added?: boolean;
   id: string;
   mappingMode?: "direct" | "resource";
   name: string;

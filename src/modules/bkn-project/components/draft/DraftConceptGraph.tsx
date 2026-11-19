@@ -15,6 +15,7 @@ import {
 } from "@/modules/bkn-project/components/draft/graph";
 import type { Draft, ExistingDefinitions } from "@/modules/bkn-project/types/draft";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
+import type { KnowledgeNetworkPreviewEdge } from "@/modules/knowledge-network/types/knowledge-network";
 
 /**
  * The draft's concept model, drawn as the knowledge network draws its ontology: one colour per
@@ -25,20 +26,26 @@ import { OntologyGraphCard } from "@/modules/knowledge-network/components/previe
 export function DraftConceptGraph({
   action,
   draft,
+  highlightedIds,
   networkId,
   onOpen,
   onOpenRelation,
+  previewEdges,
   title,
 }: {
   /** Shown after the key in the header, such as a link to the modeling page. */
   action?: ReactNode;
   /** The draft, or else the model the network already has. */
   draft: Draft | ExistingDefinitions;
+  /** Object types ringed for attention, such as those the network diagnosis finds cut off. */
+  highlightedIds?: ReadonlySet<string>;
   /** The project's network: the graph is drawn as its ontology. */
   networkId: string;
   onOpen?: (objectTypeId: string) => void;
   /** Opens a relation type where the page can; relations take no clicks without it. */
   onOpenRelation?: (relationTypeId: string) => void;
+  /** Relations a suggestion would make or adopt, drawn dashed while it is looked at. */
+  previewEdges?: readonly KnowledgeNetworkPreviewEdge[];
   title: string;
 }) {
   const { t } = useTranslation();
@@ -61,6 +68,7 @@ export function DraftConceptGraph({
     <OntologyGraphCard
       emptyDescription={t("bknProject.model.graph.emptyDescription")}
       fadedIds={records.faded}
+      highlightedIds={highlightedIds}
       // A click may open an editing panel over the page, which a maximized graph would cover.
       leaveMaximizedOnSelect
       legend={
@@ -80,6 +88,10 @@ export function DraftConceptGraph({
               {t("bknProject.model.existing.mark")}
             </span>
           ) : null}
+          {highlightedIds?.size ? (
+            <span>{t("bknProject.diagnosis.graph.islands", { count: highlightedIds.size })}</span>
+          ) : null}
+          {previewEdges?.length ? <span>{t("bknProject.diagnosis.graph.preview")}</span> : null}
           {action}
         </>
       }
@@ -97,6 +109,7 @@ export function DraftConceptGraph({
       }}
       onSelectEdge={onOpenRelation}
       parallelEdges
+      previewEdges={previewEdges}
       relationTypes={records.relationTypes}
       selectedId={null}
       title={title}
