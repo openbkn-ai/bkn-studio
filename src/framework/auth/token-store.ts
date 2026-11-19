@@ -23,7 +23,8 @@ const TOKEN_COOKIE_MAX_AGE_DAYS = 7;
 
 const AUTH_CHANNEL_NAME = "bkn-auth";
 
-export type AuthBroadcastMessage = { type: "logout" };
+const authBroadcastSource = Math.random().toString(36).slice(2);
+export type AuthBroadcastMessage = { type: "logout"; source?: string };
 
 /**
  * Host-only cookies (no Domain attribute) so localhost / IPs work and tabs
@@ -112,7 +113,7 @@ function broadcastLogout(): void {
   if (!channel) {
     return;
   }
-  const message: AuthBroadcastMessage = { type: "logout" };
+  const message: AuthBroadcastMessage = { type: "logout", source: authBroadcastSource };
   channel.postMessage(message);
   channel.close();
 }
@@ -129,7 +130,9 @@ export function subscribeAuthBroadcast(
   }
 
   const handler = (event: MessageEvent<AuthBroadcastMessage>) => {
-    if (event.data?.type === "logout") {
+    // A different channel object in this same document also receives broadcasts.
+    // Reloading the initiating page would cancel its Hydra logout navigation.
+    if (event.data?.type === "logout" && event.data.source !== authBroadcastSource) {
       onMessage(event.data);
     }
   };

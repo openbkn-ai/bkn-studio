@@ -24,6 +24,8 @@ export const authZhCN = {
     callbackErrorTitle: "登录失败",
     backToSignIn: "返回登录",
     logout: "退出登录",
+    logoutFailed: "退出登录未完成",
+    logoutFailedHint: "部分令牌可能仍然有效，请检查网络后再次退出登录。",
     devTokenAccessRequired: "请填写 Access Token",
     devTokenTitle: "开发环境 Token 配置",
     devTokenDescription:
