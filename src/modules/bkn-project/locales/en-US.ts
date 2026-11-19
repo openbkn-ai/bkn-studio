@@ -3683,7 +3683,8 @@ export const bknProjectEnUS = {
         answerError: {
           forbidden: "The question assistant may not query this business knowledge network.",
           assistantMissing: "The question assistant is not published, so nothing was asked.",
-          signInExpired: "Your sign-in expired while asking, so nothing was asked. Run the regression again.",
+          signInExpired:
+            "Your sign-in expired while asking, so nothing was asked. Run the regression again.",
           interrupted: "The answer was interrupted.",
           cancelled: "The question was cancelled.",
           judgeInvalid: "The judgement was not valid, so the answer was not judged.",
