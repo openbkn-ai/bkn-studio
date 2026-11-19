@@ -32,6 +32,7 @@ import openBknLogo from "@/assets/brand/openbkn-logo-compact.webp";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { APP_VERSION } from "@/framework/runtime/app-version";
@@ -50,6 +51,7 @@ import {
 
 export function TopBar() {
   const { t } = useTranslation();
+  const { modal } = useAppServices();
   const trailSlot = useContext(ShellTrailSlotContext);
   const location = useLocation();
   const matches = useMatches();
@@ -301,7 +303,12 @@ export function TopBar() {
         key: "logout",
         label: t("auth.logout"),
         onClick: () => {
-          void logout(runtimeConfig.mode);
+          void logout(runtimeConfig.mode).catch(() => {
+            modal.error({
+              title: t("auth.logoutFailed"),
+              content: t("auth.logoutFailedHint"),
+            });
+          });
         },
       },
     );
@@ -311,6 +318,7 @@ export function TopBar() {
     canViewInstallStatus,
     entitlement.edition,
     installStatusUrl,
+    modal,
     navigate,
     runtimeConfig.auth.tokenManager,
     runtimeConfig.locale,

@@ -13,14 +13,23 @@ import {
   shouldUseDevAuth,
 } from "@/framework/auth/dev-auth";
 import { resolveSupportedLocale } from "@/framework/i18n/locale";
-import { markSessionExpired, refreshOAuthTokens, shouldUseOAuthGate } from "@/framework/auth/oauth";
+import {
+  isLogoutInProgress,
+  markSessionExpired,
+  refreshOAuthTokens,
+  shouldUseOAuthGate,
+} from "@/framework/auth/oauth";
 import { clearStoredTokens } from "@/framework/auth/token-store";
 import { defaultDevRuntimeUser, getDevRuntimeUser } from "@/framework/runtime/dev-profile";
 
 const storageTokenManager: TokenManager = {
   getAccessToken: () => getDevAccessToken(),
   refreshAccessToken: () => refreshOAuthTokens(),
+  shouldHandleAuthFailure: () => !isLogoutInProgress(),
   onAuthFailure: () => {
+    // Requests still settling during logout must not reload the page or erase
+    // credentials needed to retry a partially completed revocation.
+    if (isLogoutInProgress()) return;
     // Read by the sign-in screen after the reload to tell the user why.
     markSessionExpired();
     handleDevAuthFailure();

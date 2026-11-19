@@ -31,6 +31,7 @@ import {
   subscribeFlowLockRelease,
   takeStashedCallbackError,
   TOKEN_REQUEST_TIMEOUT_MS,
+  isLogoutInProgress,
 } from "@/framework/auth/oauth";
 
 describe("oauth", () => {
@@ -185,9 +186,10 @@ describe("oauth", () => {
     await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow("invalid_grant");
   });
 
-  it("records a voluntary standalone logout before leaving Studio", async () => {
+  it("revokes the stored pair before clearing the session", async () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     document.cookie = "bkn_access_token=access-for-logout; path=/";
+    document.cookie = "bkn_refresh_token=refresh-for-logout; path=/";
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(null, { status: 204 }));
@@ -198,10 +200,12 @@ describe("oauth", () => {
       "/api/safe/v1/me/logout",
       expect.objectContaining({
         method: "POST",
-        headers: { Authorization: "Bearer access-for-logout" },
-        keepalive: true,
+        headers: { Authorization: "Bearer access-for-logout", "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: "refresh-for-logout" }),
+        signal: expect.any(AbortSignal) as unknown,
       }),
     );
+    expect(isLogoutInProgress()).toBe(true);
   });
 
   it("gives up on a token refresh that never answers", async () => {
@@ -226,6 +230,23 @@ describe("oauth", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("revokes a remaining refresh token when the access cookie is absent", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_refresh_token=remaining-refresh; path=/";
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    await logout("standalone");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/safe/v1/me/logout",
+      expect.objectContaining({
+        body: JSON.stringify({ refresh_token: "remaining-refresh" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    expect(document.cookie).not.toContain("bkn_refresh_token");
   });
 
   // hydra rotates refresh tokens: a second refresh with the same token would be
@@ -280,17 +301,108 @@ describe("oauth", () => {
     expect(window.sessionStorage.getItem("bkn_oauth_return_to")).toBe("/studio/projects");
   });
 
-  it("does not block logout when the access audit request never resolves", async () => {
+  it("waits for revocation, shares concurrent sign-outs and preserves credentials on failure", async () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
-    document.cookie = "bkn_access_token=access-for-pending-audit; path=/";
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
+    document.cookie = "bkn_access_token=access-pending; path=/";
+    document.cookie = "bkn_refresh_token=refresh-pending; path=/";
+    let finish!: (response: Response) => void;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const first = logout("standalone");
+    expect(logout("standalone")).toBe(first);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(isLogoutInProgress()).toBe(true);
+    expect(document.cookie).toContain("bkn_access_token=access-pending");
+    await expect(refreshOAuthTokens()).resolves.toBeNull();
+    finish(new Response(null, { status: 503 }));
+    await expect(first).rejects.toThrow("not confirmed");
+    expect(document.cookie).toContain("bkn_refresh_token=refresh-pending");
+    expect(isLogoutInProgress()).toBe(false);
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    await logout("standalone");
+    expect(document.cookie).not.toContain("bkn_access_token");
+    expect(document.cookie).not.toContain("bkn_refresh_token");
+  });
 
-    await expect(
-      Promise.race([
-        logout("standalone"),
-        new Promise((resolve) => window.setTimeout(() => resolve("timed-out"), 25)),
-      ]),
-    ).resolves.not.toBe("timed-out");
+  it("times out revocation without claiming success or erasing retry credentials", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    vi.useFakeTimers();
+    try {
+      document.cookie = "bkn_access_token=access-stalled; path=/";
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            );
+          }),
+      );
+      const result = logout("standalone");
+      const rejected = expect(result).rejects.toThrow("aborted");
+      await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+      await rejected;
+      expect(document.cookie).toContain("bkn_access_token=access-stalled");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("revokes the rotated pair when sign-out starts during refresh", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    document.cookie = "bkn_access_token=old-access; path=/";
+    document.cookie = "bkn_refresh_token=old-refresh; path=/";
+    let finish!: (response: Response) => void;
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const refreshing = refreshOAuthTokens();
+    const leaving = logout("standalone");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    finish(
+      new Response(JSON.stringify({ access_token: "new-access", refresh_token: "new-refresh" }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await refreshing;
+    await leaving;
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/safe/v1/me/logout",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer new-access" }) as unknown,
+        body: JSON.stringify({ refresh_token: "new-refresh" }),
+      }),
+    );
+    expect(document.cookie).not.toContain("bkn_access_token");
+  });
+
+  it("does not restore a session cleared by another tab during refresh", async () => {
+    document.cookie = "bkn_refresh_token=old-refresh; path=/";
+    let finish!: (response: Response) => void;
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const refreshing = refreshOAuthTokens();
+    document.cookie = "bkn_refresh_token=; path=/; max-age=0";
+    finish(
+      new Response(JSON.stringify({ access_token: "late-access", refresh_token: "late-refresh" }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await expect(refreshing).resolves.toBeNull();
+    expect(document.cookie).not.toContain("bkn_access_token");
   });
 });
 
