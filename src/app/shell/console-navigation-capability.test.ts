@@ -160,7 +160,7 @@ describe("filterNavByCapability", () => {
   });
 
   // Installed but not licensed: the entry stays and names the edition that unlocks it.
-  it("Workshop 入口:装了没买 → 保留并标出专业版", () => {
+  it("Workshop 入口:装了没买 → 保留并标出企业版", () => {
     const workshop = consoleNavigation.filter((item) => item.key === "workshop");
     const result = filterNavByCapability(
       workshop,
@@ -169,7 +169,7 @@ describe("filterNavByCapability", () => {
 
     expect(result.map((item) => item.key)).toEqual(["workshop"]);
     expect(result[0]?.locked).toBe(true);
-    expect(result[0]?.lockedEdition).toBe("professional");
+    expect(result[0]?.lockedEdition).toBe("enterprise");
   });
 
   // Workshop answers to its own key, the one bkn-safe-ee checks, not the graph explorer's.

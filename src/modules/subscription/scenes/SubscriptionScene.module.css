@@ -316,3 +316,8 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+/* 卡片上「规划中」标签与能力名之间留一点空隙;对比表里 antd Tag 自带间距。 */
+.plannedTag {
+  margin-inline-start: 6px;
+}

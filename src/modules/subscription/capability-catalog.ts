@@ -16,14 +16,22 @@ import type { Edition } from "@/framework/entitlement/edition";
  * **产品自带、不在运行时去拉**——决策 7:客户常常完全离线,而离线激活流程正是为拉不到
  * license-server 的客户存在的,那些客户同样拉不到名字。
  *
- * 只收对客户在售的行。`planned`(multi_tenant / version_mgmt /
- * offline_bundle / bigdata_connect,以及上游 e8fdf2f 退回 planned 的 audit /
+ * 只收对客户在售的行。`planned`(multi_tenant / offline_bundle /
+ * bigdata_connect,以及上游 e8fdf2f 退回 planned 的 audit /
  * ops_dashboard / branding——EE 侧从未实现)一条都不进。`impact_graph` 与
  * `source_sync` 同样不进:登记表里是 active,但这一版产品里没有对应功能,列出来就是在卖
  * 交付不了的东西——登记表管的是「在售能力集」,产品页管的是「这一版真有什么」,两者不
  * 一致时以后者为准。
  * 登记表里它们存在是为了让路线图落在表里而不是散文里,对客户不可见——写进版本对比页
  * 就是在卖还没有的东西。
+ *
+ * 另一种例外是标了 `planned: true` 的行:产品决定把路线图上的企业运维能力摆出来,页面明确标
+ * 「规划中」,不标「新增」——写清楚「还没有」,就不算在卖还没有的东西(2026-11-19)。
+ *
+ * 反方向的例外与 business_provenance 同一种:产品已经决定按某档在售、页面上已有入口,登记表
+ * 还没跟上(2026-11-19 版本划分):knowledge_base / analysis_canvas / version_mgmt 上游仍是
+ * planned,bkn_project / risk_control 上游还没有这一行。页面先按在售展示,登记表另行补登记、
+ * 转 active。
  *
  * `key` 与 `minEdition` 在登记表里创建后不可改(改 key 会让存量证的那一项失去对应,
  * 改 minEdition 等于静默改动合同范围),所以这份快照对齐它们即可,名称与描述走 i18n。
@@ -51,6 +59,11 @@ export type CapabilityCatalogEntry = {
   reportedByEndpoint: boolean;
   /** 首次可签发的产品版本。有值时列表里标「新增」。 */
   sinceVersion?: string;
+  /**
+   * 上游登记表里仍是 planned、这一版还没有交付的能力。页面上标「规划中」;不带 sinceVersion,
+   * 也不该被任何入口拿去门控。
+   */
+  planned?: true;
 };
 
 /** 分组展示顺序。与登记表的 `sort_order` 同序:先专业档,后企业档。 */
@@ -115,19 +128,34 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.1",
   },
   {
-    // Studio provides the page; bkn-backend-ee enforces the Professional license.
-    // bkn-safe does not report Eval, so endpoint absence is not an installation verdict.
-    category: "semantic",
-    key: CAPABILITIES.EVAL,
+    // BKN 项目管理整体归专业档(2026-11-19)。上游登记表还没有这一行,也没有服务登记装配表,
+    // 端点报不出,只能按证书档位判。
+    category: "modeling",
+    key: "bkn_project",
     reportedByEndpoint: false,
     minEdition: "professional",
     sinceVersion: "0.2.2",
   },
   {
-    // 页面在企业版前端镜像,服务是 openbkn-ee 的 workshop;bkn-safe-ee 登记进装配表,端点报得出。
+    // 知识库与 BKN 项目里的知识库扩展同一个 key(bkn-foundry#2522)。分在建模组:对客户来说
+    // 它是「项目管理支持知识库」。
+    //
+    // bkn-safe-ee 的 knowledgebase.Setup 经 authzresource.RequireEdition 登记(socket 顺带
+    // MarkAssembled),端点其实报得出;这里仍标 false,沿用进目录之前的判定(按证书档位):
+    // 社区构建保留了知识库的 Beta / 专业版入口,专业证配社区镜像时不该被标成待购买。
+    // 要改成按端点实况判,连同侧栏徽标(SideNav.test「knowledge base sidebar labels」)一起改。
+    category: "modeling",
+    key: CAPABILITIES.KNOWLEDGE_BASE,
+    reportedByEndpoint: false,
+    minEdition: "professional",
+    sinceVersion: "0.2.2",
+  },
+  {
+    // Studio provides the page; bkn-backend-ee enforces the Professional license.
+    // bkn-safe does not report Eval, so endpoint absence is not an installation verdict.
     category: "semantic",
-    key: CAPABILITIES.WORKSHOP,
-    reportedByEndpoint: true,
+    key: CAPABILITIES.EVAL,
+    reportedByEndpoint: false,
     minEdition: "professional",
     sinceVersion: "0.2.2",
   },
@@ -161,12 +189,62 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     minEdition: "enterprise",
   },
   {
+    // 风险管控:知识网络的权限矩阵与行动类的执行管控。上游登记表还没有这一行,也没有服务登记
+    // 装配表,端点报不出,只能按证书档位判。
+    category: "permission",
+    key: "risk_control",
+    reportedByEndpoint: false,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
+  },
+  {
+    // 知识网络版本管理(草稿、发布、比较、回退)。上游登记表里是 planned 的 version_mgmt;
+    // 没有服务登记装配表,端点报不出。
+    category: "modeling",
+    key: "version_mgmt",
+    reportedByEndpoint: false,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
+  },
+  {
+    // 应用工坊整体归企业档(2026-11-19),方案推演、模型试算与执行行动都在这一行里,不另列
+    // scenario。页面在企业版前端镜像,服务是 openbkn-ee 的 workshop;bkn-safe-ee 登记进装配表,
+    // 端点报得出。
+    //
+    // 上游登记表与 bkn-safe-ee 的 workshop.MinEdition 此刻仍是 professional;这里先改展示
+    // (版本页、锁定徽标与升级页上写的档位),实际放行仍由服务端按专业档判。登记表那一行还是
+    // planned、没签进过证书,可以按 reconcileTierCorrections 的做法改档。
+    category: "semantic",
+    key: CAPABILITIES.WORKSHOP,
+    reportedByEndpoint: true,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
+  },
+  {
+    // 分析画布:页面在企业版前端镜像,分析由 Workshop 服务保存;bkn-safe-ee 的
+    // analysiscanvas.Setup 登记装配表,端点报得出。
+    category: "semantic",
+    key: "analysis_canvas",
+    reportedByEndpoint: true,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
+  },
+  {
     category: "observability",
     key: CAPABILITIES.BUSINESS_PROVENANCE,
     // 上游状态仍是 planned,没有真实现,端点里自然没有它;今天由前端按档位判。
     reportedByEndpoint: false,
     minEdition: "enterprise",
     sinceVersion: "0.1.3",
+  },
+  // 规划中的放在最后(2026-11-19):卡片和对比表都按这份顺序排。企业档运维看板,上游登记表里
+  // 是 planned 的 ops_dashboard,这一版还没有,页面标「规划中」。
+  {
+    category: "operations",
+    key: "ops_dashboard",
+    planned: true,
+    reportedByEndpoint: false,
+    minEdition: "enterprise",
   },
 ];
 
