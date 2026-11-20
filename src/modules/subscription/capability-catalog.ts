@@ -151,7 +151,7 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     //
     // bkn-safe-ee 的 knowledgebase.Setup 经 authzresource.RequireEdition 登记(socket 顺带
     // MarkAssembled),端点其实报得出;这里仍标 false,沿用进目录之前的判定(按证书档位):
-    // 社区构建保留了知识库的 Beta / 专业版入口,专业证配社区镜像时不该被标成待购买。
+    // 社区构建保留了知识库的专业版入口,专业证配社区镜像时不该被标成待购买。
     // 要改成按端点实况判,连同侧栏徽标(SideNav.test「knowledge base sidebar labels」)一起改。
     category: "modeling",
     key: CAPABILITIES.KNOWLEDGE_BASE,
