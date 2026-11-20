@@ -49,7 +49,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ runtimeConfig: { currentUser: { id: "me" } } }),
 }));
 
-const kbModeMock = vi.hoisted(() => ({ mode: "hidden" as "hidden" | "enabled" }));
+const kbModeMock = vi.hoisted((): { mode: "hidden" | "enabled" } => ({ mode: "hidden" }));
 vi.mock("@/framework/entitlement/bkn-project-kb-mode", () => ({
   useBknProjectKbMode: () => kbModeMock.mode,
 }));
