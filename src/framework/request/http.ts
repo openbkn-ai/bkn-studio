@@ -105,6 +105,19 @@ async function refreshAccessToken(tokenManager: TokenManager) {
   return refreshPromise;
 }
 
+/**
+ * Renews the sign-in before starting work that goes on as the user long after the request that
+ * starts it, such as a release regression, so the work starts with as much sign-in time as the
+ * session can give. It never fails: without a renewal the current sign-in is used as it is.
+ */
+export async function renewSignIn(): Promise<void> {
+  const { tokenManager } = getRuntimeConfig().auth;
+  if (isSessionEnded(tokenManager)) {
+    return;
+  }
+  await refreshAccessToken(tokenManager).catch(() => null);
+}
+
 function endSession(tokenManager: TokenManager) {
   if (isSessionEnded(tokenManager) || tokenManager.shouldHandleAuthFailure?.() === false) {
     return;

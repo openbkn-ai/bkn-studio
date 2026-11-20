@@ -10,7 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AxiosAdapter } from "axios";
 
 import { logout } from "@/framework/auth/oauth";
-import { AUTH_REFRESH_TIMEOUT_MS, http, setRequestErrorHandler } from "@/framework/request/http";
+import {
+  AUTH_REFRESH_TIMEOUT_MS,
+  http,
+  renewSignIn,
+  setRequestErrorHandler,
+} from "@/framework/request/http";
 import { transformPrecisionSafeJSONRequest } from "@/framework/request/precision-safe-json";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
@@ -188,6 +193,52 @@ describe("http request headers", () => {
       expect(rejected).toHaveBeenCalledTimes(failure === "rejected-after-refresh" ? 2 : 1);
     },
   );
+
+  it("renews the sign-in once and uses the renewed token on the next request", async () => {
+    let token = "old-token";
+    const refreshAccessToken = vi.fn(() => {
+      token = "renewed-token";
+      return Promise.resolve(token);
+    });
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: { tokenManager: { getAccessToken: () => token, refreshAccessToken } },
+      }),
+    );
+
+    await renewSignIn();
+    await http.get("/bkn-project/v1/projects", { adapter });
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(adapter.mock.calls[0]?.[0].headers.get("Authorization")).toBe("Bearer renewed-token");
+  });
+
+  it("keeps the current sign-in when renewing it fails or never answers", async () => {
+    const failing = vi.fn().mockRejectedValue(new Error("refresh refused"));
+    setRuntimeConfig(
+      createRuntimeConfig({
+        auth: { tokenManager: { getAccessToken: () => "token", refreshAccessToken: failing } },
+      }),
+    );
+    await expect(renewSignIn()).resolves.toBeUndefined();
+    expect(failing).toHaveBeenCalledTimes(1);
+
+    vi.useFakeTimers();
+    try {
+      const hanging = vi.fn(() => new Promise<string | null>(() => {}));
+      setRuntimeConfig(
+        createRuntimeConfig({
+          auth: { tokenManager: { getAccessToken: () => "token", refreshAccessToken: hanging } },
+        }),
+      );
+      const renewed = renewSignIn();
+      await vi.advanceTimersByTimeAsync(AUTH_REFRESH_TIMEOUT_MS);
+      await expect(renewed).resolves.toBeUndefined();
+      expect(hanging).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it("ends the session when the token refresh never answers", async () => {
     vi.useFakeTimers();
