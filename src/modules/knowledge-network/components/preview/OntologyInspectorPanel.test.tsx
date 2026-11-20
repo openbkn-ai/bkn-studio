@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -31,7 +31,9 @@ vi.mock(
   }),
 );
 
+import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { renderWithoutAntdStyles } from "@/test/render-without-antd-styles";
+import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeRecord,
@@ -156,5 +158,36 @@ describe("OntologyInspectorPanel", () => {
     // The panel is narrow: cardinality shows in the relation's own drawer instead.
     expect(screen.queryByText(/^[1N]:[1N]$/)).toBeNull();
     expect(screen.getByText("入院（旧）")).toHaveAttribute("title", "入院（旧）");
+  });
+
+  it("leads each property with its display name and keeps the name beside it", async () => {
+    const property = {
+      displayKey: false,
+      incrementalKey: false,
+      primaryKey: false,
+      type: "string",
+    };
+    const dataProperties: ObjectTypeDataProperty[] = [
+      { ...property, displayName: "审核日期", name: "auditdate", type: "timestamp" },
+      // No display name, or the same as the name: the name shows once.
+      { ...property, displayName: "", name: "billno" },
+      { ...property, displayName: "id", name: "id", primaryKey: true },
+    ];
+    vi.mocked(getKnowledgeNetworkObjectTypeDetail).mockResolvedValueOnce({
+      ...objectTypes[0],
+      dataProperties,
+      displayKey: "",
+      incrementalKey: "",
+      logicProperties: [],
+      operations: [],
+      primaryKeys: ["id"],
+    });
+    renderPanel("patient");
+
+    const row = (await screen.findByText("审核日期")).closest("div");
+    expect(row?.textContent).toBe("审核日期auditdatetimestamp");
+    await waitFor(() => expect(screen.getAllByText("billno")).toHaveLength(1));
+    expect(screen.getAllByText("id")).toHaveLength(1);
+    expect(screen.getByText("id").parentElement?.textContent).toBe("idPK");
   });
 });
