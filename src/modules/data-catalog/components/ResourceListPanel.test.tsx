@@ -705,6 +705,30 @@ describe("ResourceListPanel", () => {
     expect(screen.queryByText("dataCatalog.resource.rowCount")).toBeNull();
   });
 
+  it("shows different tags for read-only and stale local indexes", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        missingResource({
+          id: "readonly-resource",
+          localIndexName: "readonly-index",
+          localIndexStatus: "readonly",
+        }),
+        missingResource({
+          id: "stale-resource",
+          localIndexName: "stale-index",
+          localIndexStatus: "stale",
+        }),
+      ],
+      total: 2,
+    });
+    renderPanel(catalog);
+
+    expect(
+      await screen.findByText("dataCatalog.resource.localIndexStatuses.readonly"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("dataCatalog.resource.localIndexStatuses.stale")).toBeInTheDocument();
+  });
+
   it("omits Dataset discovery and source status even when legacy values exist", async () => {
     listCatalogResourcePageMock.mockResolvedValue({
       items: [missingResource({ category: "dataset", statusMessage: "legacy source error" })],

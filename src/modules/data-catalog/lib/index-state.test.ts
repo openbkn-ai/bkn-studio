@@ -56,6 +56,29 @@ describe("indexStateOf · stopping and cancelled tasks", () => {
     expect(indexStateOf([], "available").key).toBe("built");
   });
 
+  it("keeps a read-only index serving while a rebuild runs or fails", () => {
+    const previous = buildTask("completed", { createTime: 1, id: "completed" });
+    const rebuilding = buildTask("running", { createTime: 2, id: "rebuilding" });
+    const failed = buildTask("failed", { createTime: 3, id: "failed" });
+
+    expect(indexStateOf([], "readonly").key).toBe("built");
+    expect(indexStateOf([previous, rebuilding], "readonly")).toEqual({
+      key: "rebuilding",
+      latest: rebuilding,
+      effective: previous,
+    });
+    expect(indexStateOf([previous, failed], "readonly")).toEqual({
+      key: "failed-stale",
+      latest: failed,
+      effective: previous,
+    });
+    expect(indexStateOf([previous, rebuilding], "stale")).toEqual({
+      key: "building",
+      latest: rebuilding,
+      effective: null,
+    });
+  });
+
   it("uses Resource availability for every terminal task status", () => {
     expect(indexStateOf([buildTask("cancelled")], "unavailable").key).toBe("none");
     expect(indexStateOf([buildTask("completed")], "available").key).toBe("built");

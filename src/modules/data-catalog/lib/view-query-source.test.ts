@@ -23,6 +23,12 @@ describe("sourceFilterQueryPath", () => {
       { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
       "managed_local_index",
     ],
+    [{ category: "table", localIndexStatus: "readonly" }, "source"],
+    [
+      { category: "table", localIndexStatus: "readonly", localIndexName: "idx_orders" },
+      "managed_local_index",
+    ],
+    [{ category: "table", localIndexStatus: "stale", localIndexName: "idx_orders" }, "source"],
     [{ category: "index", localIndexStatus: "unavailable" }, "local_index"],
   ] as const)("uses %j as the %s channel", (source, expected) => {
     expect(sourceFilterQueryPath(source)).toBe(expected);

@@ -731,8 +731,9 @@ describe("ResourceDetailPanel", () => {
   it.each([
     { category: "index", localIndexStatus: "unavailable", localIndexName: undefined },
     { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
+    { category: "table", localIndexStatus: "readonly", localIndexName: "idx_orders" },
   ] as const)(
-    "uses the index channel to show a legacy before condition for $category",
+    "uses the index channel to show a legacy before condition for $category $localIndexStatus",
     async (sourceState) => {
       const filter = { field: "at", operation: "before", value: [3, "2026-10-30T00:00:00Z"] };
       getCatalogResourceMock.mockResolvedValue({

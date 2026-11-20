@@ -331,6 +331,18 @@ export const dataCatalogEnUS = {
         suggestion:
           "Check the resource build key or primary-key mapping, save the index configuration, then rebuild.",
       },
+      incrementalRecovery: {
+        title: "Incremental cursor recovery failed",
+        unsupportedFieldMessage: "One or more cursor fields cannot be used for automatic recovery.",
+        queryFailedMessage: "Vega could not query the published index.",
+        invalidCursorMessage: "The indexed values cannot form a valid incremental cursor.",
+        unknownMessage: "Vega could not recover the incremental cursor from the published index.",
+        fullBuildSuggestion: "Make sure an incremental key is configured, then run a full build.",
+        queryFailedSuggestion:
+          "Check that the published index is available, then retry the incremental build.",
+        unknownSuggestion:
+          "Check that the published index is available, then retry the incremental build. If recovery still fails, configure an incremental key and run a full build.",
+      },
       unknown: {
         title: "Build task failed",
         message: "The backend returned an uncategorized error. See the raw error for details.",
@@ -653,6 +665,7 @@ export const dataCatalogEnUS = {
       indexName: "Local Index Name",
       localIndexStatuses: {
         available: "Available",
+        readonly: "Read-only",
         stale: "Stale",
         unavailable: "Unavailable",
       },
@@ -911,7 +924,13 @@ export const dataCatalogEnUS = {
         "Sync all rows from the source and rebuild the index. Use it for first builds or full refreshes.",
       executeIncremental: "Incremental",
       executeIncrementalDescription:
-        "Continue from the build-key checkpoint and process only new or changed rows.",
+        "If the cursor is missing, Vega tries to recover it from the published index after the task is queued. Recovery supports signed and unsigned integer primary keys and integer, date, or date-time incremental fields. See the task details if recovery fails. Changes at or before the cursor and source deletions may be missing from the index.",
+      incrementalNeedsPublishedIndex:
+        "Incremental builds require an available published index. Configure an incremental key and complete a full build first.",
+      incrementalRequiresFullRebuild:
+        "The published index is read-only. Run a full build before starting an incremental build.",
+      fullBuildWithoutIncrementalKey:
+        "Without an incremental key, only full builds are available. Source changes during the build may be missing from the index.",
       schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet. Run discovery to retrieve its schema.",
       fulltextTypeHint: "Text-type fields only",
@@ -968,7 +987,7 @@ export const dataCatalogEnUS = {
       configChecking: "Checking",
       configCannotBuild: "Configuration incomplete",
       primaryKeyRequired: "Primary key is not configured",
-      incrementalKeyRequired: "Incremental key is not configured",
+      incrementalKeyRequired: "Configure an incremental key to run an incremental build.",
       notConfigured: "Not configured",
       resourceDefaultsTitle: "Resource Defaults",
       resourceDefaultsHint: "Features use these defaults when no override is selected.",
@@ -1035,8 +1054,6 @@ export const dataCatalogEnUS = {
       savedAnalyzerUnavailable:
         "Saved analyzer configuration is unavailable: {{analyzers}}. Choose an available analyzer to continue.",
       fieldsRequired: "Configure at least one keyword, full-text, or vector feature.",
-      keyFieldsRequired:
-        "Batch mode requires both primary-key and incremental fields. Select them under Configure Index.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
       noModels:

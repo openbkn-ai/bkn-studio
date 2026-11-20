@@ -28,6 +28,7 @@ import {
 import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
+import { isLocalIndexReadable } from "@/modules/data-catalog/lib/index-state";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import {
@@ -372,6 +373,7 @@ function normalizeResourceStatus(value?: string): CatalogResource["status"] {
 function normalizeLocalIndexStatus(value?: string): CatalogResource["localIndexStatus"] {
   switch (value) {
     case "available":
+    case "readonly":
     case "stale":
     case "unavailable":
       return value;
@@ -1322,7 +1324,7 @@ export async function previewCatalogResource(
     const usesLocalIndex =
       !query.ignoreLocalIndex &&
       physicalResource.category === "table" &&
-      physicalResource.localIndexStatus === "available" &&
+      isLocalIndexReadable(physicalResource.localIndexStatus) &&
       Boolean(physicalResource.localIndexName);
     const usesIndexFilters =
       physicalResource.category === "dataset" ||

@@ -584,6 +584,33 @@ describe("ResourceIndexPanel", () => {
     expect(container.textContent).not.toContain("dataCatalog.resource.effectiveActive");
   });
 
+  it.each([
+    { status: "readonly", label: "localIndexStatuses.readonly" },
+    { status: "stale", label: "noEffectiveIndex" },
+  ] as const)(
+    "reports the $status index while a replacement is being built",
+    ({ status, label }) => {
+      render(
+        <MemoryRouter>
+          <ResourceIndexPanel
+            active
+            catalog={manageableCatalog}
+            indexView="tasks"
+            indexViewExplicit
+            onIndexViewChange={vi.fn()}
+            onRefresh={vi.fn()}
+            resource={{ ...resource, localIndexName: "orders-local", localIndexStatus: status }}
+            tasks={[buildTask({ mode: "batch", status: "running" })]}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(
+        screen.getByText(`dataCatalog.resource.${label}`, { exact: false }),
+      ).toBeInTheDocument();
+    },
+  );
+
   it("uses the shared colored status tag and an overflow action menu", async () => {
     const historyTasks = [
       buildTask({ id: "completed-task", status: "completed" }),

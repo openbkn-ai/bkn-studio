@@ -1157,6 +1157,41 @@ describe("resource.service · listCatalogResourcePage", () => {
     expect(result.items[0]?.updateTime).not.toBe("");
   });
 
+  it("keeps read-only and stale local index states distinct in API results", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "table",
+            id: "readonly-resource",
+            index_name: "readonly-index",
+            local_status: "readonly",
+            name: "orders",
+          },
+          {
+            catalog_id: "cat-1",
+            category: "table",
+            id: "stale-resource",
+            index_name: "stale-index",
+            local_status: "stale",
+            name: "invoices",
+          },
+        ],
+        total_count: 2,
+      },
+    });
+    const { listCatalogResourcePage } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    const result = await listCatalogResourcePage({ limit: 10 });
+
+    expect(result.items).toMatchObject([
+      { id: "readonly-resource", localIndexName: "readonly-index", localIndexStatus: "readonly" },
+      { id: "stale-resource", localIndexName: "stale-index", localIndexStatus: "stale" },
+    ]);
+  });
+
   it("preserves missing operations for fail-closed authorization checks", async () => {
     getMock.mockResolvedValue({
       data: {

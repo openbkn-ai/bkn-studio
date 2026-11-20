@@ -18,7 +18,11 @@ export function sortTasks(tasks: BuildTask[]) {
   return [...tasks].sort((left, right) => right.createTime - left.createTime);
 }
 
-/** Most recent task that can supply historical display context for an available Resource index. */
+export function isLocalIndexReadable(status: ResourceLocalIndexStatus | undefined): boolean {
+  return status === "available" || status === "readonly";
+}
+
+/** Most recent task that can supply historical display context for a readable Resource index. */
 export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
   return (
     sortTasks(tasks).find(
@@ -40,13 +44,14 @@ export function indexStateOf(
 ): IndexState {
   const sorted = sortTasks(tasks);
   const latest = sorted[0] ?? null;
-  // Resource local_index_status is the source of truth for query availability. A task is only
+  // Resource local_status is the source of truth for query availability. A task is only
   // retained here as optional display context for history and progress.
-  const effective = localIndexStatus === "available" ? effectiveIndexOf(sorted) : null;
+  const readable = isLocalIndexReadable(localIndexStatus);
+  const effective = readable ? effectiveIndexOf(sorted) : null;
 
   if (!latest) {
     return {
-      key: localIndexStatus === "available" ? "built" : "none",
+      key: readable ? "built" : "none",
       latest: null,
       effective,
     };
@@ -54,7 +59,7 @@ export function indexStateOf(
 
   if (latest.status === "running" || latest.status === "pending" || latest.status === "stopping") {
     return {
-      key: localIndexStatus === "available" ? "rebuilding" : "building",
+      key: readable ? "rebuilding" : "building",
       latest,
       effective,
     };
@@ -62,14 +67,14 @@ export function indexStateOf(
 
   if (latest.status === "failed") {
     return {
-      key: localIndexStatus === "available" ? "failed-stale" : "failed",
+      key: readable ? "failed-stale" : "failed",
       latest,
       effective,
     };
   }
 
   return {
-    key: localIndexStatus === "available" ? "built" : "none",
+    key: readable ? "built" : "none",
     latest,
     effective,
   };
