@@ -29,12 +29,14 @@ import { temporalFilterValue } from "@/modules/data-catalog/lib/filter-temporal"
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import {
   emitMockChange,
   formatMockTimestamp,
   mockBuildTasks,
   mockBuildSchedules,
   mockResources,
+  mockApiDefinitions,
   mockDiscoverRecords,
   mockDiscoveringCatalogs,
   mockSlug,
@@ -333,7 +335,7 @@ function formatTimestamp(value?: number) {
 }
 
 function normalizeCategory(value?: string, logicalType?: string): ResourceCategory {
-  if (value === "logical_view" || value === "dataset" || value === "index") {
+  if (value === "api" || value === "logical_view" || value === "dataset" || value === "index") {
     return value;
   }
   if (logicalType) {
@@ -725,9 +727,9 @@ export async function updateCatalogResource(
   input: ResourceUpdateInput,
   options: { skipErrorToast?: boolean } = {},
 ) {
-  validateFieldFilterability(input.schema);
+  if (input.schema) validateFieldFilterability(input.schema);
   if (useMock) {
-    validateMockUpdateFilterability(input.schema);
+    if (input.schema) validateMockUpdateFilterability(input.schema);
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
@@ -761,9 +763,10 @@ export async function updateCatalogResource(
       ...current,
       description: input.description,
       name: input.name,
-      schema: input.schema,
+      tags: [...input.tags],
+      schema: input.schema ?? current.schema,
       indexConfig: input.indexConfig ?? current.indexConfig,
-      columnCount: input.schema.length,
+      columnCount: input.schema?.length ?? current.columnCount,
       expectedUpdateTime,
       updateTime: formatMockTimestamp(expectedUpdateTime),
     };
@@ -781,7 +784,10 @@ export async function updateCatalogResource(
       description: input.description,
       ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
       name: input.name,
-      schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
+      tags: input.tags,
+      ...(input.schema
+        ? { schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend) }
+        : {}),
       index_config: mapIndexConfigToBackend(input.indexConfig),
       expected_update_time: input.expectedUpdateTime,
       source_identifier: input.sourceIdentifier,
@@ -964,10 +970,20 @@ export async function deleteCatalogResource(
     if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
     }
+    const resource = mockResources[index];
+    if (
+      resource.category === "api" &&
+      !hasCatalogResourceOperation(projectMockResource(resource), "delete")
+    ) {
+      throwMockRequestError(
+        403,
+        "VegaBackend.Resource.Forbidden",
+        "Resource delete permission is required.",
+      );
+    }
     if (
       options.onlyIfStale &&
-      (mockResources[index].status !== "stale" ||
-        mockResources[index].lastDiscoverStatus !== "missing")
+      (resource.status !== "stale" || resource.lastDiscoverStatus !== "missing")
     ) {
       throwMockRequestError(
         409,
@@ -977,6 +993,7 @@ export async function deleteCatalogResource(
     }
     if (index >= 0) {
       mockResources.splice(index, 1);
+      mockApiDefinitions.delete(id);
     }
     for (let cursor = mockBuildSchedules.length - 1; cursor >= 0; cursor -= 1) {
       if (mockBuildSchedules[cursor].resourceId === id) {
@@ -1022,9 +1039,20 @@ export async function setCatalogResourceEnabled(id: string, enabled: boolean) {
     if (index < 0) {
       throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
     }
+    const resource = mockResources[index];
+    if (
+      resource.category === "api" &&
+      !hasCatalogResourceOperation(projectMockResource(resource), "modify")
+    ) {
+      throwMockRequestError(
+        403,
+        "VegaBackend.Resource.Forbidden",
+        "Resource modify permission is required.",
+      );
+    }
     const expectedUpdateTime = Date.now();
     const updated = {
-      ...mockResources[index],
+      ...resource,
       enabled,
       expectedUpdateTime,
       updateTime: formatMockTimestamp(expectedUpdateTime),

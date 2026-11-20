@@ -58,6 +58,8 @@ async function chooseType(path: string, type: string) {
 describe("request Body field cards", () => {
   it("enables an object Body and adds a string field without Schema controls", () => {
     const editor = renderBody();
+    const caption = screen.getByText(body, { exact: true });
+    fireEvent.click(caption);
     expect(editor.changed).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("switch", { name: body }));
     expect(editor.changed).toHaveBeenLastCalledWith({ body: { type: "object", properties: {} } });
@@ -66,18 +68,16 @@ describe("request Body field cards", () => {
     expect(screen.getByLabelText(fieldValue(`${body}.field`))).toHaveValue("");
     expect(screen.queryByText(title("schemaType"))).toBeNull();
     expect(screen.queryByText(title("addConstraint"))).toBeNull();
+    fireEvent.click(caption);
+    expect(screen.getByLabelText(fieldValue(`${body}.field`))).toBeVisible();
     fireEvent.click(screen.getByRole("switch", { name: body }));
     expect(editor.changed).toHaveBeenLastCalledWith({});
   });
 
-  it("selects a Catalog variable in the string value input", async () => {
+  it("accepts variable syntax in the string value input", () => {
     const editor = renderBody({ token: { type: "string", value: "" } });
-    const input = screen.getByLabelText(fieldValue(`${body}.token`));
-    fireEvent.focus(input);
-    fireEvent.change(input, { target: { value: "cred" } });
-    await screen.findByRole("option", { name: "{{ credential }}" });
-    fireEvent.keyDown(input, { key: "ArrowDown", keyCode: 40 });
-    fireEvent.keyDown(input, { key: "Enter", keyCode: 13 });
+    const input = screen.getByRole("textbox", { name: fieldValue(`${body}.token`) });
+    fireEvent.change(input, { target: { value: "{{ credential }}" } });
     expect(editor.properties()).toEqual({ token: { type: "string", value: "{{ credential }}" } });
   });
 

@@ -182,7 +182,9 @@ describe("DataConnectListScene object permissions", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    listDataConnectConnectorTypesMock.mockResolvedValue([]);
+    listDataConnectConnectorTypesMock.mockResolvedValue([
+      { type: "postgresql", available: true, enabled: true, supportDiscover: true },
+    ]);
     listDataConnectRecordsMock.mockResolvedValue({
       items: [
         record("catalog-view-only", ["view_detail"]),
@@ -237,6 +239,52 @@ describe("DataConnectListScene object permissions", () => {
       expect(onEdit).toHaveBeenCalledWith("catalog-manager");
     });
   });
+
+  it.each([
+    ["task_manage", false, true, true, false],
+    ["*", false, true, true, false],
+    ["task_manage", undefined, true, true, false],
+    ["task_manage", true, false, true, false],
+    ["task_manage", true, true, false, false],
+    ["task_manage", true, true, true, true],
+  ])(
+    "uses connector capability and availability for API discovery (%s, %s, %s, %s)",
+    async (operation, supportDiscover, available, enabled, showDiscover) => {
+      listDataConnectConnectorTypesMock.mockResolvedValue([
+        { type: "http", supportDiscover, available, enabled },
+        { type: "postgresql", available: true, enabled: true, supportDiscover: true },
+      ]);
+      listDataConnectRecordsMock.mockResolvedValue({
+        items: [
+          {
+            ...record("api-catalog", ["view_detail", "modify", operation]),
+            category: "api",
+            connectorType: "http",
+          },
+          record("database-catalog", ["view_detail", operation]),
+        ],
+        total: 2,
+      });
+      render(
+        <MemoryRouter>
+          <DataConnectListScene onEdit={onEdit} onOpenDiscovers={onOpenDiscovers} />
+        </MemoryRouter>,
+      );
+      const api = await screen.findByTestId("record-api-catalog");
+      const database = await screen.findByTestId("record-database-catalog");
+      const databaseDiscover = await within(database).findByRole("button", {
+        name: "dataConnect.discoverManage",
+      });
+      expect(
+        Boolean(within(api).queryByRole("button", { name: "dataConnect.discoverManage" })),
+      ).toBe(showDiscover);
+      expect(within(api).getByRole("button", { name: "common.detail" })).toBeVisible();
+      expect(within(api).getByRole("button", { name: "common.edit" })).toBeVisible();
+      expect(within(api).getByRole("button", { name: "common.testConnection" })).toBeVisible();
+      fireEvent.click(databaseDiscover);
+      expect(onOpenDiscovers).toHaveBeenCalledExactlyOnceWith("database-catalog");
+    },
+  );
 
   it("denies write menus on actual catalog responses selected for the mock viewer", async () => {
     vi.stubEnv("DEV", true);

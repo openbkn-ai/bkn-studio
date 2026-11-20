@@ -72,6 +72,9 @@ import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 
 import { ScheduleRunResultView } from "@/shared/schedule";
 
+import { supportsCatalogDiscovery } from "../lib/catalog-discovery";
+import { listDataConnectConnectorTypes } from "../services/data-connect.service";
+
 import styles from "./DataConnectDiscoverScene.module.css";
 
 type ScheduleModalState =
@@ -169,6 +172,7 @@ export function DataConnectDiscoverScene({
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
+  const [catalogDiscoveryUnavailable, setCatalogDiscoveryUnavailable] = useState(false);
   const [catalogAccessDenied, setCatalogAccessDenied] = useState(false);
   const [authorizedCatalogId, setAuthorizedCatalogId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -268,16 +272,29 @@ export function DataConnectDiscoverScene({
     const requestId = ++catalogRequestIdRef.current;
     setCatalogsLoaded(false);
     setCatalogAccessDenied(false);
+    setCatalogDiscoveryUnavailable(false);
     setAuthorizedCatalogId(null);
     setCatalogError(null);
 
     try {
       const catalog = await getCatalog(selectedCatalogId, { skipErrorToast: true });
       if (catalogRequestIdRef.current !== requestId) return;
-      const allowed = Boolean(catalog && hasCatalogOperation(catalog, "task_manage"));
-      setCatalogs(allowed && catalog ? [catalog] : []);
-      setCatalogAccessDenied(!allowed);
-      setAuthorizedCatalogId(allowed ? selectedCatalogId : null);
+      if (!catalog || !hasCatalogOperation(catalog, "task_manage")) {
+        setCatalogs([]);
+        setCatalogAccessDenied(true);
+        return;
+      }
+
+      const connectorTypes =
+        catalog.type === "logical"
+          ? []
+          : await listDataConnectConnectorTypes({ skipErrorToast: true });
+      if (catalogRequestIdRef.current !== requestId) return;
+
+      setCatalogs([catalog]);
+      const supported = supportsCatalogDiscovery(catalog, connectorTypes);
+      setCatalogDiscoveryUnavailable(!supported);
+      if (supported) setAuthorizedCatalogId(selectedCatalogId);
     } catch (error) {
       if (catalogRequestIdRef.current !== requestId) return;
       const accessDenied = isRequestForbidden(error);
@@ -1145,11 +1162,16 @@ export function DataConnectDiscoverScene({
     </div>
   );
 
-  const permissionDeniedPanel = (
+  const blockedMessage = catalogAccessDenied
+    ? t("dataConnect.permissionRequired")
+    : catalogDiscoveryUnavailable
+      ? t("dataConnect.discoverUnavailable")
+      : null;
+  const blockedPanel = blockedMessage ? (
     <div className={styles.tabPanel}>
-      <Alert message={t("dataConnect.permissionRequired")} showIcon type="warning" />
+      <Alert message={blockedMessage} showIcon type="warning" />
     </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -1190,12 +1212,12 @@ export function DataConnectDiscoverScene({
                   activeTaskCount > 0
                     ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
                     : t("dataConnect.discoverTabTasks"),
-                children: catalogAccessDenied ? permissionDeniedPanel : tasksPanel,
+                children: catalogAccessConfirmed ? tasksPanel : blockedPanel,
               },
               {
                 key: "schedules",
                 label: t("dataConnect.discoverTabSchedules"),
-                children: catalogAccessDenied ? permissionDeniedPanel : schedulesPanel,
+                children: catalogAccessConfirmed ? schedulesPanel : blockedPanel,
               },
             ]}
             onChange={(key) => {

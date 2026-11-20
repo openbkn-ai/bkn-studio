@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Input, Space, Switch, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
@@ -24,6 +24,7 @@ import { formatDateTime } from "@/framework/i18n/format";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
@@ -45,6 +46,11 @@ import type {
   ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
+import {
+  normalizeVegaTag,
+  validateVegaTag,
+  VEGA_TAGS_MAX_NUMBER,
+} from "@/shared/catalog/vega-tags";
 
 import styles from "./ResourceDetailPanel.module.css";
 
@@ -55,6 +61,8 @@ type ResourceDetailPanelProps = {
   onEditingChange?: (editing: boolean) => void;
   onResourceRefreshed?: (resource: CatalogResource) => void;
   onUpdated?: () => Promise<void> | void;
+  onEdit?: () => void;
+  sourceMetadataContent?: ReactNode;
   resource: CatalogResource;
 };
 
@@ -65,17 +73,22 @@ export function ResourceDetailPanel({
   onEditingChange,
   onResourceRefreshed,
   onUpdated,
+  onEdit,
+  sourceMetadataContent,
   resource: resourceProp,
 }: ResourceDetailPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
   const { snapshot } = useEntitlementContext();
+  const basicInfoId = useId();
   const [schemaPage, setSchemaPage] = useState(1);
   const [schemaPageSize, setSchemaPageSize] = useState(10);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"basic" | "fields" | "combined" | null>(null);
   const [saving, setSaving] = useState(false);
   const [resource, setResource] = useState(resourceProp);
+  const [nameDraft, setNameDraft] = useState(resourceProp.name);
+  const [tagsDraft, setTagsDraft] = useState(resourceProp.tags ?? []);
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
   const [filterSource, setFilterSource] = useState<CatalogResource | null>(null);
@@ -88,6 +101,9 @@ export function ResourceDetailPanel({
   const gate = resourceGateOf(catalog);
   const readOnly =
     isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logical_view";
+  const splitEditing = resource.category === "table";
+  const editingDescription = editing === "basic" || editing === "combined";
+  const editingFields = editing === "fields" || editing === "combined";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
   const fixedFilter = useMemo(
@@ -109,12 +125,14 @@ export function ResourceDetailPanel({
   }, [resourceProp]);
 
   useEffect(() => {
-    onEditingChange?.(editing);
+    onEditingChange?.(editing !== null);
   }, [editing, onEditingChange]);
 
   useEffect(() => {
     if (!active || readOnly) {
-      setEditing(false);
+      setEditing(null);
+      setNameDraft(resource.name);
+      setTagsDraft(resource.tags ?? []);
       setDescriptionDraft(resource.description);
       setSchemaDraft(resource.schema);
     }
@@ -143,8 +161,10 @@ export function ResourceDetailPanel({
   }, [resource.category, resource.logicalViewDefinition?.sourceResourceId]);
 
   useEffect(() => {
-    setEditing(false);
+    setEditing(null);
     setSaving(false);
+    setNameDraft(resource.name);
+    setTagsDraft(resource.tags ?? []);
     setDescriptionDraft(resource.description);
     setSchemaDraft(resource.schema);
   }, [resource]);
@@ -175,8 +195,24 @@ export function ResourceDetailPanel({
     [resource.schema, schemaDraft],
   );
 
-  const basicInfoDirty = descriptionDraft.trim() !== resource.description.trim();
-  const hasDirtyChanges = basicInfoDirty || modifiedFieldCount > 0;
+  const descriptionDirty = descriptionDraft.trim() !== resource.description.trim();
+  const nameDirty = nameDraft.trim() !== resource.name.trim();
+  const tags = resource.tags ?? [];
+  const tagsDirty = tagsDraft.length !== tags.length || tagsDraft.some((tag, i) => tag !== tags[i]);
+  const modifiedCount =
+    (editingDescription ? Number(descriptionDirty) : 0) +
+    (editing === "basic" ? Number(nameDirty) + Number(tagsDirty) : 0) +
+    (editingFields ? modifiedFieldCount : 0);
+  const nameError = !nameDraft.trim()
+    ? t("common.required")
+    : Array.from(nameDraft.trim()).length > 255
+      ? t("dataCatalog.resource.nameLengthLimit")
+      : undefined;
+  const descriptionError =
+    Array.from(descriptionDraft.trim()).length > 1000
+      ? t("dataCatalog.viewEditor.descriptionLengthLimit")
+      : undefined;
+  const saveDisabled = !modifiedCount || (editing === "basic" && !!(nameError || descriptionError));
 
   const copyValue = async (label: string, value: string) => {
     try {
@@ -223,13 +259,15 @@ export function ResourceDetailPanel({
   };
 
   const handleRestoreAll = () => {
+    setNameDraft(resource.name);
+    setTagsDraft(resource.tags ?? []);
     setDescriptionDraft(resource.description);
     setSchemaDraft(resource.schema);
   };
 
   const handleCancel = () => {
     handleRestoreAll();
-    setEditing(false);
+    setEditing(null);
   };
 
   const isFieldDirty = (fieldIndex: number, key: "description" | "displayName") => {
@@ -239,7 +277,8 @@ export function ResourceDetailPanel({
   };
 
   const handleSave = async () => {
-    const unsupported = findUnsupportedFilterableField(schemaDraft);
+    if (saving || saveDisabled) return;
+    const unsupported = editingFields ? findUnsupportedFilterableField(schemaDraft) : undefined;
     if (unsupported) {
       void message.error(
         t("dataCatalog.resource.unsupportedFilterableField", {
@@ -257,19 +296,24 @@ export function ResourceDetailPanel({
       await updateCatalogResource(resource.id, {
         catalogId: resource.catalogId,
         category: resource.category,
-        description: descriptionDraft.trim(),
+        description: editingDescription ? descriptionDraft.trim() : resource.description,
         enabled: resource.enabled ?? true,
         expectedUpdateTime: resource.expectedUpdateTime,
-        name: resource.name,
-        schema: schemaDraft.map((field) => ({
-          ...field,
-          description: field.description?.trim() || undefined,
-          displayName: field.displayName?.trim() || undefined,
-        })),
+        name: editing === "basic" ? nameDraft.trim() : resource.name,
+        tags: editing === "basic" ? tagsDraft : tags,
+        ...(editingFields
+          ? {
+              schema: schemaDraft.map((field) => ({
+                ...field,
+                description: field.description?.trim() || undefined,
+                displayName: field.displayName?.trim() || undefined,
+              })),
+            }
+          : {}),
         sourceIdentifier: resource.sourceIdentifier,
       });
       void message.success(t("common.success"));
-      setEditing(false);
+      setEditing(null);
       await onUpdated?.();
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
@@ -294,6 +338,28 @@ export function ResourceDetailPanel({
     }
   };
 
+  const editingActions = (
+    <>
+      <span className={styles.editingMeta}>
+        {t("dataCatalog.resource.modifiedCount", { count: modifiedCount })}
+      </span>
+      <AppButton disabled={!modifiedCount || saving} onClick={handleRestoreAll}>
+        {t("dataCatalog.resource.restoreAll")}
+      </AppButton>
+      <AppButton disabled={saving} onClick={handleCancel}>
+        {t("common.cancel")}
+      </AppButton>
+      <AppButton
+        disabled={saveDisabled}
+        loading={saving}
+        onClick={() => void handleSave()}
+        type="primary"
+      >
+        {t("common.save")}
+      </AppButton>
+    </>
+  );
+
   const schemaColumns: ColumnsType<ResourceSchemaField> = [
     {
       dataIndex: "name",
@@ -304,8 +370,8 @@ export function ResourceDetailPanel({
       dataIndex: "displayName",
       title: t("dataCatalog.resource.fieldDisplayName"),
       width: "14%",
-      render: (value: string | undefined, _record, index) => {
-        if (!editing || index === undefined) {
+      render: (value: string | undefined, record, index) => {
+        if (!editingFields || index === undefined) {
           return value || "-";
         }
 
@@ -313,9 +379,11 @@ export function ResourceDetailPanel({
         return (
           <Input
             allowClear
+            aria-label={t("dataCatalog.resource.fieldDisplayNameLabel", { name: record.name })}
             className={`${styles.inlineInput} ${
               isFieldDirty(absoluteIndex, "displayName") ? styles.inlineInputDirty : ""
             }`}
+            disabled={saving}
             maxLength={255}
             onChange={(event) => {
               handleFieldChange(absoluteIndex, {
@@ -337,7 +405,7 @@ export function ResourceDetailPanel({
       title: t("dataCatalog.resource.fieldFilterable"),
       width: 100,
       render: (value: boolean | undefined, record, index) =>
-        editing ? (
+        editingFields ? (
           <Tooltip
             title={
               !canEnableFieldFiltering(record.type)
@@ -370,8 +438,8 @@ export function ResourceDetailPanel({
       dataIndex: "description",
       title: t("dataCatalog.resource.fieldDescription"),
       width: "18%",
-      render: (value: string | undefined, _record, index) => {
-        if (!editing || index === undefined) {
+      render: (value: string | undefined, record, index) => {
+        if (!editingFields || index === undefined) {
           return (
             <span className={styles.fieldDescription} title={value}>
               {value || "-"}
@@ -383,9 +451,11 @@ export function ResourceDetailPanel({
         return (
           <Input
             allowClear
+            aria-label={t("dataCatalog.resource.fieldDescriptionLabel", { name: record.name })}
             className={`${styles.inlineInput} ${
               isFieldDirty(absoluteIndex, "description") ? styles.inlineInputDirty : ""
             }`}
+            disabled={saving}
             maxLength={255}
             onChange={(event) => {
               handleFieldChange(absoluteIndex, {
@@ -449,28 +519,10 @@ export function ResourceDetailPanel({
         <div className={styles.sectionTitleRow}>
           <h3 className={styles.sectionTitle}>{t("common.basicInfo")}</h3>
           <div className={styles.sectionTools}>
-            {editing ? (
-              <>
-                <span className={styles.editingMeta}>
-                  {t("dataCatalog.resource.modifiedCount", {
-                    count: Number(basicInfoDirty) + modifiedFieldCount,
-                  })}
-                </span>
-                <AppButton disabled={!hasDirtyChanges || saving} onClick={handleRestoreAll}>
-                  {t("dataCatalog.resource.restoreAll")}
-                </AppButton>
-                <AppButton disabled={saving} onClick={handleCancel}>
-                  {t("common.cancel")}
-                </AppButton>
-                <AppButton
-                  disabled={!hasDirtyChanges}
-                  loading={saving}
-                  onClick={() => void handleSave()}
-                  type="primary"
-                >
-                  {t("common.save")}
-                </AppButton>
-              </>
+            {editingDescription ? (
+              editingActions
+            ) : onEdit && !readOnly ? (
+              <AppButton onClick={onEdit}>{t("common.edit")}</AppButton>
             ) : resource.category === "logical_view" &&
               resource.logicalType === "derived" &&
               !catalog?.builtin &&
@@ -485,30 +537,92 @@ export function ResourceDetailPanel({
                 {t("dataCatalog.viewEditor.edit")}
               </AppButton>
             ) : !readOnly ? (
-              <AppButton onClick={() => setEditing(true)}>
-                {t("dataCatalog.resource.editFields")}
+              <AppButton
+                disabled={editingFields || saving}
+                onClick={() => setEditing(splitEditing ? "basic" : "combined")}
+              >
+                {t(
+                  splitEditing
+                    ? "dataCatalog.resource.editBasicInfo"
+                    : "dataCatalog.resource.editFields",
+                )}
               </AppButton>
             ) : null}
           </div>
         </div>
-        {editing ? <p className={styles.editHint}>{t("dataCatalog.resource.editHint")}</p> : null}
+        {editing === "combined" ? (
+          <p className={styles.editHint}>{t("dataCatalog.resource.editHint")}</p>
+        ) : null}
         <div className={styles.basicInfo}>
           <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
             <span className={styles.basicInfoLabel}>ID</span>
             <span className={styles.basicInfoValue}>{renderCopyableValue("ID", resource.id)}</span>
           </div>
           <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.basicName")}</span>
-            <span className={styles.basicInfoValue}>
-              {renderCopyableValue(t("dataCatalog.resource.basicName"), resource.name)}
-            </span>
+            {editing === "basic" ? (
+              <>
+                <label className={styles.basicInfoLabel} htmlFor={`${basicInfoId}-name`}>
+                  {t("dataCatalog.resource.basicName")}
+                  <span aria-hidden="true" className={styles.requiredMark}>
+                    {" "}
+                    *
+                  </span>
+                </label>
+                <Input
+                  aria-describedby={nameError ? `${basicInfoId}-name-error` : undefined}
+                  aria-invalid={!!nameError}
+                  disabled={saving}
+                  id={`${basicInfoId}-name`}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  required
+                  status={nameError ? "error" : undefined}
+                  value={nameDraft}
+                />
+                {nameError ? (
+                  <span className={styles.fieldError} id={`${basicInfoId}-name-error`}>
+                    {nameError}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.basicName")}</span>
+                <span className={styles.basicInfoValue}>
+                  {renderCopyableValue(t("dataCatalog.resource.basicName"), resource.name)}
+                </span>
+              </>
+            )}
           </div>
           <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.tags")}</span>
-            <span className={styles.basicInfoValue}>
-              {resource.tags?.length ? (
+            <span className={styles.basicInfoLabel} id={`${basicInfoId}-tags`}>
+              {t("dataCatalog.resource.tags")}
+            </span>
+            <div className={styles.basicInfoValue}>
+              {editing === "basic" ? (
+                <>
+                  <LimitedTagsSelect
+                    aria-describedby={`${basicInfoId}-tags-hint`}
+                    aria-labelledby={`${basicInfoId}-tags`}
+                    disabled={saving}
+                    limit={VEGA_TAGS_MAX_NUMBER}
+                    limitMessage={t("dataCatalog.viewEditor.tagErrors.count")}
+                    normalizeTag={normalizeVegaTag}
+                    onChange={setTagsDraft}
+                    open={false}
+                    tokenSeparators={[","]}
+                    validateTag={(tag) => {
+                      const error = validateVegaTag(tag);
+                      return error ? t(`dataCatalog.viewEditor.tagErrors.${error}`) : null;
+                    }}
+                    value={tagsDraft}
+                  />
+                  <small id={`${basicInfoId}-tags-hint`}>
+                    {t("dataCatalog.resource.tagInputHint")}
+                  </small>
+                </>
+              ) : tags.length ? (
                 <Space size={[12, 8]} wrap>
-                  {resource.tags.map((tag) => (
+                  {tags.map((tag) => (
                     <Tag className={styles.resourceTag} key={tag}>
                       {tag}
                     </Tag>
@@ -517,20 +631,38 @@ export function ResourceDetailPanel({
               ) : (
                 "-"
               )}
-            </span>
+            </div>
           </div>
 
           <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.description")}</span>
-            <span className={styles.basicInfoValue}>
-              {editing ? (
-                <Input.TextArea
-                  autoSize={{ minRows: 2, maxRows: 4 }}
-                  className={`${styles.descriptionInput} ${basicInfoDirty ? styles.descriptionInputDirty : ""}`}
-                  maxLength={500}
-                  onChange={(event) => setDescriptionDraft(event.target.value)}
-                  value={descriptionDraft}
-                />
+            <span className={styles.basicInfoLabel} id={`${basicInfoId}-description`}>
+              {t("dataCatalog.resource.description")}
+            </span>
+            <div className={styles.basicInfoValue}>
+              {editingDescription ? (
+                <>
+                  <Input.TextArea
+                    aria-describedby={
+                      editing === "basic" && descriptionError
+                        ? `${basicInfoId}-description-error`
+                        : undefined
+                    }
+                    aria-invalid={editing === "basic" && !!descriptionError}
+                    aria-labelledby={`${basicInfoId}-description`}
+                    autoSize={{ minRows: 2, maxRows: 4 }}
+                    className={`${styles.descriptionInput} ${descriptionDirty ? styles.descriptionInputDirty : ""}`}
+                    disabled={saving}
+                    maxLength={editing === "combined" ? 500 : undefined}
+                    onChange={(event) => setDescriptionDraft(event.target.value)}
+                    status={editing === "basic" && descriptionError ? "error" : undefined}
+                    value={descriptionDraft}
+                  />
+                  {editing === "basic" && descriptionError ? (
+                    <div className={styles.fieldError} id={`${basicInfoId}-description-error`}>
+                      {descriptionError}
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <span
                   className={styles.basicInfoDescription}
@@ -539,7 +671,7 @@ export function ResourceDetailPanel({
                   {resource.description || "-"}
                 </span>
               )}
-            </span>
+            </div>
           </div>
 
           <div
@@ -564,7 +696,9 @@ export function ResourceDetailPanel({
               </Tag>
             </span>
           </div>
-          {resource.category !== "logical_view" && resource.category !== "dataset" ? (
+          {resource.category !== "api" &&
+          resource.category !== "logical_view" &&
+          resource.category !== "dataset" ? (
             <div
               className={`${styles.basicInfoItem} ${resource.category === "table" || resource.category === "index" ? styles.basicInfoQuarter : ""}`}
             >
@@ -629,12 +763,16 @@ export function ResourceDetailPanel({
                   )}
                 </span>
               </div>
-              <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-                <span className={styles.basicInfoLabel}>
-                  {t("dataCatalog.resource.statusMessage")}
-                </span>
-                <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
-              </div>
+              {resource.category !== "api" || resource.statusMessage ? (
+                <div
+                  className={`${styles.basicInfoItem} ${resource.category === "api" ? styles.basicInfoFull : styles.basicInfoSpanTwo}`}
+                >
+                  <span className={styles.basicInfoLabel}>
+                    {t("dataCatalog.resource.statusMessage")}
+                  </span>
+                  <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
+                </div>
+              ) : null}
             </>
           ) : null}
 
@@ -651,14 +789,18 @@ export function ResourceDetailPanel({
               )}
             </span>
           </div>
-          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+          <div
+            className={`${styles.basicInfoItem} ${resource.category === "api" ? styles.basicInfoHalf : styles.basicInfoQuarter}`}
+          >
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}</span>
             <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
           </div>
-          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
-            <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
-          </div>
+          {resource.category !== "api" ? (
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
+              <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
+            </div>
+          ) : null}
           {resource.category === "table" ||
           resource.category === "index" ||
           resource.category === "logical_view" ||
@@ -675,7 +817,7 @@ export function ResourceDetailPanel({
             </div>
           ) : null}
 
-          {resource.category !== "logical_view" ? (
+          {resource.category !== "api" && resource.category !== "logical_view" ? (
             <>
               <div className={styles.basicInfoItem}>
                 <span className={styles.basicInfoLabel}>
@@ -729,154 +871,176 @@ export function ResourceDetailPanel({
       {resource.category !== "dataset" ? (
         <div className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.sourceMetadata")}</h3>
-          <div className={styles.basicInfo}>
-            {resource.category === "logical_view" ? (
-              <div className={styles.basicInfoItem}>
-                <span className={styles.basicInfoLabel}>
-                  {t("dataCatalog.resource.viewSource")}
-                </span>
-                <span className={styles.basicInfoValue}>
-                  {resource.logicalViewDefinition?.sourceResourceId ? (
-                    <button
-                      className={styles.textLink}
-                      onClick={() => {
-                        void navigate(
-                          `/data-catalog/resource/${resource.logicalViewDefinition?.sourceResourceId}`,
-                        );
-                      }}
-                      type="button"
-                    >
-                      {resource.logicalViewDefinition.sourceResourceId}
-                    </button>
-                  ) : (
-                    "-"
-                  )}
-                </span>
-              </div>
-            ) : null}
-            <div className={styles.basicInfoItem}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.originalName")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.originalName || "-"}
-              </span>
-            </div>
-            {resource.category !== "logical_view" ? (
-              <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
-                <span className={styles.basicInfoLabel}>
-                  {t("dataCatalog.resource.originalDescription")}
-                </span>
-                <span className={styles.basicInfoValue}>
-                  <span
-                    className={styles.basicInfoDescription}
-                    title={resource.sourceMetadata?.originalDescription || undefined}
-                  >
-                    {resource.sourceMetadata?.originalDescription || "-"}
-                  </span>
-                </span>
-              </div>
-            ) : null}
-            <div
-              className={`${styles.basicInfoItem} ${resource.category === "logical_view" ? "" : styles.basicInfoQuarter}`}
-            >
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.sourceObjectType")}
-              </span>
-              <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.objectType
-                  ? t(
-                      `dataCatalog.resource.sourceObjectTypes.${resource.sourceMetadata.objectType}`,
-                      { defaultValue: resource.sourceMetadata.objectType },
-                    )
-                  : "-"}
-              </span>
-            </div>
-            {resource.category !== "logical_view" ? (
-              <>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+          {sourceMetadataContent !== undefined ? (
+            sourceMetadataContent
+          ) : (
+            <div className={styles.basicInfo}>
+              {resource.category === "logical_view" ? (
+                <div className={styles.basicInfoItem}>
                   <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.schemaName")}
-                  </span>
-                  <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
-                </div>
-                <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.sourcePrimaryKeys")}
+                    {t("dataCatalog.resource.viewSource")}
                   </span>
                   <span className={styles.basicInfoValue}>
-                    {resource.sourceMetadata?.primaryKeys?.length ? (
-                      <Space size={[8, 8]} wrap>
-                        {resource.sourceMetadata.primaryKeys.map((key) => (
-                          <Tag className={styles.resourceTag} key={key}>
-                            {key}
-                          </Tag>
-                        ))}
-                      </Space>
+                    {resource.logicalViewDefinition?.sourceResourceId ? (
+                      <button
+                        className={styles.textLink}
+                        onClick={() => {
+                          void navigate(
+                            `/data-catalog/resource/${resource.logicalViewDefinition?.sourceResourceId}`,
+                          );
+                        }}
+                        type="button"
+                      >
+                        {resource.logicalViewDefinition.sourceResourceId}
+                      </button>
                     ) : (
                       "-"
                     )}
                   </span>
                 </div>
-                <div className={styles.basicInfoItem}>
+              ) : null}
+              <div className={styles.basicInfoItem}>
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.originalName")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  {resource.sourceMetadata?.originalName || "-"}
+                </span>
+              </div>
+              {resource.category !== "logical_view" ? (
+                <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
                   <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.fieldCount")}
-                  </span>
-                  <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
-                </div>
-                <div className={styles.basicInfoItem}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.sourceIndexCount")}
+                    {t("dataCatalog.resource.originalDescription")}
                   </span>
                   <span className={styles.basicInfoValue}>
-                    {resource.sourceMetadata?.indexCount ?? "-"}
+                    <span
+                      className={styles.basicInfoDescription}
+                      title={resource.sourceMetadata?.originalDescription || undefined}
+                    >
+                      {resource.sourceMetadata?.originalDescription || "-"}
+                    </span>
                   </span>
                 </div>
-                <div className={styles.basicInfoItem}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.sourceForeignKeyCount")}
-                  </span>
-                  <span className={styles.basicInfoValue}>
-                    {resource.sourceMetadata?.foreignKeyCount ?? "-"}
-                  </span>
-                </div>
-                <div className={styles.basicInfoItem}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.estimatedRowCountLabel")}
-                  </span>
-                  <span className={styles.basicInfoValue}>{resource.estimatedRowCount ?? "-"}</span>
-                </div>
-                <div className={styles.basicInfoItem}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.rowCount")}
-                  </span>
-                  <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
-                </div>
-                <div className={styles.basicInfoItem}>
-                  <span className={styles.basicInfoLabel}>
-                    {t("dataCatalog.resource.rowCountTime")}
-                  </span>
-                  <span className={styles.basicInfoValue}>
-                    {resource.rowCountTime
-                      ? formatDateTime(resource.rowCountTime)
-                      : t("dataCatalog.resource.unknownTime")}
-                  </span>
-                </div>
-              </>
-            ) : null}
-          </div>
+              ) : null}
+              <div
+                className={`${styles.basicInfoItem} ${resource.category === "logical_view" ? "" : styles.basicInfoQuarter}`}
+              >
+                <span className={styles.basicInfoLabel}>
+                  {t("dataCatalog.resource.sourceObjectType")}
+                </span>
+                <span className={styles.basicInfoValue}>
+                  {resource.sourceMetadata?.objectType
+                    ? t(
+                        `dataCatalog.resource.sourceObjectTypes.${resource.sourceMetadata.objectType}`,
+                        { defaultValue: resource.sourceMetadata.objectType },
+                      )
+                    : "-"}
+                </span>
+              </div>
+              {resource.category !== "logical_view" ? (
+                <>
+                  <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.schemaName")}
+                    </span>
+                    <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
+                  </div>
+                  <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.sourcePrimaryKeys")}
+                    </span>
+                    <span className={styles.basicInfoValue}>
+                      {resource.sourceMetadata?.primaryKeys?.length ? (
+                        <Space size={[8, 8]} wrap>
+                          {resource.sourceMetadata.primaryKeys.map((key) => (
+                            <Tag className={styles.resourceTag} key={key}>
+                              {key}
+                            </Tag>
+                          ))}
+                        </Space>
+                      ) : (
+                        "-"
+                      )}
+                    </span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.fieldCount")}
+                    </span>
+                    <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.sourceIndexCount")}
+                    </span>
+                    <span className={styles.basicInfoValue}>
+                      {resource.sourceMetadata?.indexCount ?? "-"}
+                    </span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.sourceForeignKeyCount")}
+                    </span>
+                    <span className={styles.basicInfoValue}>
+                      {resource.sourceMetadata?.foreignKeyCount ?? "-"}
+                    </span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.estimatedRowCountLabel")}
+                    </span>
+                    <span className={styles.basicInfoValue}>
+                      {resource.estimatedRowCount ?? "-"}
+                    </span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.rowCount")}
+                    </span>
+                    <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
+                  </div>
+                  <div className={styles.basicInfoItem}>
+                    <span className={styles.basicInfoLabel}>
+                      {t("dataCatalog.resource.rowCountTime")}
+                    </span>
+                    <span className={styles.basicInfoValue}>
+                      {resource.rowCountTime
+                        ? formatDateTime(resource.rowCountTime)
+                        : t("dataCatalog.resource.unknownTime")}
+                    </span>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
       ) : null}
 
       <div className={styles.sectionCard}>
         <div className={styles.sectionTitleRow}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.schemaSection")}</h3>
-          {editing ? (
+          {splitEditing && !readOnly && !onEdit && resource.schema.length > 0 ? (
+            <div className={styles.sectionTools}>
+              {editingFields ? (
+                editingActions
+              ) : (
+                <AppButton
+                  disabled={editing !== null || saving}
+                  onClick={() => setEditing("fields")}
+                >
+                  {t("dataCatalog.resource.editSchemaFields")}
+                </AppButton>
+              )}
+            </div>
+          ) : editingFields ? (
             <span className={styles.sectionCaption}>
               {t("dataCatalog.resource.fieldEditableHint")}
             </span>
           ) : null}
         </div>
+        {splitEditing && editingFields ? (
+          <p className={styles.editHint}>{t("dataCatalog.resource.fieldEditableHint")}</p>
+        ) : null}
         <TableSurface className={styles.tableSurface}>
           <AppTable<ResourceSchemaField>
             columns={schemaColumns}

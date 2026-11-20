@@ -1,0 +1,94 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  container-type: inline-size;
+}
+.statusTabs {
+  min-width: 0;
+}
+.statusTabs :global(.ant-tabs-ink-bar) {
+  background: transparent;
+  border-block-end: 2px solid var(--color-text-link);
+}
+.section {
+  min-width: 0;
+}
+.title {
+  margin: 0 0 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th,
+.table td {
+  padding: 8px 12px;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.table thead th {
+  background: var(--color-fill-secondary);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.table tbody th {
+  font-family: monospace;
+  font-weight: 400;
+}
+.treeTable th:first-child {
+  width: 44%;
+}
+.branch th {
+  font-weight: 600;
+}
+.field {
+  display: block;
+}
+.hint {
+  color: var(--color-text-tertiary);
+}
+.value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.parameters th:first-child {
+  width: 24%;
+}
+.parameters th:nth-child(2) {
+  width: 28%;
+}
+.parameters th:nth-child(3) {
+  width: 30%;
+}
+.array {
+  margin: 0;
+  padding-inline-start: 18px;
+}
+.table .table th,
+.table .table td {
+  padding: 4px;
+}
+@container (width < 380px) {
+  .table th,
+  .table td {
+    padding-inline: 4px;
+  }
+}

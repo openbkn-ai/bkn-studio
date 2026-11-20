@@ -476,13 +476,10 @@ describe("catalog.service · mock listCatalogs", () => {
       type: "physical",
     });
 
-    expect(firstPage.items.map((catalog) => catalog.name)).toEqual([
-      "analytics_hana",
-      "customer_master",
-    ]);
+    expect(firstPage.items.map((catalog) => catalog.name)).toEqual(["analytics_hana", "api_demo"]);
     expect(secondPage.items.map((catalog) => catalog.name)).toEqual([
+      "customer_master",
       "finance_dw",
-      "ISSUE180_IV18007_PG17_orders_archive_20260915",
     ]);
     expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
       "summary_only_resource_catalog",

@@ -36,6 +36,21 @@ export const dataCatalogModuleManifest = {
   ],
   scenes: [
     {
+      id: "data-catalog.api-resource",
+      exportName: "ApiResourceScene",
+      description:
+        "Read-only API Resource definition management, backend validation and mapped data previews.",
+      inputs: [
+        "catalogId?",
+        "resourceId?",
+        "tab?",
+        "onTabChange?",
+        "onSaved?",
+        "onDeleted?",
+        "onBack?",
+      ],
+    },
+    {
       id: "data-catalog.explorer",
       exportName: "DataCatalogScene",
       description:

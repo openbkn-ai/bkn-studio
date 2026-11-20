@@ -35,6 +35,7 @@ export type DataConnectConnectorType = {
   mode: string;
   name: string;
   requiredEdition?: Edition;
+  supportDiscover?: boolean;
   type: string;
 };
 

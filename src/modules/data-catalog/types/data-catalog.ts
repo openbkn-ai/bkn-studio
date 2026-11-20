@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type ResourceCategory = "dataset" | "index" | "logical_view" | "table";
+export type ResourceCategory = "api" | "dataset" | "index" | "logical_view" | "table";
 
 export type ResourceDiscoverStatus =
   "error" | "missing" | "new" | "restored" | "unchanged" | "updated";
@@ -142,10 +142,13 @@ export type ResourceCreateInput = {
   sourceIdentifier: string;
 };
 
-export type ResourceUpdateInput = ResourceCreateInput & {
+export type ResourceUpdateInput = Omit<ResourceCreateInput, "schema"> & {
   /** Preserved by full PUT; changes use the enable/disable action endpoints. */
   enabled?: boolean;
   expectedUpdateTime: number;
+  schema?: ResourceSchemaField[];
+  /** Full updates replace tags. Include existing tags when editing other fields. */
+  tags: string[];
 };
 
 export type DerivedLogicalViewDefinition = {

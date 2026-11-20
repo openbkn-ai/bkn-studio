@@ -722,6 +722,7 @@ export function IndexConfigFormPanel({
           enabled: detail.enabled ?? true,
           expectedUpdateTime: detail.expectedUpdateTime,
           name: detail.name,
+          tags: detail.tags ?? [],
           sourceIdentifier: detail.sourceIdentifier,
           schema: nextSchema,
           indexConfig: nextIndexConfig,

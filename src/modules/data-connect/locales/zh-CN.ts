@@ -140,6 +140,7 @@ export const dataConnectZhCN = {
         "资源、计划及全部关联任务记录（包括待执行任务和历史记录）将被删除；索引不在此流程中删除。",
       catalogEmpty: "连接「{{name}}」下没有需要级联处理的对象，删除仍不可恢复。",
     },
+    discoverUnavailable: "当前连接器的探查能力不可用。",
     discoverManage: "探查",
     discoverTitle: "探查管理",
     discoverDescription: "管理数据连接的定时探查计划，并查看最近的探查任务执行情况。",

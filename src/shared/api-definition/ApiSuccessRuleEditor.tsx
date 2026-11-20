@@ -90,7 +90,11 @@ export function ApiSuccessRuleEditor({
   const changeSuccess = (key: string, next: unknown) => onChange(replaceMember(value, key, next));
   return (
     <EditorValidity onValidityChange={onValidityChange}>
-      <div className={styles.stack}>
+      <div
+        className={`${styles.member} ${styles.sectionCard}`}
+        role="group"
+        aria-label={t("dataConnect.apiEditor.success")}
+      >
         <SuccessStatusesEditor
           value={success.http_status}
           disabled={disabled}
