@@ -134,10 +134,9 @@ BKN Studio is part of the OpenBKN project. The authoritative license for compone
 
 The license applicable to each file is stated in that file's header.
 
-### BKN-project fact status choices
+### Project management
 
-The existing fact editor confirms one business-value field and an adopted entity
-relationship. Unique candidates are prefilled as suggestions; they do not grant
-authority until a person confirms. Unfinished choices can be saved as pending,
-and field changes require reconfirmation. Existing evidence-based effective
-period extraction is reused. No new business attributes or configuration page.
+Project management (BKN-project) is a Professional capability (`bkn_project`). Its pages ship in
+the enterprise image, which registers them as an extension. This build keeps the sidebar entry
+with its edition label; every project path shows a preview under the upgrade card, which says
+the edition it needs, or that the licence is there and the enterprise images are not.

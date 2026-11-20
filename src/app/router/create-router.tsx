@@ -17,6 +17,7 @@ import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { bknProjectLicenseRoutes } from "@/app/router/bkn-project-license-routes";
 import { knowledgeBaseLicenseRoutes } from "@/modules/data-catalog/routes";
 import {
   extensionRoutes,
@@ -56,6 +57,7 @@ export function createAppRouter(basename?: string) {
           },
           ...moduleRoutes,
           ...knowledgeBaseLicenseRoutes(),
+          ...bknProjectLicenseRoutes(),
           ...extensionRoutes(),
           {
             path: "*",

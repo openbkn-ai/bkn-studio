@@ -11,7 +11,6 @@ import { appEnUS } from "@/app/locales/resources/app/en-US";
 import { authEnUS } from "@/app/locales/resources/auth/en-US";
 import { commonEnUS } from "@/app/locales/resources/common/en-US";
 import { shellEnUS } from "@/app/locales/resources/shell/en-US";
-import { bknProjectEnUS } from "@/modules/bkn-project/locales/en-US";
 import { homeEnUS } from "@/modules/home/locales/en-US";
 import { knowledgeNetworkEnUS } from "@/modules/knowledge-network/locales/en-US";
 
@@ -22,7 +21,6 @@ const CHECKED_RESOURCES = {
   authEnUS,
   commonEnUS,
   shellEnUS,
-  bknProjectEnUS,
   homeEnUS,
   knowledgeNetworkEnUS,
 };

@@ -6,13 +6,13 @@
  */
 
 import { baseConsoleNavigation } from "@/app/shell/navigation/base-navigation";
+import { bknProjectNavigation } from "@/app/shell/navigation/bkn-project-navigation";
 import { workshopNavigation } from "@/app/shell/navigation/workshop-navigation";
 import type { ConsoleNavContribution, ConsoleNavItem } from "@/app/shell/navigation/types";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
 import { isExtensionInstalled } from "@/framework/extension/registry";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { bknProjectNavigation } from "@/modules/bkn-project/navigation";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";

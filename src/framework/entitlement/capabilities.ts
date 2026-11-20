@@ -69,6 +69,13 @@ export const CAPABILITIES = {
    * bkn-safe-ee 登记装配表,`/api/safe/v1/capabilities` 报得出它,入口按 `capabilityState()` 判。
    */
   WORKSHOP: "workshop",
+  /**
+   * 项目管理(BKN 项目):以项目组织知识网络的需求、本体建模与发布。专业档起。
+   *
+   * 与应用工坊同一种做法:页面和服务都在企业版镜像里,bkn-safe-ee 登记装配表,
+   * 社区构建只保留侧栏入口和带遮罩的许可提示页。
+   */
+  BKN_PROJECT: "bkn_project",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
