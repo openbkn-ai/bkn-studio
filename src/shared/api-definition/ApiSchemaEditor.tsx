@@ -5,23 +5,25 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Button, Checkbox, Input, Select, Typography } from "antd";
+import { RightOutlined } from "@ant-design/icons";
+import { Button, Checkbox, Collapse, Input, Select, Typography } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EditorValidity } from "./EditorValidity";
-import { ObjectMemberName, type ValueEditorProps } from "./ApiValueEditor";
+import { ApiValueEditor, ObjectMemberName, type ValueEditorProps } from "./ApiValueEditor";
 import {
+  defaultValue,
   isDefinitionObject,
   nextMemberName,
   objectValue,
   replaceMember,
   type DefinitionObject,
 } from "./model";
-import { useObjectEditorItems } from "./use-editor-items";
+import { useArrayEditorItems, useObjectEditorItems } from "./use-editor-items";
 import styles from "./editor.module.css";
 
-export type ApiSchemaEditorProps = ValueEditorProps;
-const schemaTypes = ["object", "array", "string", "integer", "number", "boolean"];
+export type ApiSchemaEditorProps = ValueEditorProps & { enableOneOf?: boolean };
+const schemaTypes = ["object", "array", "string", "integer", "number", "boolean", "null"];
 
 function removeNonObjectFields(schema: DefinitionObject): DefinitionObject {
   if (
@@ -33,10 +35,11 @@ function removeNonObjectFields(schema: DefinitionObject): DefinitionObject {
   return replaceMember(replaceMember(schema, "properties", undefined), "required", undefined);
 }
 
-function SchemaTypeEditor({ value, onChange, disabled, label }: ValueEditorProps) {
+function SchemaTypeEditor({ value, onChange, disabled, label }: ApiSchemaEditorProps) {
   const { t } = useTranslation();
   const id = useId();
   const schema = objectValue(value);
+  const multiple = Array.isArray(schema.type);
   const types = schemaTypes.map((value) => ({
     value,
     label: t(`dataConnect.apiEditor.types.${value}`),
@@ -51,7 +54,7 @@ function SchemaTypeEditor({ value, onChange, disabled, label }: ValueEditorProps
         aria-label={`${label} ${t("dataConnect.apiEditor.schemaType")}`}
         disabled={disabled}
         allowClear={typeof value !== "boolean"}
-        mode={Array.isArray(schema.type) ? "multiple" : undefined}
+        mode={multiple ? "multiple" : undefined}
         value={
           typeof value === "boolean"
             ? value
@@ -60,7 +63,7 @@ function SchemaTypeEditor({ value, onChange, disabled, label }: ValueEditorProps
             : (schema.type as string | string[] | undefined)
         }
         options={
-          typeof value !== "boolean"
+          multiple
             ? types
             : [
                 ...types,
@@ -89,7 +92,13 @@ function SchemaTypeEditor({ value, onChange, disabled, label }: ValueEditorProps
   );
 }
 
-function SchemaPropertiesEditor({ value, onChange, disabled, label }: ApiSchemaEditorProps) {
+function SchemaPropertiesEditor({
+  value,
+  onChange,
+  disabled,
+  label,
+  enableOneOf,
+}: ApiSchemaEditorProps) {
   const { t } = useTranslation();
   const schema = objectValue(value);
   const properties = objectValue(schema.properties);
@@ -162,6 +171,7 @@ function SchemaPropertiesEditor({ value, onChange, disabled, label }: ApiSchemaE
             disabled={disabled}
             label={`${label}.${name}`}
             hideType
+            enableOneOf={enableOneOf}
             onChange={(next) => onChange({ ...schema, properties: items.replace(name, next) })}
           />
         </div>
@@ -180,6 +190,106 @@ function SchemaPropertiesEditor({ value, onChange, disabled, label }: ApiSchemaE
   );
 }
 
+function SchemaOneOfEditor({ value, onChange, disabled, label }: ValueEditorProps) {
+  const { t } = useTranslation();
+  const branches: unknown[] = Array.isArray(value) ? value : [];
+  const items = useArrayEditorItems(branches);
+  return (
+    <div className={styles.stack}>
+      <span className={styles.fieldTitle}>{t("dataConnect.apiEditor.oneOf")}</span>
+      {branches.map((branch, index) => {
+        const name = `${t("dataConnect.apiEditor.fieldTable.branch")} ${index + 1}`;
+        return (
+          <div key={items.keys[index]} className={styles.member} role="group" aria-label={name}>
+            <div className={styles.memberHeader}>
+              <span className={styles.fieldTitle}>{name}</span>
+              <Button
+                htmlType="button"
+                type="text"
+                danger
+                disabled={disabled}
+                aria-label={`${t("dataConnect.apiEditor.remove")} ${name}`}
+                onClick={() => {
+                  const updated = items.remove(index);
+                  onChange(updated.length ? updated : undefined);
+                }}
+              >
+                {t("dataConnect.apiEditor.remove")}
+              </Button>
+            </div>
+            <SchemaNodeEditor
+              value={branch}
+              disabled={disabled}
+              label={`${label}.oneOf[${index}]`}
+              enableOneOf
+              onChange={(next) => onChange(items.replace(index, next))}
+            />
+          </div>
+        );
+      })}
+      <Button
+        htmlType="button"
+        disabled={disabled}
+        onClick={() => onChange(items.append({ type: "string" }))}
+      >
+        {t("dataConnect.apiEditor.addAlternative")}
+      </Button>
+    </div>
+  );
+}
+
+function SchemaAdvancedEditor({ value, onChange, disabled, label }: ValueEditorProps) {
+  const { t } = useTranslation();
+  const schema = objectValue(value);
+  const title = t("dataConnect.apiEditor.advancedSchema");
+  const constLabel = t("dataConnect.apiEditor.fieldTable.keywords.const");
+  const hasConst = Object.hasOwn(schema, "const");
+  return (
+    <div role="group" aria-label={`${label} ${title}`}>
+      <Collapse
+        size="small"
+        expandIcon={({ isActive }) => <RightOutlined aria-hidden rotate={isActive ? 90 : 0} />}
+        items={[
+          {
+            key: "advanced",
+            label: title,
+            children: (
+              <div className={styles.stack}>
+                <Checkbox
+                  disabled={disabled}
+                  checked={hasConst}
+                  onChange={(event) => {
+                    const type: unknown = Array.isArray(schema.type) ? schema.type[0] : schema.type;
+                    const valueType = type === "integer" ? "number" : String(type);
+                    const constant = event.target.checked ? defaultValue(valueType) : undefined;
+                    onChange(replaceMember(schema, "const", constant));
+                  }}
+                >
+                  {constLabel}
+                </Checkbox>
+                {hasConst ? (
+                  <ApiValueEditor
+                    value={schema.const}
+                    disabled={disabled}
+                    label={`${label} ${constLabel}`}
+                    onChange={(next) => onChange(replaceMember(schema, "const", next))}
+                  />
+                ) : null}
+                <SchemaOneOfEditor
+                  value={schema.oneOf}
+                  disabled={disabled}
+                  label={label}
+                  onChange={(next) => onChange(replaceMember(schema, "oneOf", next))}
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
 /** Graphical Schema editing never normalizes unrelated keywords or business data. */
 export function ApiSchemaEditor(props: ApiSchemaEditorProps) {
   return (
@@ -195,6 +305,7 @@ export function SchemaNodeEditor({
   disabled,
   label,
   hideType = false,
+  enableOneOf = false,
 }: ApiSchemaEditorProps & { hideType?: boolean }) {
   const { t } = useTranslation();
   const descriptionId = useId();
@@ -202,9 +313,8 @@ export function SchemaNodeEditor({
     return hideType ? null : (
       <SchemaTypeEditor value={value} onChange={onChange} disabled={disabled} label={label} />
     );
-  const schema = objectValue(value);
-  const update = (key: string, next: unknown) =>
-    onChange(removeNonObjectFields(replaceMember(schema, key, next)));
+  const schema = removeNonObjectFields(objectValue(value));
+  const update = (key: string, next: unknown) => onChange(replaceMember(schema, key, next));
   const descriptionField =
     schema.description === undefined || typeof schema.description === "string";
   const object =
@@ -244,6 +354,7 @@ export function SchemaNodeEditor({
           onChange={onChange}
           disabled={disabled}
           label={label}
+          enableOneOf={enableOneOf}
         />
       ) : null}
       {array ? (
@@ -268,6 +379,7 @@ export function SchemaNodeEditor({
                 onChange={(next) => update("items", next)}
                 disabled={disabled}
                 label={`${label}.items`}
+                enableOneOf={enableOneOf}
               />
             </div>
           ) : (
@@ -276,6 +388,14 @@ export function SchemaNodeEditor({
             </Button>
           )}
         </section>
+      ) : null}
+      {enableOneOf ? (
+        <SchemaAdvancedEditor
+          value={schema}
+          disabled={disabled}
+          label={label}
+          onChange={onChange}
+        />
       ) : null}
     </div>
   );

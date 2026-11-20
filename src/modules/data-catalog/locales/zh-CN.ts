@@ -5,8 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { apiResourceZhCN } from "./api-resource.zh-CN";
+
 export const dataCatalogZhCN = {
   dataCatalog: {
+    apiResource: apiResourceZhCN,
     buildSchedule: {
       enabledFilter: "启停状态",
       title: "构建计划",
@@ -315,6 +318,7 @@ export const dataCatalogZhCN = {
       logical: "逻辑分组",
     },
     categories: {
+      api: "API",
       table: "数据表",
       index: "索引",
       logical_view: "逻辑视图",
@@ -668,6 +672,12 @@ export const dataCatalogZhCN = {
       fieldOriginalType: "原始类型",
       fieldOriginalDescription: "原始描述",
       editFields: "编辑描述与字段",
+      editBasicInfo: "编辑基础信息",
+      editSchemaFields: "编辑字段",
+      fieldDisplayNameLabel: "{{name}} 的业务名称",
+      fieldDescriptionLabel: "{{name}} 的描述",
+      nameLengthLimit: "资源名称不能超过 255 个字符。",
+      tagInputHint: "输入后按回车添加，最多 5 个标签，每个不超过 40 个字符。",
       logicalViewReadOnly: "Studio 暂不支持编辑此类逻辑视图，可继续查看详情。",
       logicalViewIndexReadOnly: "Studio 暂不支持编辑逻辑视图的索引配置，可继续查看配置。",
       editHint: "可在此处编辑资源描述、字段业务名称、字段描述和过滤开关，保存后立即生效。",

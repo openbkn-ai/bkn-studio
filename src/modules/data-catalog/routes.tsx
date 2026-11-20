@@ -14,6 +14,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { isExtensionInstalled } from "@/framework/extension/registry";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { catalogDetailPermissions, dataCatalogResourceManagePermission } from "./permissions";
 
 const DataCatalogPage = lazy(async () => {
   const module = await import("@/modules/data-catalog/pages/DataCatalogPage");
@@ -23,6 +24,11 @@ const DataCatalogPage = lazy(async () => {
 const ResourceWorkspacePage = lazy(async () => {
   const module = await import("@/modules/data-catalog/pages/ResourceWorkspacePage");
   return { default: module.ResourceWorkspacePage };
+});
+
+const ApiResourcePage = lazy(async () => {
+  const module = await import("@/modules/data-catalog/pages/ApiResourcePage");
+  return { default: module.ApiResourcePage };
 });
 
 const ViewEditorPage = lazy(async () => {
@@ -54,6 +60,21 @@ function withPublicRouteLoading(element: ReactNode) {
 }
 
 export const dataCatalogRoutes: RouteObject[] = [
+  {
+    path: "data-catalog/catalog/:catalogId/api/new",
+    handle: { console: dataCatalogConsole },
+    element: withRouteLoading(dataCatalogResourceManagePermission, <ApiResourcePage />),
+  },
+  {
+    path: "data-catalog/api-resource/:resourceId/edit",
+    handle: { console: dataCatalogConsole },
+    element: withRouteLoading(catalogDetailPermissions, <ApiResourcePage edit />),
+  },
+  {
+    path: "data-catalog/api-resource/:resourceId",
+    handle: { console: dataCatalogConsole },
+    element: withRouteLoading(catalogDetailPermissions, <ApiResourcePage />),
+  },
   {
     path: "data-catalog",
     handle: {

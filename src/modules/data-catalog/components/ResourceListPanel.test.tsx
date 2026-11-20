@@ -83,6 +83,14 @@ vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
   },
 }));
 
+vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
+  listDataConnectConnectorTypes: () =>
+    Promise.resolve([
+      { type: "mysql", available: true, enabled: true, supportDiscover: true },
+      { type: "http", available: true, enabled: true, supportDiscover: false },
+    ]),
+}));
+
 import { ResourceListPanel } from "./ResourceListPanel";
 
 const catalog: CatalogRecord = {
@@ -111,7 +119,8 @@ const catalog: CatalogRecord = {
 };
 
 function LocationProbe() {
-  return <output data-testid="location">{useLocation().pathname}</output>;
+  const { pathname, search } = useLocation();
+  return <output data-testid="location">{pathname + search}</output>;
 }
 
 function renderPanel(
@@ -179,6 +188,83 @@ describe("ResourceListPanel", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("offers empty-state discovery for a supported connector in the connector registry", async () => {
+    renderPanel({ ...catalog, operations: ["view_detail", "task_manage"] });
+    const discover = await screen.findByRole("button", {
+      name: "dataCatalog.catalog.goDiscoverToDiscover",
+    });
+    fireEvent.click(discover);
+    expect(screen.getByTestId("location")).toHaveTextContent("/data-connect/catalog-1/discover");
+  });
+
+  it("offers manual API creation without discovery for an HTTP connector in the connector registry", async () => {
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["view_detail", "task_manage", "resource_manage"],
+    });
+    expect(await screen.findByText("dataCatalog.apiResource.emptyCatalog")).toBeVisible();
+    expect(screen.getByRole("button", { name: "dataCatalog.apiResource.create" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.catalog.goDiscoverToDiscover" }),
+    ).toBeNull();
+  });
+
+  it("opens API management from a compatible Catalog and suppresses View/task/index actions", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        missingResource({
+          category: "api",
+          status: "active",
+          enabled: true,
+          lastDiscoverStatus: undefined,
+          name: "Orders API",
+          operations: ["view_detail", "query_data"],
+        }),
+      ],
+      total: 1,
+    });
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["view_detail", "resource_manage", "task_manage"],
+    });
+    expect(
+      await screen.findByRole("button", { name: "dataCatalog.apiResource.create" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: /dataCatalog.viewEditor.create/ })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Orders API" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/data-catalog/api-resource/resource-1",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.actions.more" }));
+    expect(screen.queryByRole("menuitem", { name: "dataCatalog.actions.dataIndex" })).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "dataCatalog.resourceWorkspace.tabSemanticUnderstanding",
+      }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataCatalog.actions.preview" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/data-catalog/api-resource/resource-1?tab=preview",
+    );
+  });
+
+  it("routes API creation to its graphical editor", async () => {
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["resource_manage"],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.apiResource.create" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/data-catalog/catalog/catalog-1/api/new",
+    );
   });
 
   it.each([
@@ -651,7 +737,7 @@ describe("ResourceListPanel", () => {
           expectedUpdateTime: 0,
           id: "resource-1",
           localIndexStatus: "unavailable",
-          name: "客户订单",
+          name: "客户.订单",
           operations: ["view_detail"],
           rowCount: 0,
           schema: [],
@@ -663,7 +749,7 @@ describe("ResourceListPanel", () => {
     });
     renderPanel(catalog);
 
-    expect(await screen.findByText("客户订单")).toBeTruthy();
+    expect(await screen.findByText("客户.订单")).toBeTruthy();
     expect(screen.getByText("crm_core.orders")).toBeTruthy();
   });
 

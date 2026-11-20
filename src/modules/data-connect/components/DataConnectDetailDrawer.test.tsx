@@ -296,8 +296,10 @@ describe("DataConnectDetailDrawer", () => {
     render(
       <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
     );
-    await screen.findByText(/"tenant":/);
-    expect(document.body.textContent).toContain('"value": "public"');
+    await screen.findByText("tenant");
+    expect(screen.getByText("public")).toBeVisible();
+    expect(screen.getByRole("table", { name: "dataConnect.apiCatalog.variables" })).toBeVisible();
+    expect(document.querySelector("pre")).toBeNull();
     expect(document.body.textContent).not.toContain("private-option");
     expect(document.body.textContent).not.toContain("private-key");
   });

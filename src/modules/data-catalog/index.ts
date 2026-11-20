@@ -10,3 +10,6 @@ export { DataCatalogScene } from "@/modules/data-catalog/scenes/DataCatalogScene
 export type { DataCatalogSceneProps } from "@/modules/data-catalog/scenes/DataCatalogScene";
 export { IndexBuildListScene } from "@/modules/data-catalog/scenes/IndexBuildListScene";
 export type * from "@/modules/data-catalog/types/data-catalog";
+
+export { ApiResourceScene } from "./scenes/ApiResourceScene";
+export type { ApiResourceSceneProps } from "./contracts/api-resource";

@@ -16,3 +16,4 @@ export { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectF
 export { DataConnectDiscoverScene } from "@/modules/data-connect/scenes/DataConnectDiscoverScene";
 export type * from "@/modules/data-connect/types/data-connect";
 export type * from "@/modules/data-connect/types/discover";
+export { useCatalogDiscoverySupport } from "@/modules/data-connect/hooks/use-catalog-discovery-support";

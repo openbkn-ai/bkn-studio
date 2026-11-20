@@ -6,6 +6,17 @@
  */
 
 export const apiCatalogZhCN = {
+  details: {
+    field: "配置项",
+    defaultLimits: "使用后端默认的请求超时和响应大小限制。",
+    protected: "敏感值已隐藏",
+    loginConfigured: "已配置登录 · 查看定义",
+    noLogin: "未配置独立登录请求",
+    additional: "其他配置",
+    emptyArray: "空数组",
+    emptyObject: "空对象",
+    emptyString: "空字符串",
+  },
   service: "服务设置",
   variables: "变量与凭据",
   login: "可选登录",

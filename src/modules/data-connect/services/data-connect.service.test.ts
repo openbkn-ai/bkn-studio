@@ -50,6 +50,7 @@ describe("data-connect.service · test connection", () => {
             mode: "local",
             name: "SQL Server",
             required_edition: "professional",
+            support_discover: true,
             type: "sqlserver",
           },
         ],
@@ -63,6 +64,7 @@ describe("data-connect.service · test connection", () => {
       {
         available: false,
         requiredEdition: "professional",
+        supportDiscover: true,
         type: "sqlserver",
       },
     ]);
@@ -232,6 +234,7 @@ describe("data-connect.service · test connection", () => {
           host: { encrypted: false, required: true, type: "string" },
         },
         mode: "local",
+        support_discover: false,
         name: "后端连接器名称",
         type: "postgresql",
       },
@@ -240,10 +243,27 @@ describe("data-connect.service · test connection", () => {
       await import("@/modules/data-connect/services/data-connect.service");
 
     await expect(getDataConnectConnectorType("postgresql")).resolves.toMatchObject({
+      supportDiscover: false,
       fieldConfig: { host: { encrypted: false, required: true, type: "string" } },
       type: "postgresql",
     });
     expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/connector-types/postgresql");
+  });
+
+  it("provides explicit support values for every mock connector independently of availability", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_EDITION", "community");
+    const { listDataConnectConnectorTypes } = await import("./data-connect.service");
+    const types = await listDataConnectConnectorTypes();
+    expect(types.find((type) => type.type === "http")).toMatchObject({
+      available: false,
+      supportDiscover: false,
+    });
+    expect(types.find((type) => type.type === "sqlserver")).toMatchObject({
+      available: false,
+      supportDiscover: true,
+    });
+    expect(types.every((type) => typeof type.supportDiscover === "boolean")).toBe(true);
   });
 
   it("covers every built-in connector field from the Vega initialization data", async () => {

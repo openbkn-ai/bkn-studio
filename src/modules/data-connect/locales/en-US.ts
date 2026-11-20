@@ -157,6 +157,7 @@ export const dataConnectEnUS = {
       catalogEmpty:
         'Connection "{{name}}" has no cascading objects. Deletion still cannot be undone.',
     },
+    discoverUnavailable: "Discovery is unavailable for this connector.",
     discoverManage: "Discover",
     discoverTitle: "Discovery Management",
     discoverDescription:

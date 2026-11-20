@@ -58,11 +58,13 @@ type BackendConnectorType = {
   mode: string;
   name: string;
   required_edition?: string;
+  support_discover?: boolean;
   type: string;
 };
 
-type MockConnectorType = Omit<BackendConnectorType, "available"> & {
+type MockConnectorType = Omit<BackendConnectorType, "available" | "support_discover"> & {
   available?: boolean;
+  support_discover: boolean;
 };
 
 type ListResponse<T> = {
@@ -77,6 +79,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "http",
     name: "HTTP API",
     category: "api",
+    support_discover: false,
     mode: "local",
     description: "Connect external API services.",
     required_edition: "professional",
@@ -92,6 +95,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "mariadb",
     name: "MariaDB",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect MariaDB relational databases.",
     enabled: true,
@@ -108,6 +112,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "mysql",
     name: "MySQL",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect MySQL relational databases.",
     enabled: false,
@@ -124,6 +129,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "postgresql",
     name: "PostgreSQL",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect PostgreSQL databases.",
     enabled: true,
@@ -141,6 +147,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "sqlserver",
     name: "SQL Server",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect Microsoft SQL Server databases.",
     enabled: true,
@@ -169,6 +176,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "oracle",
     name: "Oracle",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect Oracle relational databases.",
     enabled: true,
@@ -197,6 +205,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "doris",
     name: "Doris",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect Apache Doris databases.",
     enabled: true,
@@ -215,6 +224,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "hana",
     name: "SAP HANA",
     category: "table",
+    support_discover: true,
     mode: "local",
     description: "Connect SAP HANA relational databases.",
     enabled: true,
@@ -233,6 +243,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "opensearch",
     name: "OpenSearch",
     category: "index",
+    support_discover: true,
     mode: "local",
     description: "Connect OpenSearch engines.",
     enabled: true,
@@ -249,6 +260,7 @@ const mockConnectorTypes: MockConnectorType[] = [
     type: "anyshare",
     name: "AnyShare",
     category: "fileset",
+    support_discover: true,
     mode: "local",
     description: "Connect fileset and document resources.",
     enabled: true,
@@ -305,6 +317,7 @@ const wait = async <T>(value: T) =>
 function mapConnectorType(item: BackendConnectorType): DataConnectConnectorType {
   return {
     available: item.available,
+    supportDiscover: item.support_discover,
     type: item.type,
     name: item.name,
     category: item.category,
@@ -339,7 +352,7 @@ function getMockConnectorTypes() {
   }));
 }
 
-export async function listDataConnectConnectorTypes() {
+export async function listDataConnectConnectorTypes(options?: { skipErrorToast?: boolean }) {
   if (useMock) {
     return wait(getMockConnectorTypes().map(mapConnectorType));
   }
@@ -353,6 +366,7 @@ export async function listDataConnectConnectorTypes() {
     const response = await http.get<ListResponse<BackendConnectorType>>(
       "/vega-backend/v1/connector-types",
       {
+        ...options,
         params: {
           direction: "asc",
           limit: pageSize,

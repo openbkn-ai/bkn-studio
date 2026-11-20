@@ -1,0 +1,141 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.layout {
+  min-width: 0;
+  container-type: inline-size;
+}
+.value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.hint {
+  color: var(--color-text-tertiary);
+}
+.tableContainer {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.variableTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.variableTable th,
+.variableTable td {
+  text-align: start;
+  padding: 8px;
+  vertical-align: top;
+  border-block-end: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: var(--color-text-primary);
+}
+.variableTable thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--color-interface-panel-bg);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.variableTable th:first-child {
+  width: 30%;
+}
+.variableTable th:nth-child(2) {
+  width: 18%;
+}
+.variableTable th:nth-child(3) {
+  width: 16%;
+}
+.variableTable tbody th {
+  font-family: monospace;
+  font-weight: 400;
+}
+.variableTable :global(.ant-tag) {
+  margin: 0;
+  white-space: normal;
+}
+.login {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+.login summary {
+  padding-block: 4px;
+  cursor: pointer;
+}
+.loginSections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-inline-size: 0;
+}
+.statusTabs {
+  min-inline-size: 0;
+  margin-block-start: 12px;
+}
+.statusTabs :global(.ant-tabs-ink-bar) {
+  background: transparent;
+  border-block-end: 2px solid var(--color-selection-accent);
+}
+.loginGroup {
+  margin-block-start: 12px;
+}
+.loginGroupTitle {
+  margin: 0 0 4px;
+  color: var(--color-text-secondary);
+  font-size: inherit;
+  font-weight: 500;
+}
+.definitionTable th:first-child,
+.definitionTable th:nth-child(2) {
+  width: 50%;
+}
+.queryTable th:first-child {
+  width: 24%;
+}
+.queryTable th:nth-child(2) {
+  width: 28%;
+}
+.queryTable th:nth-child(3) {
+  width: 30%;
+}
+.definitionTable .branchRow th {
+  font-weight: 600;
+}
+.fieldName {
+  display: block;
+}
+.nestedFields {
+  margin: 8px 0 0;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--color-border);
+  display: grid;
+  gap: 8px;
+}
+.nestedFields dt {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.nestedFields dd {
+  margin: 4px 0 0;
+  min-width: 0;
+}
+.array {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+@container (width < 380px) {
+  .variableTable th,
+  .variableTable td {
+    padding-inline: 4px;
+  }
+}

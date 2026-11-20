@@ -46,6 +46,7 @@ import {
 } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
+import { useCatalogDiscoverySupport } from "@/modules/data-connect";
 import { getCatalog, hasCatalogOperation } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -94,7 +95,7 @@ export function ResourceWorkspaceScene({
     null,
   );
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
-  const previousTabRef = useRef(tab);
+  const currentTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
   const loadRequestIdRef = useRef(0);
 
@@ -117,6 +118,19 @@ export function ResourceWorkspaceScene({
           setCatalog(null);
           setCatalogVisibilityRestricted(false);
           setTasks([]);
+        }
+        return;
+      }
+
+      if (detail.category === "api") {
+        if (
+          resourceVersionRef.current === resourceVersion &&
+          loadRequestIdRef.current === loadRequestId
+        ) {
+          const search = currentTabRef.current === "preview" ? "?tab=preview" : "";
+          void navigate(`/data-catalog/api-resource/${encodeURIComponent(detail.id)}${search}`, {
+            replace: true,
+          });
         }
         return;
       }
@@ -177,7 +191,7 @@ export function ResourceWorkspaceScene({
         setLoading(false);
       }
     }
-  }, [resourceId]);
+  }, [resourceId, navigate]);
 
   const handleLatestTaskLoaded = useCallback(
     (loadedResourceId: string, latest: BuildTask | null) => {
@@ -243,8 +257,8 @@ export function ResourceWorkspaceScene({
   }, [catalog, refreshResource, resource?.category, resourceId]);
 
   useEffect(() => {
-    const previousTab = previousTabRef.current;
-    previousTabRef.current = tab;
+    const previousTab = currentTabRef.current;
+    currentTabRef.current = tab;
     if (previousTab !== tab && (tab === "detail" || tab === "index" || tab === "preview")) {
       void refreshResource();
     }
@@ -269,6 +283,7 @@ export function ResourceWorkspaceScene({
   // Do not infer any Catalog metadata or management permission in that restricted view.
   const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
   const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
+  const canDiscover = useCatalogDiscoverySupport(catalog, canManageCatalogTasks);
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const canQueryResource = hasCatalogResourceOperation(resource, "query_data");
@@ -307,6 +322,7 @@ export function ResourceWorkspaceScene({
   const triggerResourceDiscovery = useCallback(
     async (strategy?: "count_only") => {
       if (
+        !canDiscover ||
         resource?.category === "dataset" ||
         (resource?.category === "logical_view" && strategy !== "count_only")
       )
@@ -327,7 +343,7 @@ export function ResourceWorkspaceScene({
         setResourceAction(null);
       }
     },
-    [message, resource?.category, resourceId, t],
+    [canDiscover, message, resource?.category, resourceId, t],
   );
 
   const updateResourceEnabled = useCallback(
@@ -532,7 +548,7 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
           <Space className={styles.pageHeaderActions} wrap>
-            {canManageCatalogTasks &&
+            {canDiscover &&
             resource.category !== "logical_view" &&
             resource.category !== "dataset" ? (
               <AppButton
@@ -544,7 +560,7 @@ export function ResourceWorkspaceScene({
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
               </AppButton>
             ) : null}
-            {canManageCatalogTasks &&
+            {canDiscover &&
             (resource.category === "table" ||
               resource.category === "index" ||
               resource.category === "logical_view") ? (
@@ -623,7 +639,7 @@ export function ResourceWorkspaceScene({
         {discoveryFailed || queryBlockReason ? (
           <Alert
             action={
-              canManageCatalogTasks &&
+              canDiscover &&
               resource.category !== "logical_view" &&
               resource.category !== "dataset" &&
               !resourceDisabled &&

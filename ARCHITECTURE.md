@@ -334,3 +334,7 @@ src/modules/<module-name>/
 - 宿主耦合统一收口到 `framework/runtime`
 - 模块与页面不直接感知宿主实现细节
 - 不为未来可能的宿主场景，把复杂兼容逻辑提前散落进业务页面
+
+## API Resource 管理
+
+数据目录模块通过 `ApiResourceScene` 提供只读 API Resource 图形化管理，场景契约从模块 `index.ts` 导出。创建入口位于兼容 API Catalog 的资源列表，详情入口为 `/data-catalog/api-resource/:resourceId`。请求、响应及 Schema 控件复用 `shared/api-definition`；Resource 专属构造与 Schema 扩展按需启用，Catalog 登录编辑保持既有流程。候选定义由 Resource 保存接口验证，已保存定义通过 ResourceData 查询验证，不在浏览器执行上游业务请求。正式契约见 [API Catalog/Resource 实现设计](https://github.com/openbkn-ai/bkn-docs/blob/main/docs/foundry/vega/design/issue-2776-generic-api-catalog-resource-implementation-design.md)。

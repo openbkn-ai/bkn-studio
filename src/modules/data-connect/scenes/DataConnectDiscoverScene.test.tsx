@@ -15,6 +15,11 @@ import lightStatusStyles from "@/framework/ui/common/LightStatusTag.module.css";
 
 import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 
+const listConnectorTypesMock = vi.hoisted(() => vi.fn());
+vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
+  listDataConnectConnectorTypes: listConnectorTypesMock,
+}));
+
 const {
   appServicesMock,
   deleteTaskMock,
@@ -410,6 +415,9 @@ async function openScheduleEditor(expectedRequestCount = 1) {
 describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listConnectorTypesMock.mockResolvedValue([
+      { type: "postgresql", supportDiscover: true, available: true, enabled: true },
+    ]);
     appServicesMock.runtimeConfig.currentUser.permissions = [
       "catalog:task_manage",
       "catalog:view_detail",
@@ -420,6 +428,8 @@ describe("DataConnectDiscoverScene", () => {
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
       name: "Orders",
+      type: "physical",
+      connectorType: "postgresql",
       operations: ["task_manage", "view_detail"],
     });
     updateScheduleMock.mockReset();
@@ -600,6 +610,28 @@ describe("DataConnectDiscoverScene", () => {
     expect(listSchedulesMock).not.toHaveBeenCalled();
   });
 
+  it.each([false, undefined])(
+    "does not start discovery requests without declared support (%s)",
+    async (supportDiscover) => {
+      getCatalogMock.mockResolvedValue({
+        id: "catalog-1",
+        name: "API",
+        type: "physical",
+        category: "api",
+        connectorType: "http",
+        operations: ["task_manage", "view_detail"],
+      });
+      listConnectorTypesMock.mockResolvedValue([
+        { type: "http", available: true, enabled: true, supportDiscover },
+      ]);
+      render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+      expect(await screen.findByText("dataConnect.discoverUnavailable")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "dataConnect.discoverRunNow" })).toBeNull();
+      expect(listTasksMock).not.toHaveBeenCalled();
+      expect(listSchedulesMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("authorizes a direct catalog route with an exact catalog lookup", async () => {
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
@@ -608,8 +640,18 @@ describe("DataConnectDiscoverScene", () => {
   });
 
   it("keeps the newest direct catalog authorization when lookups resolve out of order", async () => {
-    const firstLookup = deferred<{ id: string; name: string; operations: string[] }>();
-    const secondLookup = deferred<{ id: string; name: string; operations: string[] }>();
+    const firstLookup = deferred<{
+      id: string;
+      name: string;
+      operations: string[];
+      connectorType?: string;
+    }>();
+    const secondLookup = deferred<{
+      id: string;
+      name: string;
+      operations: string[];
+      connectorType?: string;
+    }>();
     getCatalogMock.mockImplementation((id: string) =>
       id === "catalog-1" ? firstLookup.promise : secondLookup.promise,
     );
@@ -626,6 +668,7 @@ describe("DataConnectDiscoverScene", () => {
       secondLookup.resolve({
         id: "catalog-2",
         name: "Customers",
+        connectorType: "postgresql",
         operations: ["task_manage", "view_detail"],
       });
       await secondLookup.promise;
