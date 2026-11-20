@@ -40,14 +40,26 @@ import {
   buildInstallStatusRedirectUrl,
   getInstallStatusUrl,
 } from "@/framework/runtime/install-status-url";
+import { http } from "@/framework/request/http";
 import type { SupportedLocale } from "@/framework/runtime/types";
-import { getProject } from "@/modules/bkn-project/services/project.service";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { resolveKnowledgeNetworkListPath } from "@/modules/knowledge-network/lib/knowledge-network-list-navigation";
 import {
   getPermissionRequestTodoSummary,
   onPermissionRequestTodoSummaryChanged,
 } from "@/modules/account/services/permission-requests.service";
+
+/**
+ * A project's name, as bkn-project serves it. The project pages ship in the enterprise image, so
+ * the shell asks the service directly; without it the read fails and the trail ends at the menu.
+ */
+async function readProjectName(projectId: string): Promise<string> {
+  const response = await http.get<{ name: string }>(
+    `/bkn-project/v1/projects/${encodeURIComponent(projectId)}`,
+    { skipErrorToast: true },
+  );
+  return response.data.name;
+}
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -144,10 +156,10 @@ export function TopBar() {
     }
     let disposed = false;
     setProjectName(null);
-    void getProject(projectId)
-      .then((project) => {
+    void readProjectName(projectId)
+      .then((name) => {
         if (!disposed) {
-          setProjectName(project.name);
+          setProjectName(name);
         }
       })
       .catch(() => undefined);

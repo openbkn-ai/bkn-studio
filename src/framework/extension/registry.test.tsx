@@ -15,17 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
-  extensionProjectConceptSource,
   extensionKnowledgeNetworkResourcePanel,
-  extensionProjectObjectSourceEditor,
-  extensionProjectRelationSourceEditor,
-  extensionProjectOverviewKnowledgeBase,
-  extensionProjectRelationBasis,
-  extensionProjectRequirementDocumentPicker,
-  extensionProjectTermLibrary,
-  extensionProjectKnowledgeBaseResources,
-  extensionProjectKnowledgeBaseModel,
-  extensionProjectKnowledgeBaseBuilds,
   extensionInstanceHandOvers,
   handOverLimit,
   extensionRoutes,
@@ -73,60 +63,21 @@ function registerDemo() {
 }
 
 describe("extension registry", () => {
-  it("offers a build panel only from the knowledge-base extension", () => {
-    const Panel = () => <p>build progress</p>;
-    expect(extensionProjectKnowledgeBaseBuilds()).toBeUndefined();
-    registerExtension({
-      id: "unrelated-builds",
-      capability: "other",
-      projectKnowledgeBaseBuilds: Panel,
-    });
-    expect(extensionProjectKnowledgeBaseBuilds()).toBeUndefined();
-    registerExtension({
-      id: "document-builds",
-      capability: "knowledge_base",
-      projectKnowledgeBaseBuilds: Panel,
-    });
-    expect(extensionProjectKnowledgeBaseBuilds()).toBe(Panel);
-  });
-
-  it("offers an optional project resource panel only from the knowledge-base extension", () => {
-    expect(extensionProjectKnowledgeBaseResources()).toBeUndefined();
-    const Panel = () => <p>source selection</p>;
+  it("offers the knowledge-network resource panel only from the knowledge-base extension", () => {
+    const Panel = () => <p>panel</p>;
+    expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
     registerExtension({
       id: "unrelated",
-      capability: "demo_capability",
-      projectKnowledgeBaseResources: Panel,
+      capability: "other",
+      knowledgeNetworkResourcePanel: Panel,
     });
-    expect(extensionProjectKnowledgeBaseResources()).toBeUndefined();
+    expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
     registerExtension({
       id: "kb",
       capability: "knowledge_base",
-      projectKnowledgeBaseResources: Panel,
+      knowledgeNetworkResourcePanel: Panel,
     });
-    expect(extensionProjectKnowledgeBaseResources()).toBe(Panel);
-  });
-  it("offers each project slot of the modeling flow only from the knowledge-base extension", () => {
-    const Panel = () => <p>panel</p>;
-    const slots = {
-      projectConceptSource: extensionProjectConceptSource,
-      knowledgeNetworkResourcePanel: extensionKnowledgeNetworkResourcePanel,
-      projectObjectSourceEditor: extensionProjectObjectSourceEditor,
-      projectRelationSourceEditor: extensionProjectRelationSourceEditor,
-      projectOverviewKnowledgeBase: extensionProjectOverviewKnowledgeBase,
-      projectRelationBasis: extensionProjectRelationBasis,
-      projectRequirementDocumentPicker: extensionProjectRequirementDocumentPicker,
-      projectTermLibrary: extensionProjectTermLibrary,
-    } as const;
-    const all = Object.fromEntries(Object.keys(slots).map((key) => [key, Panel]));
-    registerExtension({ id: "unrelated", capability: "other", ...all });
-    for (const read of Object.values(slots)) {
-      expect(read()).toBeUndefined();
-    }
-    registerExtension({ id: "kb", capability: "knowledge_base", ...all });
-    for (const read of Object.values(slots)) {
-      expect(read()).toBe(Panel);
-    }
+    expect(extensionKnowledgeNetworkResourcePanel()).toBe(Panel);
   });
 
   it("renders an extension page where the server reports its capability", () => {
@@ -396,20 +347,5 @@ describe("extension registry", () => {
 
     expect(i18n.getResource("en-US", "translation", "extensionDemo.kept")).toBe("core");
     expect(i18n.getResource("en-US", "translation", "extensionDemo.added")).toBe("extension");
-  });
-});
-
-describe("project document modeling extension", () => {
-  it("uses only the knowledge-base capability and is absent in the community registry", () => {
-    const Panel = () => null;
-    expect(extensionProjectKnowledgeBaseModel()).toBeUndefined();
-    registerExtension({ id: "wrong", capability: "other", projectKnowledgeBaseModel: Panel });
-    expect(extensionProjectKnowledgeBaseModel()).toBeUndefined();
-    registerExtension({
-      id: "kb-model",
-      capability: "knowledge_base",
-      projectKnowledgeBaseModel: Panel,
-    });
-    expect(extensionProjectKnowledgeBaseModel()).toBe(Panel);
   });
 });

@@ -82,6 +82,7 @@ describe("capability catalog", () => {
 
     expect(served.sort()).toEqual([
       "analysis_canvas",
+      "bkn_project",
       "connector_certified",
       "graph_explorer",
       "object_metrics",

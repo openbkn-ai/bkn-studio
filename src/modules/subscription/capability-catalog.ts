@@ -30,7 +30,7 @@ import type { Edition } from "@/framework/entitlement/edition";
  *
  * 反方向的例外与 business_provenance 同一种:产品已经决定按某档在售、页面上已有入口,登记表
  * 还没跟上(2026-11-19 版本划分):knowledge_base / analysis_canvas / version_mgmt 上游仍是
- * planned,bkn_project / risk_control 上游还没有这一行。页面先按在售展示,登记表另行补登记、
+ * planned,risk_control 上游还没有这一行。页面先按在售展示,登记表另行补登记、
  * 转 active。
  *
  * `key` 与 `minEdition` 在登记表里创建后不可改(改 key 会让存量证的那一项失去对应,
@@ -137,11 +137,11 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.1",
   },
   {
-    // BKN 项目管理整体归专业档(2026-11-19)。上游登记表还没有这一行,也没有服务登记装配表,
-    // 端点报不出,只能按证书档位判。
+    // BKN 项目管理整体归专业档(2026-11-19),代码只在企业版镜像里(2026-11-20)。bkn-safe-ee 的
+    // bknproject.Setup 登记装配表,端点报得出:证够了、镜像没换时提示镜像,而不是放行。
     category: "modeling",
-    key: "bkn_project",
-    reportedByEndpoint: false,
+    key: CAPABILITIES.BKN_PROJECT,
+    reportedByEndpoint: true,
     minEdition: "professional",
     sinceVersion: "0.2.2",
   },
