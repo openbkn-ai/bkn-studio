@@ -26,6 +26,11 @@ export const actiontypePart = {
   actionTypeApplicableCondition: "适用条件（可选）",
   actionTypeApplicableConditionHint:
     "适用条件只限定哪些{{objectTypeName}}实例可以操作；执行时仍需指定具体实例。",
+  actionTypeConditionObject: "条件对象类（可选）",
+  actionTypeConditionObjectSelectPlaceholder: "选择对象类（可选）",
+  actionTypeToolConditionLabel: "{{objectTypeName}}适用条件（可选）",
+  actionTypeToolConditionHint:
+    "可选。仅当{{objectTypeName}}实例满足条件时才执行所选工具；执行时仍需指定具体实例。",
   actionTypeExecutionCreateHint:
     "选择创建{{objectTypeName}}实例的工具，并设置创建时要传给工具的信息，例如名称、编号。",
   actionTypeExecutionUpdateHint:

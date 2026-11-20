@@ -104,6 +104,7 @@ type BasicFormValues = DefinitionDeclarationFormValues & {
   affectComment?: string;
   affectObjectTypeId?: string;
   color: string;
+  conditionObjectTypeId?: string;
   condition?: ActionTypeCondition | null;
   description: string;
   id?: string;
@@ -351,10 +352,17 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   const [definitionRefusal, setDefinitionRefusal] = useState<DeclarationRefusal | null>(null);
   const watchedCondition = Form.useWatch("condition", basicForm);
   const watchedOtherCondition = Form.useWatch("otherObjectCondition", basicForm);
-  const conditionObjectTypeId = watchedCondition?.objectTypeId || watchedObjectTypeId;
+  const watchedConditionObjectTypeId = Form.useWatch("conditionObjectTypeId", basicForm);
+  const conditionObjectTypeId =
+    watchedCondition?.objectTypeId || watchedObjectTypeId || watchedConditionObjectTypeId;
+  const conditionObjectTypeName =
+    objectTypes.find((item) => item.id === watchedConditionObjectTypeId)?.name ||
+    watchedConditionObjectTypeId ||
+    "";
   const showConditionPanel =
     operationKind === "relation" ||
-    (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined);
+    (isObjectOperation && watchedActionKind !== "create" && watchedActionKind !== undefined) ||
+    (operationKind === "tool" && Boolean(watchedConditionObjectTypeId));
 
   const switchActionKind = (nextKind: BasicFormValues["actionKind"]) => {
     const previousKind = activeActionKind.current;
@@ -549,8 +557,12 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             affectComment: detail.affect?.comment ?? "",
             affectObjectTypeId: detail.affect?.objectTypeId,
             color: detail.color,
+            conditionObjectTypeId:
+              detail.operationConfig?.type === "tool"
+                ? (detail.condition?.objectTypeId ?? undefined)
+                : undefined,
             condition:
-              detail.operationConfig?.type !== "relation" && detail.actionKind === "create"
+              detail.operationConfig?.type === "object" && detail.actionKind === "create"
                 ? null
                 : (detail.condition ?? null),
             description: detail.description,
@@ -565,7 +577,13 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             : undefined;
           const selectedObjectTypes = await Promise.all(
             Array.from(
-              new Set([nextBasic.objectTypeId, nextBasic.affectObjectTypeId].filter(Boolean)),
+              new Set(
+                [
+                  nextBasic.objectTypeId,
+                  nextBasic.affectObjectTypeId,
+                  nextBasic.conditionObjectTypeId,
+                ].filter(Boolean),
+              ),
             )
               .filter((id) => !nextObjectTypes.some((item) => item.id === id))
               .map((id) => getKnowledgeNetworkObjectType(networkId, id!)),
@@ -582,7 +600,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           activeActionKind.current = nextBasic.actionKind;
           operationDrafts.current = {};
           setHasSavedCondition(
-            detail.operationConfig?.type !== "relation" && detail.actionKind === "create"
+            detail.operationConfig?.type === "object" && detail.actionKind === "create"
               ? false
               : !isActionConditionEmpty(detail.condition),
           );
@@ -704,7 +722,13 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       affect,
       color: resolvedBasic.color,
       condition:
-        !isObjectBoundOperation || (isObjectOperation && resolvedBasic.actionKind === "create")
+        operationKind === "tool"
+          ? normalizeActionTypeCondition(
+              resolvedBasic.condition,
+              resolvedBasic.conditionObjectTypeId,
+            )
+          : !isObjectBoundOperation ||
+              (isObjectOperation && resolvedBasic.actionKind === "create")
           ? undefined
           : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
       description: resolvedBasic.description,
@@ -969,6 +993,27 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                 </Form.Item>
               </>
             )}
+            {operationKind === "tool" ? (
+              <Form.Item
+                label={t("knowledgeNetwork.actionTypeConditionObject")}
+                name="conditionObjectTypeId"
+              >
+                <RelationTypeObjectTypeSelect
+                  allowClear
+                  networkId={networkId}
+                  objectTypes={objectTypes}
+                  onResolvedOptionsChange={mergeResolvedObjectTypes}
+                  onChange={(nextId) => {
+                    if (nextId !== watchedConditionObjectTypeId) {
+                      basicForm.setFieldValue("condition", null);
+                      basicForm.setFields([{ name: "condition", errors: [] }]);
+                      setHasSavedCondition(false);
+                    }
+                  }}
+                  placeholder={t("knowledgeNetwork.actionTypeConditionObjectSelectPlaceholder")}
+                />
+              </Form.Item>
+            ) : null}
             {operationKind === "relation" ? (
               <ActionTypeRelationFields
                 networkId={networkId}
@@ -1015,15 +1060,23 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                 t(
                                   operationKind === "relation"
                                     ? "knowledgeNetwork.actionRelationConditionsHint"
+                                    : operationKind === "tool"
+                                      ? "knowledgeNetwork.actionTypeToolConditionHint"
                                     : "knowledgeNetwork.actionTypeApplicableConditionHint",
                                   {
-                                    objectTypeName: watchedObjectTypeId
-                                      ? currentObjectTypeName
-                                      : t("knowledgeNetwork.actionTypeGenericObjectName"),
+                                    objectTypeName:
+                                      operationKind === "tool"
+                                        ? conditionObjectTypeName
+                                        : watchedObjectTypeId
+                                          ? currentObjectTypeName
+                                          : t("knowledgeNetwork.actionTypeGenericObjectName"),
                                   },
                                 ),
-                                operationKind === "object" && watchedObjectTypeId
-                                  ? currentObjectTypeName
+                                (operationKind === "object" && watchedObjectTypeId) ||
+                                  (operationKind === "tool" && conditionObjectTypeName)
+                                  ? operationKind === "tool"
+                                    ? conditionObjectTypeName
+                                    : currentObjectTypeName
                                   : "",
                               )}
                             </p>
@@ -1036,6 +1089,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                       }),
                                       watchedObjectTypeId ? currentObjectTypeName : "",
                                     )
+                                  : operationKind === "tool"
+                                    ? t("knowledgeNetwork.actionTypeToolConditionLabel", {
+                                        objectTypeName: conditionObjectTypeName,
+                                      })
                                   : t("knowledgeNetwork.actionTypeTriggerCondition")
                               }
                               name="condition"
@@ -1055,7 +1112,11 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                               ]}
                             >
                               <ActionTypeConditionEditor
-                                boundObjectTypeId={watchedObjectTypeId}
+                                boundObjectTypeId={
+                                  operationKind === "tool"
+                                    ? watchedConditionObjectTypeId
+                                    : watchedObjectTypeId
+                                }
                                 executionParameters={executionValue.parameters ?? []}
                                 hideObjectTypeSelect
                                 objectTypes={objectTypes}

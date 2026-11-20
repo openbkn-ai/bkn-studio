@@ -126,10 +126,15 @@ export function ActionTypeOverviewPanel({
     () => objectTypes.find((item) => item.id === detail.affect?.objectTypeId),
     [detail.affect?.objectTypeId, objectTypes],
   );
+  const conditionObjectType = useMemo(
+    () => objectTypes.find((item) => item.id === detail.condition?.objectTypeId),
+    [detail.condition?.objectTypeId, objectTypes],
+  );
   const actionKindLabel = getActionKindLabel(detail.actionKind, t);
   const conditionLabel = formatConditionLabel(detail.condition, t);
   const operationKind = getActionTypeOperationKind(detail);
   const isObjectOperation = operationKind === "object";
+  const showToolCondition = operationKind === "tool" && Boolean(detail.condition);
   const relationConfig =
     detail.operationConfig?.type === "relation" ? detail.operationConfig : undefined;
   const [relation, setRelation] = useState<RelationTypeDetail | null>(null);
@@ -311,10 +316,31 @@ export function ActionTypeOverviewPanel({
                 </div>
               </section>
             )}
+            {showToolCondition ? (
+              <section className={styles.ruleSection}>
+                <div className={styles.ruleHeading}>
+                  <span>1</span>
+                  <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
+                </div>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeConditionObject")}</span>
+                    <ObjectTypeCell
+                      emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                      objectType={conditionObjectType}
+                    />
+                  </div>
+                  <div className={styles.fullWidthItem}>
+                    <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
+                    <strong>{conditionLabel}</strong>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             <section className={styles.ruleSection}>
               <div className={styles.ruleHeading}>
-                <span>{!isObjectOperation ? 1 : 2}</span>
+                <span>{!isObjectOperation && !showToolCondition ? 1 : 2}</span>
                 <h4>{t("knowledgeNetwork.actionTypeExecutionTool")}</h4>
               </div>
               <ActionTypeExecutionConfigTable

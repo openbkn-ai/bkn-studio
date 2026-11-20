@@ -526,7 +526,10 @@ describe("ActionTypeFormScene navigation context", () => {
         name: "knowledgeNetwork.actionTypeCreateTitle · knowledgeNetwork.actionOperationTool",
       }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("object type")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeTargetObject")).toBeNull();
+    expect(
+      screen.getByText("knowledgeNetwork.actionTypeConditionObject"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("radio", {
         name: /knowledgeNetwork.actionTypeInstanceOperationCreate/,
@@ -554,6 +557,77 @@ describe("ActionTypeFormScene navigation context", () => {
         }),
       ),
     );
+  });
+
+  it("saves an independent action with its condition object type", async () => {
+    mocks.locationState.current = { actionTypeCreateMode: "independent" };
+    mocks.createActionType.mockResolvedValue({ id: "action-conditioned" });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="create" />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeConditionObject"),
+    ).toBeInTheDocument();
+    const conditionObjectSelect = screen.getByLabelText("object type");
+    expect(screen.queryByText("knowledgeNetwork.actionTypeApplicableCondition")).toBeNull();
+
+    fireEvent.change(conditionObjectSelect, { target: { value: "orders" } });
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeApplicableCondition"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("action-condition-editor"));
+
+    fireEvent.change(screen.getAllByPlaceholderText("knowledgeNetwork.pleaseInput")[0], {
+      target: { value: "Send alert" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.createActionType).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          condition: {
+            field: "status",
+            objectTypeId: "orders",
+            operation: "==",
+            value: "active",
+            valueFrom: "const",
+          },
+          name: "Send alert",
+          objectTypeId: "",
+          operationConfig: { type: "tool" },
+        }),
+      ),
+    );
+  });
+
+  it("restores a saved condition and its object type when editing an independent action", async () => {
+    mocks.routeParams.current = { actionTypeId: "independent-2", networkId: "network-1" };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      condition: {
+        field: "status",
+        objectTypeId: "orders",
+        operation: "==",
+        value: "critical",
+        valueFrom: "const",
+      },
+      executionConfig: {},
+      id: "independent-2",
+      name: "Critical alert",
+      objectTypeId: "",
+      operationConfig: { type: "tool" },
+      tags: [],
+    });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    const conditionObjectSelect = await screen.findByLabelText("object type");
+    await waitFor(() => expect(conditionObjectSelect).toHaveValue("orders"));
+    expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:critical");
   });
 
   it("connects each instance operation to its applicable rules and tool guidance", async () => {
@@ -755,7 +829,7 @@ describe("ActionTypeFormScene navigation context", () => {
     renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
 
     expect(await screen.findByDisplayValue("Reconcile accounts")).toBeInTheDocument();
-    expect(screen.queryByLabelText("object type")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeTargetObject")).toBeNull();
     expect(screen.getByText("knowledgeNetwork.actionOperationConfiguration")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
 
