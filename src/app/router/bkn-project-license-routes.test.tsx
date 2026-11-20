@@ -42,10 +42,9 @@ function entitlement(overrides: Partial<Entitlement>): Entitlement {
 }
 
 function open(path: string) {
-  const router = createMemoryRouter(
-    [{ path: "/", children: bknProjectLicenseRoutes() }],
-    { initialEntries: [path] },
-  );
+  const router = createMemoryRouter([{ path: "/", children: bknProjectLicenseRoutes() }], {
+    initialEntries: [path],
+  });
   return render(<RouterProvider router={router} />);
 }
 
@@ -74,7 +73,11 @@ describe("project management without the enterprise image", () => {
   });
 
   it("says the images are missing when a Professional licence is there but the service is not", () => {
-    contextState.snapshot = entitlement({ edition: "professional", licensed: true, state: "valid" });
+    contextState.snapshot = entitlement({
+      edition: "professional",
+      licensed: true,
+      state: "valid",
+    });
     open("/bkn-project");
     expect(screen.queryByText("common.entitlement.unlockTitle")).toBeNull();
     expect(screen.getByText("common.entitlement.imageMissingTitle")).toBeTruthy();

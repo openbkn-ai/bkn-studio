@@ -66,9 +66,17 @@ describe("extension registry", () => {
   it("offers the knowledge-network resource panel only from the knowledge-base extension", () => {
     const Panel = () => <p>panel</p>;
     expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
-    registerExtension({ id: "unrelated", capability: "other", knowledgeNetworkResourcePanel: Panel });
+    registerExtension({
+      id: "unrelated",
+      capability: "other",
+      knowledgeNetworkResourcePanel: Panel,
+    });
     expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
-    registerExtension({ id: "kb", capability: "knowledge_base", knowledgeNetworkResourcePanel: Panel });
+    registerExtension({
+      id: "kb",
+      capability: "knowledge_base",
+      knowledgeNetworkResourcePanel: Panel,
+    });
     expect(extensionKnowledgeNetworkResourcePanel()).toBe(Panel);
   });
 
