@@ -333,6 +333,34 @@ describe("ProjectReleasePage", () => {
     expect(section.queryByText("cust_id")).toBeNull();
   });
 
+  it("says all data is checked by the knowledge-base build when it all comes from files", async () => {
+    getOntologyCheckMock.mockResolvedValue(
+      check({
+        results: {
+          coverage: { counted: 0, total: 1 },
+          excludedMapped: [],
+          keys: [
+            {
+              duplicates: 0,
+              fields: ["no"],
+              nulls: 0,
+              objectType: "contract",
+              reason: "knowledge_base_build",
+              rows: 0,
+              state: "not_counted",
+            },
+          ],
+          relations: [],
+        },
+        status: "partial",
+      }),
+    );
+    renderRelease();
+    const section = within(await screen.findByRole("region", { name: "数据校验" }));
+    expect(await section.findByText("数据都来自文件，由知识库构建核对")).toBeInTheDocument();
+    expect(section.queryByText(/0 \/ 0/)).toBeNull();
+  });
+
   it("prepares the release and lists the network's versions beside the check, reading them again", async () => {
     getProjectStatusMock.mockResolvedValue(
       status({

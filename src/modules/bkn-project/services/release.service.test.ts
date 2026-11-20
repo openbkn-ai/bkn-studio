@@ -27,7 +27,16 @@ const backendReview = {
   blocked: false,
   capabilities: [{ copy: true, id: "f1", kind: "function", name: "Late orders", reasons: null }],
   changes: {
-    added: [{ id: "orders", kind: "object_type", name: "Orders" }],
+    added: [
+      { id: "orders", kind: "object_type", name: "Orders" },
+      {
+        id: "order_customer",
+        kind: "relation_type",
+        name: "Customer",
+        source_name: "Orders",
+        target_name: "Customers",
+      },
+    ],
     changed: null,
     other: 2,
     removed: [],
@@ -112,7 +121,17 @@ describe("release.service", () => {
       blocked: false,
       capabilities: [{ copy: true, id: "f1", kind: "function", name: "Late orders", reasons: [] }],
       changes: {
-        added: [{ id: "orders", kind: "object_type", name: "Orders" }],
+        // A relation keeps the object types it joins.
+        added: [
+          { id: "orders", kind: "object_type", name: "Orders" },
+          {
+            id: "order_customer",
+            kind: "relation_type",
+            name: "Customer",
+            source_name: "Orders",
+            target_name: "Customers",
+          },
+        ],
         changed: [],
         other: 2,
         removed: [],

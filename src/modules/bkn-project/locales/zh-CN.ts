@@ -3463,6 +3463,7 @@ export const bknProjectZhCN = {
         outdated: "这是上次确认时的校验结果。",
         coverage: "已核对 {{counted}} / {{total}} 项",
         coverageHandedOver: "已核对 {{counted}} / {{total}} 项，文件中的数据由知识库构建核对",
+        coverageAllHandedOver: "数据都来自文件，由知识库构建核对",
         orphansHint: "找不到对应记录只作提示，不影响校验结果。",
         tab: "{{title}} {{count}}",
         tabProblems: "{{count}} 项有问题",

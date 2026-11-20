@@ -287,10 +287,12 @@ function CheckSection({
           {results ? (
             <span className={styles.muted}>
               {onlyHandedOver
-                ? t("bknProject.release.check.coverageHandedOver", {
-                    counted: results.coverage.counted,
-                    total: results.coverage.total - handedOver,
-                  })
+                ? results.coverage.total - handedOver > 0
+                  ? t("bknProject.release.check.coverageHandedOver", {
+                      counted: results.coverage.counted,
+                      total: results.coverage.total - handedOver,
+                    })
+                  : t("bknProject.release.check.coverageAllHandedOver")
                 : t("bknProject.release.check.coverage", results.coverage)}
             </span>
           ) : null}

@@ -3717,6 +3717,8 @@ export const bknProjectEnUS = {
         coverage: "{{counted}} of {{total}} checked",
         coverageHandedOver:
           "{{counted}} of {{total}} checked; data from files is checked by the knowledge-base build",
+        coverageAllHandedOver:
+          "All data comes from files and is checked by the knowledge-base build",
         orphansHint: "Records without a match are reported only; they do not fail the check.",
         tab: "{{title}} {{count}}",
         tabProblems: "{{count}} issues",
