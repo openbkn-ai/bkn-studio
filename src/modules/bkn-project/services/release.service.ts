@@ -37,7 +37,13 @@ export const REGRESSION_POLL_MS = 10000;
 
 /* ------------------------------- Backend shapes ------------------------------- */
 
-type BackendItem = { id: string; kind: string; name: string };
+type BackendItem = {
+  id: string;
+  kind: string;
+  name: string;
+  source_name?: string;
+  target_name?: string;
+};
 
 type BackendQuestion = {
   id: string;
@@ -147,8 +153,15 @@ type BackendRegression = {
   version: string;
 };
 
+// A relation keeps the names of the object types it joins, when the backend gives them.
 const items = (list: BackendItem[] | null | undefined): ReleaseItem[] =>
-  (list ?? []).map(({ id, kind, name }) => ({ id, kind, name }));
+  (list ?? []).map(({ id, kind, name, source_name, target_name }) => ({
+    id,
+    kind,
+    name,
+    ...(source_name ? { source_name } : {}),
+    ...(target_name ? { target_name } : {}),
+  }));
 
 const mapQuestion = (question: BackendQuestion): ReleaseQuestion => ({
   id: question.id,

@@ -6,7 +6,15 @@
  */
 
 /** An object type or relation type a release names. `kind` is `object_type` or `relation_type`. */
-export type ReleaseItem = { id: string; kind: string; name: string };
+export type ReleaseItem = {
+  id: string;
+  kind: string;
+  /** Empty for an item the model no longer has: the page says so rather than show its id. */
+  name: string;
+  /** For a relation type in the changes, the names of the object types it joins. */
+  source_name?: string;
+  target_name?: string;
+};
 
 /**
  * One of the seven release checks. `reason` says why it did not pass; `accept`, when set, is what

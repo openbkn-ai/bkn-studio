@@ -36,6 +36,7 @@ import type {
 } from "@/modules/bkn-project/types/release";
 import { useAccountDirectory } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 
+import { releaseItemName } from "./itemName";
 import styles from "./Release.module.css";
 
 const PREFIX = "bknProject.release.regression";
@@ -258,7 +259,7 @@ function ResultDetail({ result }: { result: RegressionResult }) {
         <span className={styles.detail}>
           {t(`${PREFIX}.missing`, {
             names: result.missing
-              .map((item) => item.name || item.id)
+              .map((item) => releaseItemName(t, item))
               .join(t("bknProject.listSeparator")),
           })}
         </span>
@@ -267,7 +268,7 @@ function ResultDetail({ result }: { result: RegressionResult }) {
         <span className={styles.detail}>
           {t(`${PREFIX}.missingTables`, {
             names: result.missingTables
-              .map((item) => item.name || item.id)
+              .map((item) => releaseItemName(t, item))
               .join(t("bknProject.listSeparator")),
           })}
         </span>

@@ -49,9 +49,30 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ runtimeConfig: { currentUser: { id: "me" } } }),
 }));
 
+const kbModeMock = vi.hoisted((): { mode: "hidden" | "enabled" } => ({ mode: "hidden" }));
 vi.mock("@/framework/entitlement/bkn-project-kb-mode", () => ({
-  useBknProjectKbMode: () => "hidden",
+  useBknProjectKbMode: () => kbModeMock.mode,
 }));
+
+// The knowledge-base block of the overview, as an edition installs it: it reports its build.
+const overviewKnowledgeBaseMock = vi.hoisted(() => ({
+  summary: null as { done: number; total: number } | null,
+}));
+vi.mock("@/framework/extension/registry", async (importOriginal) => {
+  const { useEffect } = await import("react");
+  return {
+    ...(await importOriginal<typeof import("@/framework/extension/registry")>()),
+    extensionProjectOverviewKnowledgeBase: () =>
+      function OverviewKnowledgeBase({
+        onBuildSummary,
+      }: {
+        onBuildSummary?: (summary: { done: number; total: number } | null) => void;
+      }) {
+        useEffect(() => onBuildSummary?.(overviewKnowledgeBaseMock.summary), [onBuildSummary]);
+        return null;
+      },
+  };
+});
 
 vi.mock("@/framework/entitlement/BknProjectKbSlot", () => ({
   BknProjectKbBadge: () => null,
@@ -609,6 +630,22 @@ describe("ProjectWorkspaceScene", () => {
     // The community image builds no instances and draws no concepts from a knowledge base.
     expect(screen.getByTitle("bknProject.overview.tiles.buildSubCore")).toBeInTheDocument();
     expect(screen.getByTitle("bknProject.overview.tiles.conceptsSubCore")).toBeInTheDocument();
+  });
+
+  it("counts the knowledge-base files built beside the tables indexed", async () => {
+    kbModeMock.mode = "enabled";
+    overviewKnowledgeBaseMock.summary = { done: 11, total: 11 };
+    try {
+      getOntologyIndexMock.mockResolvedValue({ counts: {}, objectTypes: [], tasksVisible: true });
+      renderScene();
+      // A project of files only is built once its files are, not "not started".
+      expect(
+        await screen.findByText('bknProject.overview.tiles.buildFilesValue:{"done":11,"total":11}'),
+      ).toBeInTheDocument();
+    } finally {
+      kbModeMock.mode = "hidden";
+      overviewKnowledgeBaseMock.summary = null;
+    }
   });
 
   it("says the questions come once the requirements are drafted", async () => {

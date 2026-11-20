@@ -436,7 +436,9 @@ describe("ProjectRequirements", () => {
   it("says generating takes minutes on a large model, and how long it has run", async () => {
     getDraftMock.mockResolvedValue({
       items: {
-        objectTypes: Array.from({ length: 16 }, (_, index) => ({
+        // 16 adopted and one left out: the count is of what the model holds.
+        objectTypes: Array.from({ length: 17 }, (_, index) => ({
+          adopted: index < 16,
           id: `o${index}`,
           name: `对象${index}`,
           properties: [],

@@ -951,6 +951,27 @@ describe("ProjectKinetic", () => {
     });
     mocks.getRequirements.mockResolvedValue(done);
     mocks.getLogicNeeds.mockResolvedValue({ ...logicNeeds(), needs: [] });
+    // Without requirement documents there was nothing to base one on: it says that, not that the
+    // model needs none.
+    const bare = renderPage();
+    expect(
+      await screen.findByText(
+        "分析已完成：还没有需求文档，没有依据来提出指标、函数或 Skill。添加需求文档后可以重新分析，也可以手工添加。",
+      ),
+    ).toBeInTheDocument();
+    bare.unmount();
+
+    mocks.listDocuments.mockResolvedValue([
+      {
+        createTime: 1,
+        docType: "prd",
+        format: "docx",
+        id: "d1",
+        name: "需求.docx",
+        size: 1,
+        uploaderId: "me",
+      },
+    ]);
     const { unmount } = renderPage();
 
     expect(

@@ -49,6 +49,7 @@ import type {
 } from "@/modules/bkn-project/types/release";
 import type { BuildTab } from "@/modules/bkn-project/types/workspace";
 
+import { releaseItemName } from "./itemName";
 import styles from "./Release.module.css";
 
 const PREFIX = "bknProject.release.publish";
@@ -471,7 +472,7 @@ function ReviewBody({
         )}
         {risks.orphans.map((orphan) => (
           <p className={styles.muted} key={orphan.id}>
-            {t(`${PREFIX}.orphans`, { count: orphan.orphans, name: orphan.name || orphan.id })}
+            {t(`${PREFIX}.orphans`, { count: orphan.orphans, name: releaseItemName(t, orphan) })}
           </p>
         ))}
         {/* Needs nothing implements yet never block: the way to them, not a dead end. */}
@@ -664,7 +665,7 @@ function ItemNames({ items, label }: { items: ReleaseItem[]; label: string }) {
       <span className={styles.names}>
         {shown.map((item) => (
           <LightStatusTag className={styles.name} key={`${item.kind}/${item.id}`} tone="neutral">
-            {item.name || item.id}
+            {releaseItemName(t, item)}
           </LightStatusTag>
         ))}
         {items.length > shown.length ? (
@@ -697,7 +698,7 @@ export function Questions({ list, title }: { list: ReleaseQuestion[]; title: str
                 <span className={styles.questionMeta}>
                   {t(`${PREFIX}.missing`, {
                     names: question.missing
-                      .map((item) => item.name || item.id)
+                      .map((item) => releaseItemName(t, item))
                       .join(t("bknProject.listSeparator")),
                   })}
                 </span>
@@ -705,8 +706,8 @@ export function Questions({ list, title }: { list: ReleaseQuestion[]; title: str
               {question.unconnected.map((pair) => (
                 <span className={styles.questionMeta} key={`${pair.from.id}-${pair.to.id}`}>
                   {t(`${PREFIX}.unconnected`, {
-                    from: pair.from.name || pair.from.id,
-                    to: pair.to.name || pair.to.id,
+                    from: releaseItemName(t, pair.from),
+                    to: releaseItemName(t, pair.to),
                   })}
                 </span>
               ))}
