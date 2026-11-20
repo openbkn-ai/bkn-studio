@@ -527,9 +527,7 @@ describe("ActionTypeFormScene navigation context", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("knowledgeNetwork.actionTypeTargetObject")).toBeNull();
-    expect(
-      screen.getByText("knowledgeNetwork.actionTypeConditionObject"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("knowledgeNetwork.actionTypeConditionObject")).toBeInTheDocument();
     expect(
       screen.queryByRole("radio", {
         name: /knowledgeNetwork.actionTypeInstanceOperationCreate/,
@@ -580,9 +578,7 @@ describe("ActionTypeFormScene navigation context", () => {
     fireEvent.change(screen.getAllByPlaceholderText("knowledgeNetwork.pleaseInput")[0], {
       target: { value: "Send alert" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.actionTypeSaveAndExit" }));
 
     await waitFor(() =>
       expect(mocks.createActionType).toHaveBeenCalledWith(

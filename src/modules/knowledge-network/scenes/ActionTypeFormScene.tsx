@@ -727,10 +727,9 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
               resolvedBasic.condition,
               resolvedBasic.conditionObjectTypeId,
             )
-          : !isObjectBoundOperation ||
-              (isObjectOperation && resolvedBasic.actionKind === "create")
-          ? undefined
-          : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
+          : !isObjectBoundOperation || (isObjectOperation && resolvedBasic.actionKind === "create")
+            ? undefined
+            : normalizeActionTypeCondition(resolvedBasic.condition, resolvedBasic.objectTypeId),
       description: resolvedBasic.description,
       executionConfig: normalizedExecution,
       id: resolvedBasic.id,
@@ -1062,7 +1061,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                     ? "knowledgeNetwork.actionRelationConditionsHint"
                                     : operationKind === "tool"
                                       ? "knowledgeNetwork.actionTypeToolConditionHint"
-                                    : "knowledgeNetwork.actionTypeApplicableConditionHint",
+                                      : "knowledgeNetwork.actionTypeApplicableConditionHint",
                                   {
                                     objectTypeName:
                                       operationKind === "tool"
@@ -1093,7 +1092,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                                     ? t("knowledgeNetwork.actionTypeToolConditionLabel", {
                                         objectTypeName: conditionObjectTypeName,
                                       })
-                                  : t("knowledgeNetwork.actionTypeTriggerCondition")
+                                    : t("knowledgeNetwork.actionTypeTriggerCondition")
                               }
                               name="condition"
                               rules={[
