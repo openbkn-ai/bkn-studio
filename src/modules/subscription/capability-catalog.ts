@@ -137,8 +137,8 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.1",
   },
   {
-    // BKN 项目管理整体归专业档(2026-11-19),代码只在企业版镜像里(2026-11-20)。bkn-safe-ee 的
-    // bknproject.Setup 登记装配表,端点报得出:证够了、镜像没换时提示镜像,而不是放行。
+    // 项目管理是专业档能力。bkn-safe-ee 的 bknproject.Setup 登记装配表,端点报得出:
+    // 证够了、镜像没换时提示镜像,而不是放行。
     category: "modeling",
     key: CAPABILITIES.BKN_PROJECT,
     reportedByEndpoint: true,
