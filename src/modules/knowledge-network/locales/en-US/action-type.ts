@@ -28,6 +28,11 @@ export const actiontypePart = {
   actionTypeApplicableCondition: "Applicable conditions (optional)",
   actionTypeApplicableConditionHint:
     "Conditions limit which {{objectTypeName}} instances can be operated on; a specific instance must still be selected at execution time.",
+  actionTypeConditionObject: "Condition object type (optional)",
+  actionTypeConditionObjectSelectPlaceholder: "Select an object type (optional)",
+  actionTypeToolConditionLabel: "{{objectTypeName}} conditions (optional)",
+  actionTypeToolConditionHint:
+    "Optional. The selected tool only runs for {{objectTypeName}} instances that satisfy the conditions; a specific instance must still be selected at execution time.",
   actionTypeExecutionCreateHint:
     "Choose the tool that creates an instance of {{objectTypeName}}, then set the information passed to it, such as a name or reference number.",
   actionTypeExecutionUpdateHint:
