@@ -1353,6 +1353,7 @@ export const bknProjectZhCN = {
         buildSub: "结构化索引和非结构化实例",
         buildSubCore: "结构化对象的索引",
         buildValue: "{{ready}} / {{total}} 张表",
+        buildFilesValue: "{{done}} / {{total}} 个文件",
         buildAction: "查看构建",
         releaseSub: "最新发布的版本",
         releaseAction: "查看发布",
@@ -2164,6 +2165,8 @@ export const bknProjectZhCN = {
       analyzedCovered:
         "分析已完成：网络已有的内容已经覆盖这个模型，不需要新增动力需求。需要时也可以手工添加。",
       analyzedNone: "分析已完成：这个模型暂时不需要指标、函数或 Skill。需要时也可以手工添加。",
+      analyzedNoBasis:
+        "分析已完成：还没有需求文档，没有依据来提出指标、函数或 Skill。添加需求文档后可以重新分析，也可以手工添加。",
       noneFiltered: "没有符合筛选条件的动力需求。",
       allCovered: "动力需求都已由网络已有的内容覆盖，没有新增需求。",
       network: {
@@ -3125,14 +3128,14 @@ export const bknProjectZhCN = {
         },
         accept: {
           similar_names: "知道名称相近，仍然发布",
-          check_partial: "知道有部分数据没有核对，仍然发布",
+          check_partial: "部分数据暂时无法核对，仍然发布",
           index_not_ready: "知道部分索引还没就绪，仍然发布",
           knowledge_base_review_items: "知道还有未处理的待核实条目，带着它们发布",
           other: "知道这项没有通过，仍然发布",
         },
         accepted: {
           similar_names: "名称与已有内容相近",
-          check_partial: "部分数据没有核对",
+          check_partial: "部分数据暂时无法核对",
           index_not_ready: "部分本地索引没有就绪",
           knowledge_base_review_items: "带着未处理的待核实条目",
           other: "有检查没有通过",
@@ -3168,6 +3171,8 @@ export const bknProjectZhCN = {
         changed: "修改",
         removed: "删除",
         countedLabel: "{{label}} {{count}}",
+        removedItem: "模型中已没有的一项",
+        relationEnds: "{{name}}（{{source}} → {{target}}）",
         showAll: "显示全部 {{count}} 项",
         showAll_one: "显示全部 {{count}} 项",
         showAll_other: "显示全部 {{count}} 项",
@@ -3208,9 +3213,9 @@ export const bknProjectZhCN = {
         unanswerable: "仍然答不上来",
         missing: "缺少：{{names}}",
         unconnected: "「{{from}}」与「{{to}}」之间没有可用的关联",
-        unjudged: "另有 {{count}} 个问题没有写明需要什么，无法判断。",
-        unjudged_one: "另有 {{count}} 个问题没有写明需要什么，无法判断。",
-        unjudged_other: "另有 {{count}} 个问题没有写明需要什么，无法判断。",
+        unjudged: "另有 {{count}} 个问题看不出用到模型中的哪些内容，暂不判断。",
+        unjudged_one: "另有 {{count}} 个问题看不出用到模型中的哪些内容，暂不判断。",
+        unjudged_other: "另有 {{count}} 个问题看不出用到模型中的哪些内容，暂不判断。",
         publishVersion: "发布 v{{version}}",
         regressionHint: "写入网络后会自动用场景问题做一次回归，回归结果不影响发布。",
         regressionEmpty:
@@ -3457,6 +3462,7 @@ export const bknProjectZhCN = {
         failedHint: "校验没能完成，可以重新校验。",
         outdated: "这是上次确认时的校验结果。",
         coverage: "已核对 {{counted}} / {{total}} 项",
+        coverageHandedOver: "已核对 {{counted}} / {{total}} 项，文件中的数据由知识库构建核对",
         orphansHint: "找不到对应记录只作提示，不影响校验结果。",
         tab: "{{title}} {{count}}",
         tabProblems: "{{count}} 项有问题",

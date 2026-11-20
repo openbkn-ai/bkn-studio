@@ -204,6 +204,8 @@ export function ProjectOverview({
     };
   }, [project.id]);
   const OverviewKnowledgeBase = extensionProjectOverviewKnowledgeBase();
+  // The files of the latest knowledge-base full build, as the knowledge-base block reports them.
+  const [kbBuild, setKbBuild] = useState<{ done: number; total: number } | null>(null);
   const kbMode = useBknProjectKbMode();
 
   const [requirements, setRequirements] = useState<Requirements | null | undefined>(undefined);
@@ -525,14 +527,20 @@ export function ProjectOverview({
           ? "bknProject.overview.tiles.buildSubCore"
           : "bknProject.overview.tiles.buildSub",
       ),
-      value: indexed.length
-        ? t("bknProject.overview.tiles.buildValue", {
-            ready: indexed.filter((item) => item.state === "ready").length,
-            total: indexed.length,
-          })
-        : index === undefined
-          ? PLACEHOLDER
-          : t("bknProject.overview.tiles.notStarted"),
+      // Tables indexed and knowledge-base files built both count as building.
+      value:
+        [
+          indexed.length
+            ? t("bknProject.overview.tiles.buildValue", {
+                ready: indexed.filter((item) => item.state === "ready").length,
+                total: indexed.length,
+              })
+            : "",
+          kbBuild ? t("bknProject.overview.tiles.buildFilesValue", kbBuild) : "",
+        ]
+          .filter(Boolean)
+          .join(t("bknProject.listSeparator")) ||
+        (index === undefined ? PLACEHOLDER : t("bknProject.overview.tiles.notStarted")),
     },
     {
       action: { label: t("bknProject.overview.tiles.releaseAction"), onClick: () => go("release") },
@@ -778,7 +786,7 @@ export function ProjectOverview({
               </dt>
               <dd data-region="knowledge-base">
                 {OverviewKnowledgeBase && kbMode === "enabled" ? (
-                  <OverviewKnowledgeBase projectId={project.id} />
+                  <OverviewKnowledgeBase onBuildSummary={setKbBuild} projectId={project.id} />
                 ) : (
                   <span className={styles.muted}>
                     {t("bknProject.overview.sources.knowledgeBasePreview")}

@@ -1441,6 +1441,7 @@ export const bknProjectEnUS = {
         buildSub: "Structured indexes and unstructured instances",
         buildSubCore: "Indexes of structured objects",
         buildValue: "{{ready}} / {{total}} tables",
+        buildFilesValue: "{{done}} / {{total}} files",
         buildAction: "View the build",
         releaseSub: "The latest released version",
         releaseAction: "View releases",
@@ -2312,6 +2313,8 @@ export const bknProjectEnUS = {
         "Analysis finished: what the network already has covers this model, so no new kinetic needs are required. You can still add one by hand.",
       analyzedNone:
         "Analysis finished: this model needs no metrics, functions or Skills for now. You can still add one by hand.",
+      analyzedNoBasis:
+        "Analysis finished: there are no requirement documents yet, so nothing to base metrics, functions or Skills on. Add documents and analyze again, or add them by hand.",
       noneFiltered: "No kinetic need matches the filters.",
       allCovered:
         "Every kinetic need is covered by what the network already has; there are no new needs.",
@@ -3342,14 +3345,14 @@ export const bknProjectEnUS = {
         },
         accept: {
           similar_names: "I know the names are close; publish anyway",
-          check_partial: "I know part of the data was not checked; publish anyway",
+          check_partial: "Part of the data could not be checked yet; publish anyway",
           index_not_ready: "I know some indexes are not ready; publish anyway",
           knowledge_base_review_items: "I know some items are not reviewed; publish with them",
           other: "I know this did not pass; publish anyway",
         },
         accepted: {
           similar_names: "names close to existing content",
-          check_partial: "part of the data not checked",
+          check_partial: "part of the data could not be checked yet",
           index_not_ready: "some local indexes not ready",
           knowledge_base_review_items: "items not reviewed",
           other: "a check that did not pass",
@@ -3387,6 +3390,8 @@ export const bknProjectEnUS = {
         changed: "Changed",
         removed: "Removed",
         countedLabel: "{{label}} {{count}}",
+        removedItem: "an item no longer in the model",
+        relationEnds: "{{name}} ({{source}} → {{target}})",
         showAll: "Show all {{count}}",
         showAll_one: "Show all {{count}}",
         showAll_other: "Show all {{count}}",
@@ -3427,10 +3432,12 @@ export const bknProjectEnUS = {
         unanswerable: "Still not answerable",
         missing: "Missing: {{names}}",
         unconnected: "No usable relation joins {{from}} and {{to}}",
-        unjudged: "{{count}} more questions do not say what they need, so they cannot be judged.",
-        unjudged_one: "{{count}} more question does not say what it needs, so it cannot be judged.",
+        unjudged:
+          "{{count}} more questions don't show which parts of the model they use, so they are not judged.",
+        unjudged_one:
+          "{{count}} more question doesn't show which parts of the model it uses, so it is not judged.",
         unjudged_other:
-          "{{count}} more questions do not say what they need, so they cannot be judged.",
+          "{{count}} more questions don't show which parts of the model they use, so they are not judged.",
         publishVersion: "Publish v{{version}}",
         regressionHint:
           "Once written into the network, the scenario questions are asked once as a regression; its result does not stop publishing.",
@@ -3708,6 +3715,8 @@ export const bknProjectEnUS = {
         failedHint: "The check did not finish. You can check again.",
         outdated: "These are the results for the last confirmation.",
         coverage: "{{counted}} of {{total}} checked",
+        coverageHandedOver:
+          "{{counted}} of {{total}} checked; data from files is checked by the knowledge-base build",
         orphansHint: "Records without a match are reported only; they do not fail the check.",
         tab: "{{title}} {{count}}",
         tabProblems: "{{count}} issues",

@@ -1023,7 +1023,11 @@ export function ProjectKinetic({
                   run?.status === "ready"
                     ? hasNetworkItems
                       ? "analyzedCovered"
-                      : "analyzedNone"
+                      : // With no requirement documents nothing was there to base one on.
+                        documents !== null &&
+                          !documents.some((document) => document.id !== NETWORK_DOCUMENT_ID)
+                        ? "analyzedNoBasis"
+                        : "analyzedNone"
                     : "none"
                 }`,
               )}

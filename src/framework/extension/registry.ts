@@ -203,6 +203,11 @@ export type ProjectRequirementDocumentPickerProps = ProjectSlotProps & {
 
 export type ProjectOverviewKnowledgeBaseProps = {
   projectId: string;
+  /**
+   * Reports how many knowledge-base files the latest full build processed, of how many, so the
+   * overview's build card counts them too; null when none was built.
+   */
+  onBuildSummary?: (summary: { done: number; total: number } | null) => void;
 };
 
 /** The installed knowledge-base extension's component for one project slot, if it has one. */

@@ -272,7 +272,10 @@ export function ProjectRequirements({
     const timer = window.setTimeout(() => void load(), REQUIREMENTS_POLL_MS);
     return () => window.clearTimeout(timer);
   }, [isDrafting, load, reads, stalled]);
-  const objectTypes = drafted.filter((item) => item.kind === "object_type").length;
+  // The object types the model holds: adopted ones, as every other count on the page has them.
+  const objectTypes = modelCounts
+    ? modelCounts.network + modelCounts.project
+    : drafted.filter((item) => item.kind === "object_type").length;
   // Generating takes longer the larger the model: say so rather than promise a minute or two.
   const draftingMinutes =
     isDrafting && requirements?.updateTime

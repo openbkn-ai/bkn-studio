@@ -79,12 +79,15 @@ function byAttention<T extends CheckCountState>(rows: T[], hasProblem: (row: T) 
  */
 function CheckSection({
   canRun,
+  fieldNames,
   names,
   onSettled,
   outdated,
   projectId,
 }: {
   canRun: boolean;
+  /** Each object type's fields by the names people know. */
+  fieldNames: Record<string, Record<string, string>>;
   names: Record<string, string>;
   /** The check ended: what may be done next has changed. */
   onSettled?: () => void;
@@ -166,7 +169,10 @@ function CheckSection({
     },
     {
       dataIndex: "fields",
-      render: (fields: string[]) => fields.join(t("bknProject.listSeparator")),
+      render: (fields: string[], item) =>
+        fields
+          .map((field) => fieldNames[item.objectType]?.[field] ?? field)
+          .join(t("bknProject.listSeparator")),
       title: t("bknProject.release.check.keys.fields"),
     },
     {
@@ -243,6 +249,18 @@ function CheckSection({
     ) ?? [],
     joinHasProblem,
   );
+  // Data read from files is checked by the knowledge-base build: a check partial only for that
+  // reads as passed, and those rows are not counted against it.
+  const handedOver = [...keys, ...joins].filter(
+    (row) => row.state !== "counted" && row.reason === "knowledge_base_build",
+  ).length;
+  const onlyHandedOver =
+    check?.status === "partial" &&
+    handedOver > 0 &&
+    [...keys, ...joins].every(
+      (row) => row.state === "counted" || row.reason === "knowledge_base_build",
+    );
+  const shownStatus = onlyHandedOver ? "passed" : check?.status;
   const keyProblems = keys.filter(keyHasProblem).length;
   const joinProblems = joins.filter(joinHasProblem).length;
   const tabLabel = (title: string, count: number, problems: number) => (
@@ -261,14 +279,19 @@ function CheckSection({
       actions={
         <>
           {/* A status this page does not know gets no tag rather than a raw value. */}
-          {check && CHECK_STATUSES.includes(check.status) ? (
-            <LightStatusTag tone={CHECK_STATUS_TONE[check.status]}>
-              {t(`bknProject.release.check.status.${check.status}`)}
+          {shownStatus && CHECK_STATUSES.includes(shownStatus) ? (
+            <LightStatusTag tone={CHECK_STATUS_TONE[shownStatus]}>
+              {t(`bknProject.release.check.status.${shownStatus}`)}
             </LightStatusTag>
           ) : null}
           {results ? (
             <span className={styles.muted}>
-              {t("bknProject.release.check.coverage", results.coverage)}
+              {onlyHandedOver
+                ? t("bknProject.release.check.coverageHandedOver", {
+                    counted: results.coverage.counted,
+                    total: results.coverage.total - handedOver,
+                  })
+                : t("bknProject.release.check.coverage", results.coverage)}
             </span>
           ) : null}
           {canRun ? (
@@ -421,6 +444,8 @@ export function ProjectReleasePage({
   const [status, setStatus] = useState<ProjectStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
+  // Each object type's fields by the names people know: the check counts the stored columns.
+  const [fieldNames, setFieldNames] = useState<Record<string, Record<string, string>>>({});
 
   const load = useCallback(async () => {
     setLoadFailed(false);
@@ -464,6 +489,22 @@ export function ProjectReleasePage({
               [...draft.items.objectTypes, ...draft.items.relationTypes].map((item) => [
                 item.id,
                 item.name,
+              ]),
+            ),
+          );
+          setFieldNames(
+            Object.fromEntries(
+              draft.items.objectTypes.map((objectType) => [
+                objectType.id,
+                Object.fromEntries(
+                  objectType.properties.flatMap((property) => {
+                    const shown = property.displayName || property.name;
+                    return [
+                      [property.name, shown],
+                      ...(property.mappedField ? [[property.mappedField, shown]] : []),
+                    ];
+                  }),
+                ),
               ]),
             ),
           );
@@ -551,6 +592,7 @@ export function ProjectReleasePage({
       />
       <CheckSection
         canRun={canRun}
+        fieldNames={fieldNames}
         names={names}
         onSettled={() => void load()}
         outdated={status.stale.includes("check_outdated")}
