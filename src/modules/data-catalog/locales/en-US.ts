@@ -5,8 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { apiResourceEnUS } from "./api-resource.en-US";
+
 export const dataCatalogEnUS = {
   dataCatalog: {
+    apiResource: apiResourceEnUS,
     buildSchedule: {
       enabledFilter: "Schedule state",
       title: "Build schedules",
@@ -338,6 +341,7 @@ export const dataCatalogEnUS = {
       logical: "Logical Group",
     },
     categories: {
+      api: "API",
       table: "Table",
       index: "Index",
       logical_view: "Logical View",
@@ -710,6 +714,12 @@ export const dataCatalogEnUS = {
       fieldOriginalType: "Original Type",
       fieldOriginalDescription: "Original Description",
       editFields: "Edit description and fields",
+      editBasicInfo: "Edit basic information",
+      editSchemaFields: "Edit fields",
+      fieldDisplayNameLabel: "Business name for {{name}}",
+      fieldDescriptionLabel: "Description for {{name}}",
+      nameLengthLimit: "Resource names must be at most 255 characters.",
+      tagInputHint: "Press Enter to add a tag. Add up to 5 tags, with at most 40 characters each.",
       logicalViewReadOnly:
         "Studio does not support editing this type of logical view. You can still view its details.",
       logicalViewIndexReadOnly:

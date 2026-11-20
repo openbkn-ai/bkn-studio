@@ -6,6 +6,17 @@
  */
 
 export const apiCatalogEnUS = {
+  details: {
+    field: "Field",
+    defaultLimits: "Uses the backend's default timeout and response size limits.",
+    protected: "Sensitive value hidden",
+    loginConfigured: "Login configured · View definition",
+    noLogin: "No separate login request configured",
+    additional: "Additional configuration",
+    emptyArray: "Empty array",
+    emptyObject: "Empty object",
+    emptyString: "Empty string",
+  },
   service: "Service settings",
   variables: "Variables and credentials",
   login: "Optional login",

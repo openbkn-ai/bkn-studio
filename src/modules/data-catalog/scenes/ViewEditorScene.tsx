@@ -7,8 +7,6 @@
 
 import {
   ApartmentOutlined,
-  ArrowDownOutlined,
-  ArrowUpOutlined,
   CheckOutlined,
   PartitionOutlined,
   PlusOutlined,
@@ -26,6 +24,7 @@ import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
+import { OutputFieldActions } from "@/modules/data-catalog/components/OutputFieldActions";
 import {
   canEnableFieldFiltering,
   findUnsupportedFilterableField,
@@ -922,28 +921,16 @@ export function ViewEditorScene({
                                   </Tooltip>
                                 </td>
                                 <td className={styles.fieldActions}>
-                                  <AppButton
-                                    aria-label={t("dataCatalog.viewEditor.moveUp")}
-                                    disabled={index === 0}
-                                    icon={<ArrowUpOutlined />}
-                                    onClick={() => moveField(index, -1)}
-                                  />
-                                  <AppButton
-                                    aria-label={t("dataCatalog.viewEditor.moveDown")}
-                                    disabled={index === fields.length - 1}
-                                    icon={<ArrowDownOutlined />}
-                                    onClick={() => moveField(index, 1)}
-                                  />
-                                  <AppButton
-                                    onClick={() =>
+                                  <OutputFieldActions
+                                    canMoveUp={index > 0}
+                                    canMoveDown={index < fields.length - 1}
+                                    onMove={(direction) => moveField(index, direction)}
+                                    onRemove={() =>
                                       setFields((current) =>
                                         current.filter((_, position) => position !== index),
                                       )
                                     }
-                                    type="link"
-                                  >
-                                    {t("dataCatalog.viewEditor.removeField")}
-                                  </AppButton>
+                                  />
                                 </td>
                               </tr>
                             );

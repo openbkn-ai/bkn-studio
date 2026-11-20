@@ -1,0 +1,182 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.surface {
+  min-inline-size: 0;
+  container-type: inline-size;
+}
+.table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tbody > tr > td {
+  padding: 8px 12px;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.table > thead > tr > th {
+  background: var(--color-fill-secondary);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+.table > tbody > tr > th {
+  font-family: monospace;
+  font-weight: 400;
+}
+.variables > thead > tr > th:nth-child(1) {
+  inline-size: 28%;
+}
+.variables > thead > tr > th:nth-child(2) {
+  inline-size: 16%;
+}
+.variables > thead > tr > th:nth-child(3) {
+  inline-size: 12%;
+}
+.variables > thead > tr > th:nth-child(4) {
+  inline-size: 44%;
+}
+.tree > thead > tr > th:nth-child(1) {
+  inline-size: 38%;
+}
+.tree > thead > tr > th:nth-child(2) {
+  inline-size: 20%;
+}
+.tree > thead > tr > th:nth-child(3) {
+  inline-size: 42%;
+}
+.table > caption {
+  padding: 4px 0 8px;
+  color: var(--color-text-secondary);
+  text-align: start;
+  caption-side: top;
+  overflow-wrap: anywhere;
+}
+.table > tbody > .detailRow > td {
+  padding: 8px 12px;
+  background: var(--color-bg-layout);
+}
+.toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-inline-size: 100%;
+  min-block-size: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.toggle > :global(.anticon) {
+  flex: none;
+  font-size: 10px;
+}
+.toggle:hover {
+  color: var(--color-link);
+}
+.toggle:focus-visible,
+.additional > summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.protectedValue {
+  font-family: monospace;
+  white-space: nowrap;
+}
+.literal {
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.hint {
+  color: var(--color-text-tertiary);
+}
+.fieldName {
+  display: block;
+}
+.leaf {
+  padding-inline-start: 16px;
+}
+.mobilePath {
+  display: none;
+}
+.additional > summary {
+  min-block-size: 24px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.additional > .surface {
+  margin-block-start: 8px;
+}
+
+@container (width < 600px) {
+  .table,
+  .table > caption,
+  .table > tbody,
+  .table > tbody > tr,
+  .table > tbody > tr > th,
+  .table > tbody > tr > td {
+    display: block;
+    inline-size: auto;
+  }
+  .table > thead {
+    display: none;
+  }
+  .table > tbody > tr {
+    padding: 8px;
+    border-block-end: 1px solid var(--color-border);
+  }
+  .table > tbody > tr > th {
+    padding: 4px 0 8px;
+    border: 0;
+    background: var(--color-fill-secondary);
+  }
+  .table > tbody > tr > td {
+    display: grid;
+    grid-template-columns: minmax(0, 5em) minmax(0, 1fr);
+    gap: 8px;
+    padding: 4px 0;
+    border: 0;
+  }
+  .table > tbody > tr > td::before {
+    content: attr(data-label);
+    color: var(--color-text-secondary);
+  }
+  .table > tbody > .detailRow {
+    padding: 0 0 8px;
+  }
+  .table > tbody > .detailRow > td {
+    display: block;
+    padding: 8px;
+  }
+  .table > tbody > .detailRow > td::before {
+    content: none;
+  }
+  .fieldName {
+    padding-inline-start: 0 !important;
+  }
+  .mobilePath {
+    display: block;
+    padding-inline-start: 16px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+  }
+}

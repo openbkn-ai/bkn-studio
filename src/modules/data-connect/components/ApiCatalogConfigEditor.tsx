@@ -5,16 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Checkbox, Empty, Form, Input, Switch, Tabs, Tooltip } from "antd";
+import { Alert, Form, Input, Switch, Tabs } from "antd";
 import BigNumber from "bignumber.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   ApiLoginEditor,
-  ApiValueEditor,
-  ApiValueTypeSelect,
+  ApiVariableEditor,
   createApiLoginDefinition,
 } from "@/shared/api-definition";
 import { isCatalogVariable } from "@/shared/catalog/config-security";
@@ -182,10 +180,14 @@ export function ApiCatalogConfigEditor({
             forceRender: true,
             children: (
               <div className={styles.section}>
-                <ApiCatalogVariables
-                  config={value}
+                <ApiVariableEditor
+                  value={value.variables}
+                  hint={t("dataConnect.apiCatalog.variablesHint")}
+                  emptyDescription={t("dataConnect.apiCatalog.noVariables")}
+                  storedValueHint={t("dataConnect.apiCatalog.storedValue")}
                   isEdit={isEdit}
-                  onChange={(next) => onChange?.(next)}
+                  onChange={(variables) => onChange?.({ ...value, variables })}
+                  onInvalidDraft={() => onChange?.({ ...value })}
                   onValidityChange={setVariablesValid}
                   disabled={disabled}
                 />
@@ -266,252 +268,6 @@ export function ApiCatalogConfigEditor({
           },
         ]}
       />
-    </div>
-  );
-}
-
-type VariableRow = {
-  id: number;
-  name: string;
-  value: unknown;
-  sensitive: boolean;
-  stored: boolean;
-};
-let variableRowId = 0;
-
-function variableRows(config: Record<string, unknown>, isEdit: boolean): VariableRow[] {
-  const variables = (config.variables ?? {}) as Record<string, unknown>;
-  return Object.entries(variables).map(([name, entry]) => {
-    const variable = entry as { value?: unknown; sensitive?: boolean };
-    return {
-      id: ++variableRowId,
-      name,
-      value: variable.value ?? undefined,
-      sensitive: variable.sensitive === true,
-      stored:
-        isEdit &&
-        variable.sensitive === true &&
-        (variable.value === undefined || variable.value === null),
-    };
-  });
-}
-
-function ApiCatalogVariables({
-  config,
-  onChange,
-  isEdit,
-  onValidityChange,
-  disabled,
-}: {
-  config: Record<string, unknown>;
-  onChange: (config: Record<string, unknown>) => void;
-  isEdit: boolean;
-  onValidityChange: (valid: boolean) => void;
-  disabled: boolean;
-}) {
-  const { t } = useTranslation();
-  const [rows, setRows] = useState(() => variableRows(config, isEdit));
-  const [sensitiveHintRow, setSensitiveHintRow] = useState<number | null>(null);
-  const [invalidValues, setInvalidValues] = useState<Set<number>>(() => new Set());
-  const lastEmitted = useRef(config.variables);
-  useEffect(() => {
-    if (lastEmitted.current !== config.variables) {
-      setRows(variableRows(config, isEdit));
-      setInvalidValues(new Set());
-      lastEmitted.current = config.variables;
-    }
-  }, [config, isEdit]);
-  const validNames =
-    rows.every((row) => /^[A-Za-z][A-Za-z0-9_]*$/.test(row.name)) &&
-    new Set(rows.map((row) => row.name)).size === rows.length;
-  useEffect(() => {
-    onValidityChange(validNames && invalidValues.size === 0);
-  }, [validNames, invalidValues, onValidityChange]);
-
-  const changeRows = (next: VariableRow[]) => {
-    setRows(next);
-    const names = next.map((row) => row.name);
-    if (
-      !next.every((row) => /^[A-Za-z][A-Za-z0-9_]*$/.test(row.name)) ||
-      new Set(names).size !== names.length
-    ) {
-      onChange({ ...config });
-      return;
-    }
-    const variables = Object.fromEntries(
-      next.map((row) => [
-        row.name,
-        {
-          ...(row.value !== undefined && row.value !== null ? { value: row.value } : {}),
-          sensitive: row.sensitive,
-        },
-      ]),
-    );
-    lastEmitted.current = variables;
-    onChange({ ...config, variables });
-  };
-  const changeRow = (index: number, patch: Partial<VariableRow>) =>
-    changeRows(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-
-  return (
-    <div className={styles.variables}>
-      <div className={styles.toolbar}>
-        <p className={styles.hint}>
-          {t("dataConnect.apiCatalog.variablesHint")} <code>{"{{ name }}"}</code>
-        </p>
-        <AppButton
-          disabled={disabled}
-          onClick={() => {
-            let index = rows.length + 1;
-            while (rows.some((row) => row.name === `variable${index}`)) index++;
-            changeRows([
-              ...rows,
-              {
-                id: ++variableRowId,
-                name: `variable${index}`,
-                value: "",
-                sensitive: false,
-                stored: false,
-              },
-            ]);
-          }}
-        >
-          {t("dataConnect.apiCatalog.addVariable")}
-        </AppButton>
-      </div>
-      {!validNames ? (
-        <Alert message={t("dataConnect.apiCatalog.errors.variables")} showIcon type="error" />
-      ) : null}
-      {!rows.length ? (
-        <Empty
-          description={t("dataConnect.apiCatalog.noVariables")}
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
-      ) : null}
-      {rows.map((row, index) => (
-        <div
-          className={styles.variable}
-          key={row.id}
-          role="group"
-          aria-label={`${t("dataConnect.apiCatalog.variableName")}: ${row.name}`}
-        >
-          <div className={styles.variableHeader}>
-            <label className={`${styles.field} ${styles.variableName}`}>
-              <span className={styles.label}>{t("dataConnect.apiCatalog.variableName")}</span>
-              <Input
-                disabled={disabled}
-                aria-label={`${t("dataConnect.apiCatalog.variableName")} ${index + 1}`}
-                value={row.name}
-                onChange={(event) => changeRow(index, { name: event.target.value })}
-              />
-            </label>
-            <div className={styles.variableType}>
-              <label className={styles.label} htmlFor={`api-variable-${row.id}-type`}>
-                {t("dataConnect.apiEditor.valueType")}
-              </label>
-              <ApiValueTypeSelect
-                id={`api-variable-${row.id}-type`}
-                value={row.sensitive ? "" : row.value}
-                onChange={(value) => changeRow(index, { value })}
-                disabled={disabled || row.sensitive}
-                label={`${t("dataConnect.apiCatalog.variableValue")} ${row.name}`}
-                allowedTypes={
-                  row.sensitive ? ["string"] : ["string", "number", "boolean", "object", "array"]
-                }
-              />
-            </div>
-            <div className={styles.variableActions}>
-              <Tooltip
-                id={`api-variable-${row.id}-sensitive-tip`}
-                title={t("dataConnect.apiCatalog.sensitiveHint")}
-                trigger={["hover", "focus"]}
-                open={sensitiveHintRow === row.id}
-                onOpenChange={(open) =>
-                  setSensitiveHintRow((current) =>
-                    open ? row.id : current === row.id ? null : current,
-                  )
-                }
-              >
-                <Checkbox
-                  disabled={disabled}
-                  checked={row.sensitive}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") setSensitiveHintRow(null);
-                  }}
-                  onChange={(event) => {
-                    setInvalidValues((current) => {
-                      const next = new Set(current);
-                      next.delete(row.id);
-                      return next;
-                    });
-                    changeRow(index, {
-                      sensitive: event.target.checked,
-                      ...((event.target.checked && typeof row.value !== "string") ||
-                      row.value === undefined
-                        ? { value: "" }
-                        : {}),
-                    });
-                  }}
-                >
-                  <span className={styles.sensitiveLabel}>
-                    {t("dataConnect.apiCatalog.sensitive")}
-                  </span>
-                </Checkbox>
-              </Tooltip>
-              <AppButton
-                disabled={disabled}
-                type="text"
-                size="middle"
-                danger
-                aria-label={`${t("dataConnect.apiCatalog.removeVariable")} ${row.name}`}
-                onClick={() => {
-                  setInvalidValues((current) => {
-                    const next = new Set(current);
-                    next.delete(row.id);
-                    return next;
-                  });
-                  changeRows(rows.filter((_, i) => index !== i));
-                }}
-              >
-                {t("common.remove")}
-              </AppButton>
-            </div>
-          </div>
-          <div className={styles.variableValue}>
-            <span className={styles.label}>{t("dataConnect.apiCatalog.variableValue")}</span>
-            {row.sensitive ? (
-              <div className={styles.field}>
-                <Input.Password
-                  disabled={disabled}
-                  aria-label={`${t("dataConnect.apiCatalog.sensitiveValue")} ${row.name}`}
-                  autoComplete="new-password"
-                  value={typeof row.value === "string" ? row.value : ""}
-                  onChange={(event) => changeRow(index, { value: event.target.value })}
-                />
-                {row.stored && !row.value ? (
-                  <span className={styles.hint}>{t("dataConnect.apiCatalog.storedValue")}</span>
-                ) : null}
-              </div>
-            ) : (
-              <ApiValueEditor
-                showTypeSelector={false}
-                disabled={disabled}
-                label={`${t("dataConnect.apiCatalog.variableValue")} ${row.name}`}
-                value={row.value}
-                onChange={(value) => changeRow(index, { value })}
-                onValidityChange={(valid) => {
-                  if (invalidValues.has(row.id) === !valid) return;
-                  if (!valid) onChange({ ...config });
-                  const next = new Set(invalidValues);
-                  if (valid) next.delete(row.id);
-                  else next.add(row.id);
-                  setInvalidValues(next);
-                }}
-              />
-            )}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

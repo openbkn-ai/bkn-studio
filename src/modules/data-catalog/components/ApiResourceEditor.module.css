@@ -1,0 +1,137 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.cardHint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.apiInfo {
+  --api-variable-card-bg: var(--color-bg-raised);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.basicForm :global(.ant-form-item) {
+  min-width: 0;
+  margin-block-end: 0;
+}
+
+.basicForm :global(.ant-form-item-row) {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+}
+
+.basicForm :global(.ant-form-item-label) {
+  padding: 0;
+  text-align: end;
+}
+
+.basicForm :global(.ant-form-item-label > label) {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.basicForm :global(.ant-form-item-control) {
+  min-width: 0;
+}
+
+@media (width <= 768px) {
+  .basicForm :global(.ant-form-item-row) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .basicForm :global(.ant-form-item-label) {
+    text-align: start;
+  }
+
+  .basicForm :global(.ant-form-item-label > label) {
+    height: auto;
+  }
+}
+
+.outputTable th {
+  white-space: nowrap;
+}
+.outputTable td {
+  vertical-align: top;
+}
+.outputFieldType {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.outputFieldType > :global(.ant-select) {
+  flex: 1;
+}
+.decimalSettings {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  inline-size: min(15rem, calc(100vw - 3rem));
+}
+.decimalSettingsHeader {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.decimalSettings :global(.ant-input-number) {
+  inline-size: 100%;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.inlineToggle {
+  align-self: flex-start;
+  align-items: center;
+  flex-flow: row wrap;
+}
+.apiInfo .pagingCard {
+  background: var(--color-bg-raised);
+}
+.pagingModeSelect {
+  inline-size: min(100%, 10rem);
+}
+.pagingParameters {
+  display: grid;
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: 8px 12px;
+}
+.preview {
+  overflow: auto;
+  max-height: 440px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (width <= 720px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

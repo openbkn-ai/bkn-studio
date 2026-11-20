@@ -7,6 +7,7 @@
 
 import { Button, Empty, Input, Select, Tabs } from "antd";
 import { useId, useState } from "react";
+import type { ReactNode } from "react";
 import { ApiSchemaEditor } from "./ApiSchemaEditor";
 import { ObjectMemberName } from "./ApiValueEditor";
 import { useTranslation } from "react-i18next";
@@ -21,7 +22,15 @@ export function ApiResponseEditor({
   onChange,
   disabled,
   onValidityChange,
-}: ApiDefinitionEditorProps) {
+  renderResponseFields,
+  enableOneOf = false,
+}: ApiDefinitionEditorProps & {
+  enableOneOf?: boolean;
+  renderResponseFields?: (
+    value: Record<string, unknown>,
+    onChange: (value: Record<string, unknown>) => void,
+  ) => ReactNode;
+}) {
   const { t } = useTranslation();
   const mediaTypeId = useId();
   const response = objectValue(value.statuses);
@@ -55,7 +64,11 @@ export function ApiResponseEditor({
   );
   return (
     <EditorValidity onValidityChange={onValidityChange}>
-      <div className={styles.stack}>
+      <div
+        className={`${styles.member} ${styles.sectionCard}`}
+        role="group"
+        aria-label={t("dataConnect.apiEditor.response")}
+      >
         <div className={styles.inlineField}>
           <label className={styles.fieldTitle} htmlFor={mediaTypeId}>
             {t("dataConnect.apiEditor.mediaType")}
@@ -161,9 +174,11 @@ export function ApiResponseEditor({
                         value={r.schema}
                         disabled={disabled}
                         label={`${status} ${t("dataConnect.apiEditor.response")}`}
+                        enableOneOf={enableOneOf}
                         onChange={(schema) => next({ ...r, schema })}
                       />
                     </div>
+                    {renderResponseFields?.(r, next)}
                   </div>
                 ),
               };

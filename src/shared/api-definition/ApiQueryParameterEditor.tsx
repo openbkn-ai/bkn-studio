@@ -6,9 +6,21 @@
  */
 
 import { AutoComplete, Button, Input } from "antd";
+import BigNumber from "bignumber.js";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  precisionPreservingValueText,
+  transformPrecisionSafeJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { replaceMember, type DefinitionObject } from "./model";
 import styles from "./editor.module.css";
+
+function queryValueText(value: unknown): string {
+  if (value == null) return "";
+  if (BigNumber.isBigNumber(value)) return precisionPreservingValueText(value);
+  return transformPrecisionSafeJSONRequest(value);
+}
 
 export function ApiQueryParameterEditor({
   value,
@@ -26,13 +38,15 @@ export function ApiQueryParameterEditor({
   label: string;
 }) {
   const { t } = useTranslation();
+  const id = useId();
   const change = (key: string, next: string) => onChange(replaceMember(value, key, next));
   return (
     <div className={styles.member} role="group" aria-label={label}>
       <div className={`${styles.memberHeader} ${styles.inlineMemberHeader}`}>
-        <label className={styles.inlineField}>
+        <label className={styles.inlineField} htmlFor={`${id}-name`}>
           <span className={styles.fieldTitle}>{t("dataConnect.apiEditor.parameterName")}</span>
           <Input
+            id={`${id}-name`}
             aria-label={`${label} ${t("dataConnect.apiEditor.name")}`}
             value={typeof value.name === "string" ? value.name : ""}
             disabled={disabled}
@@ -43,10 +57,11 @@ export function ApiQueryParameterEditor({
           {t("dataConnect.apiEditor.remove")}
         </Button>
       </div>
-      <label className={styles.inlineField}>
+      <label className={styles.inlineField} htmlFor={`${id}-value`}>
         <span className={styles.fieldTitle}>{t("dataConnect.apiEditor.parameterValue")}</span>
         <AutoComplete
-          value={typeof value.value === "string" ? value.value : ""}
+          id={`${id}-value`}
+          value={queryValueText(value.value)}
           disabled={disabled}
           options={variableNames.map((name) => ({ value: `{{ ${name} }}` }))}
           filterOption={(input, option) =>

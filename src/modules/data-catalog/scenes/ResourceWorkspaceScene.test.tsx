@@ -160,6 +160,9 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
   subscribeMockDb: subscribeMockDbMock,
 }));
+vi.mock("@/modules/data-connect", () => ({
+  useCatalogDiscoverySupport: (catalog: unknown, enabled: boolean) => Boolean(catalog && enabled),
+}));
 vi.mock("@/shared/catalog", () => ({
   getCatalog: getCatalogMock,
   hasCatalogOperation: (catalog: { operations?: string[] } | null, operation: string) =>
@@ -224,6 +227,34 @@ describe("ResourceWorkspaceScene", () => {
     setCatalogResourceEnabledMock.mockReset();
     modalConfirmMock.mockReset();
   });
+
+  it.each([
+    ["detail", ""],
+    ["preview", "?tab=preview"],
+    ["index", ""],
+  ] as const)(
+    "preserves the supported tab when redirecting an API %s link",
+    async (tab, search) => {
+      getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "api" });
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab={tab}
+        />,
+      );
+      await waitFor(() =>
+        expect(navigateMock).toHaveBeenCalledWith(
+          "/data-catalog/api-resource/resource-1" + search,
+          {
+            replace: true,
+          },
+        ),
+      );
+    },
+  );
 
   it.each([
     ["missing table", { category: "table", status: "stale", lastDiscoverStatus: "missing" }, true],

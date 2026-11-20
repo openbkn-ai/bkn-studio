@@ -168,7 +168,8 @@
   white-space: nowrap;
 }
 
-.panelIntro h3 {
+.panelIntro h3,
+.panelHeading > h2 {
   margin: 0;
   color: var(--color-text-primary);
   font-size: 16px;
@@ -318,7 +319,8 @@
   min-width: 0;
 }
 
-.configSection h2 {
+.configSection h2,
+.configSection > h3 {
   margin: 0;
   color: var(--color-text-primary);
   font-size: 13px;
@@ -332,7 +334,8 @@
   background: var(--color-interface-panel-bg);
 }
 
-.configGroup h2 {
+.configGroup h2,
+.configGroup > h3 {
   color: var(--color-text-secondary);
   font-size: 12px;
 }

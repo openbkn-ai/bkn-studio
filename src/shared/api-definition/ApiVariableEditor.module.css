@@ -1,0 +1,122 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.variables {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.toolbar > .hint {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.variable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--api-variable-card-bg, var(--color-interface-panel-bg));
+}
+
+.variableHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.variableName {
+  display: flex;
+  align-items: center;
+  flex: 1 1 240px;
+  gap: 8px;
+}
+
+.variableName > span,
+.variableType > label {
+  flex-shrink: 0;
+}
+
+.variableName > :global(.ant-input) {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.variableValue {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.variableValue > .label {
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.variableType {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sensitiveLabel {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.variableActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/* Override the enclosing connection form's full-width select rule only inside variable cards. */
+.variables .variable :global(.ant-select) {
+  width: 128px;
+  max-width: 100%;
+}

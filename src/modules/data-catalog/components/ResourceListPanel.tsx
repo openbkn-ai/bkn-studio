@@ -51,11 +51,12 @@ import type {
   ResourceDiscoverStatus,
 } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
+import { useCatalogDiscoverySupport } from "@/modules/data-connect";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceListPanel.module.css";
 
-const CATEGORY_FILTERS = ["table", "index", "logical_view", "dataset"] as const;
+const CATEGORY_FILTERS = ["table", "index", "logical_view", "dataset", "api"] as const;
 const RESOURCE_STATUS_FILTERS = ["active", "deprecated", "stale"] as const;
 const DISCOVER_STATUS_FILTERS = [
   "error",
@@ -86,6 +87,9 @@ function deriveDisplayName(resource: CatalogResource, connectorType: string) {
     return rawName || rawIdentifier || "-";
   }
 
+  if (resource.category === "table" && rawName && rawName !== rawIdentifier) {
+    return rawName;
+  }
   const byName = rawName.includes(".") ? rawName.split(".").filter(Boolean).at(-1) : rawName;
   if (byName) {
     return byName;
@@ -169,8 +173,16 @@ export function ResourceListPanel({
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
+  const canDiscover = useCatalogDiscoverySupport(catalog, physical && canManageResourceTasks);
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
+  const canCreateApiResource =
+    catalog.category === "api" &&
+    canManageResources &&
+    !catalog.builtin &&
+    catalog.enabled &&
+    catalog.status === "enabled";
   const canShowCreateView =
+    catalog.category !== "api" &&
     snapshot !== null &&
     !catalog.builtin &&
     catalog.enabled &&
@@ -204,6 +216,7 @@ export function ResourceListPanel({
     canAuthorizeCatalog ||
     canRequestCatalogPermission ||
     canShowCreateView ||
+    canCreateApiResource ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -294,7 +307,7 @@ export function ResourceListPanel({
             <Tooltip classNames={{ root: styles.resourceNameTooltip }} title={tooltip}>
               <AppButton
                 className={styles.ellipsisLink}
-                onClick={() => onOpenResource(record.id, "detail")}
+                onClick={() => openResource(record, "detail")}
                 type="link"
               >
                 <span className={styles.cellEllipsis}>{displayName}</span>
@@ -466,7 +479,7 @@ export function ResourceListPanel({
             ),
           });
         }
-        if (record.category !== "logical_view") {
+        if (record.category !== "logical_view" && record.category !== "api") {
           moreItems.push({
             key: "index",
             label: indexLabel,
@@ -484,7 +497,7 @@ export function ResourceListPanel({
             ),
           });
         }
-        if (!catalog.builtin && canManageResourceTasks) {
+        if (!catalog.builtin && catalog.category !== "api" && canManageResourceTasks) {
           moreItems.push({
             key: "semantic-understanding",
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
@@ -517,11 +530,11 @@ export function ResourceListPanel({
                 onClick: ({ key, domEvent }) => {
                   domEvent.stopPropagation();
                   if (key === "detail") {
-                    onOpenResource(record.id, "detail");
+                    openResource(record, "detail");
                     return;
                   }
                   if (key === "preview") {
-                    onOpenResource(record.id, "preview");
+                    openResource(record, "preview");
                     return;
                   }
                   if (key === "index") {
@@ -585,6 +598,13 @@ export function ResourceListPanel({
     setDiscoverStatusFilter("");
   };
 
+  const openResource = (record: CatalogResource, tab: "detail" | "preview") => {
+    if (record.category === "api") {
+      const search = tab === "preview" ? "?tab=preview" : "";
+      void navigate(`/data-catalog/api-resource/${encodeURIComponent(record.id)}${search}`);
+    } else onOpenResource(record.id, tab);
+  };
+
   const createViewButton = canShowCreateView ? (
     <AppButton
       aria-haspopup={canCreateView ? undefined : "dialog"}
@@ -627,6 +647,16 @@ export function ResourceListPanel({
               {canAuthorizeCatalog ? (
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("dataCatalog.catalog.authorize")}
+                </AppButton>
+              ) : null}
+              {canCreateApiResource ? (
+                <AppButton
+                  type="primary"
+                  onClick={() =>
+                    void navigate(`/data-catalog/catalog/${encodeURIComponent(catalog.id)}/api/new`)
+                  }
+                >
+                  {t("dataCatalog.apiResource.create")}
                 </AppButton>
               ) : null}
               {createViewButton}
@@ -755,7 +785,7 @@ export function ResourceListPanel({
         ) : resourceTotal === 0 && !hasResourceQuery ? (
           <EmptyStatePanel
             action={
-              physical && canManageResourceTasks ? (
+              canDiscover ? (
                 <AppButton
                   onClick={() => {
                     void navigate(`/data-connect/${catalog.id}/discover`);
@@ -775,9 +805,11 @@ export function ResourceListPanel({
               ) : null
             }
             description={
-              physical
-                ? t("dataCatalog.catalog.emptyResourcesPhysical")
-                : t("dataCatalog.catalog.emptyResourcesLogical")
+              catalog.category === "api"
+                ? t("dataCatalog.apiResource.emptyCatalog")
+                : physical
+                  ? t("dataCatalog.catalog.emptyResourcesPhysical")
+                  : t("dataCatalog.catalog.emptyResourcesLogical")
             }
             icon={<DatabaseOutlined />}
             title={t("dataCatalog.catalog.resourceSection")}
