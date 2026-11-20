@@ -105,6 +105,7 @@ const NOTICE_NAMES = 5;
  * concepts are matched to the data, never objects of their own. Ask AI stays beside the list.
  */
 export function ProjectConcepts({
+  onCount,
   onGoToKinetic,
   onGoToModel,
   onGoToResources,
@@ -112,6 +113,8 @@ export function ProjectConcepts({
   ownerIsCaller,
   project,
 }: {
+  /** Told how many concepts the page holds whenever they are read again, for the navigation. */
+  onCount?: (count: number) => void;
   /** Opens kinetic modeling, where what is judged kinetic is implemented. */
   onGoToKinetic: () => void;
   onGoToModel: () => void;
@@ -128,6 +131,11 @@ export function ProjectConcepts({
   // Extracting a model from the knowledge-base files, where the edition has it.
   const KnowledgeBaseModel = extensionProjectKnowledgeBaseModel();
   const [concepts, setConcepts] = useState<Concepts | undefined>(undefined);
+  // The navigation's count follows the list here, not the read made when the page was opened.
+  const conceptCount = concepts?.concepts.length;
+  useEffect(() => {
+    if (conceptCount !== undefined) onCount?.(conceptCount);
+  }, [conceptCount, onCount]);
   const [draft, setDraft] = useState<Draft | null | undefined>(undefined);
   // The specification, for the run extracting the documents' concepts; null when unread.
   const [requirements, setRequirements] = useState<Requirements | null>(null);

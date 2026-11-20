@@ -120,6 +120,10 @@ export function ProjectWorkspaceScene({
   const knowledgeBases = useMountedKnowledgeBases(loaded?.project.knId);
   // Kinetic modeling counts what it reads itself; elsewhere the count is read here.
   const [kineticCount, setKineticCount] = useState<number | undefined>(undefined);
+  // The concepts page reports its count as its list changes (an extraction adds concepts long after
+  // the page opened); its own count wins over the one read on arrival.
+  const [conceptCount, setConceptCount] = useState<number | undefined>(undefined);
+  useEffect(() => setConceptCount(undefined), [projectId, section]);
   // Read once the project is, after the page's own reads: the counts only add to it.
   const loadedId = loaded?.project.id;
   const catalogKey = loaded?.project.catalogIds.join(",");
@@ -229,6 +233,7 @@ export function ProjectWorkspaceScene({
                 ? {}
                 : { resources: counts.resources + (knowledgeBases?.length ?? 0) }),
               ...(kineticCount === undefined ? {} : { kinetic: kineticCount }),
+              ...(conceptCount === undefined ? {} : { concepts: conceptCount }),
             }}
             projectId={project.id}
           />
@@ -295,6 +300,7 @@ export function ProjectWorkspaceScene({
                 />
               ) : section === "concepts" ? (
                 <ProjectConcepts
+                  onCount={setConceptCount}
                   onGoToKinetic={() => go("kinetic")}
                   onGoToModel={() => go("model")}
                   onGoToResources={() => goToResources()}
