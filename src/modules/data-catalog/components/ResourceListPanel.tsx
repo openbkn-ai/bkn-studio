@@ -423,7 +423,7 @@ export function ResourceListPanel({
             className={
               value === "available"
                 ? styles.statusTagSuccess
-                : value === "stale"
+                : value === "readonly" || value === "stale"
                   ? styles.statusTagWarning
                   : styles.statusTagNeutral
             }

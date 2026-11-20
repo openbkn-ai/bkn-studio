@@ -7,6 +7,7 @@
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { FilterQueryPath } from "./filter-tree";
+import { isLocalIndexReadable } from "./index-state";
 
 type SourceBlockReason = "indexRequired" | "unknownFilter";
 
@@ -16,7 +17,7 @@ export function sourceFilterQueryPath(
 ): FilterQueryPath {
   if (resource?.category === "index") return "local_index";
   return resource?.category === "table" &&
-    resource.localIndexStatus === "available" &&
+    isLocalIndexReadable(resource.localIndexStatus) &&
     resource.localIndexName
     ? "managed_local_index"
     : "source";

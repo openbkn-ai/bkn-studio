@@ -12,8 +12,8 @@ export type ResourceDiscoverStatus =
 
 export type ResourceStatus = "active" | "deprecated" | "stale";
 
-/** Whether the Resource's local OpenSearch index is currently usable for queries. */
-export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
+/** Query and incremental build availability for the Resource's local OpenSearch index. */
+export type ResourceLocalIndexStatus = "available" | "readonly" | "stale" | "unavailable";
 
 /** Safe integers stay numeric; int64 values outside JavaScript's safe range stay decimal strings. */
 export type ResourceRowCount = number | string;

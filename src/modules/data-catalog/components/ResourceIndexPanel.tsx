@@ -39,7 +39,12 @@ import {
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { timeAgo } from "@/modules/data-catalog/lib/format";
-import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
+import {
+  indexStateOf,
+  isLocalIndexReadable,
+  resourceGateOf,
+  sortTasks,
+} from "@/modules/data-catalog/lib/index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
   canManageResourceBuildTasks,
@@ -105,14 +110,18 @@ function buildStatusSummary(
   language: string,
 ) {
   if (
-    localIndexStatus !== "available" ||
+    !isLocalIndexReadable(localIndexStatus) ||
     !latest ||
     (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")
   ) {
     return null;
   }
 
-  const parts = [formatEffectiveState(latest, t), t(`dataCatalog.modes.${latest.mode}`)];
+  const indexLabel =
+    localIndexStatus === "readonly"
+      ? t("dataCatalog.resource.localIndexStatuses.readonly")
+      : formatEffectiveState(latest, t);
+  const parts = [indexLabel, t(`dataCatalog.modes.${latest.mode}`)];
 
   if (latest.mode === "streaming") {
     parts.push(
@@ -573,6 +582,14 @@ export function ResourceIndexPanel({
   ];
 
   const statusSummary = buildStatusSummary(latest, resource.localIndexStatus, t, i18n.language);
+  const effectiveIndexLabel =
+    resource.localIndexStatus === "readonly"
+      ? t("dataCatalog.resource.localIndexStatuses.readonly")
+      : t(
+          isLocalIndexReadable(resource.localIndexStatus)
+            ? "dataCatalog.resource.effectiveActive"
+            : "dataCatalog.resource.noEffectiveIndex",
+        );
 
   const gateBanner =
     !gate.ok && catalog ? (
@@ -637,10 +654,7 @@ export function ResourceIndexPanel({
             <span className={panelStyles.statusStripValue}>
               {taskStatusUnavailable
                 ? t("dataCatalog.resourceWorkspace.indexStatusUnavailable")
-                : (statusSummary ??
-                  (resource.localIndexStatus === "available"
-                    ? t("dataCatalog.resource.effectiveActive")
-                    : t("dataCatalog.resource.noEffectiveIndex")))}
+                : (statusSummary ?? effectiveIndexLabel)}
             </span>
           </div>
           <div className={panelStyles.sectionActions}>

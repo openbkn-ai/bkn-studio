@@ -308,6 +308,17 @@ export const dataCatalogZhCN = {
         message: "写入索引失败：部分文档没有生成稳定的 id 字段。",
         suggestion: "请检查资源索引配置中的增量键或主键映射，保存配置后重新构建。",
       },
+      incrementalRecovery: {
+        title: "增量游标恢复失败",
+        unsupportedFieldMessage: "游标中有字段不支持自动恢复。",
+        queryFailedMessage: "Vega 无法查询已发布的索引。",
+        invalidCursorMessage: "索引中的字段值无法组成有效的增量游标。",
+        unknownMessage: "Vega 无法从已发布的索引恢复增量游标。",
+        fullBuildSuggestion: "请确认已配置增量键，再运行一次全量构建。",
+        queryFailedSuggestion: "请确认已发布的索引可用，再重试增量构建。",
+        unknownSuggestion:
+          "请确认已发布的索引可用，再重试增量构建。若仍无法恢复，请配置增量键并运行一次全量构建。",
+      },
       unknown: {
         title: "构建任务执行失败",
         message: "后端返回了未分类错误，请查看原始错误定位具体原因。",
@@ -614,6 +625,7 @@ export const dataCatalogZhCN = {
       indexName: "本地索引名称",
       localIndexStatuses: {
         available: "可用",
+        readonly: "只读",
         stale: "已失效",
         unavailable: "不可用",
       },
@@ -837,7 +849,13 @@ export const dataCatalogZhCN = {
         "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
       executeIncremental: "增量",
       executeIncrementalDescription:
-        "按增量键从上次进度继续同步，只处理新增或变化的数据，适合日常补建。",
+        "缺少增量游标时，Vega 会在任务入队后尝试从已发布索引恢复。自动恢复支持整数主键（含无符号整数），增量字段须为整数、日期或日期时间类型。恢复失败原因见任务详情。游标位置及之前的变更和源端删除可能不会反映到索引中。",
+      incrementalNeedsPublishedIndex:
+        "增量构建需要已发布的可用索引。请先配置增量键并完成一次全量构建。",
+      incrementalRequiresFullRebuild:
+        "已发布的索引处于只读状态。请先完成一次全量构建，再执行增量构建。",
+      fullBuildWithoutIncrementalKey:
+        "未配置增量键时只能运行全量构建。构建期间的源端变更可能不会反映到索引中。",
       schemaLoading: "正在加载字段…",
       schemaEmpty: "该资源暂无字段，请先执行探查发现 schema。",
       fulltextTypeHint: "仅支持文本类字段",
@@ -889,7 +907,7 @@ export const dataCatalogZhCN = {
       configChecking: "检查中",
       configCannotBuild: "配置不完整",
       primaryKeyRequired: "未配置主键",
-      incrementalKeyRequired: "未配置增量键",
+      incrementalKeyRequired: "增量构建需要配置增量键。",
       notConfigured: "未配置",
       resourceDefaultsTitle: "资源默认配置",
       resourceDefaultsHint: "特征未单独指定时使用默认值。",
@@ -946,7 +964,6 @@ export const dataCatalogZhCN = {
       noAnalyzers: "当前没有可用的全文分词器，无法保存索引配置。",
       savedAnalyzerUnavailable: "已保存的分词器配置不可用：{{analyzers}}。请选择可用分词器后继续。",
       fieldsRequired: "请至少配置一个关键字、全文检索或向量特征。",
-      keyFieldsRequired: "批量模式必须同时指定主键字段和增量键字段，请回到「配置索引」勾选。",
       model: "Embedding 模型",
       modelRequired: "请选择 Embedding 模型。",
       noModels: "尚未接入 embedding 模型,无法保存含向量字段的配置。",

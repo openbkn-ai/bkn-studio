@@ -828,7 +828,8 @@ export function ResourceDetailPanel({
                     className={
                       resource.localIndexStatus === "available"
                         ? styles.statusTagSuccess
-                        : resource.localIndexStatus === "stale"
+                        : resource.localIndexStatus === "readonly" ||
+                            resource.localIndexStatus === "stale"
                           ? styles.statusTagWarning
                           : styles.statusTagNeutral
                     }

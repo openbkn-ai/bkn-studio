@@ -27,6 +27,7 @@ import {
   type FilterGroup,
   type FilterQueryPath,
 } from "@/modules/data-catalog/lib/filter-tree";
+import { isLocalIndexReadable } from "@/modules/data-catalog/lib/index-state";
 import {
   resourceCountAsBigInt,
   resourceCountForPagination,
@@ -210,7 +211,7 @@ function ResourcePreviewContent({
   const isApiResource = resource.category === "api";
   const hasLocalIndex =
     resource.category === "table" &&
-    resource.localIndexStatus === "available" &&
+    isLocalIndexReadable(resource.localIndexStatus) &&
     Boolean(resource.localIndexName);
   const isDerivedView = resource.category === "logical_view" && resource.logicalType === "derived";
   const sourceId = resource.logicalViewDefinition?.sourceResourceId;
@@ -260,7 +261,7 @@ function ResourcePreviewContent({
   const queryPath: FilterQueryPath =
     (resource.category === "table" && !queriesSource) ||
     (resource.category === "dataset" &&
-      resource.localIndexStatus === "available" &&
+      isLocalIndexReadable(resource.localIndexStatus) &&
       Boolean(resource.localIndexName)) ||
     (isTableView &&
       !ignoreLocalIndex &&
