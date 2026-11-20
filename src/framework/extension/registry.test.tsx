@@ -16,6 +16,7 @@ import { EntitlementContext } from "@/framework/entitlement/entitlement-context"
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionAccountWorkOrders,
+  extensionActionExecutionGate,
   extensionProjectConceptSource,
   extensionKnowledgeNetworkResourcePanel,
   extensionProjectObjectSourceEditor,
@@ -385,4 +386,15 @@ it("keeps the account work-order extension optional for community builds", () =>
     accountWorkOrders: WorkOrders,
   });
   expect(extensionAccountWorkOrders()).toBe(WorkOrders);
+});
+
+it("keeps the action execution gate optional for community builds", () => {
+  expect(extensionActionExecutionGate()).toBeUndefined();
+  const Gate = () => null;
+  registerExtension({
+    id: "governance",
+    capability: "action_governance",
+    actionExecutionGate: Gate,
+  });
+  expect(extensionActionExecutionGate()).toBe(Gate);
 });

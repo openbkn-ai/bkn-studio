@@ -10,7 +10,7 @@ import { getActionTypeOperationKind } from "../utils/action-type-operation";
 import { getActionTypeToolboxMetadataType } from "./action-type-tool.service";
 import type { ActionTypeOperationKind } from "../types/action-type";
 
-import { isRequestNotFound } from "@/framework/request/error-message";
+import { isRequestNotFound, readErrorCode } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { throwIfStillReferenced } from "@/modules/knowledge-network/services/shared/definition-refusals";
 import { withMockDefinitionDeclarations } from "@/modules/knowledge-network/services/shared/mock-declarations";
@@ -414,6 +414,7 @@ export async function listKnowledgeNetworkActionTypeExecutionResults(
 export async function getActionTypeExecutionSchema(
   networkId: string,
   actionTypeId: string,
+  options: { publishedOnly?: boolean } = {},
 ): Promise<ActionExecutionSchema> {
   if (useMock) {
     const detail = await getKnowledgeNetworkActionTypeDetail(networkId, actionTypeId);
@@ -506,7 +507,11 @@ export async function getActionTypeExecutionSchema(
   const response = await http.post<{ execution_schema?: ActionExecutionSchema }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}`,
     {},
-    { headers: { "x-http-method-override": "GET" }, params: await resolveKnReadParams(networkId) },
+    {
+      headers: { "x-http-method-override": "GET" },
+      params: options.publishedOnly ? { branch: "main" } : await resolveKnReadParams(networkId),
+      ...(options.publishedOnly ? { _knSkip: true } : {}),
+    },
   );
   if (
     response.data.execution_schema?.type !== "object" ||
@@ -521,6 +526,7 @@ export async function executeKnowledgeNetworkActionTypeNow(
   networkId: string,
   actionTypeId: string,
   input: ActionExecutionInput = {},
+  governance?: { requestId: string; planDigest: string },
 ) {
   if (useMock) {
     const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
@@ -539,7 +545,15 @@ export async function executeKnowledgeNetworkActionTypeNow(
 
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
-    input,
+    {
+      ...input,
+      ...(governance
+        ? {
+            governance_request_id: governance.requestId,
+            governance_plan_digest: governance.planDigest,
+          }
+        : {}),
+    },
     {
       headers: { "Content-Type": "application/json" },
       params: await resolveKnReadParams(networkId),
@@ -548,6 +562,23 @@ export async function executeKnowledgeNetworkActionTypeNow(
   );
 
   return response.data;
+}
+
+/** The executor refused an action because a governance request must authorize it first. */
+export function isActionGovernanceRequiredError(error: unknown): boolean {
+  return readErrorCode(error) === "OntologyQuery.ActionExecution.GovernanceRequired";
+}
+
+/** SHA-256 of the published action definition, as the governance gate computes it. */
+export async function getActionTypeGovernanceDigest(networkId: string, actionTypeId: string) {
+  const response = await http.get<{ definition_digest?: string }>(
+    `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/governance-digest`,
+    { params: { branch: "main" }, _knSkip: true },
+  );
+  if (!/^[0-9a-f]{64}$/.test(response.data.definition_digest ?? "")) {
+    throw new Error("Action governance digest is unavailable");
+  }
+  return response.data.definition_digest!;
 }
 
 export async function cancelKnowledgeNetworkActionTypeExecution(networkId: string, logId: string) {

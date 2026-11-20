@@ -17,6 +17,10 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import {
+  extensionActionExecutionGate,
+  type ActionExecutionGateProps,
+} from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
 import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
@@ -32,6 +36,7 @@ import {
 import {
   executeKnowledgeNetworkActionTypeNow,
   getKnowledgeNetworkActionTypeDetail,
+  isActionGovernanceRequiredError,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ActionTypeDetail,
@@ -64,6 +69,10 @@ export function ActionTypeExecutionScene() {
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
+  const [governanceGate, setGovernanceGate] = useState<{
+    input: ActionExecutionInput;
+  } | null>(null);
+  const ExecutionGate = extensionActionExecutionGate();
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const canExecute = detail ? hasKnowledgeNetworkRecordOperation(detail, "execute") : false;
@@ -169,19 +178,29 @@ export function ActionTypeExecutionScene() {
     setSearchParams({ tab });
   };
 
-  const executeNow = async (input?: ActionExecutionInput) => {
+  const executeNow = async (
+    input?: ActionExecutionInput,
+    governance?: { requestId: string; planDigest: string },
+  ) => {
     if (!detail || !canExecute) {
       return false;
     }
 
     setExecuting(true);
     try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input);
+      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input, governance);
       void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
       setTaskRefreshToken((value) => value + 1);
       setActiveTab("tasks");
       return true;
     } catch (nextError) {
+      if (!governance && isActionGovernanceRequiredError(nextError) && ExecutionGate) {
+        // The executor owns the governance verdict. Keep the assembled input and let
+        // the extension negotiate the decision before exactly one authorized retry.
+        setGovernanceGate({ input: input ?? {} });
+        setExecuteModalOpen(false);
+        return false;
+      }
       void message.error(extractRequestErrorMessage(nextError));
       return false;
     } finally {
@@ -195,6 +214,17 @@ export function ActionTypeExecutionScene() {
     }
 
     setExecuteModalOpen(true);
+  };
+
+  const handleGovernanceAuthorized: ActionExecutionGateProps["onAuthorized"] = async (
+    credentials,
+  ) => {
+    const input = governanceGate?.input;
+    setGovernanceGate(null);
+    if (!input) {
+      return;
+    }
+    await executeNow(input, credentials);
   };
 
   const renderRunPanel = () => {
@@ -340,6 +370,16 @@ export function ActionTypeExecutionScene() {
           }}
           open={executeModalOpen}
           submitting={executing}
+        />
+      ) : null}
+      {detail && ExecutionGate && governanceGate ? (
+        <ExecutionGate
+          networkId={networkId}
+          actionTypeId={detail.id}
+          actionTypeName={detail.name}
+          input={governanceGate.input}
+          onClose={() => setGovernanceGate(null)}
+          onAuthorized={handleGovernanceAuthorized}
         />
       ) : null}
     </KnowledgeNetworkResourceConfigShell>

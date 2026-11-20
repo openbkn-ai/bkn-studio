@@ -47,6 +47,13 @@ export type StudioExtension = {
   accountWorkOrders?: ComponentType;
   /** Optional aggregate count; the shell checks this extension's entitlement before calling. */
   accountPendingCount?: () => Promise<number | null>;
+  /**
+   * Optional action execution gate. When the executor rejects an action with a
+   * governance-required conflict, the execution entry hands the assembled input to this
+   * component; it renders the decision (allow, deny, self confirmation or external approval)
+   * and reports credentials that authorize exactly one retry.
+   */
+  actionExecutionGate?: ComponentType<ActionExecutionGateProps>;
   /** Routes inside the app shell, beside the module routes. */
   routes?: RouteObject[];
   /** Routes without the shell, like the knowledge-network workspace pages. */
@@ -92,6 +99,30 @@ export type StudioExtension = {
   projectRequirementDocumentPicker?: ComponentType<ProjectRequirementDocumentPickerProps>;
   /** The knowledge-base block on the project overview, under the stat cards. */
   projectOverviewKnowledgeBase?: ComponentType<ProjectOverviewKnowledgeBaseProps>;
+};
+
+export type ActionGovernanceExecutionInput = {
+  dynamic_params?: Record<string, unknown>;
+  _instance_identities?: Record<string, unknown>[];
+  relation_target?: {
+    source_identity: Record<string, unknown>;
+    target_identity: Record<string, unknown>;
+  };
+  object_input?: Record<string, unknown>;
+};
+
+export type ActionGovernanceExecutionCredentials = {
+  requestId: string;
+  planDigest: string;
+};
+
+export type ActionExecutionGateProps = {
+  networkId: string;
+  actionTypeId: string;
+  actionTypeName: string;
+  input: ActionGovernanceExecutionInput;
+  onClose: () => void;
+  onAuthorized: (credentials: ActionGovernanceExecutionCredentials) => void;
 };
 
 /** The project an extension's page or panel is for, and what the person may do there. */
@@ -415,6 +446,10 @@ export function extensionAccountPendingCount() {
 
 export function extensionAccountWorkOrders() {
   return installed.find((extension) => extension.accountWorkOrders)?.accountWorkOrders;
+}
+
+export function extensionActionExecutionGate() {
+  return installed.find((extension) => extension.actionExecutionGate)?.actionExecutionGate;
 }
 
 const installed: StudioExtension[] = [];
