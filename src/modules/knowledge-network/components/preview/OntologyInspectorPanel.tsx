@@ -204,15 +204,27 @@ export function OntologyInspectorPanel({
             <Spin size="small" />
           </div>
         ) : detail && detail.dataProperties.length > 0 ? (
-          detail.dataProperties.map((property) => (
-            <div key={property.name} className={styles.propRow}>
-              <code>
-                {property.name}
-                {property.primaryKey ? <span className={styles.pk}>PK</span> : null}
-              </code>
-              <span className={styles.propType}>{property.type}</span>
-            </div>
-          ))
+          detail.dataProperties.map((property) => {
+            // The display name leads; the name stays beside it, as Cypher and mappings use it.
+            const displayName = property.displayName?.trim();
+            const showName = Boolean(displayName) && displayName !== property.name;
+            return (
+              <div key={property.name} className={styles.propRow}>
+                <span className={styles.propName}>
+                  {showName ? (
+                    <>
+                      <span className={styles.propDisplayName}>{displayName}</span>
+                      <code className={styles.propId}>{property.name}</code>
+                    </>
+                  ) : (
+                    <code>{property.name}</code>
+                  )}
+                  {property.primaryKey ? <span className={styles.pk}>PK</span> : null}
+                </span>
+                <span className={styles.propType}>{property.type}</span>
+              </div>
+            );
+          })
         ) : (
           <div className={styles.muted}>{t("knowledgeNetwork.previewNoProps")}</div>
         )}
