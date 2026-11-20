@@ -32,14 +32,11 @@ describe("consoleNavigation — 主线菜单顺序", () => {
 });
 
 describe("consoleNavigation — product stages", () => {
-  it("marks project management and knowledge base as beta", () => {
+  it("marks no entry with a product stage", () => {
     const staged = consoleNavigation
       .flatMap((item) => [item, ...(item.children ?? [])])
       .filter((item) => item.stage);
-    expect(staged.map((item) => [item.key, item.stage])).toEqual([
-      ["bkn-project", "beta"],
-      ["knowledge-base", "beta"],
-    ]);
+    expect(staged.map((item) => [item.key, item.stage])).toEqual([]);
   });
 });
 
