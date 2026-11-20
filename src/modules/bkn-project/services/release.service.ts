@@ -8,7 +8,7 @@
 import axios, { AxiosError, type AxiosResponse } from "axios";
 
 import { isRequestNotFound } from "@/framework/request/error-message";
-import { http } from "@/framework/request/http";
+import { http, renewSignIn } from "@/framework/request/http";
 import { defaultDevRuntimeUser } from "@/framework/runtime/dev-profile";
 import { getDraft } from "@/modules/bkn-project/services/draft.service";
 import { getProject } from "@/modules/bkn-project/services/project.service";
@@ -342,6 +342,8 @@ export async function prepareRelease(projectId: string, input: PrepareInput): Pr
     await wait(await mockPrepare(projectId, input));
     return;
   }
+  // The regression this starts asks its questions as the user; a renewed sign-in lasts it longest.
+  await renewSignIn();
   await http.post(
     `${projectPath(projectId)}/releases/${encodeURIComponent(input.version)}/prepare`,
     {
@@ -531,6 +533,7 @@ export async function runRegression(projectId: string, version: string): Promise
     mockRegressionStarts[version] = Date.now();
     return wait(mockRegression(version)!);
   }
+  await renewSignIn();
   const response = await http.post<BackendRegression>(
     `${projectPath(projectId)}/releases/${encodeURIComponent(version)}/regression:run`,
     undefined,

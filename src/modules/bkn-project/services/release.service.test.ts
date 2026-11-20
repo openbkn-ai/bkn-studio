@@ -8,9 +8,16 @@
 import { AxiosError, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
+const { mockGet, mockPost, mockRenewSignIn } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+  mockRenewSignIn: vi.fn(),
+}));
 
-vi.mock("@/framework/request/http", () => ({ http: { get: mockGet, post: mockPost } }));
+vi.mock("@/framework/request/http", () => ({
+  http: { get: mockGet, post: mockPost },
+  renewSignIn: mockRenewSignIn,
+}));
 
 // useMock is read when the module loads, so each case stubs the env and imports afresh.
 async function importService(useMock = "false") {
@@ -201,6 +208,11 @@ describe("release.service", () => {
       { accepts: ["index_not_ready"], overwrite_draft_changes: true, signature: "sig" },
       // A large model takes minutes to write into the network: not the default 30 seconds.
       { skipErrorToast: true, timeout: 300_000 },
+    );
+    // The regression it starts runs as the user: the sign-in is renewed first.
+    expect(mockRenewSignIn).toHaveBeenCalledTimes(1);
+    expect(mockRenewSignIn.mock.invocationCallOrder[0]).toBeLessThan(
+      mockPost.mock.invocationCallOrder[0],
     );
 
     mockPost.mockResolvedValueOnce({ data: { kn_version: 8, network_id: "n", purged_version: 6 } });
@@ -426,6 +438,10 @@ describe("release.service", () => {
     expect(mockPost).toHaveBeenCalledWith(`${prefix}/releases/1.0.2/regression:run`, undefined, {
       skipErrorToast: true,
     });
+    expect(mockRenewSignIn).toHaveBeenCalledTimes(1);
+    expect(mockRenewSignIn.mock.invocationCallOrder[0]).toBeLessThan(
+      mockPost.mock.invocationCallOrder[0],
+    );
   });
 
   it("reads the rollback plan, null lists as empty, and rolls back with its signature", async () => {
