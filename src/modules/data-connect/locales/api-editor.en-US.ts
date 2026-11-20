@@ -19,6 +19,8 @@ export const apiEditorEnUS = {
     emptyString: "Empty string",
     unset: "Not set",
     properties: "Properties: {{count}}",
+    properties_one: "{{count}} property",
+    properties_other: "{{count}} properties",
     elements: "Elements: {{count}}",
     additional: "Additional configuration",
   },

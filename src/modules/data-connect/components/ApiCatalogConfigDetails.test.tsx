@@ -173,7 +173,7 @@ describe("API Catalog configuration details", () => {
     expect(transformPrecisionSafeJSONRequest(config)).toBe(before);
   });
 
-  it("masks sensitive variable values while preserving login headers, templates and literal values", () => {
+  it("masks credentials before rendering while preserving symbolic login templates", () => {
     render(
       <ApiCatalogConfigDetails
         config={{
@@ -182,7 +182,9 @@ describe("API Catalog configuration details", () => {
             secret: { value: "sample-private-value", sensitive: true },
             stored: { sensitive: true },
             public: { value: "ordinary-variable", sensitive: false },
+            metadata: { value: { authorization: "ordinary-property" }, sensitive: false },
             malformed: { value: "legacy-unmarked-value", extra: true },
+            legacy: "legacy-string-value",
           },
           login_request: {
             request: {
@@ -192,7 +194,9 @@ describe("API Catalog configuration details", () => {
                 Authorization: "sample-auth-value",
                 Cookie: "sample-cookie-value",
                 "Proxy-Authorization": "Bearer {{ secret }}",
-                "X-Trace": "sample-private-value",
+                "Set-Cookie": "session=sample-mixed-value; tenant={{ public }}",
+                "X-Trace": "prefix sample-private-value suffix",
+                "X-Tenant": "{{ public }}",
               },
               body: { type: "string", value: "sample-private-value" },
             },
@@ -206,18 +210,23 @@ describe("API Catalog configuration details", () => {
     expect(screen.getByText("auth/login")).toBeVisible();
     const variableTable = screen.getByRole("table", { name: "dataConnect.apiCatalog.variables" });
     expect(variableTable).not.toHaveTextContent("sample-private-value");
-    expect(within(variableTable).getByText("legacy-unmarked-value")).toBeVisible();
+    expect(within(variableTable).getByRole("rowheader", { name: "malformed" })).toBeVisible();
+    expect(within(variableTable).getByRole("rowheader", { name: "legacy" })).toBeVisible();
     expect(within(variableTable).getByText("ordinary-variable")).toBeVisible();
+    fireEvent.click(within(variableTable).getByRole("button", { name: /metadata/ }));
+    expect(within(variableTable).getByText("ordinary-property")).toBeVisible();
     const request = screen.getByRole("table", { name: "dataConnect.apiEditor.request" });
-    expect(within(request).getByText("sample-auth-value")).toBeVisible();
-    expect(within(request).getByText("sample-cookie-value")).toBeVisible();
     expect(within(request).getByText("Bearer {{ secret }}")).toBeVisible();
-    expect(within(request).getByText("sample-private-value")).toBeVisible();
+    expect(within(request).getByText("{{ public }}")).toBeVisible();
+    expect(within(request).getByText("prefix •••••••• suffix")).toBeVisible();
     expect(
       within(screen.getByRole("table", { name: "dataConnect.apiEditor.body" })).getByText(
-        "sample-private-value",
+        "••••••••",
       ),
     ).toBeVisible();
+    expect(document.body).not.toHaveTextContent(
+      /sample-(auth|cookie|mixed|private)-value|legacy-(unmarked|string)-value/,
+    );
     expect(screen.getAllByLabelText("dataConnect.apiEditor.variablesTable.protected")).toHaveLength(
       2,
     );

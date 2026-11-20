@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
   extractRequestErrorDetails,
+  extractRequestErrorMessage,
   isRequestConflict,
   isRequestForbidden,
 } from "@/framework/request/error-message";
@@ -289,9 +290,15 @@ export function ApiResourceScene({
     void modal.confirm({
       title: t("dataCatalog.apiResource.deleteTitle", { name: saved.name }),
       content: t("dataCatalog.apiResource.deleteHint"),
+      autoFocusButton: "cancel",
       okButtonProps: { danger: true },
       onOk: async () => {
-        await deleteCatalogResource(saved.id, { skipErrorToast: true });
+        try {
+          await deleteCatalogResource(saved.id, { skipErrorToast: true });
+        } catch (failure) {
+          void message.error(extractRequestErrorMessage(failure));
+          throw failure;
+        }
         onDeleted?.(saved.catalog_id);
       },
     });

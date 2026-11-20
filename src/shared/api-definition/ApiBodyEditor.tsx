@@ -211,11 +211,12 @@ function BodyNodeValue({ root = false, ...props }: BodyNodeProps & { root?: bool
     ) : null;
   if (isDefinitionObject(raw) || (Array.isArray(raw) && type !== "array")) {
     const nested = isDefinitionObject(raw) ? raw : { type: "array", value: raw };
+    const nestedPath = `${label}.value`;
     return (
       <>
         <BodyNodeValue
           {...props}
-          label={`${label}.value`}
+          label={nestedPath}
           value={nested}
           onChange={(next) =>
             onChange(replaceMember(value, "value", Array.isArray(raw) ? next.value : next))

@@ -14,8 +14,8 @@ import { ApiResourcePage } from "../pages/ApiResourcePage";
 import type { ApiResource } from "../types/api-resource";
 import type { CatalogRecord } from "@/shared/catalog";
 
-const { get, save, getCatalog, getConnector, toggle, remove, translate, confirm } = vi.hoisted(
-  () => ({
+const { get, save, getCatalog, getConnector, toggle, remove, translate, confirm, messageError } =
+  vi.hoisted(() => ({
     get: vi.fn(),
     save: vi.fn(),
     getCatalog: vi.fn(),
@@ -24,14 +24,17 @@ const { get, save, getCatalog, getConnector, toggle, remove, translate, confirm 
     remove: vi.fn(),
     translate: (key: string) => key,
     confirm: vi.fn(),
-  }),
-);
+    messageError: vi.fn(),
+  }));
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: translate }),
 }));
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ modal: { confirm }, message: { success: vi.fn() } }),
+  useAppServices: () => ({
+    modal: { confirm },
+    message: { success: vi.fn(), error: messageError },
+  }),
 }));
 vi.mock("@/shared/catalog", () => ({
   getCatalog,
@@ -593,4 +596,25 @@ describe("API Resource management", () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith("resource", { skipErrorToast: true }));
     expect(deleted).toHaveBeenCalledWith("catalog");
   });
+
+  it.each([
+    [403, "Permission denied"],
+    [409, "The resource is still referenced"],
+  ])(
+    "shows delete failures and keeps the confirmation open on HTTP %s",
+    async (status, description) => {
+      const deleted = vi.fn();
+      const failure = { isAxiosError: true, response: { status, data: { description } } };
+      remove.mockRejectedValueOnce(failure);
+      confirm.mockImplementationOnce(() => undefined);
+      render(<ApiResourceScene resourceId="resource" onDeleted={deleted} />);
+      fireEvent.click(await screen.findByRole("button", { name: "common.delete" }));
+
+      const { onOk } = confirm.mock.lastCall?.[0] as { onOk: () => Promise<void> };
+      await expect(onOk()).rejects.toBe(failure);
+      expect(messageError).toHaveBeenCalledOnce();
+      expect(messageError).toHaveBeenCalledWith(description);
+      expect(deleted).not.toHaveBeenCalled();
+    },
+  );
 });

@@ -142,6 +142,7 @@ describe("API Resource service", () => {
       resource,
     );
     const [, payload, options] = put.mock.calls[0];
+    expect(options.headers).toEqual({ "Content-Type": "application/json" });
     const wire = options.transformRequest(payload);
     expect(wire).toContain('"headers":{"X-Demo":"updated"}');
     expect(wire).toContain('"price","value":1.2300');
@@ -165,6 +166,7 @@ describe("API Resource service", () => {
     expect(post.mock.calls[0][0]).toBe("/vega-backend/v1/resources");
     expect(post.mock.calls[0][1]).toMatchObject({ category: "api", api_effect_type: "read" });
     expect(post.mock.calls[0][1]).not.toHaveProperty("source_identifier");
+    expect(post.mock.calls[0][2].headers).toEqual({ "Content-Type": "application/json" });
     post.mockRejectedValueOnce(new Error("validation failed"));
     await expect(saveApiResource(saved())).rejects.toThrow("validation failed");
     expect(post).toHaveBeenCalledTimes(2);

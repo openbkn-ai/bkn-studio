@@ -24,6 +24,9 @@ const RESPONSE_STATUS_KEYS = new Set(["description", "headers", "schema", "resul
 const SUCCESS_KEYS = new Set(["http_status", "body_filter_condition"]);
 const VARIABLE_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
 const MASK = "••••••••";
+const CREDENTIAL_HEADER = /^(?:authorization|proxy-authorization|cookie|set-cookie)$/i;
+const AUTH_TEMPLATE =
+  /^[ \t]*(?:(?:Basic|Bearer)[ \t]+)?\{\{[ \t]*[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*|\[\d+\])*[ \t]*\}\}[ \t]*$/i;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return (
@@ -157,13 +160,9 @@ export function validateApiCatalogConfig(
   return undefined;
 }
 
-/** Read-only preview keeps templates symbolic and never renders a declared credential value. */
-export function buildApiCatalogPreview(
-  config: Record<string, unknown>,
-  previewValue?: unknown,
-): string {
+function catalogCredentialValues(config: Record<string, unknown>): string[] {
   const variables = isRecord(config.variables) ? config.variables : {};
-  const secretValues = Object.values(variables).flatMap((variable) => {
+  return Object.values(variables).flatMap((variable) => {
     if (typeof variable === "string") return variable ? [variable] : [];
     return isRecord(variable) &&
       (variable.sensitive === true || !isCatalogVariable(variable)) &&
@@ -172,24 +171,53 @@ export function buildApiCatalogPreview(
       ? [variable.value]
       : [];
   });
-  const redact = (value: unknown, key = ""): unknown => {
-    if (typeof value === "string") {
-      if (/^(?:authorization|proxy-authorization|cookie|set-cookie)$/i.test(key)) return MASK;
-      return secretValues.reduce((text, secret) => text.replaceAll(secret, MASK), value);
-    }
-    if (Array.isArray(value)) return value.map((child) => redact(child));
-    if (isRecord(value))
-      return Object.fromEntries(
-        Object.entries(value).map(([name, child]) => [name, redact(child, name)]),
-      );
-    return value;
-  };
+}
+
+function redactCatalogPreviewValue(
+  value: unknown,
+  secretValues: string[],
+  mode: "preview" | "details",
+  key = "",
+): unknown {
+  if (typeof value === "string")
+    return secretValues.reduce((text, secret) => text.replaceAll(secret, MASK), value);
+  if (Array.isArray(value))
+    return value.map((child) => redactCatalogPreviewValue(child, secretValues, mode));
+  if (isRecord(value)) {
+    const checkCredentialHeaders = mode === "preview" || key === "headers";
+    return Object.fromEntries(
+      Object.entries(value).map(([name, child]) => {
+        if (checkCredentialHeaders && typeof child === "string" && CREDENTIAL_HEADER.test(name))
+          return [name, mode === "details" && AUTH_TEMPLATE.test(child) ? child : MASK];
+        return [name, redactCatalogPreviewValue(child, secretValues, mode, name)];
+      }),
+    );
+  }
+  return value;
+}
+
+/** Preserve structured values for the detail tables while masking credentials before rendering. */
+export function redactApiCatalogDetails(config: Record<string, unknown>): Record<string, unknown> {
+  return redactCatalogPreviewValue(
+    protectCatalogConfigVariables(config, "display"),
+    catalogCredentialValues(config),
+    "details",
+  ) as Record<string, unknown>;
+}
+
+/** Read-only preview keeps templates symbolic and never renders a declared credential value. */
+export function buildApiCatalogPreview(
+  config: Record<string, unknown>,
+  previewValue?: unknown,
+): string {
   return formatPrecisionSafeJSON(
     transformPrecisionSafeJSONRequest(
-      redact(
+      redactCatalogPreviewValue(
         previewValue === undefined
           ? protectCatalogConfigVariables(config, "display")
           : previewValue,
+        catalogCredentialValues(config),
+        "preview",
       ),
     ),
     { allowSpecialKeys: true },

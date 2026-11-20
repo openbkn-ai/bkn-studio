@@ -50,6 +50,8 @@ const options = {
   transformResponse: preciseDefinitionResponse,
 };
 
+const saveOptions = { ...options, headers: { "Content-Type": "application/json" } };
+
 export async function getApiResourceConnector(type: string, signal?: AbortSignal) {
   if (import.meta.env.VITE_USE_MOCK !== "false") {
     const { getMockApiResourceConnector } = await import("./api-resource-mock");
@@ -109,11 +111,15 @@ export async function saveApiResource(
     await http.put(
       `/vega-backend/v1/resources/${encodeURIComponent(previous.id)}`,
       payload,
-      options,
+      saveOptions,
     );
     return previous.id;
   }
-  const response = await http.post<{ id: string }>("/vega-backend/v1/resources", payload, options);
+  const response = await http.post<{ id: string }>(
+    "/vega-backend/v1/resources",
+    payload,
+    saveOptions,
+  );
   return response.data.id;
 }
 

@@ -19,6 +19,8 @@ export const apiEditorZhCN = {
     emptyString: "空字符串",
     unset: "未设置",
     properties: "{{count}} 个属性",
+    properties_one: "{{count}} 个属性",
+    properties_other: "{{count}} 个属性",
     elements: "{{count}} 个元素",
     additional: "其他配置",
   },

@@ -13,13 +13,18 @@ import { precisionPreservingValueText } from "@/framework/request/precision-safe
 import { isDefinitionObject, objectValue } from "@/shared/api-definition/model";
 import { ApiVariablesTable } from "@/shared/api-definition/ApiVariablesTable";
 import { ApiDefinitionFieldTable } from "@/shared/api-definition/ApiDefinitionFieldTable";
+import { redactApiCatalogDetails } from "../lib/api-catalog-config";
 import { humanizeConnectorFieldLabel } from "../lib/connector-template";
 import drawerStyles from "./DataConnectDetailDrawer.module.css";
 import styles from "./ApiCatalogConfigDetails.module.css";
 
-/** Only declared sensitive variable values are masked in connection details. */
-export function ApiCatalogConfigDetails({ config }: { config: Record<string, unknown> }) {
+export function ApiCatalogConfigDetails({
+  config: rawConfig,
+}: {
+  config: Record<string, unknown>;
+}) {
   const { t } = useTranslation();
+  const config = redactApiCatalogDetails(rawConfig);
   if (!Object.keys(config).length)
     return (
       <Empty
