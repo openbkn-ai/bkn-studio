@@ -88,7 +88,6 @@ type WorkspaceNavItem = {
   paidCapability?: string;
   paidCapabilityState?: CapabilityState;
   paidEdition?: Edition;
-  alwaysShowEdition?: boolean;
   path?: string;
 };
 
@@ -232,7 +231,6 @@ export function KnowledgeNetworkWorkspaceScene({
             ? "available"
             : "not-licensed",
         paidEdition: "enterprise",
-        alwaysShowEdition: true,
       },
       {
         key: "action-control",
@@ -245,7 +243,6 @@ export function KnowledgeNetworkWorkspaceScene({
             ? "available"
             : "not-licensed",
         paidEdition: "enterprise",
-        alwaysShowEdition: true,
         path: extensionWorkspaceNavItems("risk-control")
           .find((item) => item.id === "action-control")
           ?.path(activeNetworkId),
@@ -462,11 +459,7 @@ export function KnowledgeNetworkWorkspaceScene({
         {!sideCollapsed && (item.paidEdition || showCount) ? (
           <span className={styles.sideItemStatus}>
             {item.paidEdition ? (
-              <EditionBadge
-                alwaysShow={item.alwaysShowEdition}
-                capability={item.paidCapability}
-                edition={item.paidEdition}
-              />
+              <EditionBadge capability={item.paidCapability} edition={item.paidEdition} />
             ) : null}
             {showCount ? (
               <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>
