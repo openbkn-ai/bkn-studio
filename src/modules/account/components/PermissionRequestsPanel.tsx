@@ -189,6 +189,7 @@ export function PermissionRequestsPanel({
   const [resourceCheck, setResourceCheck] = useState<ResourceCheckState | null>(null);
   const submittingRef = useRef(false);
   const resourceCheckRef = useRef<string | null>(null);
+  const detailRequestRef = useRef<symbol | null>(null);
 
   const requestOperationNames = (request: PermissionRequest) =>
     (request.operations?.length ? request.operations : [request.operation]).map((operation) => ({
@@ -466,7 +467,11 @@ export function PermissionRequestsPanel({
 
   const openDetail = async (id: string) => {
     if (submittingRef.current) return;
+    const requestVersion = Symbol();
+    detailRequestRef.current = requestVersion;
     setComment("");
+    setDetail(null);
+    setReviews([]);
     resourceCheckRef.current = id;
     setResourceCheck({ id, result: "checking" });
     try {
@@ -474,20 +479,28 @@ export function PermissionRequestsPanel({
         getPermissionRequest(id),
         listPermissionRequestReviews(id),
       ]);
+      if (requestVersion !== detailRequestRef.current) return;
       setDetail(request);
       setReviews(nextReviews);
       void verifyResource(request);
     } catch {
-      message.error(t("account.permissionRequests.detailsFailed"));
+      if (requestVersion === detailRequestRef.current) {
+        message.error(t("account.permissionRequests.detailsFailed"));
+      }
     }
   };
   useEffect(() => {
     if (requestId) void openDetail(requestId);
+    return () => {
+      detailRequestRef.current = null;
+      resourceCheckRef.current = null;
+    };
     // The host changes requestId when a different work order is selected.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
   const closeDetail = () => {
     if (submittingRef.current) return;
+    detailRequestRef.current = null;
     setComment("");
     setReviews([]);
     resourceCheckRef.current = null;
