@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import type { Entitlement } from "@/framework/entitlement/types";
 import {
+  extensionAccountWorkOrders,
+  extensionActionExecutionGate,
   extensionKnowledgeNetworkResourcePanel,
   extensionInstanceHandOvers,
   handOverLimit,
@@ -348,4 +350,26 @@ describe("extension registry", () => {
     expect(i18n.getResource("en-US", "translation", "extensionDemo.kept")).toBe("core");
     expect(i18n.getResource("en-US", "translation", "extensionDemo.added")).toBe("extension");
   });
+});
+
+it("keeps the account work-order extension optional for community builds", () => {
+  expect(extensionAccountWorkOrders()).toBeUndefined();
+  const WorkOrders = () => null;
+  registerExtension({
+    id: "governance",
+    capability: "action_governance",
+    accountWorkOrders: WorkOrders,
+  });
+  expect(extensionAccountWorkOrders()).toBe(WorkOrders);
+});
+
+it("keeps the action execution gate optional for community builds", () => {
+  expect(extensionActionExecutionGate()).toBeUndefined();
+  const Gate = () => null;
+  registerExtension({
+    id: "governance",
+    capability: "action_governance",
+    actionExecutionGate: Gate,
+  });
+  expect(extensionActionExecutionGate()).toBe(Gate);
 });

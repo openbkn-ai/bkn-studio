@@ -7,3 +7,12 @@
 
 export { accountRouteContribution } from "@/modules/account/routes";
 export { AccountScene } from "@/modules/account/scenes/AccountScene";
+
+export { PermissionRequestsPanel } from "./components/PermissionRequestsPanel";
+export { listPermissionRequests } from "./services/permission-requests.service";
+export type { PermissionRequest } from "./services/permission-requests.service";
+
+export {
+  getPermissionRequestTodoSummary,
+  notifyPermissionRequestTodoSummaryChanged,
+} from "./services/permission-requests.service";

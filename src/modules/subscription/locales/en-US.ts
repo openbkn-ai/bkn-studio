@@ -90,6 +90,14 @@ export const subscriptionEnUS = {
           "Connect files from object storage, file services and other sources, keep their content versions, and parse, chunk and locate them in the original text.",
         name: "Ontology knowledge base",
       },
+      action_governance: {
+        name: "Action control",
+        description: "Configure confirmation, denial and business approval rules for actions.",
+      },
+      permission_matrix: {
+        name: "Permission matrix",
+        description: "Review user and role permissions across knowledge network resources.",
+      },
       object_metrics: {
         bullets: {
           b1: "Atomic, derived and composite metrics",

@@ -6,7 +6,7 @@
  */
 
 import { Tag } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -28,6 +28,7 @@ import { DefinitionAliases } from "@/modules/knowledge-network/components/defini
 import styles from "./ActionTypeOverviewPanel.module.css";
 
 type ActionTypeOverviewPanelProps = {
+  basicInfoExtra?: ReactNode;
   canResolveActionSource: boolean;
   detail: ActionTypeDetail;
   networkId: string;
@@ -111,6 +112,7 @@ function ObjectTypeCell({
 }
 
 export function ActionTypeOverviewPanel({
+  basicInfoExtra,
   canResolveActionSource,
   detail,
   networkId,
@@ -227,6 +229,7 @@ export function ActionTypeOverviewPanel({
                   {detail.color}
                 </span>
               </div>
+              {basicInfoExtra ? <div className={styles.basicExtra}>{basicInfoExtra}</div> : null}
               <div className={styles.basicDescription}>
                 <span>{t("knowledgeNetwork.descriptionField")}</span>
                 <strong>{detail.description || t("knowledgeNetwork.noDescription")}</strong>

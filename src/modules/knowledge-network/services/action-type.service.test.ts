@@ -863,6 +863,71 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
     );
   });
 
+  it("attaches one-time governance credentials to the retry", async () => {
+    const { executeKnowledgeNetworkActionTypeNow } = await import("./action-type.service");
+
+    await executeKnowledgeNetworkActionTypeNow(
+      "kn-1",
+      "action-1",
+      { dynamic_params: { amount: 10 } },
+      { requestId: "request-1", planDigest: "a".repeat(64) },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/ontology-query/v1/knowledge-networks/kn-1/action-types/action-1/execute",
+      {
+        dynamic_params: { amount: 10 },
+        governance_request_id: "request-1",
+        governance_plan_digest: "a".repeat(64),
+      },
+      expect.objectContaining({ params: { kn_version: "draft" } }),
+    );
+  });
+
+  it("reads the published governance digest and rejects malformed values", async () => {
+    const { getActionTypeGovernanceDigest } = await import("./action-type.service");
+    const digest = "b".repeat(64);
+    getMock.mockReset();
+    getMock.mockResolvedValueOnce({ data: { definition_digest: digest } });
+
+    expect(await getActionTypeGovernanceDigest("kn-1", "pay")).toBe(digest);
+    expect(getMock).toHaveBeenCalledWith(
+      "/ontology-query/v1/knowledge-networks/kn-1/action-types/pay/governance-digest",
+      { params: { branch: "main" }, _knSkip: true },
+    );
+
+    getMock.mockResolvedValueOnce({ data: { definition_digest: "short" } });
+    await expect(getActionTypeGovernanceDigest("kn-1", "pay")).rejects.toThrow("digest");
+  });
+
+  it("recognizes only the executor's governance-required refusal", async () => {
+    const { isActionGovernanceRequiredError } = await import("./action-type.service");
+    const governanceError = {
+      response: { data: { error_code: "OntologyQuery.ActionExecution.GovernanceRequired" } },
+    };
+    expect(isActionGovernanceRequiredError(governanceError)).toBe(true);
+    expect(
+      isActionGovernanceRequiredError({
+        response: { data: { error_code: "OntologyQuery.ActionExecution.InvalidParameter" } },
+      }),
+    ).toBe(false);
+    expect(isActionGovernanceRequiredError(new Error("network"))).toBe(false);
+  });
+
+  it("loads published execution schema independently of the version on screen", async () => {
+    const service = await import("./action-type.service");
+    const schema = { type: "object", properties: {} };
+    postMock.mockResolvedValueOnce({ data: { execution_schema: schema } });
+    expect(
+      await service.getActionTypeExecutionSchema("kn-1", "tool", { publishedOnly: true }),
+    ).toEqual(schema);
+    expect(postMock).toHaveBeenCalledWith(
+      expect.stringContaining("/tool"),
+      {},
+      { headers: { "x-http-method-override": "GET" }, params: { branch: "main" }, _knSkip: true },
+    );
+  });
+
   it("loads definition-only execution schema and rejects a missing contract", async () => {
     const service = await import("./action-type.service");
     postMock.mockResolvedValueOnce({
@@ -993,6 +1058,17 @@ describe("action-type.service - optional reads", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("reads published actions for operational control even while the draft is being viewed", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listKnowledgeNetworkActionTypes } = await import("./action-type.service");
+    await listKnowledgeNetworkActionTypes("kn-1", { publishedOnly: true });
+    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1/action-types", {
+      _knSkip: true,
+      params: { branch: "main", direction: "desc", limit: -1, offset: 0, sort: "update_time" },
+      skipErrorToast: undefined,
+    });
   });
 
   // The app development page reads action types as optional data: a 403 must not raise a toast.

@@ -27,7 +27,7 @@ export const accountZhCN = {
         description:
           "签发和管理用于外部系统或智能体接入的 API Key，查看和断开已连接的智能体客户端。",
       },
-      permissionRequests: { title: "权限工单", description: "查看和处理资源权限工单。" },
+      permissionRequests: { title: "我的工单", description: "查看和处理权限申请与行动申请。" },
     },
     profileSoon: "个人资料编辑开发中，敬请期待。",
     securitySoon: "自助修改密码开发中，敬请期待。",

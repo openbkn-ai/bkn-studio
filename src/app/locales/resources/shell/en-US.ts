@@ -76,9 +76,9 @@ export const shellEnUS = {
       apiKeys: "API keys",
       account: "Account",
       aboutOpenBkn: "About OpenBKN",
-      permissionReviews: "Permission tickets",
-      pendingPermissionRequests_one: "{{count}} permission ticket awaiting review",
-      pendingPermissionRequests_other: "{{count}} permission tickets awaiting review",
+      permissionReviews: "My work orders",
+      pendingPermissionRequests_one: "{{count}} work order awaiting processing",
+      pendingPermissionRequests_other: "{{count}} work orders awaiting processing",
       installStatus: "Backend service status",
     },
     aboutOpenBkn: {

@@ -41,8 +41,14 @@ function objectMetricsRouteChild(path: string): ReactElement {
 }
 
 describe("knowledge network standalone routes", () => {
-  it("registers the permission matrix workspace route", () => {
-    expect(routeChild("/knowledge-network/workspace/:networkId/permissions")).toBeTruthy();
+  it("protects the permission matrix workspace route with the Enterprise gate", () => {
+    const gate = routeChild("/knowledge-network/workspace/:networkId/permissions");
+    expect(gate.type).toBe(RequireEdition);
+    expect(gate.props).toMatchObject({
+      capability: CAPABILITIES.PERMISSION_MATRIX,
+      minEdition: "enterprise",
+      mountLockedContent: false,
+    });
   });
   it("keeps unlicensed Eval behind the Professional gate without mounting its API consumers", () => {
     const gate = routeChild("/knowledge-network/workspace/:networkId/evals") as ReactElement<{

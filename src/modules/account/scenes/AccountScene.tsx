@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { extensionAccountWorkOrders } from "@/framework/extension/registry";
 import { Spin } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -56,7 +57,12 @@ export function AccountScene({ section }: { section: AccountSection }) {
       return <ApiKeyListScene embedded />;
     }
     if (section === "permission-requests") {
-      return <PermissionRequestsPanel hideMine={getRuntimeConfig().currentUser.isSuperAdmin} />;
+      const WorkOrders = extensionAccountWorkOrders();
+      return WorkOrders ? (
+        <WorkOrders />
+      ) : (
+        <PermissionRequestsPanel hideMine={getRuntimeConfig().currentUser.isSuperAdmin} />
+      );
     }
 
     if (profileLoading) {

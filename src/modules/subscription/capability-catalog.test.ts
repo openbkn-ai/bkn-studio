@@ -59,7 +59,13 @@ describe("capability catalog", () => {
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
     expect(capabilitiesIntroducedBy("professional")).toHaveLength(10);
-    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(7);
+    expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(9);
+    expect(
+      CAPABILITY_CATALOG.find((entry) => entry.key === CAPABILITIES.ACTION_GOVERNANCE),
+    ).toMatchObject({
+      minEdition: "enterprise",
+      reportedByEndpoint: false,
+    });
     expect(CAPABILITY_CATALOG.find((entry) => entry.key === CAPABILITIES.EVAL)).toMatchObject({
       minEdition: "professional",
       reportedByEndpoint: false,

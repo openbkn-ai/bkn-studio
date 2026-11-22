@@ -6,11 +6,12 @@
  */
 
 import { Alert } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extensionActionControlSummary } from "@/framework/extension/registry";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
@@ -38,6 +39,7 @@ import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/componen
 import styles from "./ActionTypeDetailScene.module.css";
 
 export function ActionTypeDetailScene() {
+  const ActionControlSummary = extensionActionControlSummary();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -198,6 +200,17 @@ export function ActionTypeDetailScene() {
             networkId={networkId}
           />
           <ActionTypeOverviewPanel
+            basicInfoExtra={
+              ActionControlSummary ? (
+                <Suspense fallback={null}>
+                  <ActionControlSummary
+                    key={JSON.stringify([networkId, actionTypeId])}
+                    networkId={networkId}
+                    actionTypeId={actionTypeId}
+                  />
+                </Suspense>
+              ) : undefined
+            }
             canResolveActionSource={canResolveActionSource}
             detail={detail}
             networkId={networkId}

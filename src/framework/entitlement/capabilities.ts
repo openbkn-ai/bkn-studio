@@ -20,6 +20,9 @@
  * 只是"哪个能力"的标识,不参与任何授权判定。
  */
 export const CAPABILITIES = {
+  /** Action execution governance; Enterprise and higher, implemented by governance. */
+  ACTION_GOVERNANCE: "action_governance",
+  PERMISSION_MATRIX: "permission_matrix",
   /** SSO configuration management; Professional and higher. */
   SSO: "sso",
   /** 自定义角色/部门/权限的写入面。专业档起。 */

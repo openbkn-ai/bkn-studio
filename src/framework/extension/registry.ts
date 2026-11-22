@@ -33,6 +33,18 @@ export type StudioExtension = {
    * licence that falls short gets the upgrade page instead.
    */
   capability: string;
+  /** Optional account work-order scene. The community permission panel remains the fallback. */
+  accountWorkOrders?: ComponentType;
+  /** Optional aggregate count; the shell checks this extension's entitlement before calling. */
+  accountPendingCount?: () => Promise<number | null>;
+  /**
+   * Optional action execution gate. When the executor rejects an action with a
+   * governance-required conflict, the execution entry hands the assembled input to this
+   * component; it renders the decision (allow, deny, self confirmation or external approval)
+   * and reports credentials that authorize exactly one retry.
+   */
+  actionExecutionGate?: ComponentType<ActionExecutionGateProps>;
+  actionControlSummary?: ComponentType<{ networkId: string; actionTypeId: string }>;
   /** Routes inside the app shell, beside the module routes. */
   routes?: RouteObject[];
   /** Routes without the shell, like the knowledge-network workspace pages. */
@@ -54,6 +66,30 @@ export type StudioExtension = {
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
   /** The knowledge-bases section of the knowledge-network workspace. */
   knowledgeNetworkResourcePanel?: ComponentType<KnowledgeNetworkResourcePanelProps>;
+};
+
+export type ActionGovernanceExecutionInput = {
+  dynamic_params?: Record<string, unknown>;
+  _instance_identities?: Record<string, unknown>[];
+  relation_target?: {
+    source_identity: Record<string, unknown>;
+    target_identity: Record<string, unknown>;
+  };
+  object_input?: Record<string, unknown>;
+};
+
+export type ActionGovernanceExecutionCredentials = {
+  requestId: string;
+  planDigest: string;
+};
+
+export type ActionExecutionGateProps = {
+  networkId: string;
+  actionTypeId: string;
+  actionTypeName: string;
+  input: ActionGovernanceExecutionInput;
+  onClose: () => void;
+  onAuthorized: (credentials: ActionGovernanceExecutionCredentials) => void;
 };
 
 export type KnowledgeNetworkResourcePanelProps = {
@@ -111,7 +147,7 @@ export type WorkspaceNavEntry = {
   page?: WorkspaceNavPage;
 };
 
-export type WorkspaceNavSection = "verification" | "analysis";
+export type WorkspaceNavSection = "verification" | "analysis" | "risk-control";
 
 /**
  * A sidebar entry's page, shown inside the knowledge-network workspace. Studio registers its
@@ -165,6 +201,25 @@ export function handOverLimit(handOver: InstanceHandOver): number {
   return typeof handOver.maxInstances === "function"
     ? handOver.maxInstances()
     : handOver.maxInstances;
+}
+
+export function extensionAccountPendingCount() {
+  const extension = installed.find((item) => item.accountPendingCount);
+  return extension?.accountPendingCount
+    ? { capability: extension.capability, load: extension.accountPendingCount }
+    : undefined;
+}
+
+export function extensionAccountWorkOrders() {
+  return installed.find((extension) => extension.accountWorkOrders)?.accountWorkOrders;
+}
+
+export function extensionActionExecutionGate() {
+  return installed.find((extension) => extension.actionExecutionGate)?.actionExecutionGate;
+}
+
+export function extensionActionControlSummary() {
+  return installed.find((extension) => extension.actionControlSummary)?.actionControlSummary;
 }
 
 const installed: StudioExtension[] = [];

@@ -70,6 +70,14 @@
   min-height: 24px;
 }
 
+.basicFields .basicExtra {
+  grid-column: span 2;
+}
+
+.basicFields .basicExtra:empty {
+  display: none;
+}
+
 .basicFields > div > span:first-child,
 .auditBar span {
   color: var(--color-text-secondary);
@@ -243,7 +251,8 @@
     grid-template-columns: 1fr;
   }
 
-  .basicFields .basicDescription {
+  .basicFields .basicDescription,
+  .basicFields .basicExtra {
     grid-column: 1;
   }
 
