@@ -5,9 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import BigNumber from "bignumber.js";
+import {
+  precisionPreservingValueText,
+  transformNumberLiteralJSONRequest,
+} from "@/framework/request/precision-safe-json";
 import { CopyOutlined } from "@ant-design/icons";
 import { Alert, Button, Checkbox, Modal, Select, Spin, Tooltip } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
@@ -21,6 +26,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
 import {
+  apiFilterOperationsForField,
   emptyFilterGroup,
   filterToBackend,
   filterValidationError,
@@ -101,8 +107,9 @@ function formatPreviewCell(value: unknown) {
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
+  if (BigNumber.isBigNumber(value)) return precisionPreservingValueText(value);
   try {
-    return JSON.stringify(value) ?? "";
+    return transformNumberLiteralJSONRequest(value);
   } catch {
     return "";
   }
@@ -200,6 +207,7 @@ function ResourcePreviewContent({
   const [filterRetryVersion, setFilterRetryVersion] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
+  const filterHintId = useId();
   const requestVersionRef = useRef(0);
   const requestController = useRef<AbortController | null>(null);
   const queryBlockReason = resourceQueryBlockReason(resource);
@@ -209,6 +217,9 @@ function ResourcePreviewContent({
   const previewUnavailable = queryBlockReason !== null;
   const canQueryData = hasCatalogResourceOperation(resource, "query_data");
   const isApiResource = resource.category === "api";
+  const apiFilterUnavailable =
+    isApiResource &&
+    !resource.schema.some((field) => apiFilterOperationsForField(field).length > 0);
   const hasLocalIndex =
     resource.category === "table" &&
     isLocalIndexReadable(resource.localIndexStatus) &&
@@ -274,7 +285,8 @@ function ResourcePreviewContent({
         ? "local_index"
         : "source";
   const activeFilter =
-    !isApiResource && filterValidationError(appliedFilter, resource.schema, queryPath) === null
+    !apiFilterUnavailable &&
+    filterValidationError(appliedFilter, resource.schema, queryPath) === null
       ? appliedFilter
       : EMPTY_APPLIED_FILTER;
   // An unfiltered request does not depend on the query path learned from its response.
@@ -581,32 +593,40 @@ function ResourcePreviewContent({
     <div className={styles.panel}>
       <div className={styles.metaRow}>
         <div className={styles.previewControls}>
+          <Button
+            aria-expanded={filterOpen && !apiFilterUnavailable}
+            aria-describedby={apiFilterUnavailable ? filterHintId : undefined}
+            disabled={invalidViewMetadata || apiFilterUnavailable}
+            onClick={() => setFilterOpen((open) => !open)}
+          >
+            {t("dataCatalog.preview.filter")}
+            {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
+          </Button>
+          {apiFilterUnavailable ? (
+            <span id={filterHintId} className={styles.dataSource}>
+              {t("dataCatalog.apiResource.invocation.noFilterableFields")}
+            </span>
+          ) : null}
           {!isApiResource ? (
-            <>
-              <Button disabled={invalidViewMetadata} onClick={() => setFilterOpen((open) => !open)}>
-                {t("dataCatalog.preview.filter")}
-                {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
-              </Button>
-              <Tooltip
-                title={sourceSwitchHintKey ? t(sourceSwitchHintKey) : undefined}
-                trigger={["hover", "focus"]}
-              >
-                <span tabIndex={sourceSwitchDisabled ? 0 : undefined}>
-                  <Checkbox
-                    checked={ignoreLocalIndex}
-                    disabled={sourceSwitchDisabled}
-                    onChange={(event) => {
-                      setSourceSelected(event.target.checked);
-                      if (!event.target.checked) {
-                        setBinaryContent(false);
-                      }
-                    }}
-                  >
-                    {t("dataCatalog.preview.queryOriginalSource")}
-                  </Checkbox>
-                </span>
-              </Tooltip>
-            </>
+            <Tooltip
+              title={sourceSwitchHintKey ? t(sourceSwitchHintKey) : undefined}
+              trigger={["hover", "focus"]}
+            >
+              <span tabIndex={sourceSwitchDisabled ? 0 : undefined}>
+                <Checkbox
+                  checked={ignoreLocalIndex}
+                  disabled={sourceSwitchDisabled}
+                  onChange={(event) => {
+                    setSourceSelected(event.target.checked);
+                    if (!event.target.checked) {
+                      setBinaryContent(false);
+                    }
+                  }}
+                >
+                  {t("dataCatalog.preview.queryOriginalSource")}
+                </Checkbox>
+              </span>
+            </Tooltip>
           ) : null}
           {hasBinaryField ? (
             <Checkbox
@@ -628,9 +648,10 @@ function ResourcePreviewContent({
           ) : null}
         </div>
       </div>
-      {!isApiResource && filterOpen ? (
+      {filterOpen && !apiFilterUnavailable ? (
         <div className={styles.filterPanel}>
           <FilterTreeEditor
+            apiFilter={isApiResource}
             fields={resource.schema}
             queryPath={queryPath}
             onChange={(next) => {
@@ -653,6 +674,7 @@ function ResourcePreviewContent({
                 if (filterDraft === appliedFilter && error) {
                   setFilterRetryVersion((version) => version + 1);
                 } else {
+                  if (isApiResource && filterDraft !== appliedFilter) setResult(null);
                   setAppliedFilter(filterDraft);
                 }
               }}
@@ -661,6 +683,7 @@ function ResourcePreviewContent({
             </Button>
             <Button
               onClick={() => {
+                if (isApiResource && appliedFilter.children.length) setResult(null);
                 setFilterDraft(emptyFilterGroup());
                 setAppliedFilter(emptyFilterGroup());
                 setFilterError(null);

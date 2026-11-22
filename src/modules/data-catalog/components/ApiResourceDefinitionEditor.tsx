@@ -31,9 +31,49 @@ type Props = {
   value: ApiResourceInput;
   onChange: (value: ApiResourceInput) => void;
   disabled?: boolean;
+  showOutputFieldErrors?: boolean;
   onValidityChange: (valid: boolean) => void;
   catalogVariableNames?: string[];
 };
+
+function RequiredOutputName({
+  label,
+  value,
+  onChange,
+  disabled,
+  showErrors,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  showErrors: boolean;
+}) {
+  const { t } = useTranslation();
+  const errorId = useId();
+  const [touched, setTouched] = useState(false);
+  const invalid = !disabled && (touched || showErrors) && !value.trim();
+  return (
+    <>
+      <Input
+        required
+        aria-label={label}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? errorId : undefined}
+        disabled={disabled}
+        status={invalid ? "error" : undefined}
+        value={value}
+        onBlur={() => setTouched(true)}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {invalid ? (
+        <small id={errorId} className={viewStyles.fieldError}>
+          {t("common.required")}
+        </small>
+      ) : null}
+    </>
+  );
+}
 
 function DecimalFieldSettings({
   attributes,
@@ -181,6 +221,7 @@ export function ApiResourceDefinitionEditor({
   value,
   onChange,
   disabled,
+  showOutputFieldErrors = false,
   onValidityChange,
   catalogVariableNames = [],
 }: Props) {
@@ -412,6 +453,11 @@ export function ApiResourceDefinitionEditor({
                 <tr>
                   {columns.map((column) => (
                     <th key={column} scope="col">
+                      {column === "fieldName" || column === "displayName" ? (
+                        <span aria-hidden="true" className={styles.validationError}>
+                          *{" "}
+                        </span>
+                      ) : null}
                       {t(`dataCatalog.apiResource.${column}`)}
                     </th>
                   ))}
@@ -433,21 +479,21 @@ export function ApiResourceDefinitionEditor({
                       />
                     </td>
                     <td>
-                      <Input
+                      <RequiredOutputName
                         disabled={disabled}
-                        aria-label={t("dataCatalog.apiResource.fieldName")}
+                        label={t("dataCatalog.apiResource.fieldName")}
+                        showErrors={showOutputFieldErrors}
                         value={field.name}
-                        onChange={(event) => changeField(index, { name: event.target.value })}
+                        onChange={(name) => changeField(index, { name })}
                       />
                     </td>
                     <td>
-                      <Input
+                      <RequiredOutputName
                         disabled={disabled}
-                        aria-label={t("dataCatalog.apiResource.displayName")}
+                        label={t("dataCatalog.apiResource.displayName")}
+                        showErrors={showOutputFieldErrors}
                         value={field.display_name ?? ""}
-                        onChange={(event) =>
-                          changeField(index, { display_name: event.target.value })
-                        }
+                        onChange={(display_name) => changeField(index, { display_name })}
                       />
                     </td>
                     <td>

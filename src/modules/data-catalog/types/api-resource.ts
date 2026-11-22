@@ -45,6 +45,9 @@ export type ApiResourceQuery = {
   need_total?: boolean;
 };
 
+/** Transient candidate verification; never persisted as part of the Resource definition. */
+export type ApiResourceValidation = Pick<ApiResourceQuery, "filter_condition" | "paging">;
+
 export type ApiResourceResult = {
   entries: Record<string, unknown>[];
   query_source?: string;

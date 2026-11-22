@@ -5,10 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse, Space, Tabs } from "antd";
+import { Alert, Space, Tabs } from "antd";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { extractRequestErrorDetails, isRequestConflict } from "@/framework/request/error-message";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import type { CatalogRecord } from "@/shared/catalog";
 import type { ApiResourceTab } from "../contracts/api-resource";
@@ -20,9 +21,9 @@ import {
 import { getApiResource, queryApiResource } from "../services/api-resource.service";
 import type { ApiResource } from "../types/api-resource";
 import type { ResourcePreviewQuery } from "../types/data-catalog";
+import { hasCatalogResourceOperation } from "../utils/resource-operations";
 import { ResourceDetailPanel } from "./ResourceDetailPanel";
 import { ApiResourceDefinitionTables } from "./ApiResourceDefinitionTables";
-import { ApiResourceTestPanel } from "./ApiResourceTestPanel";
 import { ResourcePreviewPanel, type ResourcePreviewData } from "./ResourcePreviewPanel";
 import workspaceStyles from "../scenes/ResourceWorkspaceScene.module.css";
 import styles from "./ApiResourceWorkspaceView.module.css";
@@ -80,18 +81,36 @@ export function ApiResourceWorkspaceView({
           onConflict();
           throw new Error(t("dataCatalog.apiResource.conflict"));
         }
+        return latest;
       };
-      await checkVersion();
+      const latest = await checkVersion();
+      if (
+        !latest.enabled ||
+        latest.status !== "active" ||
+        !hasCatalogResourceOperation(latest, "query_data")
+      ) {
+        throw new Error(t("dataCatalog.apiResource.errors.queryUnavailable"));
+      }
       const data = await queryApiResource(
         id,
         {
+          ...(query.filterCondition ? { filter_condition: query.filterCondition } : {}),
           ...(hasPaging
             ? { paging: { mode: "single" as const, offset: query.offset, limit: query.limit } }
             : {}),
           ...(supportsTotal ? { need_total: true } : {}),
         },
         signal,
-      );
+      ).catch((error: unknown) => {
+        if (
+          !signal.aborted &&
+          isRequestConflict(error) &&
+          extractRequestErrorDetails(error).code === "VegaBackend.Resource.UpdateConflict"
+        ) {
+          onConflict();
+        }
+        throw error;
+      });
       await checkVersion();
       return {
         rows: data.entries,
@@ -183,25 +202,6 @@ export function ApiResourceWorkspaceView({
                   initialPageSize={defaultLimit}
                   pageSizeOptions={hasPaging ? pageSizes : undefined}
                   apiPagingEnabled={hasPaging}
-                />
-                <Collapse
-                  size="small"
-                  items={[
-                    {
-                      key: "advanced-query",
-                      label: t("dataCatalog.apiResource.advancedQuery"),
-                      children: (
-                        <ApiResourceTestPanel
-                          key={`${resource.id}:${resource.update_time}`}
-                          resource={resource}
-                          canQuery={canQuery}
-                          revision={0}
-                          hasUnsavedDefinition={false}
-                          onConflict={onConflict}
-                        />
-                      ),
-                    },
-                  ]}
                 />
               </div>
             ),

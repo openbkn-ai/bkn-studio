@@ -6,6 +6,13 @@
  */
 
 export const apiResourceZhCN = {
+  invocation: {
+    filter: "指定过滤条件",
+    noFilterableFields: "请在「输出字段」中为至少一个支持过滤的字段开启「允许过滤」。",
+    noPagingRule: "请先在「API 信息」中配置分页规则。",
+    validation: "本次保存验证输入",
+    validationHint: "仅在新建资源或修改 API 定义、字段映射时用于本次验证，不保存到资源定义。",
+  },
   table: {
     field: "配置项",
     variable: "变量名",
@@ -26,9 +33,8 @@ export const apiResourceZhCN = {
   mockHint:
     "Mock 演示：配置仅保存在当前页面会话，刷新页面后重置；保存与测试结果均为模拟，不访问上游服务。",
   mockSaved: "Mock 配置已保存，未执行真实上游验证。",
-  mockTestSuccess: "Mock 测试完成：展示已保存配置对应的模拟结果，未执行真实上游调用。",
   emptyCatalog: "暂无 API 资源。创建只读 API 资源以配置请求与输出映射。",
-  create: "新建 API 资源",
+  create: "创建 API 资源",
   edit: "编辑 API 资源",
   configuration: "API 资源配置",
   definition: "API 信息",
@@ -74,21 +80,11 @@ export const apiResourceZhCN = {
   savedReadbackFailed: "资源已保存，暂时无法读取最新内容。",
   retryReadback: "重试读取",
   savedMetadata: "元数据已保存；未执行新的业务验证。",
-  advancedQuery: "高级查询",
-  savedTestHint:
-    "只测试已保存版本，不验证未保存草稿。实际调用由后端执行，包含响应契约、成功规则、提取、映射和字段类型验证。",
-  run: "测试已保存定义",
   testPaging: "显式指定单页参数",
   offset: "偏移量（留空使用缺省值）",
   limit: "条数（留空使用缺省值）",
-  needTotal: "请求总条数",
-  emptyResult: "合法空结果（0 行）",
   total: "总条数",
   unknown: "未知",
-  testSuccess: "已保存版本实调用验证成功；此结果仅对应所示版本和调用输入。",
-  staleTest: "此结果对应之前的编辑状态或调用输入，不能证明当前草稿有效。",
-  testVersion: "测试版本：{{version}}",
-  noTraversal: "仅展示映射后的 entries；未自动翻页。未返回的分页元数据保持未知。",
   warnings: "后端返回了查询警告，请检查资源定义和调用范围。",
   unavailable:
     "API 连接器不可用、未安装或当前版本未授权。服务端返回的连接器可用性决定是否允许操作。",
@@ -105,7 +101,7 @@ export const apiResourceZhCN = {
     variables:
       "资源变量名须以字母开头，每个变量都须填写非 null 的值。敏感值须为字符串，完整替换定义时请重新填写受保护值。",
     metadata: "请填写资源名称。",
-    mapping: "至少配置一个输出字段，字段名必须非空且唯一，并填写原始字段名。",
+    mapping: "请至少配置一个输出字段，填写原始字段名、公开字段名和显示名称。公开字段名必须唯一。",
     decimal:
       "decimal 必须显式设置正整数 precision 和整数 scale，支持 0、负 scale 及 scale 大于 precision。",
     resource: "资源不存在，或不是只读 API 资源。",

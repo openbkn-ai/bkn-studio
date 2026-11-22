@@ -39,6 +39,12 @@ export type FilterOperation =
   | (typeof FULLTEXT)[number]
   | "before"
   | "current";
+const API_FILTER_OPERATIONS = new Set<FilterOperation>([
+  ...COMPARISONS,
+  ...SETS,
+  "null",
+  "not_null",
+]);
 export type FilterRule = {
   kind: "rule";
   field: string;
@@ -278,6 +284,13 @@ export function filterOperationsForField(
   )
     return [...PRESENCE, ...fulltext];
   return ["==", "!=", ...SETS, ...STRINGS, ...PRESENCE, ...fulltext];
+}
+
+export function apiFilterOperationsForField(field: ResourceSchemaField): FilterOperation[] {
+  if (fieldType(field.type) === "json") return [];
+  return filterOperationsForField(field).filter((operation) =>
+    API_FILTER_OPERATIONS.has(operation),
+  );
 }
 
 export function compatibleFilterFields(

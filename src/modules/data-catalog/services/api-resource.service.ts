@@ -17,6 +17,7 @@ import type {
   ApiResourceInput,
   ApiResourceQuery,
   ApiResourceResult,
+  ApiResourceValidation,
 } from "../types/api-resource";
 
 function preciseDefinitionResponse(data: unknown): unknown {
@@ -41,6 +42,21 @@ function preciseDefinitionResponse(data: unknown): unknown {
     return response;
   } catch {
     return data;
+  }
+}
+
+/** Keep business numbers lossless; pagination counts retain the existing safe display type. */
+function preciseResultResponse(data: unknown): unknown {
+  const result = transformPrecisionSafeJSONResponse(data);
+  if (typeof data !== "string" || !result || typeof result !== "object") return result;
+  try {
+    const precise = parsePrecisionPreservingJSON(data, {
+      allowSpecialKeys: true,
+    }) as ApiResourceResult;
+    if (Array.isArray(precise.entries)) (result as ApiResourceResult).entries = precise.entries;
+    return result;
+  } catch {
+    return result;
   }
 }
 
@@ -80,8 +96,18 @@ export async function getApiResource(id: string, signal?: AbortSignal): Promise<
 }
 
 /** Explicit allowlist prevents API definitions from leaking into logical/internal storage fields. */
-export function apiResourcePayload(input: ApiResourceInput, previous?: ApiResource) {
+export function apiResourcePayload(
+  input: ApiResourceInput,
+  previous?: ApiResource,
+  validation?: ApiResourceValidation,
+) {
   const changes = apiResourceChanges(input, previous);
+  const validationInput = {
+    ...(validation && Object.hasOwn(validation, "filter_condition")
+      ? { filter_condition: validation.filter_condition }
+      : {}),
+    ...(validation && Object.hasOwn(validation, "paging") ? { paging: validation.paging } : {}),
+  };
   // Omit unchanged sections so the server can reuse the stored definition and credentials.
   return {
     catalog_id: input.catalog_id,
@@ -94,6 +120,9 @@ export function apiResourcePayload(input: ApiResourceInput, previous?: ApiResour
     ...(previous ? { expected_update_time: previous.update_time } : {}),
     ...(changes.definition ? { api_definition: input.api_definition } : {}),
     ...(changes.schema ? { schema_definition: input.schema_definition } : {}),
+    ...(changes.requiresValidation && Object.keys(validationInput).length
+      ? { validation: validationInput }
+      : {}),
   };
 }
 
@@ -101,12 +130,13 @@ export function apiResourcePayload(input: ApiResourceInput, previous?: ApiResour
 export async function saveApiResource(
   input: ApiResourceInput,
   previous?: ApiResource,
+  validation?: ApiResourceValidation,
 ): Promise<string> {
   if (import.meta.env.VITE_USE_MOCK !== "false") {
     const { saveMockApiResource } = await import("./api-resource-mock");
-    return saveMockApiResource(input, previous);
+    return saveMockApiResource(input, previous, validation);
   }
-  const payload = apiResourcePayload(input, previous);
+  const payload = apiResourcePayload(input, previous, validation);
   if (previous) {
     await http.put(
       `/vega-backend/v1/resources/${encodeURIComponent(previous.id)}`,
@@ -144,7 +174,7 @@ export async function queryApiResource(
     },
     {
       ...options,
-      transformResponse: transformPrecisionSafeJSONResponse,
+      transformResponse: preciseResultResponse,
       headers: { "Content-Type": "application/json", "X-HTTP-Method-Override": "GET" },
       signal,
     },

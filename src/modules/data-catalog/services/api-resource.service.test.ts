@@ -50,6 +50,7 @@ function saved(): ApiResource {
       {
         name: "amount",
         original_name: "AMOUNT",
+        display_name: "Amount",
         type: "decimal",
         attributes: { precision: 30, scale: 0, extension: "keep" },
         condition_constraints: { operations: ["eq"] },
@@ -202,13 +203,25 @@ describe("API Resource service", () => {
     const response = config.transformResponse(
       '{"entries":[{"id":9007199254740993,"amount":1234567890.123456789,"date":"2026-01-01T00:00:00.123456789Z"}]}',
     ) as { entries: Record<string, unknown>[] };
-    expect(response.entries[0]).toEqual({
-      id: "9007199254740993",
-      amount: "1234567890.123456789",
-      date: "2026-01-01T00:00:00.123456789Z",
-    });
+    expect(transformPrecisionSafeJSONRequest(response.entries[0])).toBe(
+      '{"id":9007199254740993,"amount":1234567890.123456789,"date":"2026-01-01T00:00:00.123456789Z"}',
+    );
+    expect(response.entries[0].date).toBe("2026-01-01T00:00:00.123456789Z");
     expect(response).not.toHaveProperty("total_count");
     expect(response).not.toHaveProperty("paging");
+  });
+
+  it("keeps preview rows and total when an arbitrary JSON field exceeds the exact numeric range", async () => {
+    await queryApiResource("resource", {});
+    const { transformResponse } = post.mock.calls[0][2];
+    expect(
+      transformResponse(
+        '{"entries":[{"id":"row-1","payload":{"number":1e-1000000000}}],"total_count":1}',
+      ),
+    ).toEqual({
+      entries: [{ id: "row-1", payload: { number: "1e-1000000000" } }],
+      total_count: 1,
+    });
   });
 
   it("does not invent paging, totals or filters for a no-filter validation and preserves legal empty entries", async () => {
@@ -233,6 +246,18 @@ describe("API Resource service", () => {
     }
     expect(post).toHaveBeenCalledTimes(4);
   });
+
+  it.each(["name", "display_name"])(
+    "requires a nonblank output field %s when saving the schema",
+    (key) => {
+      const input = saved();
+      input.schema_definition[0] = { ...input.schema_definition[0], [key]: " " };
+      expect(validateApiResourceInput(input, { definition: false, schema: true })).toBe(
+        "dataCatalog.apiResource.errors.mapping",
+      );
+      expect(validateApiResourceInput(input, { definition: false, schema: false })).toBeUndefined();
+    },
+  );
 
   it("rejects another category/read effect and validates required decimal metadata without replacing scale zero", async () => {
     get.mockResolvedValueOnce({ data: { entries: [{ ...saved(), category: "table" }] } });
@@ -299,5 +324,56 @@ describe("API Resource service", () => {
         "dataCatalog.apiResource.errors.variables",
       );
     }
+  });
+  it("sends precise validation input only with candidate changes and never in stored definitions", async () => {
+    const previous = saved();
+    const validation = {
+      filter_condition: {
+        field: "amount",
+        operation: "eq",
+        value: parsePrecisionPreservingJSON("1234567890123456.78"),
+      },
+      paging: { mode: "single" as const, offset: 0, limit: 10 },
+    };
+    const changed = {
+      ...previous,
+      api_definition: { ...previous.api_definition, request: { method: "GET", path: "changed" } },
+    };
+    await saveApiResource(changed, previous, {
+      ...validation,
+      target: "forbidden",
+      credentials: "forbidden",
+    } as never);
+    expect(put.mock.calls[0][1]).toMatchObject({ validation });
+    expect((put.mock.calls[0][1] as { validation: unknown }).validation).not.toHaveProperty(
+      "target",
+    );
+    expect((put.mock.calls[0][1] as { validation: unknown }).validation).not.toHaveProperty(
+      "credentials",
+    );
+    expect(put.mock.calls[0][2].transformRequest(put.mock.calls[0][1])).toContain(
+      '"value":1234567890123456.78',
+    );
+    expect((put.mock.calls[0][1] as { api_definition: unknown }).api_definition).not.toHaveProperty(
+      "validation",
+    );
+    const metadata = apiResourcePayload({ ...previous, name: "Renamed" }, previous, validation);
+    expect(metadata).not.toHaveProperty("validation");
+  });
+
+  it("sends validation for output mapping changes and omits it for field labels and descriptions", () => {
+    const previous = saved();
+    const validation = { paging: { mode: "single" as const, limit: 10 } };
+    const field = { ...previous.schema_definition[0], display_name: "Cost", description: "Total" };
+    const labels = { ...previous, schema_definition: [field] };
+    const payload = apiResourcePayload(labels, previous, validation);
+    expect(payload.schema_definition).toEqual([field]);
+    expect(payload).not.toHaveProperty("validation");
+
+    const mapping = { ...labels, schema_definition: [{ ...field, original_name: "COST" }] };
+    expect(apiResourcePayload(mapping, previous, validation)).toMatchObject({
+      schema_definition: mapping.schema_definition,
+      validation,
+    });
   });
 });

@@ -23,6 +23,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { atLeast } from "@/framework/entitlement/edition";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
@@ -170,17 +171,21 @@ export function ResourceListPanel({
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [viewUpgradeOpen, setViewUpgradeOpen] = useState(false);
+  const [apiResourceUpgradeOpen, setApiResourceUpgradeOpen] = useState(false);
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canDiscover = useCatalogDiscoverySupport(catalog, physical && canManageResourceTasks);
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
-  const canCreateApiResource =
+  const canShowCreateApiResource =
     catalog.category === "api" &&
+    snapshot !== null &&
     canManageResources &&
     !catalog.builtin &&
     catalog.enabled &&
     catalog.status === "enabled";
+  const canCreateApiResource =
+    snapshot?.licensed === true && atLeast(snapshot.edition, "professional");
   const canShowCreateView =
     catalog.category !== "api" &&
     snapshot !== null &&
@@ -216,7 +221,7 @@ export function ResourceListPanel({
     canAuthorizeCatalog ||
     canRequestCatalogPermission ||
     canShowCreateView ||
-    canCreateApiResource ||
+    canShowCreateApiResource ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -649,14 +654,25 @@ export function ResourceListPanel({
                   {t("dataCatalog.catalog.authorize")}
                 </AppButton>
               ) : null}
-              {canCreateApiResource ? (
+              {canShowCreateApiResource ? (
                 <AppButton
+                  aria-haspopup={canCreateApiResource ? undefined : "dialog"}
+                  icon={<PlusOutlined aria-hidden />}
                   type="primary"
-                  onClick={() =>
-                    void navigate(`/data-catalog/catalog/${encodeURIComponent(catalog.id)}/api/new`)
-                  }
+                  onClick={() => {
+                    if (canCreateApiResource) {
+                      void navigate(
+                        `/data-catalog/catalog/${encodeURIComponent(catalog.id)}/api/new`,
+                      );
+                    } else {
+                      setApiResourceUpgradeOpen(true);
+                    }
+                  }}
                 >
                   {t("dataCatalog.apiResource.create")}
+                  {!canCreateApiResource ? (
+                    <EditionBadge alwaysShow edition="professional" />
+                  ) : null}
                 </AppButton>
               ) : null}
               {createViewButton}
@@ -853,6 +869,15 @@ export function ResourceListPanel({
           capability={CAPABILITIES.VEGA_LOGICAL_VIEW}
           minEdition="professional"
           onClose={() => setViewUpgradeOpen(false)}
+          open
+        />
+      ) : null}
+
+      {apiResourceUpgradeOpen && canShowCreateApiResource && !canCreateApiResource ? (
+        <CapabilityUpgradeDialog
+          capability={CAPABILITIES.CONNECTOR_CERTIFIED}
+          minEdition="professional"
+          onClose={() => setApiResourceUpgradeOpen(false)}
           open
         />
       ) : null}

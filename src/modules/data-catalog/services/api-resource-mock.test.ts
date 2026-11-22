@@ -409,6 +409,91 @@ describe("API Resource demo mocks", () => {
     });
   });
 
+  it.each([
+    { id: listId, needTotal: true },
+    { id: detailId, needTotal: false },
+  ])(
+    "accepts exact order ID filters for $id, including empty results",
+    async ({ id, needTotal }) => {
+      const api = await services();
+      const query = (value: string) =>
+        api.queryApiResource(id, {
+          filter_condition: {
+            operation: "and",
+            sub_conditions: [{ field: "id", operation: "==", value_from: "const", value }],
+          },
+          ...(needTotal ? { need_total: true } : {}),
+        });
+      const empty = await query("1");
+      expect(empty.entries).toEqual([]);
+      const matched = await query("9007199254740993");
+      expect(matched).toMatchObject({
+        entries: [expect.objectContaining({ id: "9007199254740993" })],
+      });
+      if (needTotal) {
+        expect(empty.total_count).toBe(0);
+        expect(matched.total_count).toBe(1);
+      } else {
+        expect(empty).not.toHaveProperty("total_count");
+        expect(matched).not.toHaveProperty("total_count");
+      }
+    },
+  );
+
+  it("applies the demonstration AND filters before paging and validates transient inputs before saving", async () => {
+    const api = await services();
+    const previous = await api.getApiResource(listId);
+    const filter_condition = {
+      operation: "and",
+      sub_conditions: [
+        { field: "order_number", operation: "==", value: "SO-2026-002", value_from: "const" },
+        { field: "customer", operation: "==", value: "示例客户 B", value_from: "const" },
+      ],
+    };
+    const validation = { filter_condition, paging: { mode: "single" as const, limit: 1 } };
+    expect(await api.queryApiResource(listId, { ...validation, need_total: true })).toMatchObject({
+      entries: [expect.objectContaining({ order_number: "SO-2026-002" })],
+      total_count: 1,
+    });
+    expect(
+      await api.queryApiResource(listId, {
+        filter_condition: {
+          ...filter_condition,
+          sub_conditions: [
+            filter_condition.sub_conditions[0],
+            {
+              ...filter_condition.sub_conditions[1],
+              value: "示例客户 C",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ entries: [] });
+
+    const candidate = {
+      ...previous,
+      api_definition: {
+        ...previous.api_definition,
+        variables: {
+          ...objectValue(previous.api_definition.variables),
+          example_label: { value: "edited" },
+        },
+      },
+    };
+    await expect(
+      api.saveApiResource(candidate, previous, {
+        ...validation,
+        paging: { mode: "single", limit: 101 },
+      }),
+    ).rejects.toMatchObject({ response: { status: 400 } });
+    expect((await api.getApiResource(listId)).update_time).toBe(previous.update_time);
+    await api.saveApiResource(candidate, previous, validation);
+    const saved = await api.getApiResource(listId);
+    expect(saved).not.toHaveProperty("validation");
+    expect(saved.api_definition).not.toHaveProperty("validation");
+    expect((await api.queryApiResource(listId, {})).entries).toHaveLength(2);
+  });
+
   it("rejects unsupported filters, paths and paging instead of returning a false success or calling upstream", async () => {
     const api = await services();
     await expect(

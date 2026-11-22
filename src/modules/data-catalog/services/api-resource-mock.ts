@@ -29,6 +29,7 @@ import type {
   ApiResourceInput,
   ApiResourceQuery,
   ApiResourceResult,
+  ApiResourceValidation,
 } from "../types/api-resource";
 import { hasCatalogResourceOperation } from "../utils/resource-operations";
 import { apiResourceMockSummary, mockApiOrderRows } from "./api-resource-mock-data";
@@ -128,16 +129,11 @@ export function getMockApiResource(id: string, signal?: AbortSignal): ApiResourc
   return result;
 }
 
-function outputMapping(fields: ApiResourceInput["schema_definition"]) {
-  return fields.map(({ name, original_name, type, attributes }) => ({
-    name,
-    original_name,
-    type,
-    attributes,
-  }));
-}
-
-export function saveMockApiResource(input: ApiResourceInput, previous?: ApiResource): string {
+export function saveMockApiResource(
+  input: ApiResourceInput,
+  previous?: ApiResource,
+  validation?: ApiResourceValidation,
+): string {
   const current = previous ? privateResource(previous.id) : undefined;
   const catalog = catalogFor(current ?? input);
   const allowed = current
@@ -164,15 +160,9 @@ export function saveMockApiResource(input: ApiResourceInput, previous?: ApiResou
       );
   }
   const changes = apiResourceChanges(input, previous);
-  const mappingChanged =
-    current &&
-    changes.schema &&
-    transformNumberLiteralJSONRequest(outputMapping(current.schema_definition)) !==
-      transformNumberLiteralJSONRequest(outputMapping(input.schema_definition));
-  const requiresValidation = changes.definition || mappingChanged;
-  if (requiresValidation && (!catalog.enabled || catalog.status !== "enabled"))
+  if (changes.requiresValidation && (!catalog.enabled || catalog.status !== "enabled"))
     throwMockRequestError(403, "VegaBackend.Resource.QueryUnavailable", "Catalog is disabled.");
-  if (requiresValidation && current && !hasCatalogResourceOperation(current, "query_data"))
+  if (changes.requiresValidation && current && !hasCatalogResourceOperation(current, "query_data"))
     throwMockRequestError(
       403,
       "VegaBackend.Resource.QueryUnavailable",
@@ -193,6 +183,9 @@ export function saveMockApiResource(input: ApiResourceInput, previous?: ApiResou
   };
   const invalid = validateApiResourceInput(candidate, changes);
   if (invalid) throwMockRequestError(400, "VegaBackend.Resource.DefinitionInvalid", invalid);
+  if (changes.requiresValidation && (validation?.filter_condition || validation?.paging)) {
+    executeMockApiRequest(candidate, validation);
+  }
   if (
     mockResources.some(
       (resource) =>
@@ -222,6 +215,44 @@ export function saveMockApiResource(input: ApiResourceInput, previous?: ApiResou
   return candidate.id;
 }
 
+function unsupportedMockFilter(): never {
+  throwMockRequestError(
+    400,
+    "VegaBackend.Resource.UnsupportedFilter",
+    "Mock order filters require string equality on distinct fields bound to the request.",
+  );
+}
+
+function mockOrderFilters(resource: ApiResource, condition: Record<string, unknown>) {
+  const request = objectValue(resource.api_definition.request);
+  const parameters = Array.isArray(request.parameters) ? request.parameters.map(objectValue) : [];
+  const rules = condition.operation === "and" ? condition.sub_conditions : [condition];
+  if (!Array.isArray(rules) || rules.length === 0) unsupportedMockFilter();
+
+  const values = new Map<string, string>();
+  for (const raw of rules) {
+    const rule = objectValue(raw);
+    const field = resource.schema_definition.find(({ name }) => name === rule.field);
+    if (
+      !field?.filterable ||
+      field.type !== "string" ||
+      (rule.operation !== "==" && rule.operation !== "eq") ||
+      (rule.value_from !== undefined && rule.value_from !== "const") ||
+      typeof rule.value !== "string" ||
+      values.has(field.original_name) ||
+      !parameters.some(
+        (parameter) =>
+          parameter.name === field.original_name &&
+          parameter.value === `{{ __filter_values.${field.name} }}`,
+      )
+    ) {
+      unsupportedMockFilter();
+    }
+    values.set(field.original_name, rule.value);
+  }
+  return [...values];
+}
+
 /** Fixed demonstration data, never an HTTP/template interpreter or a live-call fallback. */
 export function queryMockApiResource(
   id: string,
@@ -231,19 +262,17 @@ export function queryMockApiResource(
   signal?.throwIfAborted();
   const resource = privateResource(id);
   requireQueryable(resource);
-  if (Object.hasOwn(query, "filter_condition"))
-    throwMockRequestError(
-      400,
-      "VegaBackend.Resource.UnsupportedFilter",
-      "Mock API examples do not simulate caller filters.",
-    );
+  return executeMockApiRequest(resource, query);
+}
+
+function executeMockApiRequest(resource: ApiResource, query: ApiResourceQuery): ApiResourceResult {
+  const request = objectValue(resource.api_definition.request);
   if (query.need_total && !apiResourceSupportsTotal(resource.api_definition))
     throwMockRequestError(
       400,
       "VegaBackend.Resource.InvalidPaging",
       "Totals require paging and a total path for every successful API response.",
     );
-  const request = objectValue(resource.api_definition.request);
   const rule = apiResourcePagingRule(resource.api_definition);
   const offset = query.paging?.offset ?? 0;
   const requestedLimit = query.paging?.limit ?? 0;
@@ -274,6 +303,10 @@ export function queryMockApiResource(
       "VegaBackend.Resource.MockUnsupportedRequest",
       "Mock calls support only the demonstration orders and orders/detail paths.",
     );
+  }
+  if (query.filter_condition) {
+    const filters = mockOrderFilters(resource, query.filter_condition);
+    rows = rows.filter((row) => filters.every(([name, value]) => row[name] === value));
   }
   const limit = requestedLimit === 0 ? (rule ? rule.default_limit : rows.length) : requestedLimit;
   if (

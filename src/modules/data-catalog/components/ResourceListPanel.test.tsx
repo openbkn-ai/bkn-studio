@@ -26,6 +26,7 @@ const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 const editionMock = vi.hoisted(() => ({
   value: "professional",
+  licensed: true,
   known: true,
   extensions: ["enterprise"],
 }));
@@ -33,7 +34,7 @@ const editionMock = vi.hoisted(() => ({
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
   useEntitlement: () => ({
     edition: editionMock.value,
-    licensed: editionMock.value !== "community",
+    licensed: editionMock.licensed && editionMock.value !== "community",
     capabilities: [],
     extensions: editionMock.extensions,
     limits: {},
@@ -43,7 +44,7 @@ vi.mock("@/framework/entitlement/use-entitlement", () => ({
     snapshot: editionMock.known
       ? {
           edition: editionMock.value,
-          licensed: editionMock.value !== "community",
+          licensed: editionMock.licensed && editionMock.value !== "community",
           capabilities: [],
           extensions: editionMock.extensions,
           limits: {},
@@ -171,6 +172,7 @@ describe("ResourceListPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     editionMock.value = "professional";
+    editionMock.licensed = true;
     editionMock.known = true;
     editionMock.extensions = ["enterprise"];
     currentPermissions.value = [];
@@ -266,6 +268,102 @@ describe("ResourceListPanel", () => {
       "/data-catalog/catalog/catalog-1/api/new",
     );
   });
+
+  it("offers a professional upgrade dialog for Community API Resource creation", async () => {
+    editionMock.value = "community";
+    editionMock.extensions = [];
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["resource_manage"],
+    });
+    const create = await screen.findByRole("button", { name: /dataCatalog.apiResource.create/ });
+    expect(within(create).getByText("common.entitlement.editionsShort.professional")).toBeVisible();
+    expect(create).toHaveAttribute("aria-haspopup", "dialog");
+    fireEvent.click(create);
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText("subscription.capabilities.connector_certified.name"),
+    ).toBeVisible();
+    expect(screen.getByTestId("location").textContent).toBe("/");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByTestId("location").textContent).toBe("/");
+  });
+
+  it.each(["professional", "enterprise", "industry"])(
+    "creates API Resources directly with a valid %s license",
+    async (edition) => {
+      editionMock.value = edition;
+      renderPanel({
+        ...catalog,
+        category: "api",
+        connectorType: "http",
+        operations: ["resource_manage"],
+      });
+      const create = await screen.findByRole("button", { name: "dataCatalog.apiResource.create" });
+      expect(
+        within(create).queryByText("common.entitlement.editionsShort.professional"),
+      ).toBeNull();
+      fireEvent.click(create);
+      expect(screen.getByTestId("location").textContent).toBe(
+        "/data-catalog/catalog/catalog-1/api/new",
+      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
+
+  it("keeps API Resource creation hidden while the entitlement is unknown", async () => {
+    editionMock.known = false;
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["resource_manage"],
+    });
+    await act(async () => {});
+    expect(screen.queryByRole("button", { name: /dataCatalog.apiResource.create/ })).toBeNull();
+  });
+
+  it("does not open API Resource creation with an invalid Professional license", async () => {
+    editionMock.licensed = false;
+    renderPanel({
+      ...catalog,
+      category: "api",
+      connectorType: "http",
+      operations: ["resource_manage"],
+    });
+    const create = await screen.findByRole("button", { name: /dataCatalog.apiResource.create/ });
+    expect(within(create).getByText("common.entitlement.editionsShort.professional")).toBeVisible();
+    fireEvent.click(create);
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.getByTestId("location").textContent).toBe("/");
+  });
+
+  it.each(["community", "professional"])(
+    "keeps API Resource creation hidden on ineligible Catalogs in %s",
+    async (edition) => {
+      editionMock.value = edition;
+      for (const overrides of [
+        { builtin: true },
+        { enabled: false },
+        { status: "disabled" as const },
+        { operations: ["view_detail"] },
+      ]) {
+        const view = renderPanel({
+          ...catalog,
+          category: "api",
+          connectorType: "http",
+          operations: ["resource_manage"],
+          ...overrides,
+        });
+        await act(async () => {});
+        expect(screen.queryByRole("button", { name: /dataCatalog.apiResource.create/ })).toBeNull();
+        view.unmount();
+      }
+    },
+  );
 
   it.each([
     ["stale and missing with permission", {}, true],

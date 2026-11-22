@@ -28,6 +28,7 @@ import {
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { objectValue } from "@/shared/api-definition/model";
 import { ApiResourceWorkspaceView } from "../components/ApiResourceWorkspaceView";
+import { ApiResourceInvocationEditor } from "../components/ApiResourceInvocationEditor";
 import { ApiResourceDefinitionEditor } from "../components/ApiResourceDefinitionEditor";
 import {
   createApiResourceInput,
@@ -40,7 +41,7 @@ import {
   saveApiResource,
 } from "../services/api-resource.service";
 import { deleteCatalogResource, setCatalogResourceEnabled } from "../services/resource.service";
-import type { ApiResource, ApiResourceInput } from "../types/api-resource";
+import type { ApiResource, ApiResourceInput, ApiResourceQuery } from "../types/api-resource";
 import type { ApiResourceSceneProps } from "../contracts/api-resource";
 import { hasCatalogResourceOperation } from "../utils/resource-operations";
 import styles from "../components/ApiResourceEditor.module.css";
@@ -61,10 +62,13 @@ export function ApiResourceScene({
   onBack,
 }: ApiResourceSceneProps) {
   const { t } = useTranslation();
+  const [validationInput, setValidationInput] = useState<ApiResourceQuery>({});
+  const [validationInputValid, setValidationInputValid] = useState(true);
   const mockMode = import.meta.env.VITE_USE_MOCK !== "false";
   const { message, modal } = useAppServices();
   const configTitleId = useId();
   const basicTitleId = useId();
+  const validationTitleId = useId();
   const [form] = Form.useForm();
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [saved, setSaved] = useState<ApiResource>();
@@ -74,6 +78,7 @@ export function ApiResourceScene({
   const [editing, setEditing] = useState(startInEditMode || !resourceId);
   const [busy, setBusy] = useState(false);
   const [editorValid, setEditorValid] = useState(true);
+  const [showOutputFieldErrors, setShowOutputFieldErrors] = useState(false);
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState<string>();
@@ -103,6 +108,7 @@ export function ApiResourceScene({
     const current = ++generation.current;
     setLoading(true);
     setError(undefined);
+    setShowOutputFieldErrors(false);
     setPendingReadback(undefined);
     try {
       const resource = resourceId ? await getApiResource(resourceId) : undefined;
@@ -127,6 +133,8 @@ export function ApiResourceScene({
       setSaved(resource);
       setEditing(startInEditMode || !resourceId);
       setEditorValid(true);
+      setValidationInput({});
+      setValidationInputValid(true);
       setCatalog(selectedCatalog);
       const input = resource ?? createApiResourceInput(selectedCatalog?.id ?? catalogId ?? "");
       initialDraft.current = input;
@@ -156,7 +164,9 @@ export function ApiResourceScene({
   const canDelete = hasCatalogResourceOperation(saved, "delete");
   const canQuery = hasCatalogResourceOperation(saved, "query_data");
   const enabled = catalog ? catalog.enabled === true && catalog.status === "enabled" : null;
-  const changes = draft ? apiResourceChanges(draft, saved) : { definition: false, schema: false };
+  const changes = draft
+    ? apiResourceChanges(draft, saved)
+    : { definition: false, schema: false, requiresValidation: false };
   const dirty =
     editing &&
     !!draft &&
@@ -181,7 +191,10 @@ export function ApiResourceScene({
       return;
     }
     if (!mounted.current || current !== generation.current) return;
+    setValidationInput({});
+    setValidationInputValid(true);
     setSaved(latest);
+    setShowOutputFieldErrors(false);
     initialDraft.current = latest;
     setDraft(latest);
     form.setFieldsValue(latest);
@@ -212,7 +225,8 @@ export function ApiResourceScene({
       return;
     }
     const validation = validateApiResourceInput(draft, changes);
-    if (validation || !editorValid) {
+    setShowOutputFieldErrors(changes.schema);
+    if (validation || !editorValid || (changes.requiresValidation && !validationInputValid)) {
       setError(t(validation ?? "dataCatalog.apiResource.errors.incomplete"));
       return;
     }
@@ -220,7 +234,10 @@ export function ApiResourceScene({
     setBusy(true);
     let handedOff = false;
     try {
-      const id = await saveApiResource(draft, saved);
+      const id =
+        changes.requiresValidation && Object.keys(validationInput).length
+          ? await saveApiResource(draft, saved, validationInput)
+          : await saveApiResource(draft, saved);
       if (!mounted.current || current !== generation.current) return;
       let noticeKey = "dataCatalog.apiResource.savedMetadata";
       if (mockMode) noticeKey = "dataCatalog.apiResource.mockSaved";
@@ -244,9 +261,12 @@ export function ApiResourceScene({
     if (busy) return;
     const leave = () => {
       if (saved && (!startInEditMode || !onBack)) {
+        setValidationInput({});
+        setValidationInputValid(true);
         setDraft(saved);
         form.setFieldsValue(saved);
         setEditorValid(true);
+        setShowOutputFieldErrors(false);
         setEditing(false);
         setError(undefined);
       } else onBack?.();
@@ -513,9 +533,29 @@ export function ApiResourceScene({
             catalogVariableNames={Object.keys(objectValue(catalog?.connectorConfig?.variables))}
             onChange={change}
             disabled={disabled}
+            showOutputFieldErrors={changes.schema && showOutputFieldErrors}
             onValidityChange={setEditorValid}
           />
-          {(changes.definition || changes.schema) && !mockMode ? (
+        </article>
+        <article
+          className={`${viewStyles.configPanel} ${viewStyles.configWrapper}`}
+          aria-labelledby={validationTitleId}
+        >
+          <header className={viewStyles.panelHeading}>
+            <h2 id={validationTitleId}>{t("dataCatalog.apiResource.invocation.validation")}</h2>
+          </header>
+          <p className={styles.cardHint}>
+            {t("dataCatalog.apiResource.invocation.validationHint")}
+          </p>
+          <ApiResourceInvocationEditor
+            key={saved ? `${saved.id}:${saved.update_time}` : "new"}
+            resource={draft}
+            value={validationInput}
+            onChange={setValidationInput}
+            onValidityChange={setValidationInputValid}
+            disabled={disabled}
+          />
+          {!mockMode && changes.requiresValidation ? (
             <Alert type="info" showIcon message={t("dataCatalog.apiResource.saveHint")} />
           ) : null}
         </article>
