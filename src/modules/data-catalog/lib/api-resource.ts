@@ -38,17 +38,32 @@ export function createApiResourceInput(catalogId: string): ApiResourceInput {
   };
 }
 
+function outputMapping(fields: ApiResourceInput["schema_definition"]) {
+  return fields.map(({ name, original_name, type, attributes, filterable }) => ({
+    name,
+    original_name,
+    type,
+    attributes,
+    filterable,
+  }));
+}
+
 export function apiResourceChanges(input: ApiResourceInput, saved?: ApiResource) {
-  return {
-    definition:
-      !saved ||
-      transformNumberLiteralJSONRequest(input.api_definition) !==
-        transformNumberLiteralJSONRequest(saved.api_definition),
-    schema:
-      !saved ||
-      transformNumberLiteralJSONRequest(input.schema_definition) !==
-        transformNumberLiteralJSONRequest(saved.schema_definition),
-  };
+  if (!saved) return { definition: true, schema: true, requiresValidation: true };
+
+  const definition =
+    transformNumberLiteralJSONRequest(input.api_definition) !==
+    transformNumberLiteralJSONRequest(saved.api_definition);
+  const schema =
+    transformNumberLiteralJSONRequest(input.schema_definition) !==
+    transformNumberLiteralJSONRequest(saved.schema_definition);
+  // Display names and descriptions are saved with the schema but do not affect invocation.
+  const requiresValidation =
+    definition ||
+    (schema &&
+      transformNumberLiteralJSONRequest(outputMapping(input.schema_definition)) !==
+        transformNumberLiteralJSONRequest(outputMapping(saved.schema_definition)));
+  return { definition, schema, requiresValidation };
 }
 
 export function apiResourcePagingRule(
@@ -84,7 +99,10 @@ export function apiResourceSupportsTotal(definition: ApiResourceInput["api_defin
 
 export function validateApiResourceInput(
   input: ApiResourceInput,
-  changes: ReturnType<typeof apiResourceChanges> = { definition: true, schema: true },
+  changes: Pick<ReturnType<typeof apiResourceChanges>, "definition" | "schema"> = {
+    definition: true,
+    schema: true,
+  },
 ): string | undefined {
   if (!input.name.trim()) return "dataCatalog.apiResource.errors.metadata";
   if (changes.schema) {
@@ -109,7 +127,9 @@ function validateApiResourceSchema(fields: ApiResourceInput["schema_definition"]
   if (
     !fields.length ||
     new Set(fields.map((f) => f.name)).size !== fields.length ||
-    fields.some((f) => !f.name.trim() || !f.original_name.trim() || !f.type)
+    fields.some(
+      (f) => !f.name.trim() || !f.display_name?.trim() || !f.original_name.trim() || !f.type,
+    )
   )
     return "dataCatalog.apiResource.errors.mapping";
   for (const field of fields) {

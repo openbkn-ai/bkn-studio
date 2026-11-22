@@ -28,7 +28,7 @@ const fields: ApiResourceField[] = [
     original_name: "order_id",
     display_name: "订单 ID",
     type: "string",
-    filterable: false,
+    filterable: true,
   },
   {
     name: "order_number",
@@ -89,7 +89,11 @@ export const mockApiResourceFixtures: ApiResource[] = [
     tags: ["api", "demo", "orders"],
     operations: ["view_detail", "query_data", "modify", "delete"],
     update_time: timestamp,
-    schema_definition: fields,
+    schema_definition: fields.map((field) =>
+      field.name === "order_number" || field.name === "customer"
+        ? { ...field, filterable: true }
+        : field,
+    ),
     api_definition: {
       variables: { order_status: { value: "confirmed", sensitive: false } },
       request: {
@@ -103,6 +107,9 @@ export const mockApiResourceFixtures: ApiResource[] = [
         parameters: [
           { name: "tenant", value: "{{ tenant }}", default_value: "demo", required: true },
           { name: "status", value: "{{ order_status }}", required: false },
+          { name: "order_id", value: "{{ __filter_values.id }}", required: false },
+          { name: "order_no", value: "{{ __filter_values.order_number }}", required: false },
+          { name: "customer_name", value: "{{ __filter_values.customer }}", required: false },
           { name: "offset", value: "{{ __paging.offset }}", default_value: 0, required: true },
           { name: "limit", value: "{{ __paging.limit }}", default_value: 2, required: true },
         ],
@@ -174,6 +181,7 @@ export const mockApiResourceFixtures: ApiResource[] = [
         },
         parameters: [
           { name: "tenant", value: "{{ tenant }}", default_value: "demo", required: true },
+          { name: "order_id", value: "{{ __filter_values.id }}", required: false },
         ],
         body: {
           type: "object",

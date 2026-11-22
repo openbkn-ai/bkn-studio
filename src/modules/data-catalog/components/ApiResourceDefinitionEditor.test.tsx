@@ -209,6 +209,24 @@ describe("API Resource graphical definition", () => {
     expect(table).toBeVisible();
   });
 
+  it("shows a required error on each blank output name after leaving its input", () => {
+    const input = fixture();
+    input.schema_definition[0] = { ...input.schema_definition[0], name: " " };
+    harness(input);
+
+    for (const name of ["fieldName", "displayName"]) {
+      const field = screen.getByRole("textbox", { name: key(name) });
+      expect(field).toBeRequired();
+      expect(field).toHaveAttribute("aria-invalid", "false");
+      fireEvent.blur(field);
+      expect(field).toHaveAttribute("aria-invalid", "true");
+      expect(field).toHaveAccessibleDescription("common.required");
+      fireEvent.change(field, { target: { value: "Amount" } });
+      expect(field).toHaveAttribute("aria-invalid", "false");
+      expect(field).not.toHaveAccessibleDescription();
+    }
+  });
+
   it("toggles filtering for the selected output field", () => {
     const input = fixture();
     input.schema_definition.push({

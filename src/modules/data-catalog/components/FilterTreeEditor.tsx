@@ -17,6 +17,7 @@ import {
 } from "@/framework/request/precision-safe-json";
 import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import {
+  apiFilterOperationsForField,
   filterOperationsForField,
   filterValueKind,
   filterSupportsFieldValue,
@@ -35,6 +36,7 @@ type Props = {
   value: FilterGroup;
   fields: ResourceSchemaField[];
   queryPath?: FilterQueryPath;
+  apiFilter?: boolean;
 } & (
   | { readOnly: true; onChange?: never }
   | { readOnly?: false; onChange: (value: FilterGroup) => void }
@@ -99,10 +101,13 @@ export function FilterTreeEditor({
   fields,
   queryPath = "source",
   readOnly = false,
+  apiFilter = false,
 }: Props) {
   const { t } = useTranslation();
+  const operationsForField = (field: ResourceSchemaField) =>
+    apiFilter ? apiFilterOperationsForField(field) : filterOperationsForField(field, queryPath);
   const fieldOptions = fields
-    .filter((field) => filterOperationsForField(field, queryPath).length > 0)
+    .filter((field) => operationsForField(field).length > 0)
     .map((field) => ({
       label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
       searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
@@ -142,7 +147,7 @@ export function FilterTreeEditor({
       <div className={styles.group} key={path.join("-") || "root"}>
         <div className={styles.toolbar}>
           <span>{t("dataCatalog.filter.match")}</span>
-          {readOnly ? (
+          {readOnly || apiFilter ? (
             <strong className={styles.readOnlyLogic}>
               {t(`dataCatalog.filter.${group.operation}`)}
             </strong>
@@ -222,7 +227,7 @@ export function FilterTreeEditor({
                     onChange={(field: string) => {
                       const nextField = fields.find((item) => item.name === field);
                       if (!nextField) return;
-                      const operations = filterOperationsForField(nextField, queryPath);
+                      const operations = operationsForField(nextField);
                       const operation = operations.includes(child.operation)
                         ? child.operation
                         : (operations[0] ?? "==");
@@ -268,17 +273,16 @@ export function FilterTreeEditor({
                                 : undefined,
                       }))
                     }
-                    options={(selectedField
-                      ? filterOperationsForField(selectedField, queryPath)
-                      : []
-                    ).map((operation) => ({
-                      label: ["==", "!=", ">", "<", ">=", "<="].includes(operation)
-                        ? operation
-                        : t(
-                            `dataCatalog.filter.operations.${operation === "contain" && queryPath !== "source" ? "containAny" : operation}`,
-                          ),
-                      value: operation,
-                    }))}
+                    options={(selectedField ? operationsForField(selectedField) : []).map(
+                      (operation) => ({
+                        label: ["==", "!=", ">", "<", ">=", "<="].includes(operation)
+                          ? operation
+                          : t(
+                              `dataCatalog.filter.operations.${operation === "contain" && queryPath !== "source" ? "containAny" : operation}`,
+                            ),
+                        value: operation,
+                      }),
+                    )}
                     value={child.operation}
                   />
                   <FilterRuleValueEditor
@@ -313,12 +317,14 @@ export function FilterTreeEditor({
             >
               {t("dataCatalog.filter.addRule")}
             </AppButton>
-            <AppButton
-              disabled={group.children.length >= 100}
-              onClick={() => add({ kind: "group", operation: "and", children: [] })}
-            >
-              {t("dataCatalog.filter.addGroup")}
-            </AppButton>
+            {!apiFilter ? (
+              <AppButton
+                disabled={group.children.length >= 100}
+                onClick={() => add({ kind: "group", operation: "and", children: [] })}
+              >
+                {t("dataCatalog.filter.addGroup")}
+              </AppButton>
+            ) : null}
           </div>
         ) : null}
       </div>

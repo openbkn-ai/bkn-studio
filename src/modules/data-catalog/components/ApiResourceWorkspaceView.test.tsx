@@ -269,7 +269,78 @@ describe("API Resource table-style workspace", () => {
     expect(query).toHaveBeenCalledOnce();
     expect(ordinaryPreview).not.toHaveBeenCalled();
     expect(screen.queryByText("dataCatalog.preview.queryOriginalSource")).toBeNull();
-    expect(screen.queryByRole("button", { name: "dataCatalog.preview.filter" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "dataCatalog.preview.filter" })).toBeVisible();
+  });
+
+  it("applies a single AND group to the preview from page one, then clears it", async () => {
+    show();
+    fireEvent.click(screen.getByRole("tab", { name: key("tabPreview") }));
+    const preview = within(await screen.findByRole("tabpanel", { name: key("tabPreview") }));
+    await preview.findByText("SO-2026-001");
+    fireEvent.click(preview.getByTitle("2"));
+    await waitFor(() => expect(preview.getByTitle("2")).toHaveClass("ant-pagination-item-active"));
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    expect(preview.getByText("dataCatalog.filter.and")).toBeVisible();
+    expect(preview.queryByRole("combobox", { name: "dataCatalog.filter.groupLogic" })).toBeNull();
+    expect(preview.queryByRole("button", { name: "dataCatalog.filter.addGroup" })).toBeNull();
+    expect(preview.queryByText("dataCatalog.apiResource.advancedQuery")).toBeNull();
+
+    for (const [field, value] of [
+      ["订单编号", "SO-2026-002"],
+      ["客户", "示例客户 B"],
+    ]) {
+      fireEvent.click(preview.getByRole("button", { name: "dataCatalog.filter.addRule" }));
+      fireEvent.mouseDown(
+        preview.getAllByRole("combobox", { name: "dataCatalog.filter.field" }).at(-1)!,
+      );
+      fireEvent.click(
+        await screen.findByText(field, {
+          selector:
+            ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content span",
+        }),
+      );
+      fireEvent.change(
+        preview.getAllByRole("textbox", { name: "dataCatalog.filter.value" }).at(-1)!,
+        {
+          target: { value },
+        },
+      );
+    }
+    expect(query).toHaveBeenCalledTimes(2);
+    query
+      .mockRejectedValueOnce(new Error("Filter request failed"))
+      .mockResolvedValueOnce({ entries: [{ order_number: "SO-2026-002" }], total_count: 1 });
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    expect(await preview.findByText("Filter request failed")).toBeVisible();
+    expect(preview.queryByText("SO-2026-001")).toBeNull();
+    expect(query).toHaveBeenNthCalledWith(
+      3,
+      resource.id,
+      {
+        filter_condition: {
+          operation: "and",
+          sub_conditions: [
+            { field: "order_number", operation: "==", value_from: "const", value: "SO-2026-002" },
+            { field: "customer", operation: "==", value_from: "const", value: "示例客户 B" },
+          ],
+        },
+        paging: { mode: "single", offset: 0, limit: 2 },
+        need_total: true,
+      },
+      expect.any(AbortSignal),
+    );
+    fireEvent.click(preview.getByRole("button", { name: "common.retry" }));
+    expect(await preview.findByText("SO-2026-002")).toBeVisible();
+    expect(query.mock.calls[3]?.[1]).toEqual(query.mock.calls[2]?.[1]);
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+    expect(await preview.findByText("SO-2026-001")).toBeVisible();
+    expect(query).toHaveBeenNthCalledWith(
+      5,
+      resource.id,
+      { paging: { mode: "single", offset: 0, limit: 2 }, need_total: true },
+      expect.any(AbortSignal),
+    );
+    expect(ordinaryPreview).not.toHaveBeenCalled();
   });
 
   it.each([

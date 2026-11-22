@@ -95,10 +95,8 @@
   gap: 12px;
   min-width: 0;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+.validationError {
+  color: var(--color-error-text);
 }
 .field {
   display: flex;
@@ -123,15 +121,4 @@
   align-items: center;
   justify-items: start;
   gap: 8px 12px;
-}
-.preview {
-  overflow: auto;
-  max-height: 440px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-@media (width <= 720px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

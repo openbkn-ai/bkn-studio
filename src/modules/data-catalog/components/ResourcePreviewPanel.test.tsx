@@ -6,6 +6,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { createInstance } from "i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,6 +139,33 @@ describe("ResourcePreviewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(testFilterRule, { field: "id", operation: ">", value: "10" });
+  });
+
+  it("renders exact API numeric objects as numbers, retaining nested values and string identifiers", async () => {
+    const row = parsePrecisionPreservingJSON(
+      '{"id":9007199254740993,"amount":1234567890123456.78,"code":"00123","nested":{"n":9007199254740993}}',
+    ) as Record<string, unknown>;
+    const sample: CatalogResource = {
+      ...resource,
+      category: "api",
+      schema: [
+        { name: "id", type: "integer" },
+        { name: "amount", type: "decimal" },
+        { name: "code", type: "string" },
+        { name: "nested", type: "json" },
+      ],
+    };
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={sample}
+        loadPreview={() => Promise.resolve({ rows: [row], querySource: "source" })}
+      />,
+    );
+    expect(await screen.findByRole("cell", { name: "9007199254740993" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "1234567890123456.78" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "00123" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: '{"n":9007199254740993}' })).toBeVisible();
   });
 
   it.each([

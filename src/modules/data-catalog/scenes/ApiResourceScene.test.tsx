@@ -105,7 +105,7 @@ vi.mock("../components/ApiResourceDefinitionEditor", () => ({
             },
             schema_definition: value.schema_definition.length
               ? value.schema_definition
-              : [{ name: "id", original_name: "ID", type: "integer" }],
+              : [{ name: "id", original_name: "ID", display_name: "ID", type: "integer" }],
           })
         }
       >
@@ -249,6 +249,11 @@ describe("API Resource management", () => {
     await screen.findByRole("heading", { name: "Orders" });
     expect(screen.queryByRole("button", { name: "common.refresh" })).not.toBeInTheDocument();
     await openEditor();
+    const validation = screen.getByRole("article", { name: key("invocation.validation") });
+    fireEvent.click(within(validation).getByRole("switch", { name: key("invocation.filter") }));
+    expect(
+      within(validation).getByRole("button", { name: "dataCatalog.filter.addRule" }),
+    ).toBeVisible();
     expect(screen.queryByRole("button", { name: "common.refresh" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.disable" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.delete" })).not.toBeInTheDocument();
@@ -433,10 +438,14 @@ describe("API Resource management", () => {
     expect(toggle).not.toHaveBeenCalled();
   });
 
-  it("saves output labels with modify permission and redacted credentials", async () => {
+  it("saves output labels with modify permission even with incomplete validation inputs", async () => {
     const restricted = {
       ...resource,
       operations: ["view_detail", "modify"],
+      schema_definition: resource.schema_definition.map((field) => ({
+        ...field,
+        filterable: true,
+      })),
       api_definition: {
         ...resource.api_definition,
         variables: { credential: { sensitive: true } },
@@ -445,6 +454,10 @@ describe("API Resource management", () => {
     get.mockResolvedValue(restricted);
     render(<ApiResourceScene resourceId="resource" startInEditMode />);
     fireEvent.click(await screen.findByRole("button", { name: "edit output labels" }));
+    const validation = screen.getByRole("article", { name: key("invocation.validation") });
+    fireEvent.click(within(validation).getByRole("switch", { name: key("invocation.filter") }));
+    fireEvent.click(within(validation).getByRole("button", { name: "dataCatalog.filter.addRule" }));
+    expect(screen.queryByText(key("saveHint"))).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith(

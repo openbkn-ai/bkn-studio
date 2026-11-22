@@ -6,6 +6,15 @@
  */
 
 export const apiResourceEnUS = {
+  invocation: {
+    filter: "Specify filter conditions",
+    noFilterableFields:
+      "In Output fields, turn on Allow filtering for at least one supported field.",
+    noPagingRule: "Configure a paging rule in API information first.",
+    validation: "Save-time validation inputs",
+    validationHint:
+      "Used only for this validation when creating a Resource or changing its API definition or field mapping. These inputs are never saved.",
+  },
   table: {
     field: "Field",
     variable: "Variable",
@@ -27,8 +36,6 @@ export const apiResourceEnUS = {
   mockHint:
     "Mock demo: configuration is kept in this page session and resets on reload. Saves and test results are simulated; no upstream service is called.",
   mockSaved: "Mock configuration saved. No real upstream validation was performed.",
-  mockTestSuccess:
-    "Mock test completed: showing simulated results for the saved configuration. No real upstream request was made.",
   emptyCatalog:
     "No API Resources yet. Create a read-only API Resource to define its request and output mapping.",
   create: "Create API Resource",
@@ -78,23 +85,11 @@ export const apiResourceEnUS = {
   savedReadbackFailed: "The resource was saved. Its latest details could not be loaded.",
   retryReadback: "Retry loading resource",
   savedMetadata: "Metadata saved; no new business validation was performed.",
-  advancedQuery: "Advanced query",
-  savedTestHint:
-    "Tests only the saved version, not unsaved edits. The backend validates the response contract, success rule, extraction, mapping and field types.",
-  run: "Test saved definition",
   testPaging: "Specify single-page inputs",
   offset: "Offset (blank uses default)",
   limit: "Limit (blank uses default)",
-  needTotal: "Request total count",
-  emptyResult: "Valid empty result (0 rows)",
   total: "Total count",
   unknown: "Unknown",
-  testSuccess: "Saved-version validation succeeded for this version and invocation only.",
-  staleTest:
-    "This result belongs to an earlier editing state or invocation. It does not validate the current draft.",
-  testVersion: "Tested version: {{version}}",
-  noTraversal:
-    "Shows mapped entries only. No automatic page traversal; omitted pagination metadata remains unknown.",
   warnings: "The backend returned query warnings. Check the definition and invocation scope.",
   unavailable:
     "The API connector is unavailable, disabled or unlicensed for this edition. Server connector availability controls these operations.",
@@ -112,7 +107,8 @@ export const apiResourceEnUS = {
     variables:
       "Resource variable names must begin with a letter, and each variable requires a non-null value. Sensitive values must be strings. Re-enter protected values before replacing a definition.",
     metadata: "Enter a Resource name.",
-    mapping: "Add at least one output field with a non-empty unique name and source field name.",
+    mapping:
+      "Add at least one output field with a source field name, unique public name, and display name.",
     decimal:
       "Decimal fields require positive integer precision and integer scale; zero, negative scale and scale greater than precision are supported.",
     resource: "Resource is missing or is not a read-only API Resource.",
