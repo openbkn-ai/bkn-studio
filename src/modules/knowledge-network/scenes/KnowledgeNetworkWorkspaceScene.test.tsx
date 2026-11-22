@@ -712,7 +712,7 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
   expect(screen.getByTitle("评测")).toBeTruthy();
 });
 
-it("connects the existing action-control entry to the installed risk-control page", () => {
+it.each(["enterprise", "industry"] as const)("hides risk badges on %s", (edition) => {
   resetExtensionsForTesting();
   registerExtension({
     id: "governance",
@@ -731,7 +731,7 @@ it("connects the existing action-control entry to the installed risk-control pag
       value={{
         loading: false,
         refresh: async () => {},
-        snapshot: entitlement({ edition: "industry", licensed: true }),
+        snapshot: entitlement({ edition, licensed: true }),
       }}
     >
       <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
@@ -740,7 +740,8 @@ it("connects the existing action-control entry to the installed risk-control pag
   fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }));
   const item = screen.getByTitle("行动管控");
   expect(item).not.toBeDisabled();
-  expect(item).toHaveTextContent("企业版");
+  expect(item).not.toHaveTextContent("企业版");
+  expect(screen.getByTitle("权限管控")).not.toHaveTextContent("企业版");
   fireEvent.click(item);
   expect(mocks.navigate).toHaveBeenCalledWith(
     "/knowledge-network/workspace/network-1/action-control",
