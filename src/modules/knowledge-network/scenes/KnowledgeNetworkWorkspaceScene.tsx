@@ -88,6 +88,7 @@ type WorkspaceNavItem = {
   paidCapability?: string;
   paidCapabilityState?: CapabilityState;
   paidEdition?: Edition;
+  alwaysShowEdition?: boolean;
   path?: string;
 };
 
@@ -224,17 +225,33 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "permissions",
         label: t("knowledgeNetwork.permissionMatrix.nav"),
         icon: <SafetyCertificateOutlined />,
+        paidCapability: CAPABILITIES.PERMISSION_MATRIX,
+        paidCapabilityState: !snapshot
+          ? "unknown"
+          : permissionMatrixLicensed
+            ? "available"
+            : "not-licensed",
+        paidEdition: "enterprise",
+        alwaysShowEdition: true,
       },
       {
         key: "action-control",
         label: t("knowledgeNetwork.riskActionControlNav"),
         icon: <ControlOutlined />,
+        paidCapability: CAPABILITIES.ACTION_GOVERNANCE,
+        paidCapabilityState: !snapshot
+          ? "unknown"
+          : actionControlLicensed
+            ? "available"
+            : "not-licensed",
+        paidEdition: "enterprise",
+        alwaysShowEdition: true,
         path: extensionWorkspaceNavItems("risk-control")
           .find((item) => item.id === "action-control")
           ?.path(activeNetworkId),
-        disabled: !extensionWorkspaceNavItems("risk-control").some(
-          (item) => item.id === "action-control",
-        ),
+        disabled:
+          (!snapshot || actionControlLicensed) &&
+          !extensionWorkspaceNavItems("risk-control").some((item) => item.id === "action-control"),
       },
       {
         key: "concept-groups",
@@ -308,12 +325,7 @@ export function KnowledgeNetworkWorkspaceScene({
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
-    return items.filter(
-      (item) =>
-        !hiddenNavigation.includes(item.key) &&
-        (item.key !== "permissions" || permissionMatrixLicensed) &&
-        (item.key !== "action-control" || actionControlLicensed),
-    );
+    return items.filter((item) => !hiddenNavigation.includes(item.key));
   }, [
     activeNetworkId,
     actionControlLicensed,
@@ -323,6 +335,7 @@ export function KnowledgeNetworkWorkspaceScene({
     kbMode,
     objectMetricsCapability,
     permissionMatrixLicensed,
+    snapshot,
     t,
   ]);
 
@@ -449,7 +462,11 @@ export function KnowledgeNetworkWorkspaceScene({
         {!sideCollapsed && (item.paidEdition || showCount) ? (
           <span className={styles.sideItemStatus}>
             {item.paidEdition ? (
-              <EditionBadge capability={item.paidCapability} edition={item.paidEdition} />
+              <EditionBadge
+                alwaysShow={item.alwaysShowEdition}
+                capability={item.paidCapability}
+                edition={item.paidEdition}
+              />
             ) : null}
             {showCount ? (
               <span className={styles.sideItemCount}>{formatNavCount(item.count)}</span>

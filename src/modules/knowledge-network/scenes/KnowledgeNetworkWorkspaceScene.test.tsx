@@ -60,6 +60,7 @@ vi.mock("react-i18next", async (importOriginal) => {
         ({
           "common.entitlement.editions.professional": "专业版",
           "common.entitlement.editionsShort.professional": "专业版",
+          "common.entitlement.editionsShort.enterprise": "企业版",
           "knowledgeNetwork.workspaceExperienceAgent": "智能问答",
           "knowledgeNetwork.workspaceExperienceCypher": "数据查询",
           "knowledgeNetwork.workspaceExperienceMcp": "MCP 调试",
@@ -593,12 +594,21 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
   });
 
-  it.each(["community", "professional"] as const)("hides risk control on %s", (edition) => {
-    renderScene(entitlement({ edition, licensed: true }));
-    expect(
-      screen.queryByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
-    ).toBeNull();
-  });
+  it.each(["community", "professional"] as const)(
+    "shows Enterprise risk controls on %s",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true }));
+      expect(
+        screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+      ).toHaveAttribute("aria-expanded", "true");
+      for (const label of ["权限管控", "行动管控"]) {
+        expect(screen.getByTitle(label)).toHaveTextContent("企业版");
+      }
+      fireEvent.click(screen.getByTitle("行动管控"));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(mocks.navigate).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps the ability verification title while an extension entry is still shown", () => {
     mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop", "evals"];
@@ -730,6 +740,7 @@ it("connects the existing action-control entry to the installed risk-control pag
   fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }));
   const item = screen.getByTitle("行动管控");
   expect(item).not.toBeDisabled();
+  expect(item).toHaveTextContent("企业版");
   fireEvent.click(item);
   expect(mocks.navigate).toHaveBeenCalledWith(
     "/knowledge-network/workspace/network-1/action-control",
