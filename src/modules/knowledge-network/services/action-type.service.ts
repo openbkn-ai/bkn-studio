@@ -527,6 +527,7 @@ export async function executeKnowledgeNetworkActionTypeNow(
   actionTypeId: string,
   input: ActionExecutionInput = {},
   governance?: { requestId: string; planDigest: string },
+  options: { skipErrorToast?: boolean; publishedOnly?: boolean } = {},
 ) {
   if (useMock) {
     const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
@@ -556,7 +557,9 @@ export async function executeKnowledgeNetworkActionTypeNow(
     },
     {
       headers: { "Content-Type": "application/json" },
-      params: await resolveKnReadParams(networkId),
+      skipErrorToast: options.skipErrorToast,
+      params: options.publishedOnly ? { branch: "main" } : await resolveKnReadParams(networkId),
+      ...(options.publishedOnly ? { _knSkip: true } : {}),
       transformRequest: [transformPrecisionSafeJSONRequest],
     },
   );

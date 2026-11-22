@@ -209,9 +209,9 @@ describe("data catalog discover-status mocks", () => {
     });
   });
 
-  it("provides source metadata for physical resources but not datasets", () => {
+  it("provides database source metadata for physical resources while API resources and datasets omit it", () => {
     for (const resource of mockResources) {
-      if (resource.category === "dataset") {
+      if (resource.category === "dataset" || resource.category === "api") {
         expect(resource.sourceMetadata).toBeUndefined();
         continue;
       }

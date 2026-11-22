@@ -44,6 +44,8 @@ import {
   type CatalogDeletionImpact,
 } from "@/shared/catalog";
 
+import { supportsCatalogDiscovery } from "../lib/catalog-discovery";
+
 import styles from "./DataConnectListScene.module.css";
 
 const HEALTH_STATUS_TONES: Record<DataConnectRecord["healthStatus"], LightStatusTone> = {
@@ -368,7 +370,10 @@ export function DataConnectListScene({
         });
       }
 
-      if (hasCatalogOperation(record, "task_manage")) {
+      if (
+        hasCatalogOperation(record, "task_manage") &&
+        supportsCatalogDiscovery(record, connectorTypes)
+      ) {
         items.push({
           key: "discover",
           label: t("dataConnect.discoverManage"),
@@ -426,7 +431,16 @@ export function DataConnectListScene({
         },
       };
     },
-    [deleteRecord, openDetail, openDiscovers, openEdit, t, testConnection, toggleEnabled],
+    [
+      connectorTypes,
+      deleteRecord,
+      openDetail,
+      openDiscovers,
+      openEdit,
+      t,
+      testConnection,
+      toggleEnabled,
+    ],
   );
 
   const columns: ColumnsType<DataConnectRecord> = [

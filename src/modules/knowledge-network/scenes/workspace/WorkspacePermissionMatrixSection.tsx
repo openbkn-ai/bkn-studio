@@ -530,6 +530,10 @@ export function WorkspacePermissionMatrixSection({
     }))
     .filter(
       (subject) =>
+        !foundSubjects.some((found) => found.id === subject.id && found.type === subject.type),
+    )
+    .filter(
+      (subject) =>
         !normalizedSubjectSearch ||
         `${subject.name} ${subject.id} ${subject.detail ?? ""}`
           .toLocaleLowerCase()
@@ -537,7 +541,7 @@ export function WorkspacePermissionMatrixSection({
     );
   const subjectOptions = [
     ...new Map(
-      [...knownSubjects, ...foundSubjects, ...(selectedSubject ? [selectedSubject] : [])]
+      [...foundSubjects, ...knownSubjects, ...(selectedSubject ? [selectedSubject] : [])]
         .filter((subject) => subject.type === subjectType)
         .map((subject) => [subject.id, subject]),
     ).values(),

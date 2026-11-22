@@ -7,7 +7,7 @@
 
 import { ThunderboltOutlined } from "@ant-design/icons";
 import { Alert, Tooltip } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -83,6 +83,8 @@ export function BuildTaskLaunchPanel({
 }: BuildTaskLaunchPanelProps) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
+  const batchWarningId = useId();
+  const executeHintId = useId();
 
   const [mode, setMode] = useState<BuildMode>("batch");
   const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
@@ -111,8 +113,22 @@ export function BuildTaskLaunchPanel({
   const primaryKeyFields = config.primaryKeyFields ?? EMPTY_KEY_FIELDS;
   const incrementalFields = config.incrementalFields ?? EMPTY_KEY_FIELDS;
   const hasResourceConfig = hasPersistedBuildFeatures(resource);
-  const batchNeedsKeyFields =
-    mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
+  const missingBatchPrimaryKey = mode === "batch" && primaryKeyFields.length === 0;
+  const missingBatchIncrementalKey = mode === "batch" && incrementalFields.length === 0;
+  const canWritePublishedIndex =
+    resource.localIndexStatus === "available" && Boolean(resource.localIndexName);
+  let batchReadinessError: string | undefined;
+  if (missingBatchPrimaryKey) {
+    batchReadinessError = t("dataCatalog.build.primaryKeyRequired");
+  } else if (mode === "batch" && executeType === "incremental") {
+    if (missingBatchIncrementalKey) {
+      batchReadinessError = t("dataCatalog.build.incrementalKeyRequired");
+    } else if (resource.localIndexStatus === "readonly" && resource.localIndexName) {
+      batchReadinessError = t("dataCatalog.build.incrementalRequiresFullRebuild");
+    } else if (!canWritePublishedIndex) {
+      batchReadinessError = t("dataCatalog.build.incrementalNeedsPublishedIndex");
+    }
+  }
   const excludedFields = useMemo(
     () => excludedBuildSchemaFields(resource.schema),
     [resource.schema],
@@ -124,6 +140,13 @@ export function BuildTaskLaunchPanel({
     ],
     [incrementalFields, primaryKeyFields, resource.schema],
   );
+  const showFullBuildRisk =
+    missingBatchIncrementalKey && executeType === "full" && invalidConfiguredKeyFields.length === 0;
+  const batchWarning =
+    batchReadinessError ??
+    (showFullBuildRisk ? t("dataCatalog.build.fullBuildWithoutIncrementalKey") : undefined);
+  const executeDescriptionIds =
+    hasResourceConfig && batchWarning ? `${executeHintId} ${batchWarningId}` : executeHintId;
   const analyzerLabel =
     config.fulltextFields.length > 0 && config.fulltextAnalyzer
       ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
@@ -213,7 +236,7 @@ export function BuildTaskLaunchPanel({
     controlsDisabled ||
     decimalIssues.length > 0 ||
     !hasResourceConfig ||
-    batchNeedsKeyFields ||
+    Boolean(batchReadinessError) ||
     invalidConfiguredKeyFields.length > 0;
 
   const createTask = async () => {
@@ -261,8 +284,8 @@ export function BuildTaskLaunchPanel({
       setError({ description: t("dataCatalog.build.needConfigFirst") });
       return;
     }
-    if (mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0)) {
-      setError({ description: t("dataCatalog.build.keyFieldsRequired") });
+    if (batchReadinessError) {
+      setError({ description: batchReadinessError });
       return;
     }
     if (actionsLocked) {
@@ -376,14 +399,16 @@ export function BuildTaskLaunchPanel({
           type="warning"
         />
       ) : null}
-      {hasResourceConfig && batchNeedsKeyFields ? (
+      {hasResourceConfig && batchWarning ? (
         <Alert
           action={
-            <AppButton onClick={onGoConfigure} size="small" type="link">
-              {t("dataCatalog.indexWorkspace.viewConfig")}
-            </AppButton>
+            missingBatchPrimaryKey || missingBatchIncrementalKey ? (
+              <AppButton onClick={onGoConfigure} size="small" type="link">
+                {t("dataCatalog.indexWorkspace.viewConfig")}
+              </AppButton>
+            ) : undefined
           }
-          message={t("dataCatalog.build.keyFieldsRequired")}
+          message={<span id={batchWarningId}>{batchWarning}</span>}
           showIcon
           type="warning"
         />
@@ -444,6 +469,9 @@ export function BuildTaskLaunchPanel({
                         )}
                       >
                         <input
+                          aria-describedby={
+                            executeType === option.key ? executeDescriptionIds : undefined
+                          }
                           checked={executeType === option.key}
                           disabled={controlsDisabled}
                           name="batch-execute-type"
@@ -462,6 +490,7 @@ export function BuildTaskLaunchPanel({
                   ))}
                   <span
                     className={formStyles.executeInlineHint}
+                    id={executeHintId}
                     title={selectedExecuteOption.description}
                   >
                     {selectedExecuteOption.description}

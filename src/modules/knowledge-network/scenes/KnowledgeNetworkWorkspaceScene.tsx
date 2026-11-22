@@ -115,6 +115,18 @@ export function KnowledgeNetworkWorkspaceScene({
   const params = useParams<{ networkId: string }>();
   const activeNetworkId = networkId ?? params.networkId ?? "";
   const { snapshot } = useEntitlementContext();
+  const actionControlLicensed = capabilitySatisfied(
+    CAPABILITIES.ACTION_GOVERNANCE,
+    snapshot,
+    "enterprise",
+    false,
+  );
+  const permissionMatrixLicensed = capabilitySatisfied(
+    CAPABILITIES.PERMISSION_MATRIX,
+    snapshot,
+    "enterprise",
+    false,
+  );
   // Use the same capability catalog as the route and badge license rule;
   // network admission belongs to the Eval page, not sidebar discovery.
   const evalLicensed = capabilitySatisfied(
@@ -296,14 +308,21 @@ export function KnowledgeNetworkWorkspaceScene({
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
-    return items.filter((item) => !hiddenNavigation.includes(item.key));
+    return items.filter(
+      (item) =>
+        !hiddenNavigation.includes(item.key) &&
+        (item.key !== "permissions" || permissionMatrixLicensed) &&
+        (item.key !== "action-control" || actionControlLicensed),
+    );
   }, [
     activeNetworkId,
+    actionControlLicensed,
     detail,
     evalCapabilityState,
     hiddenNavigation,
     kbMode,
     objectMetricsCapability,
+    permissionMatrixLicensed,
     t,
   ]);
 

@@ -36,14 +36,14 @@ export const subscriptionZhCN = {
         name: "业务溯源",
       },
       bkn_trace: {
-        description: "技术 Trace 与运行诊断:调用链、耗时与错误定位(不含业务正文与证据链)",
+        description: "技术 Trace 与运行诊断：调用链、耗时与错误定位（不含业务正文与证据链）",
         name: "运行诊断 Trace",
       },
       connector_certified: {
         bullets: {
-          b1: "SQL Server、Oracle、Doris 直连；SAP HANA 需企业版及以上",
+          b1: "SQL Server、Oracle、Doris 直连，并支持以 API 方式连接数据；SAP HANA 需企业版及以上",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
-          b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
+          b3: "与社区连接器同一套建模、索引与查询链路，切换不改模型",
           b4: "使用连接器需要有效的对应版本授权，以及包含对应连接器实现的 Vega 部署镜像",
         },
         // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
@@ -51,9 +51,10 @@ export const subscriptionZhCN = {
           b1: "SQL Server",
           b2: "Oracle",
           b3: "Doris",
+          b4: "以 API 方式连接数据",
         },
         description:
-          "认证/高级数据源连接器：专业版支持 SQL Server、Oracle、Doris，企业版增加 SAP HANA；社区版仅开放基础连接器",
+          "认证/高级数据源连接器：专业版支持 SQL Server、Oracle、Doris 与 API 方式连接，企业版增加 SAP HANA；社区版仅开放基础连接器",
         name: "高级数据连接",
       },
       vega_logic_view: {
@@ -62,15 +63,29 @@ export const subscriptionZhCN = {
       },
       graph_explorer: {
         bullets: {
-          b1: "语义检索、条件、浏览或 Cypher 找到实例,沿关系逐跳展开",
-          b2: "两个实例之间的路径查找,多种布局",
-          b3: "探索历史、画布导出与可分享的链接",
+          b1: "语义检索或 Cypher 找实例，逐跳展开",
+          b2: "实例间路径查找，多种布局",
+          b3: "探索历史、画布导出与分享链接",
         },
-        description: "从具体实例出发,在画布上展开邻居、追踪路径;也能打开 Agent 给出的图谱链接",
+        description: "从具体实例出发，在画布上展开邻居、追踪路径；也能打开 Agent 给出的图谱链接",
         name: "图探索",
       },
-      // 能力仍是 planned,不进在售目录;这里只供遮罩与升级弹窗(含 BKN 项目里的知识库扩展)。
+      bkn_project: {
+        bullets: {
+          b1: "需求输入、本体建模与知识网络发布一站式管理",
+          b2: "从数据表抽取概念",
+          b3: "动力建模与业务场景",
+        },
+        description: "以项目组织知识网络的需求、本体建模与发布",
+        name: "项目管理",
+      },
+      // 上游登记表仍是 planned,产品先按专业档在售;遮罩与升级弹窗(含 BKN 项目里的知识库扩展)同用这份。
       knowledge_base: {
+        bullets: {
+          b1: "从文档抽取概念、属性、关系与事件",
+          b2: "实体识别、链接与知识融合",
+          b3: "文件接入、解析切片与原文定位",
+        },
         description: "接入对象存储、文件服务等来源的文件，管理内容版本，完成解析、切片与原文定位",
         name: "本体知识库",
       },
@@ -78,42 +93,69 @@ export const subscriptionZhCN = {
         name: "行动管控",
         description: "配置行动执行的确认、禁止与业务审批规则。",
       },
+      permission_matrix: {
+        name: "权限矩阵",
+        description: "查看知识网络中用户和角色对各类资源的权限。",
+      },
       object_metrics: {
         bullets: {
-          b1: "按对象类统一管理原子、衍生和复合对象指标",
-          b2: "支持校验、预览、版本发布、逻辑属性绑定与血缘查看",
-          b3: "按对象实例或对象集合查询和试算对象指标结果",
+          b1: "原子、衍生、复合指标统一管理",
+          b2: "校验、预览、发布与血缘查看",
+          b3: "按实例或对象集合查询、试算",
         },
         description: "按对象类定义、验证、发布并查询原子、衍生和复合对象指标",
         name: "对象指标",
       },
       workshop: {
         bullets: {
-          b1: "用组件搭建页面，AI 辅助配置，应用可导入导出",
-          b2: "规则命中或人工登记的事件，按任务完成分析与处理",
-          b3: "方案推演与模型试算，确认后逐个对象执行行动",
+          b1: "组件搭建页面，AI 辅助配置",
+          b2: "事件按任务分析与处理",
+          b3: "方案推演、模型试算与执行行动",
         },
         description: "在知识网络上搭建业务应用：页面与组件、事件与任务、方案推演",
         name: "应用工坊",
       },
+      analysis_canvas: {
+        description: "用 AI 把分析拆成可复核的卡片，结果存在服务端，可带结果分享给他人",
+        name: "分析画布",
+      },
+      version_mgmt: {
+        bullets: {
+          b1: "多版本管理",
+          b2: "版本历史，按历史版本查询与执行",
+          b3: "版本比较与回退",
+        },
+        description: "知识网络的版本历史、比较与回退",
+        name: "知识网络版本管理",
+      },
+      risk_control: {
+        bullets: {
+          b1: "权限矩阵：生效权限与来源",
+          b2: "行动类的执行管控",
+        },
+        description: "知识网络的权限矩阵与行动类执行管控",
+        name: "风险管控",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "查看、查询、修改、删除、执行分别授权",
-          b2: "显式例外(直接授权或拒绝)与完整授权审计",
+          b2: "显式允许、拒绝与授权审计",
         },
         description: "按对象和操作配置允许、拒绝与来源级撤销",
-        name: "细粒度对象授权",
+        name: "对象授权",
       },
       perm_object_level: {
         bullets: {
-          b1: "对象类支持行过滤",
-          b2: "对象类支持列过滤（支持配置属性列不可见、仅属性名称、列掩码-内容脱敏）",
+          b1: "对象类行过滤",
+          b2: "对象类列过滤：隐藏、仅列名、脱敏",
           b3: "行列权限变更审计",
         },
         description: "企业对象规则兼容层与属性级权限",
-        name: "企业对象规则",
+        name: "行列级权限管控",
       },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
+      // 登记表里这一行叫「运营看板」;产品页按运维的口径命名。
+      ops_dashboard: { description: "模型使用策略、使用统计与运维看板", name: "运维看板" },
       semantic_task: {
         description: "面向业务语义的理解任务编排与执行",
         name: "数据资源支持语义理解",
@@ -127,13 +169,14 @@ export const subscriptionZhCN = {
       actionSandbox: "行动运行与安全沙箱环境",
       basicAudit: "基础操作审计",
       cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
-      commonSources: "MySQL、PostgreSQL、MariaDB、Opensearch 作为数据源接入",
+      commonSources: "MySQL、PostgreSQL、MariaDB、OpenSearch",
       executionFactory: "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
       indexing: "数据发现、批量索引与向量化",
-      localAuth: "本地登录,用户、部门与内置角色管理",
+      localAuth: "本地登录，用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
-      modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
-      modelingTypes: "对象、关系、行动与对象指标建模",
+      modelingSurfaces: "Studio、CLI、SDK 与 Skill 建模",
+      modelingTypes: "对象、关系与行动建模",
+      draftAndRunning: "知识网络草稿与运行版本",
       oneClickExperience: "支持一键体验，动态加载官方样例",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",
@@ -149,19 +192,20 @@ export const subscriptionZhCN = {
     },
     cta: {
       import: "导入授权文件",
-      importHint: "已有授权文件?前往授权管理导入,补证下一个请求即生效,无需重启。",
-      needAdmin: "导入授权文件需要授权管理权限,请联系管理员。",
+      importHint: "已有授权文件？前往授权管理导入，补证下一个请求即生效，无需重启。",
+      needAdmin: "导入授权文件需要授权管理权限，请联系管理员。",
       apply: "申请授权",
       details: "查看详情",
     },
     current: {
       badge: "当前",
-      edition: "当前工作区运行在 {{edition}}。",
-      unlicensed: "当前没有生效授权,按社区能力运行。",
+      edition: "当前工作区运行在{{edition}}。",
+      unlicensed: "当前没有生效授权，按社区能力运行。",
     },
     matrix: {
       capability: "能力",
       new: "新增",
+      planned: "规划中",
       sinceVersion: "{{version}} 起可用",
       title: "能力对比",
     },
@@ -173,13 +217,13 @@ export const subscriptionZhCN = {
       // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
         audience:
-          "面向开发者、技术团队和生态伙伴,免费构建和验证业务知识网络,适合 Demo 验证和 POC。",
+          "面向开发者、技术团队和生态伙伴，免费构建和验证业务知识网络，适合 Demo 验证和 POC。",
         price: "免费",
         unit: "自部署 · 无限期",
       },
       enterprise: {
         audience:
-          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加 SAP HANA 数据连接、企业对象细粒度权限和业务溯源。",
+          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织，在专业版基础上增加应用工坊、分析画布、风险管控、知识网络版本管理、SAP HANA 数据连接、行列级权限管控和业务溯源。",
         hanaConnector: "SAP HANA",
         price: "洽谈",
         unit: "按合同授权",
@@ -187,7 +231,7 @@ export const subscriptionZhCN = {
       inheritsFrom: "{{edition}}全部能力",
       professional: {
         audience:
-          "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
+          "面向快速成长的 AI 原生团队，在社区版基础上增加自定义角色与权限、对象授权、高级数据连接（含 API 方式连接）、项目管理与知识库。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },
@@ -198,8 +242,9 @@ export const subscriptionZhCN = {
         unlimited: "不限",
       },
     },
-    contact: "完整能力对比、服务条款与优惠计划见版本说明;商务咨询 business@openbkn.ai。",
+    contact: "完整能力对比、服务条款与优惠计划见版本说明；商务咨询 business@openbkn.ai。",
     title: "版本与订阅",
-    subtitle: "BKN 的知识网络与数据能力在所有版本中完整开放;权限边界、审计与合规能力随版本递进。",
+    subtitle:
+      "知识网络建模、常用数据接入与查询在所有版本中开放；项目与知识库、权限管控、版本管理与业务应用随版本递进。",
   },
 } as const;

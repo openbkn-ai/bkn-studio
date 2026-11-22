@@ -6,7 +6,7 @@
  */
 
 import { Button, Input, Select, Switch } from "antd";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { ApiBodyEditor } from "./ApiBodyEditor";
 import { ApiQueryParameterEditor } from "./ApiQueryParameterEditor";
 import { ObjectValueEditor } from "./ApiValueEditor";
@@ -22,9 +22,11 @@ export function ApiRequestEditor({
   onChange,
   disabled,
   variableNames = [],
+  enableJsonSerialization,
   onValidityChange,
-}: ApiDefinitionEditorProps & { variableNames?: string[] }) {
+}: ApiDefinitionEditorProps & { variableNames?: string[]; enableJsonSerialization?: boolean }) {
   const { t } = useTranslation();
+  const bodyLabelId = useId();
   const request = value;
   const changeRequest = (key: string, next: unknown) => onChange(replaceMember(value, key, next));
   const parameters: unknown[] = Array.isArray(request.parameters) ? request.parameters : [];
@@ -101,24 +103,26 @@ export function ApiRequestEditor({
         >
           {t("dataConnect.apiEditor.addParameter")}
         </Button>
-        <label className={styles.bodyToggle}>
-          <span className={styles.fieldTitle}>{t("dataConnect.apiEditor.body")}</span>
+        <div className={styles.bodyToggle}>
+          <span className={styles.fieldTitle} id={bodyLabelId}>
+            {t("dataConnect.apiEditor.body")}
+          </span>
           <Switch
-            aria-label={t("dataConnect.apiEditor.body")}
+            aria-labelledby={bodyLabelId}
             disabled={disabled}
             checked={Object.hasOwn(request, "body")}
             onChange={(checked) =>
               changeRequest("body", checked ? { type: "object", properties: {} } : undefined)
             }
           />
-        </label>
+        </div>
         {Object.hasOwn(request, "body") ? (
           <ApiBodyEditor
             value={objectValue(request.body)}
             disabled={disabled}
+            enableJsonSerialization={enableJsonSerialization}
             label={t("dataConnect.apiEditor.body")}
             onChange={(next) => changeRequest("body", next)}
-            variableNames={variableNames}
           />
         ) : null}
       </div>

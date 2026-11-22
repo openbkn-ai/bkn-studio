@@ -14,6 +14,13 @@ export type BuildTaskErrorSummary = {
   title: string;
 };
 
+const incrementalRecoveryErrors = new Map([
+  ["cannot recover incremental checkpoint: unsupported cursor field", "unsupportedField"],
+  ["cannot recover incremental checkpoint: published index query failed", "queryFailed"],
+  ["cannot recover incremental checkpoint: invalid indexed cursor", "invalidCursor"],
+  ["cannot recover a compatible incremental checkpoint from the published index", "unknown"],
+]);
+
 export function summarizeBuildTaskError(
   rawError: string | null | undefined,
   language?: string,
@@ -21,6 +28,21 @@ export function summarizeBuildTaskError(
   const raw = rawError?.trim();
   if (!raw) {
     return null;
+  }
+
+  const recoveryError = incrementalRecoveryErrors.get(raw);
+  if (recoveryError) {
+    return {
+      title: taskErrorText("incrementalRecovery.title", language),
+      message: taskErrorText(`incrementalRecovery.${recoveryError}Message`, language),
+      raw,
+      suggestion: taskErrorText(
+        recoveryError === "queryFailed" || recoveryError === "unknown"
+          ? `incrementalRecovery.${recoveryError}Suggestion`
+          : "incrementalRecovery.fullBuildSuggestion",
+        language,
+      ),
+    };
   }
 
   const dataTooLong = raw.match(/Data too long for column '([^']+)'/i);

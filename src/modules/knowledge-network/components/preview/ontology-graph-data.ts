@@ -15,7 +15,10 @@
 import type { ComboData, EdgeData, GraphData, NodeData } from "@antv/g6";
 
 import { GRAPH_PALETTE, type GraphTokens } from "@/modules/knowledge-network/lib/graph-style";
-import type { KnowledgeNetworkPreviewGraph } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  KnowledgeNetworkPreviewEdge,
+  KnowledgeNetworkPreviewGraph,
+} from "@/modules/knowledge-network/types/knowledge-network";
 import { isDeprecated } from "@/modules/knowledge-network/utils/definition-declarations";
 import {
   GROUP_HULL_PAD,
@@ -47,6 +50,18 @@ export function typeColors(nodes: readonly { id: string; color?: string }[]): Ma
   }
   return out;
 }
+/** Relations per type, added previews aside: showing one changes no dot's size. */
+function drawnDegree(graph: KnowledgeNetworkPreviewGraph): Map<string, number> {
+  const degree = new Map<string, number>();
+  graph.edges
+    .filter((edge) => !edge.added)
+    .forEach((edge) => {
+      degree.set(edge.sourceId, (degree.get(edge.sourceId) ?? 0) + 1);
+      degree.set(edge.targetId, (degree.get(edge.targetId) ?? 0) + 1);
+    });
+  return degree;
+}
+
 /** Drawn dot radius of an object type with no relation, and the largest an ordinary / hub one gets. */
 const MIN_DRAWN_RADIUS = 10;
 const MAX_DRAWN_RADIUS = 24;
@@ -146,11 +161,7 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
   );
   clusters.forEach((cluster) => cluster.ids.forEach((id) => comboOf.set(id, cluster.id)));
 
-  const degree = new Map<string, number>();
-  graph.edges.forEach((edge) => {
-    degree.set(edge.sourceId, (degree.get(edge.sourceId) ?? 0) + 1);
-    degree.set(edge.targetId, (degree.get(edge.targetId) ?? 0) + 1);
-  });
+  const degree = drawnDegree(graph);
 
   const colorOf = typeColors(graph.nodes);
   const nodes: NodeData[] = graph.nodes.map((node) => {
@@ -173,8 +184,9 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
         fill: color,
         // Stated so G6 has a value to return to when the dimmed state is cleared.
         opacity: node.faded || isDeprecated(node) ? FADED_OPACITY : 1,
-        stroke: tokens.inverse,
-        lineWidth: 1.5,
+        // A highlighted type is ringed in the warning colour; others keep a thin light edge.
+        stroke: node.highlighted ? tokens.warning : tokens.inverse,
+        lineWidth: node.highlighted ? 3 : 1.5,
         haloStroke: color,
         // Under the dot, clear of the index badge at its top right and of the next type in a row.
         labelPlacement: "bottom",
@@ -188,7 +200,7 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
   });
 
   const edges: EdgeData[] = graph.edges.map((edge) => {
-    const faint = edge.faded || isDeprecated(edge);
+    const faint = !edge.preview && (edge.faded || isDeprecated(edge));
     return {
       id: edge.id,
       source: edge.sourceId,
@@ -199,10 +211,10 @@ export function buildOntologyStructure(input: OntologyStructureInput): Required<
         ...(edge.curveOffset ? { curveOffset: edge.curveOffset } : {}),
         // Stated so G6 has a value to return to when the dimmed state is cleared.
         opacity: faint ? FADED_OPACITY : 1,
-        // Relations stay one quiet grey: the types carry the colour.
-        stroke: tokens.faint,
-        lineWidth: 1,
-        ...(faint ? { lineDash: [4, 4] } : {}),
+        // Relations stay one quiet grey: the types carry the colour. A previewed one stands out.
+        stroke: edge.preview ? tokens.success : tokens.faint,
+        lineWidth: edge.preview ? 2 : 1,
+        ...(faint || edge.preview ? { lineDash: edge.preview ? [6, 4] : [4, 4] } : {}),
         endArrow: true,
         endArrowSize: 6,
         labelFill: tokens.text,
@@ -373,11 +385,7 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
       if (edge.targetId === selectedId) neighbours.add(edge.sourceId);
     });
   }
-  const degree = new Map<string, number>();
-  graph.edges.forEach((edge) => {
-    degree.set(edge.sourceId, (degree.get(edge.sourceId) ?? 0) + 1);
-    degree.set(edge.targetId, (degree.get(edge.targetId) ?? 0) + 1);
-  });
+  const degree = drawnDegree(graph);
   const radiusOf = (id: string) => drawnRadius(degree.get(id) ?? 0, id === input.hubId);
   const scale = labelScale(input.zoom);
   const names = new Occupancy(80 * scale);
@@ -430,8 +438,13 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
     (degree.get(edge.sourceId) ?? 0) + (degree.get(edge.targetId) ?? 0);
   const relationNames = new Map<string, string>();
   graph.edges
-    .filter((edge) => input.edgeLabelsVisible || isActive(edge))
-    .sort((a, b) => Number(isActive(b)) - Number(isActive(a)) || weight(b) - weight(a))
+    .filter((edge) => input.edgeLabelsVisible || isActive(edge) || edge.preview)
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.preview)) - Number(Boolean(a.preview)) ||
+        Number(isActive(b)) - Number(isActive(a)) ||
+        weight(b) - weight(a),
+    )
     .forEach((edge) => {
       const text = edge.name || input.defaultEdgeName;
       const a = positions?.get(edge.sourceId);
@@ -521,4 +534,34 @@ export function buildOntologyDecorations(input: OntologyDecorationInput): Ontolo
   });
 
   return { nodes, edges, states };
+}
+
+/**
+ * The graph with relations previewed: one already drawn is marked in place, a new one between two
+ * drawn types is added; one with an end not drawn is left out.
+ */
+export function withPreviewEdges<
+  G extends { edges: KnowledgeNetworkPreviewEdge[]; nodes: { id: string }[] },
+>(graph: G, previews: readonly KnowledgeNetworkPreviewEdge[]): G {
+  const byId = new Map(previews.map((edge) => [edge.id, edge]));
+  const drawn = new Set(graph.nodes.map((node) => node.id));
+  const edgeIds = new Set(graph.edges.map((edge) => edge.id));
+  return {
+    ...graph,
+    edges: [
+      ...graph.edges.map((edge) => (byId.has(edge.id) ? { ...edge, preview: true } : edge)),
+      ...previews
+        .filter(
+          (edge) => !edgeIds.has(edge.id) && drawn.has(edge.sourceId) && drawn.has(edge.targetId),
+        )
+        .map((edge) => ({ ...edge, added: true, preview: true })),
+    ],
+  };
+}
+
+/** The graph as it is arranged: added previews aside, so showing one moves no type. */
+export function arrangedGraph<G extends { edges: KnowledgeNetworkPreviewEdge[] }>(graph: G): G {
+  return graph.edges.some((edge) => edge.added)
+    ? { ...graph, edges: graph.edges.filter((edge) => !edge.added) }
+    : graph;
 }

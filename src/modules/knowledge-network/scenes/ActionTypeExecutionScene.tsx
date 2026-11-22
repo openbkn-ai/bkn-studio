@@ -10,7 +10,7 @@ import type { ActionExecutionInput } from "../utils/action-execution-input";
 
 import { EditOutlined, PlayCircleOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Card, Descriptions, Spin } from "antd";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -188,7 +188,9 @@ export function ActionTypeExecutionScene() {
 
     setExecuting(true);
     try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input, governance);
+      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, input, governance, {
+        skipErrorToast: true,
+      });
       void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
       setTaskRefreshToken((value) => value + 1);
       setActiveTab("tasks");
@@ -216,15 +218,12 @@ export function ActionTypeExecutionScene() {
     setExecuteModalOpen(true);
   };
 
-  const handleGovernanceAuthorized: ActionExecutionGateProps["onAuthorized"] = async (
-    credentials,
-  ) => {
+  const handleGovernanceAuthorized: ActionExecutionGateProps["onAuthorized"] = (credentials) => {
     const input = governanceGate?.input;
-    setGovernanceGate(null);
     if (!input) {
       return;
     }
-    await executeNow(input, credentials);
+    void executeNow(input, credentials).finally(() => setGovernanceGate(null));
   };
 
   const renderRunPanel = () => {
@@ -373,14 +372,16 @@ export function ActionTypeExecutionScene() {
         />
       ) : null}
       {detail && ExecutionGate && governanceGate ? (
-        <ExecutionGate
-          networkId={networkId}
-          actionTypeId={detail.id}
-          actionTypeName={detail.name}
-          input={governanceGate.input}
-          onClose={() => setGovernanceGate(null)}
-          onAuthorized={handleGovernanceAuthorized}
-        />
+        <Suspense fallback={<Spin />}>
+          <ExecutionGate
+            networkId={networkId}
+            actionTypeId={detail.id}
+            actionTypeName={detail.name}
+            input={governanceGate.input}
+            onClose={() => setGovernanceGate(null)}
+            onAuthorized={handleGovernanceAuthorized}
+          />
+        </Suspense>
       ) : null}
     </KnowledgeNetworkResourceConfigShell>
   );

@@ -128,8 +128,18 @@ vi.mock("@/modules/knowledge-network/components/object-type/ObjectTypeResourceGr
 }));
 
 import { ActionTypeListPanel } from "./ActionTypeListPanel";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
+import { FALLBACK_ENTITLEMENT } from "@/framework/entitlement/types";
+import type { Edition } from "@/framework/entitlement/edition";
+import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 
-function renderPanel(initialEntry = "/?view=list", canDelete = false, canModify = false) {
+function renderPanel(
+  initialEntry = "/?view=list",
+  canDelete = false,
+  canModify = false,
+  edition: Edition = "community",
+) {
   function LocationProbe() {
     const location = useLocation();
     return <span data-testid="location-search">{location.search}</span>;
@@ -137,13 +147,21 @@ function renderPanel(initialEntry = "/?view=list", canDelete = false, canModify 
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <LocationProbe />
-      <ActionTypeListPanel
-        canDelete={canDelete}
-        canModify={canModify}
-        networkId="network-1"
-        networkName="Test network"
-        onDelete={vi.fn()}
-      />
+      <EntitlementContext.Provider
+        value={{
+          loading: false,
+          refresh: async () => {},
+          snapshot: { ...FALLBACK_ENTITLEMENT, edition, licensed: edition !== "community" },
+        }}
+      >
+        <ActionTypeListPanel
+          canDelete={canDelete}
+          canModify={canModify}
+          networkId="network-1"
+          networkName="Test network"
+          onDelete={vi.fn()}
+        />
+      </EntitlementContext.Provider>
     </MemoryRouter>,
   );
 }
@@ -528,6 +546,53 @@ describe("ActionTypeListPanel menu access", () => {
     expect(screen.queryByText("common.edit")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.authorizeAction")).toBeNull();
   });
+
+  it.each(["professional", "enterprise", "industry"] as const)(
+    "gates the linked action control row operation for %s",
+    async (edition) => {
+      resetExtensionsForTesting();
+      try {
+        registerExtension({
+          id: "governance",
+          capability: CAPABILITIES.ACTION_GOVERNANCE,
+          workspaceNavItems: [
+            {
+              id: "action-control",
+              labelKey: "knowledgeNetwork.riskActionControlNav",
+              section: "risk-control",
+              path: (networkId) => `/knowledge-network/workspace/${networkId}/action-control`,
+            },
+          ],
+        });
+        listActionTypePage.mockResolvedValue({
+          entries: [
+            {
+              id: "action/1",
+              name: "Update order",
+              actionKind: "update",
+              operations: ["view_detail"],
+              tags: [],
+            },
+          ],
+          totalCount: 1,
+        });
+        renderPanel(undefined, false, false, edition);
+        fireEvent.click(await screen.findByRole("button", { name: "common.actions" }));
+        await screen.findByText("common.detail");
+        if (edition === "professional") {
+          expect(screen.queryByText("knowledgeNetwork.riskActionControlNav")).toBeNull();
+        } else {
+          fireEvent.click(screen.getByText("knowledgeNetwork.riskActionControlNav"));
+          expect(navigate).toHaveBeenCalledWith(
+            "/knowledge-network/workspace/network-1/action-control?action_type_id=action%2F1",
+            expect.any(Object),
+          );
+        }
+      } finally {
+        resetExtensionsForTesting();
+      }
+    },
+  );
 
   it("uses root authorize plus child view for the configure-permissions entry", async () => {
     listActionTypePage.mockResolvedValue({

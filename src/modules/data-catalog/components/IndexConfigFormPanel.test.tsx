@@ -74,6 +74,7 @@ const resource: CatalogResource = {
   rowCount: 1,
   schema: [{ name: "title", type: "string" }],
   sourceIdentifier: "orders",
+  tags: ["orders"],
   updateTime: "2026-08-11T00:00:00Z",
   expectedUpdateTime: 0,
 };
@@ -183,6 +184,7 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
     expect(payload.indexConfig?.defaultEmbeddingModel).toBe(modelId);
+    expect(payload.tags).toEqual(["orders"]);
 
     const control = select.closest(".ant-select");
     const clearButton = control?.querySelector(".ant-select-clear");
@@ -566,7 +568,7 @@ describe("IndexConfigFormPanel", () => {
           ResourceUpdateInput,
         ];
         expect(payload.indexConfig?.defaultFulltextAnalyzer).toBe("english");
-        expect(payload.schema[0]?.features).toEqual(
+        expect(payload.schema?.[0]?.features).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ featureType: "fulltext", config: { analyzer: "english" } }),
           ]),
@@ -754,7 +756,7 @@ describe("IndexConfigFormPanel", () => {
 
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
-    expect(payload.schema[0]?.features).toContainEqual(
+    expect(payload.schema?.[0]?.features).toContainEqual(
       expect.objectContaining({
         config: { ignore_above: 256 },
         featureType: "keyword",
@@ -1086,7 +1088,7 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
     expect(payload.indexConfig?.defaultKeywordIgnoreAbove).toBe(512);
-    const titleField = payload.schema.find((field) => field.name === "title");
+    const titleField = payload.schema?.find((field) => field.name === "title");
     const { features = [] } = titleField ?? {};
     const keyword = features.find((feature) => feature.featureType === "keyword");
     expect(keyword?.name).toBe("exact");
@@ -1321,6 +1323,40 @@ describe("IndexConfigFormPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.build.configCannotBuild")).toBeTruthy();
+  });
+
+  it("marks a primary-key-only configuration as ready and saves the empty incremental key", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      indexConfig: { primaryKeyFields: ["title"], incrementalFields: [] },
+    };
+    getCatalogResourceMock.mockResolvedValue(configuredResource);
+    updateCatalogResourceMock.mockResolvedValue(configuredResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("dataCatalog.build.configCanBuildYes")).toBeVisible();
+    expect(screen.getByText("dataCatalog.build.fullBuildWithoutIncrementalKey")).toBeVisible();
+    expect(
+      screen.getByRole("combobox", { name: "dataCatalog.build.roleIncrementalKey" }),
+    ).toHaveAccessibleDescription(/dataCatalog\.build\.fullBuildWithoutIncrementalKey/);
+    const save = screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
+    const [resourceId, payload] = updateCatalogResourceMock.mock.calls[0] as [
+      string,
+      ResourceUpdateInput,
+    ];
+    expect(resourceId).toBe(configuredResource.id);
+    expect(payload.indexConfig).toMatchObject({
+      primaryKeyFields: ["title"],
+      incrementalFields: [],
+    });
   });
 
   it("keeps resource key fields when an active task has no configuration snapshot", async () => {

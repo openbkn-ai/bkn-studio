@@ -7,21 +7,29 @@
 
 import JSONBig from "json-bigint";
 import BigNumber from "bignumber.js";
-import { isLosslessNumber, parse } from "lossless-json";
+import { isLosslessNumber, parse, stringify } from "lossless-json";
 
 const precisionPreservingJSON = JSONBig();
-const numericLiterals = new WeakMap<BigNumber, string>();
+const numberLiteral = Symbol.for("openbkn.precision-safe-json.number-literal");
 
+type ParsedBigNumber = BigNumber & { readonly [numberLiteral]?: string };
 type PrecisionJSONOptions = { allowSpecialKeys?: boolean };
+type PrecisionJSONParseOptions = PrecisionJSONOptions & { preserveNumberLiterals?: boolean };
 
 /** Keep the previous numeric/string boundary and preserve extreme exponents. */
-function preciseNumber(text: string): number | BigNumber {
+function preciseNumber(text: string, preserveNumberLiterals = false): number | BigNumber {
   const number = Number(text);
   const exact = new BigNumber(text);
   if (!exact.isFinite() || (exact.isZero() && /[1-9]/.test(text.split(/[eE]/)[0])))
     throw new RangeError("JSON number exceeds the supported precision range.");
-  if (text.length > 15 || !Number.isFinite(number) || !exact.isEqualTo(number)) {
-    numericLiterals.set(exact, text);
+  if (
+    text.length > 15 ||
+    !Number.isFinite(number) ||
+    !exact.isEqualTo(number) ||
+    (preserveNumberLiterals && String(number) !== text)
+  ) {
+    // Keep the spelling with the value across module reloads without adding a JSON property.
+    Object.defineProperty(exact, numberLiteral, { value: text });
     return exact;
   }
   return number;
@@ -30,7 +38,7 @@ function preciseNumber(text: string): number | BigNumber {
 /** Keep the original JSON spelling for precise values without expanding extreme exponents. */
 export function precisionPreservingValueText(value: unknown): string {
   return BigNumber.isBigNumber(value)
-    ? (numericLiterals.get(value) ?? String(value))
+    ? ((value as ParsedBigNumber)[numberLiteral] ?? String(value))
     : String(value);
 }
 
@@ -68,9 +76,13 @@ export function parsePrecisionSafeJSON(data: string): unknown {
 /** Retain numeric literals as numbers or BigNumbers, distinct from quoted strings. */
 export function parsePrecisionPreservingJSON(
   data: string,
-  options?: PrecisionJSONOptions,
+  options?: PrecisionJSONParseOptions,
 ): unknown {
-  return parseWithNumbers(data, preciseNumber, options);
+  return parseWithNumbers(
+    data,
+    (text) => preciseNumber(text, options?.preserveNumberLiterals),
+    options,
+  );
 }
 
 /** Pretty-prints JSON while keeping precise numeric literals as JSON numbers. */
@@ -82,6 +94,19 @@ export function formatPrecisionSafeJSON(data: string, options?: PrecisionJSONOpt
 export function transformPrecisionSafeJSONRequest(data: unknown): string {
   if (typeof data === "string") return data;
   return precisionPreservingJSON.stringify(data);
+}
+
+/** Preserve the original number spelling when writing editable request definitions. */
+export function transformNumberLiteralJSONRequest(data: unknown): string {
+  if (typeof data === "string") return data;
+  return (
+    stringify(data, undefined, undefined, [
+      {
+        test: (value) => value instanceof BigNumber && value.isFinite(),
+        stringify: precisionPreservingValueText,
+      },
+    ]) ?? ""
+  );
 }
 
 /** Axios response transformer for APIs that may return dynamic business data. */

@@ -94,6 +94,36 @@ function stateStyles(tokens: GraphTokens) {
   };
 }
 
+/**
+ * Whether two structures place the same nodes, with the same data, the same way, and name every
+ * edge, so their edges can be told apart.
+ */
+function sameNodes(before: GraphData, after: GraphData): boolean {
+  const left = before.nodes ?? [];
+  const right = after.nodes ?? [];
+  const named = (data: GraphData) => (data.edges ?? []).every((edge) => edge.id !== undefined);
+  return (
+    named(before) &&
+    named(after) &&
+    left.length === right.length &&
+    left.every((node, index) => JSON.stringify(node) === JSON.stringify(right[index])) &&
+    JSON.stringify(before.combos ?? []) === JSON.stringify(after.combos ?? [])
+  );
+}
+
+/** The edges to add, remove and update to go from one structure to another. */
+function edgeChanges(before: GraphData, after: GraphData) {
+  const previous = new Map((before.edges ?? []).map((edge) => [String(edge.id), edge]));
+  const next = new Map((after.edges ?? []).map((edge) => [String(edge.id), edge]));
+  const added = [...next.values()].filter((edge) => !previous.has(String(edge.id)));
+  const removed = [...previous.keys()].filter((id) => !next.has(id));
+  const changed = [...next.values()].filter((edge) => {
+    const old = previous.get(String(edge.id));
+    return old !== undefined && JSON.stringify(old) !== JSON.stringify(edge);
+  });
+  return { added, removed, changed };
+}
+
 export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6CanvasProps>(
   function OntologyG6Canvas(props, ref) {
     const { structure, decorations, tokens, totalNodes, ariaLabel } = props;
@@ -241,8 +271,25 @@ export const OntologyG6Canvas = forwardRef<OntologyCanvasHandle, OntologyG6Canva
       };
     }, []);
 
+    // The structure and theme last drawn: a change of edges only is applied in place.
+    const drawnRef = useRef<{ structure: GraphData; tokens: GraphTokens } | null>(null);
+
     // A new graph, arrangement or theme: redraw from the arranged positions and fit the view.
+    // Only edges changed, as when a relation is previewed: add and remove them where the types
+    // stand, keeping the reader's pan, zoom and dragged positions.
     useEffect(() => {
+      const drawn = drawnRef.current;
+      drawnRef.current = { structure, tokens };
+      if (drawn && drawn.tokens === tokens && sameNodes(drawn.structure, structure)) {
+        enqueue(async (graph) => {
+          const { added, removed, changed } = edgeChanges(drawn.structure, structure);
+          if (removed.length) graph.removeEdgeData(removed);
+          if (added.length) graph.addEdgeData(added);
+          if (changed.length) graph.updateEdgeData(changed);
+          await applyDecorations(graph, decorationsRef.current);
+        });
+        return;
+      }
       enqueue(async (graph) => {
         const states = stateStyles(tokens);
         graph.setNode({ type: "circle", state: states.node });

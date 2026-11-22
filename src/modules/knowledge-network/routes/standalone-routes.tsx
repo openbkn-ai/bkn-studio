@@ -130,7 +130,13 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.permissionMatrix.description",
       titleKey: "knowledgeNetwork.permissionMatrix.title",
     },
-    workspaceSectionPage("permissions"),
+    <RequireEdition
+      capability={CAPABILITIES.PERMISSION_MATRIX}
+      minEdition="enterprise"
+      mountLockedContent={false}
+    >
+      {workspaceSectionPage("permissions")}
+    </RequireEdition>,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/experience",

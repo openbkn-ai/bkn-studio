@@ -20,8 +20,9 @@
  * 只是"哪个能力"的标识,不参与任何授权判定。
  */
 export const CAPABILITIES = {
-  /** Action execution governance; Professional and higher, implemented by governance. */
+  /** Action execution governance; Enterprise and higher, implemented by governance. */
   ACTION_GOVERNANCE: "action_governance",
+  PERMISSION_MATRIX: "permission_matrix",
   /** SSO configuration management; Professional and higher. */
   SSO: "sso",
   /** 自定义角色/部门/权限的写入面。专业档起。 */
@@ -58,7 +59,7 @@ export const CAPABILITIES = {
    * 本体知识库:接入文件来源,管理内容版本,解析、切片与原文定位。专业档起。
    *
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
-   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建保留 Beta / 专业版入口及许可提示页,实际知识库页面仍由扩展提供。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
+   * bkn-safe-ee 登记装配表,入口按 `capabilityState()` 判。社区构建保留专业版入口及许可提示页,实际知识库页面仍由扩展提供。登记表里目前是 planned,发布时再进能力目录(capability-catalog)。
    *
    * BKN 项目里的知识库扩展(概念模型抽取、实体识别与链接、属性关系事件抽取、知识融合)也按它门控,
    * 不另设 key(bkn-foundry#2522):同为专业档,扩展本就依赖知识库。三态见 `bkn-project-kb-mode.ts`。
@@ -71,6 +72,13 @@ export const CAPABILITIES = {
    * bkn-safe-ee 登记装配表,`/api/safe/v1/capabilities` 报得出它,入口按 `capabilityState()` 判。
    */
   WORKSHOP: "workshop",
+  /**
+   * 项目管理(BKN 项目):以项目组织知识网络的需求、本体建模与发布。专业档起。
+   *
+   * 与应用工坊同一种做法:页面和服务都在企业版镜像里,bkn-safe-ee 登记装配表,
+   * 社区构建只保留侧栏入口和带遮罩的许可提示页。
+   */
+  BKN_PROJECT: "bkn_project",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

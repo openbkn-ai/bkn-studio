@@ -50,8 +50,10 @@ const SUBSCRIPTION_DETAIL_URL = "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
 export function SubscriptionScene() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
+  // 三句拼成一段:英文句间要空格,中文句号后不留空格。
+  const sentenceGap = i18n.language.startsWith("zh") ? "" : " ";
   const entitlement = useEntitlement();
   const runtimeConfig = useRuntimeConfig();
 
@@ -96,6 +98,7 @@ export function SubscriptionScene() {
         <td>
           <span className={styles.capName}>
             {t(`subscription.capabilities.${entry.key}.name`)}
+            {entry.planned ? <Tag>{t("subscription.matrix.planned")}</Tag> : null}
             {entry.sinceVersion ? (
               <Tag
                 color="blue"
@@ -143,11 +146,12 @@ export function SubscriptionScene() {
           <h2 className={styles.title}>{t("subscription.title")}</h2>
         </div>
         <p className={styles.subtitle}>
-          {t("subscription.subtitle")}{" "}
+          {t("subscription.subtitle")}
+          {sentenceGap}
           {t("subscription.current.edition", {
             edition: editionName(entitlement.edition),
           })}
-          {entitlement.licensed ? null : ` ${t("subscription.current.unlicensed")}`}
+          {entitlement.licensed ? null : `${sentenceGap}${t("subscription.current.unlicensed")}`}
         </p>
       </header>
 
@@ -210,7 +214,7 @@ export function SubscriptionScene() {
                   </li>
                 )}
                 {/*
-                  登记表的名字说不清这一档比上一档多在哪:「细粒度对象授权」细到操作粒度与
+                  登记表的名字说不清这一档比上一档多在哪:「对象授权」细到操作粒度与
                   显式例外,「高级数据连接」连的是哪些库,「业务溯源」看得到哪几条链——卡片
                   得把这几项列出来。默认与升级弹窗同一份卖点;连接器的卖点是整句,卡片上只列
                   它的摘要(`cardBullets`),整句留给弹窗,否则卡片会被拉成一页说明书。
@@ -234,6 +238,11 @@ export function SubscriptionScene() {
                       <CheckOutlined className={styles.tick} />
                       <span>
                         {t(`subscription.capabilities.${entry.key}.name`)}
+                        {entry.planned ? (
+                          <Tag className={styles.plannedTag}>
+                            {t("subscription.matrix.planned")}
+                          </Tag>
+                        ) : null}
                         {bullets.length > 0 ? (
                           <ul className={styles.planFeatDetail}>
                             {bullets.map((text) => (

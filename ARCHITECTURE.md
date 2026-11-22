@@ -196,7 +196,7 @@ src/app/extensions/installed.ts       唯一的注册点；社区构建为空
 - `actionExecutionGate` 为行动执行入口提供可选管控协商组件。执行器以 `GovernanceRequired` 冲突拒绝执行时，入口把已组装的执行输入交给该组件展示管控结论（允许、禁止、待本人确认、待外部审批），组件回调一次性执行凭证后入口原样重试；未注册时执行入口保持原有直接执行与报错行为。
 - 工作区扩展可声明 `section: "risk-control"`；行动管控复用风险管控组内既有入口，由注册表为其页面挂载能力守卫，不在能力验证组重复展示。
 - 扩展文案按 locale 合进 i18n 资源，不覆盖已有 key
-- 数据资源知识网络的知识库入口在社区版保留，显示 Beta 与专业版标签并打开许可说明；有效专业版、企业版许可只显示 Beta。未安装知识库扩展时由社区提示路由承接，已安装时不遮蔽实际扩展路由；服务端能力守卫继续控制实际功能，未授权时不挂载知识库实现。
+- 数据资源知识网络的知识库入口在社区版保留，显示专业版标签并打开许可说明；有效专业版、企业版许可下不显示标签。未安装知识库扩展时由社区提示路由承接，已安装时不遮蔽实际扩展路由；服务端能力守卫继续控制实际功能，未授权时不挂载知识库实现。
 - BKN 项目资源页的知识库区域通过 `projectKnowledgeBaseResources` 注册嵌入组件，传入项目编号、可编辑状态和可清理保留登记状态。区域继续由现有 `BknProjectKbSlot` 门控；未授权时不挂载组件。具体来源操作由专业版实现，社区仓不引入专业版代码。
 - 工作区侧栏入口使用 `workspaceNavItems`；默认新标签页打开，`openIn: "workspace"` 使用当前页路由并高亮选中项。扩展路由可复用 `KnowledgeNetworkWorkspaceScene` 的 `section="extension"` 与 `children` 插槽，在保留知识网络导航的同时呈现扩展内容；路由仍由注册表统一挂载能力守卫。
 - 扩展用到的本仓内部接口（服务、框架件）改动时，要想到企业版构建会跟着断；企业版 CI 每天拿本仓 main 构建一次来发现漂移
@@ -337,3 +337,7 @@ src/modules/<module-name>/
 - 宿主耦合统一收口到 `framework/runtime`
 - 模块与页面不直接感知宿主实现细节
 - 不为未来可能的宿主场景，把复杂兼容逻辑提前散落进业务页面
+
+## API Resource 管理
+
+数据目录模块通过 `ApiResourceScene` 提供只读 API Resource 图形化管理，场景契约从模块 `index.ts` 导出。创建入口位于兼容 API Catalog 的资源列表，详情入口为 `/data-catalog/api-resource/:resourceId`。请求、响应及 Schema 控件复用 `shared/api-definition`；Resource 专属构造与 Schema 扩展按需启用，Catalog 登录编辑保持既有流程。候选定义由 Resource 保存接口验证，已保存定义通过 ResourceData 查询验证，不在浏览器执行上游业务请求。正式契约见 [API Catalog/Resource 实现设计](https://github.com/openbkn-ai/bkn-docs/blob/main/docs/foundry/vega/design/issue-2776-generic-api-catalog-resource-implementation-design.md)。

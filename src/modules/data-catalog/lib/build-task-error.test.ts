@@ -38,4 +38,38 @@ describe("summarizeBuildTaskError", () => {
     expect(summary?.title).toBe("任务状态写入冲突");
     expect(summary?.suggestion).toContain("请刷新任务列表");
   });
+
+  it.each([
+    {
+      raw: "cannot recover incremental checkpoint: unsupported cursor field",
+      language: "zh-CN",
+      title: "增量游标恢复失败",
+      message: "游标中有字段不支持自动恢复。",
+      suggestion: "请确认已配置增量键，再运行一次全量构建。",
+    },
+    {
+      raw: "cannot recover incremental checkpoint: published index query failed",
+      language: "en-US",
+      title: "Incremental cursor recovery failed",
+      message: "Vega could not query the published index.",
+      suggestion: "Check that the published index is available, then retry the incremental build.",
+    },
+    {
+      raw: "cannot recover incremental checkpoint: invalid indexed cursor",
+      language: "en-US",
+      title: "Incremental cursor recovery failed",
+      message: "The indexed values cannot form a valid incremental cursor.",
+      suggestion: "Make sure an incremental key is configured, then run a full build.",
+    },
+    {
+      raw: "cannot recover a compatible incremental checkpoint from the published index",
+      language: "zh-CN",
+      title: "增量游标恢复失败",
+      message: "Vega 无法从已发布的索引恢复增量游标。",
+      suggestion:
+        "请确认已发布的索引可用，再重试增量构建。若仍无法恢复，请配置增量键并运行一次全量构建。",
+    },
+  ])("explains recovery failure: $raw", ({ raw, language, title, message, suggestion }) => {
+    expect(summarizeBuildTaskError(raw, language)).toEqual({ raw, title, message, suggestion });
+  });
 });

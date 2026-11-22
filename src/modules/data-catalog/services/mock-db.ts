@@ -13,6 +13,8 @@ import type {
   ResourceSchemaField,
 } from "@/modules/data-catalog/types/data-catalog";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
+import { apiResourceMockSummary, mockApiResourceFixtures } from "./api-resource-mock-data";
+import type { ApiResource } from "../types/api-resource";
 
 /**
  * Shared mock storage for data resources, build tasks, and discovery records. It models SDK behavior:
@@ -1342,9 +1344,21 @@ export const mockResources: CatalogResource[] = [
     rowCount: 0,
     expectedUpdateTime: minutesAgo(3),
   }),
+  ...mockApiResourceFixtures.map(apiResourceMockSummary),
 ];
 
 export { mockBuildSchedules } from "@/shared/schedule/build-schedule-mock";
+
+/** Definitions share lifecycle metadata with mockResources instead of a second resource store. */
+export const mockApiDefinitions = new Map<
+  string,
+  Pick<ApiResource, "api_definition" | "schema_definition">
+>(
+  mockApiResourceFixtures.map((resource) => [
+    resource.id,
+    { api_definition: resource.api_definition, schema_definition: resource.schema_definition },
+  ]),
+);
 
 const mockCatalogNames: Record<string, string> = {
   "cat-001": "customer_master",

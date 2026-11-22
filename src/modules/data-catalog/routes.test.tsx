@@ -5,8 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isValidElement } from "react";
 import { describe, expect, it } from "vitest";
 
+import { deriveStudioPermissions, flattenSafeGrants } from "@/framework/auth/permission-map";
+import { hasPermissions } from "@/framework/permission/has-permissions";
+import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifest";
 import { dataCatalogRoutes } from "@/modules/data-catalog/routes";
 
 describe("data-catalog routes", () => {
@@ -36,5 +40,34 @@ describe("data-catalog routes", () => {
     const paths = dataCatalogRoutes.map((route) => route.path);
     expect(paths).toContain("data-catalog/catalog/:catalogId/views/new");
     expect(paths).toContain("data-catalog/resource/:resourceId/edit");
+  });
+
+  it("registers separate API Resource detail, create, and edit routes", () => {
+    const paths = dataCatalogRoutes.map((route) => route.path);
+    expect(paths).toContain("data-catalog/api-resource/:resourceId");
+    expect(paths).toContain("data-catalog/catalog/:catalogId/api/new");
+    expect(paths).toContain("data-catalog/api-resource/:resourceId/edit");
+  });
+
+  it("allows a resource-only editor to enter the edit route but not the create route", () => {
+    const permissions = deriveStudioPermissions(
+      dataCatalogModuleManifest.permissions,
+      flattenSafeGrants([
+        { resource: { type: "resource", id: "orders" }, operations: ["view_detail", "modify"] },
+      ]),
+      false,
+    );
+    const canEnter = (path: string) => {
+      const element = dataCatalogRoutes.find((route) => route.path === path)?.element;
+      if (!isValidElement<{ permissions: string | string[] }>(element))
+        throw new Error("Expected a guarded route");
+      return hasPermissions({
+        currentPermissions: permissions,
+        requiredPermissions: element.props.permissions,
+        mode: "any",
+      });
+    };
+    expect(canEnter("data-catalog/api-resource/:resourceId/edit")).toBe(true);
+    expect(canEnter("data-catalog/catalog/:catalogId/api/new")).toBe(false);
   });
 });

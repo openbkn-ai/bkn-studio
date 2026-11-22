@@ -6,7 +6,7 @@
  */
 
 import { Alert, Drawer, Input, Select, Space, Tooltip } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -138,6 +138,7 @@ export function IndexConfigFormPanel({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
+  const incrementalFieldsId = useId();
 
   const [activeTaskLookup, setActiveTaskLookup] = useState<{
     resourceId: string;
@@ -722,6 +723,7 @@ export function IndexConfigFormPanel({
           enabled: detail.enabled ?? true,
           expectedUpdateTime: detail.expectedUpdateTime,
           name: detail.name,
+          tags: detail.tags ?? [],
           sourceIdentifier: detail.sourceIdentifier,
           schema: nextSchema,
           indexConfig: nextIndexConfig,
@@ -830,9 +832,6 @@ export function IndexConfigFormPanel({
   const configurationIssues = [
     ...(supportsBuild && primaryKeyFields.length === 0
       ? [t("dataCatalog.build.primaryKeyRequired")]
-      : []),
-    ...(supportsBuild && incrementalFields.length === 0
-      ? [t("dataCatalog.build.incrementalKeyRequired")]
       : []),
     ...(configurationValidationError ? [configurationValidationError] : []),
   ];
@@ -1469,10 +1468,15 @@ export function IndexConfigFormPanel({
                 </span>
               </label>
               <label className={formStyles.resourceDefaultItem}>
-                <span className={formStyles.resourceDefaultItemHead}>
+                <span
+                  className={formStyles.resourceDefaultItemHead}
+                  id={`${incrementalFieldsId}-label`}
+                >
                   {t("dataCatalog.build.roleIncrementalKey")}
                 </span>
                 <Select
+                  aria-describedby={`${incrementalFieldsId}-hint`}
+                  aria-labelledby={`${incrementalFieldsId}-label`}
                   disabled={actionsLocked}
                   mode="multiple"
                   onChange={(values) => {
@@ -1485,8 +1489,14 @@ export function IndexConfigFormPanel({
                   style={{ width: "100%" }}
                   value={incrementalFields}
                 />
-                <span className={formStyles.fieldHint}>
+                <span className={formStyles.fieldHint} id={`${incrementalFieldsId}-hint`}>
                   {t("dataCatalog.build.incrementalFieldsHint")}
+                  {incrementalFields.length === 0 ? (
+                    <>
+                      {" "}
+                      <span>{t("dataCatalog.build.fullBuildWithoutIncrementalKey")}</span>
+                    </>
+                  ) : null}
                 </span>
               </label>
             </div>

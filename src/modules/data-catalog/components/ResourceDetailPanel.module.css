@@ -7,7 +7,9 @@
 
 .contentSurface {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+  min-inline-size: 0;
 }
 
 .detailHeader {
@@ -89,6 +91,7 @@
 }
 
 .sectionCard {
+  min-inline-size: 0;
   padding: 14px 16px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
@@ -196,6 +199,12 @@
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.requiredMark,
+.fieldError {
+  color: var(--color-error-text);
+  font-size: 12px;
 }
 
 .basicInfoDescription {
@@ -372,6 +381,7 @@
     grid-template-columns: 1fr;
   }
 
+  .basicInfoItem,
   .basicInfoSpanTwo,
   .basicInfoHalf,
   .basicInfoQuarter,

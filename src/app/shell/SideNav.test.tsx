@@ -67,7 +67,7 @@ afterEach(cleanup);
 describe("knowledge base sidebar labels", () => {
   for (const chinese of [false, true])
     for (const edition of ["community", "professional", "enterprise"] as const) {
-      it(`${chinese ? "Chinese" : "English"} ${edition} keeps Beta and shows Pro only when a licence is needed`, () => {
+      it(`${chinese ? "Chinese" : "English"} ${edition} shows no Beta, and Pro only when a licence is needed`, () => {
         badgeState.chinese = chinese;
         badgeState.snapshot = {
           edition,
@@ -81,7 +81,7 @@ describe("knowledge base sidebar labels", () => {
         const button = screen.getByRole("button", {
           name: chinese ? /^知识库/ : /^Knowledge base/,
         });
-        expect(within(button).getByText("Beta")).toBeTruthy();
+        expect(within(button).queryByText("Beta")).toBeNull();
         expect(Boolean(within(button).queryByText(chinese ? "专业版" : "Pro"))).toBe(
           edition === "community",
         );

@@ -1064,13 +1064,11 @@ describe("action-type.service - optional reads", () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
     const { listKnowledgeNetworkActionTypes } = await import("./action-type.service");
     await listKnowledgeNetworkActionTypes("kn-1", { publishedOnly: true });
-    expect(getMock).toHaveBeenCalledWith(
-      "/bkn-backend/v1/knowledge-networks/kn-1/action-types",
-      expect.objectContaining({
-        _knSkip: true,
-        params: expect.objectContaining({ branch: "main" }),
-      }),
-    );
+    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1/action-types", {
+      _knSkip: true,
+      params: { branch: "main", direction: "desc", limit: -1, offset: 0, sort: "update_time" },
+      skipErrorToast: undefined,
+    });
   });
 
   // The app development page reads action types as optional data: a 403 must not raise a toast.

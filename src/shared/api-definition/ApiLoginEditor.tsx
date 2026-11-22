@@ -54,34 +54,22 @@ export function ApiLoginEditor({
               key: "response",
               label: t("dataConnect.apiEditor.response"),
               children: (
-                <div
-                  className={`${styles.member} ${styles.sectionCard}`}
-                  role="group"
-                  aria-label={t("dataConnect.apiEditor.response")}
-                >
-                  <ApiResponseEditor
-                    value={objectValue(value.response)}
-                    onChange={(next) => change("response", next)}
-                    disabled={disabled}
-                  />
-                </div>
+                <ApiResponseEditor
+                  value={objectValue(value.response)}
+                  onChange={(next) => change("response", next)}
+                  disabled={disabled}
+                />
               ),
             },
             {
               key: "success",
               label: t("dataConnect.apiEditor.success"),
               children: (
-                <div
-                  className={`${styles.member} ${styles.sectionCard}`}
-                  role="group"
-                  aria-label={t("dataConnect.apiEditor.success")}
-                >
-                  <ApiSuccessRuleEditor
-                    value={objectValue(value.success_rule)}
-                    onChange={(next) => change("success_rule", next)}
-                    disabled={disabled}
-                  />
-                </div>
+                <ApiSuccessRuleEditor
+                  value={objectValue(value.success_rule)}
+                  onChange={(next) => change("success_rule", next)}
+                  disabled={disabled}
+                />
               ),
             },
           ]}

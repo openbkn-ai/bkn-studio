@@ -19,6 +19,161 @@ export const MOCK_CATALOG_OPERATIONS = [
 
 let mockCatalogs: CatalogRecord[] = [
   {
+    id: "cat-api-demo",
+    builtin: false,
+    name: "api_demo",
+    description: "完整 API 配置展示样例，覆盖变量、登录定义与调用限制，尚未验证真实上游调用。",
+    connectorType: "http",
+    category: "api",
+    mode: "local",
+    enabled: true,
+    status: "enabled",
+    healthStatus: "unchecked",
+    healthCheckResult: "",
+    lastCheckTime: "-",
+    expectedUpdateTime: Date.parse("2026-11-19T00:00:00Z"),
+    updateTime: "2026-11-19 08:00:00",
+    createTime: "2026-11-19 08:00:00",
+    updaterName: "Platform Admin",
+    creatorName: "Platform Admin",
+    tags: ["api", "demo"],
+    connectorConfig: {
+      base_url: "https://api.example.com/",
+      variables: {
+        tenant: { value: "demo", sensitive: false },
+        client_name: { value: "studio-demo", sensitive: false },
+        username: { value: "demo-reader", sensitive: false },
+        password: { value: "demo-only-password-not-valid", sensitive: true },
+        api_key: { value: "demo-only-api-key-not-valid", sensitive: true },
+        locale: { value: 1033, sensitive: false },
+        attempts: { value: 0, sensitive: false },
+        remember: { value: false, sensitive: false },
+        account_id: { value: "9007199254740993", sensitive: false },
+        scopes: { value: ["catalog:read", "resource:read"], sensitive: false },
+        empty_scopes: { value: [], sensitive: false },
+        client_context: {
+          value: { channel: "studio", version: "1.0", flags: { audit: true } },
+          sensitive: false,
+        },
+        empty_note: { value: "", sensitive: false },
+        extra_context: { value: {}, sensitive: false },
+      },
+      options: { timeout_seconds: 30, max_response_mib: 10 },
+      login_request: {
+        request: {
+          method: "POST",
+          path: "auth/login",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Client-Name": "{{ client_name }}",
+            Authorization: "Bearer {{ api_key }}",
+          },
+          parameters: [
+            { name: "tenant", value: "{{ tenant }}", default_value: "demo", required: true },
+            { name: "locale", value: "{{ locale }}", default_value: 1033, required: false },
+          ],
+          body: {
+            type: "object",
+            required: ["username", "password"],
+            properties: {
+              username: { type: "string", value: "{{ username }}" },
+              password: { type: "string", value: "{{ password }}" },
+              remember: { type: "boolean", value: "{{ remember }}" },
+              client_context_json: {
+                type: "string",
+                value: "{{ client_context }}",
+                serialize: "json",
+              },
+              client: {
+                type: "object",
+                properties: {
+                  name: { type: "string", value: "{{ client_name }}" },
+                  scopes: {
+                    type: "array",
+                    items: { type: "string" },
+                    value: [
+                      { type: "string", value: "catalog:read" },
+                      { type: "string", value: "resource:read" },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        response: {
+          content_type: "application/json",
+          statuses: {
+            "200": {
+              description: "登录业务响应",
+              headers: {
+                "X-Request-ID": { description: "演示请求编号", schema: { type: "string" } },
+              },
+              schema: {
+                oneOf: [
+                  {
+                    type: "object",
+                    required: ["success", "data"],
+                    properties: {
+                      success: { type: "boolean", const: true },
+                      status: { type: "string", enum: ["ok", "success"] },
+                      data: {
+                        type: "object",
+                        required: ["user_id"],
+                        properties: {
+                          user_id: { type: "string" },
+                          display_name: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    type: "object",
+                    required: ["success", "error"],
+                    properties: {
+                      success: { type: "boolean", const: false },
+                      error: { type: "string" },
+                    },
+                  },
+                ],
+              },
+            },
+            "401": {
+              description: "凭据无效的响应示例",
+              schema: {
+                type: "object",
+                required: ["error"],
+                properties: { error: { type: "string" } },
+              },
+            },
+            default: { description: "不接受其他响应", schema: false },
+          },
+        },
+        success_rule: {
+          http_status: [200],
+          body_filter_condition: {
+            operation: "and",
+            sub_conditions: [
+              { field: "success", operation: "eq", value: true },
+              { field: "error", operation: "not_exist" },
+              {
+                operation: "or",
+                sub_conditions: [
+                  { field: "status", operation: "eq", value: "ok" },
+                  { field: "status", operation: "eq", value: "success" },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    },
+    metadata: {},
+    operations: [...MOCK_CATALOG_OPERATIONS],
+    type: "physical",
+  },
+  {
     id: "cat-001",
     builtin: false,
     name: "customer_master",

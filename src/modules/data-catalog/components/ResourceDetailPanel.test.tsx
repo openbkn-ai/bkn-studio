@@ -107,15 +107,49 @@ describe("ResourceDetailPanel", () => {
     }));
   });
 
+  it("edits table basic information without submitting the field schema", async () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{ ...resource, tags: ["orders"] }}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editBasicInfo" }));
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "dataCatalog.resource.basicName" }), {
+      target: { value: " Order facts " },
+    });
+    fireEvent.change(screen.getByLabelText("dataCatalog.resource.description"), {
+      target: { value: "Sales orders" },
+    });
+    const tags = screen.getByRole("combobox", { name: "dataCatalog.resource.tags" });
+    fireEvent.keyDown(tags, { key: "Backspace" });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
+    const input: unknown = updateCatalogResourceMock.mock.calls[0]?.[1];
+    expect(input).toMatchObject({ name: "Order facts", description: "Sales orders", tags: [] });
+    expect(input).not.toHaveProperty("schema");
+  });
+
   it("edits and saves only the filtering switch while keeping the field in the schema", async () => {
     render(
       <MemoryRouter>
-        <ResourceDetailPanel active canEdit catalog={null} resource={resource} />
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{ ...resource, tags: ["orders"] }}
+        />
       </MemoryRouter>,
     );
     expect(screen.getByText("dataCatalog.resource.filterableEnabled")).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editSchemaFields" }));
+    expect(screen.queryByRole("textbox", { name: "dataCatalog.resource.description" })).toBeNull();
     const toggle = screen.getByRole("switch", {
       name: "dataCatalog.resource.fieldFilterableLabel",
     });
@@ -124,7 +158,10 @@ describe("ResourceDetailPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledOnce());
     expect(updateCatalogResourceMock.mock.calls[0]?.[1]).toMatchObject({
+      name: resource.name,
+      description: resource.description,
       schema: [{ name: "id", filterable: false, originalName: "source_order_id" }],
+      tags: ["orders"],
     });
   });
 
@@ -144,7 +181,9 @@ describe("ResourceDetailPanel", () => {
           />
         </MemoryRouter>,
       );
-      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "dataCatalog.resource.editSchemaFields" }),
+      );
       const toggle = screen.getByRole("switch");
       expect(toggle).toBeDisabled();
       fireEvent.mouseEnter(toggle.parentElement!);
@@ -168,7 +207,7 @@ describe("ResourceDetailPanel", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editSchemaFields" }));
     expect(screen.getByRole("switch")).not.toBeDisabled();
     fireEvent.click(screen.getByRole("switch"));
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
@@ -181,7 +220,7 @@ describe("ResourceDetailPanel", () => {
   it.each(["binary", "ip"])(
     "rejects unsupported enabled %s history on save and allows turning it off",
     async (type) => {
-      const { container } = render(
+      render(
         <MemoryRouter>
           <ResourceDetailPanel
             active
@@ -194,10 +233,15 @@ describe("ResourceDetailPanel", () => {
           />
         </MemoryRouter>,
       );
-      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
-      fireEvent.change(container.querySelector("textarea")!, {
-        target: { value: "new description" },
-      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "dataCatalog.resource.editSchemaFields" }),
+      );
+      fireEvent.change(
+        screen.getByRole("textbox", { name: "dataCatalog.resource.fieldDescriptionLabel" }),
+        {
+          target: { value: "new field description" },
+        },
+      );
       fireEvent.click(screen.getByRole("button", { name: "common.save" }));
       await waitFor(() =>
         expect(messageMock.error).toHaveBeenCalledWith(
@@ -223,7 +267,7 @@ describe("ResourceDetailPanel", () => {
         <ResourceDetailPanel active canEdit catalog={null} resource={resource} />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editSchemaFields" }));
     fireEvent.click(screen.getByRole("switch"));
     fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
     expect(screen.getByText("dataCatalog.resource.filterableEnabled")).toBeTruthy();
@@ -540,7 +584,9 @@ describe("ResourceDetailPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.resource.editSchemaFields" }),
+    ).toBeNull();
   });
 
   it("shows logic view details without the unsupported generic edit action", () => {
@@ -568,7 +614,9 @@ describe("ResourceDetailPanel", () => {
     expect(screen.queryByText("dataCatalog.resource.indexName")).toBeNull();
     expect(screen.queryByText("dataCatalog.resource.discoverStatus")).toBeNull();
     expect(screen.queryByText("dataCatalog.discoverStatuses.updated")).toBeNull();
-    expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.resource.editSchemaFields" }),
+    ).toBeNull();
     expect(screen.getByText("dataCatalog.resource.logicalViewReadOnly")).toBeTruthy();
     const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
     expect(within(sourceMetadata).getByText("dataCatalog.resource.originalName")).toBeTruthy();
@@ -683,8 +731,9 @@ describe("ResourceDetailPanel", () => {
   it.each([
     { category: "index", localIndexStatus: "unavailable", localIndexName: undefined },
     { category: "table", localIndexStatus: "available", localIndexName: "idx_orders" },
+    { category: "table", localIndexStatus: "readonly", localIndexName: "idx_orders" },
   ] as const)(
-    "uses the index channel to show a legacy before condition for $category",
+    "uses the index channel to show a legacy before condition for $category $localIndexStatus",
     async (sourceState) => {
       const filter = { field: "at", operation: "before", value: [3, "2026-10-30T00:00:00Z"] };
       getCatalogResourceMock.mockResolvedValue({
@@ -824,7 +873,7 @@ describe("ResourceDetailPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editFields" }));
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.resource.editBasicInfo" }));
     const descriptionInput = container.querySelector("textarea");
     if (!descriptionInput) {
       throw new Error("resource description input not found");

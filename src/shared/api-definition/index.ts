@@ -12,6 +12,7 @@ export type { ApiDefinitionEditorProps } from "./types";
 export { ApiLoginEditor, type ApiLoginEditorProps } from "./ApiLoginEditor";
 export { ApiSchemaEditor, type ApiSchemaEditorProps } from "./ApiSchemaEditor";
 export { ApiValueEditor, ApiValueTypeSelect, type ValueEditorProps } from "./ApiValueEditor";
+export { ApiVariableEditor } from "./ApiVariableEditor";
 export { validateApiLoginDefinition } from "./model";
 
 export function createApiLoginDefinition(): Record<string, unknown> {

@@ -11,7 +11,6 @@ import { commonZhCN } from "@/app/locales/resources/common/zh-CN";
 import { shellZhCN } from "@/app/locales/resources/shell/zh-CN";
 import { accountZhCN } from "@/modules/account/locales/zh-CN";
 import { apiKeysZhCN } from "@/modules/api-keys/locales/zh-CN";
-import { bknProjectZhCN } from "@/modules/bkn-project/locales/zh-CN";
 import { bknTraceZhCN } from "@/modules/bkn-trace/locales/zh-CN";
 import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
 import { dataConnectZhCN } from "@/modules/data-connect/locales/zh-CN";
@@ -38,7 +37,6 @@ export const zhCN = {
   ...subscriptionZhCN,
   ...systemAdminZhCN,
   ...apiKeysZhCN,
-  ...bknProjectZhCN,
   ...bknTraceZhCN,
   ...accountZhCN,
   executionFactoryLab: {

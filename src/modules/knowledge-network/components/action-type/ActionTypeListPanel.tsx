@@ -22,7 +22,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isCommunityBuild } from "@/framework/entitlement/types";
-import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { extensionWorkspaceNavItems } from "@/framework/extension/registry";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { ActionTypeCreateEntryModal } from "@/modules/knowledge-network/components/action-type/ActionTypeCreateEntryModal";
@@ -126,6 +129,17 @@ export function ActionTypeListPanel({
   onDelete,
 }: ActionTypeListPanelProps) {
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const { snapshot } = useEntitlementContext();
+  const actionControlPath = capabilitySatisfied(
+    CAPABILITIES.ACTION_GOVERNANCE,
+    snapshot,
+    "enterprise",
+    false,
+  )
+    ? extensionWorkspaceNavItems("risk-control")
+        .find((item) => item.id === "action-control")
+        ?.path(networkId)
+    : undefined;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -516,6 +530,14 @@ export function ActionTypeListPanel({
       return;
     }
 
+    if (key === "action-control" && actionControlPath) {
+      const query = new URLSearchParams({ action_type_id: record.id });
+      void navigate(`${actionControlPath}?${query}`, {
+        state: knowledgeNetworkReturnState(currentReturnTo),
+      });
+      return;
+    }
+
     if (key === "authorize") {
       setAuthorizingRecord(record);
       return;
@@ -588,6 +610,9 @@ export function ActionTypeListPanel({
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "execute")
             ? [{ key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") }]
+            : []),
+          ...(actionControlPath && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{ key: "action-control", label: t("knowledgeNetwork.riskActionControlNav") }]
             : []),
           ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
             ? [

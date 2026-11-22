@@ -25,6 +25,16 @@
   color: var(--color-text-secondary);
   font-size: 13px;
 }
+.unknownPagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-block: 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
 
 .previewControls {
   display: flex;

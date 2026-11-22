@@ -40,7 +40,7 @@ export const subscriptionEnUS = {
       },
       connector_certified: {
         bullets: {
-          b1: "Connect directly to SQL Server, Oracle and Doris; SAP HANA requires Enterprise or higher",
+          b1: "Connect directly to SQL Server, Oracle and Doris, and connect data through APIs; SAP HANA requires Enterprise or higher",
           b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
           b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
           b4: "Using a connector requires a valid licence for its edition and a Vega deployment image containing its implementation",
@@ -50,9 +50,10 @@ export const subscriptionEnUS = {
           b1: "SQL Server",
           b2: "Oracle",
           b3: "Doris",
+          b4: "Data through APIs",
         },
         description:
-          "Certified and advanced source connectors: Professional includes SQL Server, Oracle and Doris; Enterprise adds SAP HANA. Community ships the basic connectors only.",
+          "Certified and advanced source connectors: Professional includes SQL Server, Oracle, Doris and API connections; Enterprise adds SAP HANA. Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
       vega_logic_view: {
@@ -61,15 +62,30 @@ export const subscriptionEnUS = {
       },
       graph_explorer: {
         bullets: {
-          b1: "Find instances by semantic search, filter, browsing or Cypher, then expand along relations hop by hop",
-          b2: "Path finding between two instances, with several layouts",
-          b3: "Exploration history, canvas export and shareable links",
+          b1: "Find instances by search or Cypher, expand hop by hop",
+          b2: "Paths between instances, several layouts",
+          b3: "History, canvas export and share links",
         },
         description:
           "Start from a concrete instance, expand its neighbours and trace paths on a canvas; also opens graph links handed over by agents.",
         name: "Graph explorer",
       },
+      bkn_project: {
+        bullets: {
+          b1: "Requirements, ontology modelling and network releases in one place",
+          b2: "Extract concepts from data tables",
+          b3: "Kinetic modelling and business scenarios",
+        },
+        description:
+          "Organise a knowledge network's requirements, ontology modelling and releases as projects.",
+        name: "Project management",
+      },
       knowledge_base: {
+        bullets: {
+          b1: "Extract concepts, properties, relations and events from documents",
+          b2: "Entity recognition, linking and fusion",
+          b3: "File ingestion, chunking and source location",
+        },
         description:
           "Connect files from object storage, file services and other sources, keep their content versions, and parse, chunk and locate them in the original text.",
         name: "Ontology knowledge base",
@@ -78,11 +94,15 @@ export const subscriptionEnUS = {
         name: "Action control",
         description: "Configure confirmation, denial and business approval rules for actions.",
       },
+      permission_matrix: {
+        name: "Permission matrix",
+        description: "Review user and role permissions across knowledge network resources.",
+      },
       object_metrics: {
         bullets: {
-          b1: "Manage atomic, derived and composite metrics by object type",
-          b2: "Validate, preview, version, publish, bind to logical properties and inspect lineage",
-          b3: "Query and trial metric results for object instances or object sets",
+          b1: "Atomic, derived and composite metrics",
+          b2: "Validate, preview, publish and trace lineage",
+          b3: "Query and trial by instance or object set",
         },
         description:
           "Define, validate, publish and query atomic, derived and composite metrics by object type.",
@@ -90,34 +110,60 @@ export const subscriptionEnUS = {
       },
       workshop: {
         bullets: {
-          b1: "Build pages from components with AI help, and import or export apps",
-          b2: "Handle events from rule hits or user reports as tasks: analysis, then handling",
-          b3: "Simulate scenarios and try models, then run actions per object once confirmed",
+          b1: "Build pages from components with AI help",
+          b2: "Handle events as tasks",
+          b3: "Scenarios, model trials and actions",
         },
         description:
           "Build business apps on knowledge networks: pages and components, events and tasks, scenarios.",
         name: "Workshop",
       },
+      analysis_canvas: {
+        description:
+          "Break an analysis into reviewable cards with AI; results are kept on the server and can be shared with others.",
+        name: "Analysis canvas",
+      },
+      version_mgmt: {
+        bullets: {
+          b1: "Multiple versions",
+          b2: "Version history; query and run on a past version",
+          b3: "Version comparison and rollback",
+        },
+        description: "Version history, comparison and rollback for knowledge networks.",
+        name: "Knowledge network versions",
+      },
+      risk_control: {
+        bullets: {
+          b1: "Permission matrix: effective permissions and sources",
+          b2: "Execution control for action types",
+        },
+        description: "Permission matrix and action execution control for knowledge networks.",
+        name: "Risk control",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "View, query, modify, delete and execute granted separately",
-          b2: "Explicit exceptions (direct allow or deny) and full authorization audit",
+          b2: "Explicit allow, deny and authorization audit",
         },
         description: "Per-object allow and deny decisions with source-level revocation",
-        name: "Fine-grained object authorization",
+        name: "Object authorization",
       },
       perm_object_level: {
         bullets: {
-          b1: "Object types support row filtering",
-          b2: "Object types support column filtering (hide property columns, show property names only, or use column masking to redact content)",
+          b1: "Row filtering on object types",
+          b2: "Column filtering: hide, names only, or mask",
           b3: "Audit of row and column permission changes",
         },
         description: "Enterprise object-rule compatibility and property-level controls",
-        name: "Enterprise object rules",
+        name: "Row- and column-level permission control",
       },
       rbac_basic: {
         description: "Custom departments, roles and permission control",
         name: "Custom roles and permissions",
+      },
+      ops_dashboard: {
+        description: "Model usage policies, usage statistics and an O&M dashboard",
+        name: "O&M dashboard",
       },
       semantic_task: {
         description: "Authoring and execution of business-semantic understanding tasks",
@@ -134,13 +180,14 @@ export const subscriptionEnUS = {
       actionSandbox: "Action execution in a secure sandbox",
       basicAudit: "Basic activity audit",
       cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
-      commonSources: "Connect to MySQL, PostgreSQL, MariaDB and OpenSearch as data sources",
+      commonSources: "MySQL, PostgreSQL, MariaDB and OpenSearch",
       executionFactory: "Execution Factory connects OpenAPI, MCP, SKILL and functions",
       indexing: "Data discovery, batch indexing and vectorisation",
       localAuth: "Local sign-in with user, department and built-in role management",
       mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
-      modelingSurfaces: "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
-      modelingTypes: "Object, relation, action and metric modelling",
+      modelingSurfaces: "Model from Studio, CLI, SDK and Skills",
+      modelingTypes: "Object, relation and action modelling",
+      draftAndRunning: "Knowledge network draft and running version",
       oneClickExperience: "Try it in one click with dynamically loaded official examples",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
@@ -171,6 +218,7 @@ export const subscriptionEnUS = {
     matrix: {
       capability: "Capability",
       new: "New",
+      planned: "Planned",
       sinceVersion: "Available from {{version}}",
       title: "Capability comparison",
     },
@@ -188,7 +236,7 @@ export const subscriptionEnUS = {
       },
       enterprise: {
         audience:
-          "For organisations running their enterprise AI agents on OpenBKN. Adds SAP HANA connectivity, fine-grained enterprise object permissions and business provenance on top of Professional.",
+          "For organisations running their enterprise AI agents on OpenBKN. Adds Workshop, the analysis canvas, risk control, knowledge network versions, SAP HANA connectivity, row- and column-level permission control and business provenance on top of Professional.",
         hanaConnector: "SAP HANA",
         price: "Contact us",
         unit: "Per contract",
@@ -196,7 +244,7 @@ export const subscriptionEnUS = {
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "For fast-growing AI-native teams. Adds custom roles and permissions, fine-grained object authorization and advanced data connectivity on top of Community.",
+          "For fast-growing AI-native teams. Adds custom roles and permissions, object authorization, advanced data connectivity (including API connections), project management and the knowledge base on top of Community.",
         price: "¥99,600",
         unit: "/ year · list price",
       },
@@ -211,6 +259,6 @@ export const subscriptionEnUS = {
       "Full capability comparison, service terms and current discounts are in the pricing page; for sales, business@openbkn.ai.",
     title: "Editions & subscription",
     subtitle:
-      "Knowledge network and data capabilities are complete in every edition. Permission boundaries, audit and compliance scale with the edition.",
+      "Knowledge network modelling, common data connections and queries are open in every edition. Projects and the knowledge base, permission control, versions and business apps scale with the edition.",
   },
 } as const;

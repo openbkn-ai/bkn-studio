@@ -6,7 +6,7 @@
  */
 
 import { Tag } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -28,6 +28,7 @@ import { DefinitionAliases } from "@/modules/knowledge-network/components/defini
 import styles from "./ActionTypeOverviewPanel.module.css";
 
 type ActionTypeOverviewPanelProps = {
+  basicInfoExtra?: ReactNode;
   canResolveActionSource: boolean;
   detail: ActionTypeDetail;
   networkId: string;
@@ -111,6 +112,7 @@ function ObjectTypeCell({
 }
 
 export function ActionTypeOverviewPanel({
+  basicInfoExtra,
   canResolveActionSource,
   detail,
   networkId,
@@ -126,10 +128,15 @@ export function ActionTypeOverviewPanel({
     () => objectTypes.find((item) => item.id === detail.affect?.objectTypeId),
     [detail.affect?.objectTypeId, objectTypes],
   );
+  const conditionObjectType = useMemo(
+    () => objectTypes.find((item) => item.id === detail.condition?.objectTypeId),
+    [detail.condition?.objectTypeId, objectTypes],
+  );
   const actionKindLabel = getActionKindLabel(detail.actionKind, t);
   const conditionLabel = formatConditionLabel(detail.condition, t);
   const operationKind = getActionTypeOperationKind(detail);
   const isObjectOperation = operationKind === "object";
+  const showToolCondition = operationKind === "tool" && Boolean(detail.condition);
   const relationConfig =
     detail.operationConfig?.type === "relation" ? detail.operationConfig : undefined;
   const [relation, setRelation] = useState<RelationTypeDetail | null>(null);
@@ -222,6 +229,7 @@ export function ActionTypeOverviewPanel({
                   {detail.color}
                 </span>
               </div>
+              {basicInfoExtra ? <div className={styles.basicExtra}>{basicInfoExtra}</div> : null}
               <div className={styles.basicDescription}>
                 <span>{t("knowledgeNetwork.descriptionField")}</span>
                 <strong>{detail.description || t("knowledgeNetwork.noDescription")}</strong>
@@ -311,10 +319,31 @@ export function ActionTypeOverviewPanel({
                 </div>
               </section>
             )}
+            {showToolCondition ? (
+              <section className={styles.ruleSection}>
+                <div className={styles.ruleHeading}>
+                  <span>1</span>
+                  <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
+                </div>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span>{t("knowledgeNetwork.actionTypeConditionObject")}</span>
+                    <ObjectTypeCell
+                      emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                      objectType={conditionObjectType}
+                    />
+                  </div>
+                  <div className={styles.fullWidthItem}>
+                    <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
+                    <strong>{conditionLabel}</strong>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             <section className={styles.ruleSection}>
               <div className={styles.ruleHeading}>
-                <span>{!isObjectOperation ? 1 : 2}</span>
+                <span>{!isObjectOperation && !showToolCondition ? 1 : 2}</span>
                 <h4>{t("knowledgeNetwork.actionTypeExecutionTool")}</h4>
               </div>
               <ActionTypeExecutionConfigTable

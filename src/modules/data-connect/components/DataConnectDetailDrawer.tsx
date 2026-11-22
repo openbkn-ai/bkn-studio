@@ -31,8 +31,7 @@ import type {
 } from "@/modules/data-connect/types/data-connect";
 import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import { hasCatalogOperation } from "@/shared/catalog";
-import { buildApiCatalogPreview } from "@/modules/data-connect/lib/api-catalog-config";
-import apiStyles from "./ApiCatalogConfigEditor.module.css";
+import { ApiCatalogConfigDetails } from "./ApiCatalogConfigDetails";
 
 import { ScheduleRunResultView } from "@/shared/schedule";
 
@@ -172,7 +171,7 @@ export function DataConnectDetailDrawer({
         header: { padding: "12px 16px" },
       }}
       title={t("dataConnect.detailTitle")}
-      width={560}
+      width="min(960px, 100dvw)"
     >
       {loading ? <Spin /> : null}
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
@@ -281,9 +280,7 @@ export function DataConnectDetailDrawer({
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
             {record.category === "api" ? (
-              <pre className={apiStyles.preview}>
-                {buildApiCatalogPreview(record.connectorConfig)}
-              </pre>
+              <ApiCatalogConfigDetails config={record.connectorConfig} />
             ) : configEntries.length > 0 ? (
               <div className={styles.configGrid}>
                 {configEntries.map((item) => (

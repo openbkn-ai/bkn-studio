@@ -63,6 +63,12 @@ const resource: CatalogResource = {
   expectedUpdateTime: 0,
 };
 
+const publishedResource: CatalogResource = {
+  ...resource,
+  localIndexName: "orders-local",
+  localIndexStatus: "available",
+};
+
 describe("BuildTaskLaunchPanel", () => {
   beforeEach(() => {
     createBuildTaskMock.mockReset();
@@ -140,15 +146,21 @@ describe("BuildTaskLaunchPanel", () => {
     expect(screen.getByText("dataCatalog.build.executeIncremental")).toBeTruthy();
   });
 
-  it("switches batch execution modes and starts the selected incremental build", async () => {
-    createBuildTaskMock.mockResolvedValue({ id: "incremental-task" });
+  it("queues the selected incremental build using the existing request fields", async () => {
+    const queuedTask = {
+      id: "incremental-task",
+      status: "pending",
+      mode: "batch",
+      executeType: "incremental",
+    };
+    createBuildTaskMock.mockResolvedValue(queuedTask);
     const onStarted = vi.fn();
     render(
       <BuildTaskLaunchPanel
         active
         onGoConfigure={vi.fn()}
         onStarted={onStarted}
-        resource={resource}
+        resource={publishedResource}
       />,
     );
     const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
@@ -164,16 +176,163 @@ describe("BuildTaskLaunchPanel", () => {
     expect(full).toBeChecked();
     fireEvent.click(incremental);
     fireEvent.click(start);
-    await waitFor(() =>
-      expect(createBuildTaskMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resourceId: resource.id,
-          mode: "batch",
-          executeType: "incremental",
-        }),
-      ),
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith(queuedTask));
+    expect(createBuildTaskMock).toHaveBeenCalledExactlyOnceWith({
+      resourceId: resource.id,
+      mode: "batch",
+      executeType: "incremental",
+    });
+    expect(start).toBeDisabled();
+  });
+
+  it("allows a full build with only a primary key and explains the source-change risk", async () => {
+    createBuildTaskMock.mockResolvedValue({ id: "full-task" });
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={{ ...resource, indexConfig: { primaryKeyFields: ["id"] } }}
+      />,
     );
-    expect(onStarted).toHaveBeenCalledWith({ id: "incremental-task" });
+
+    const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
+    const full = screen.getByRole("radio", { name: /dataCatalog\.build\.executeFull/ });
+    const incremental = screen.getByRole("radio", {
+      name: /dataCatalog\.build\.executeIncremental/,
+    });
+    await waitFor(() => expect(start).toBeEnabled());
+    expect(screen.getByText("dataCatalog.build.fullBuildWithoutIncrementalKey")).toBeVisible();
+    expect(full).toHaveAccessibleDescription(/dataCatalog\.build\.fullBuildWithoutIncrementalKey/);
+    fireEvent.click(incremental);
+    expect(screen.getByText("dataCatalog.build.incrementalKeyRequired")).toBeVisible();
+    expect(incremental).toHaveAccessibleDescription(/dataCatalog\.build\.incrementalKeyRequired/);
+    expect(start).toBeDisabled();
+    expect(createBuildTaskMock).not.toHaveBeenCalled();
+
+    fireEvent.click(full);
+    fireEvent.click(start);
+    await waitFor(() =>
+      expect(createBuildTaskMock).toHaveBeenCalledWith({
+        resourceId: resource.id,
+        mode: "batch",
+        executeType: "full",
+      }),
+    );
+  });
+
+  it.each([
+    [{ incrementalFields: ["id"] }, "primaryKeyRequired"],
+    [{ incrementalFields: ["deleted"], primaryKeyFields: ["id"] }, "invalidKeyFields"],
+  ])("blocks a full build with an invalid key configuration", async (indexConfig, error) => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={{ ...resource, indexConfig }}
+      />,
+    );
+
+    expect(await screen.findByText(`dataCatalog.build.${error}`)).toBeVisible();
+    expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).toBeDisabled();
+  });
+
+  it.each([
+    { localIndexName: undefined, localIndexStatus: "available" },
+    { localIndexName: "orders-local", localIndexStatus: "stale" },
+    { localIndexName: "orders-local", localIndexStatus: "unavailable" },
+  ] as const)("requires a published index for incremental mode", async (localIndex) => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={{ ...resource, ...localIndex }}
+      />,
+    );
+
+    const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
+    await waitFor(() => expect(start).toBeEnabled());
+    fireEvent.click(screen.getByRole("radio", { name: /dataCatalog\.build\.executeIncremental/ }));
+    expect(screen.getByText("dataCatalog.build.incrementalNeedsPublishedIndex")).toBeVisible();
+    expect(start).toBeDisabled();
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+  });
+
+  it("requires a full rebuild before writing to a read-only published index", async () => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={{ ...publishedResource, localIndexStatus: "readonly" }}
+      />,
+    );
+
+    const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
+    await waitFor(() => expect(start).toBeEnabled());
+    const incremental = screen.getByRole("radio", {
+      name: /dataCatalog\.build\.executeIncremental/,
+    });
+    fireEvent.click(incremental);
+    expect(screen.getByText("dataCatalog.build.incrementalRequiresFullRebuild")).toBeVisible();
+    expect(incremental).toHaveAccessibleDescription(
+      /dataCatalog\.build\.incrementalRequiresFullRebuild/,
+    );
+    expect(start).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /dataCatalog\.build\.executeFull/ }));
+    expect(start).toBeEnabled();
+    expect(createBuildTaskMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the recovery hint and preserves the admission error for an invalid saved cursor", async () => {
+    const description = "The saved incremental cursor is invalid.";
+    createBuildTaskMock
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: { error_code: "VegaBackend.BuildTask.IncrementalBaselineUnavailable", description },
+        },
+      })
+      .mockResolvedValueOnce({ id: "full-task" });
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={publishedResource}
+      />,
+    );
+
+    const start = screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ });
+    const incremental = screen.getByRole("radio", {
+      name: /dataCatalog\.build\.executeIncremental/,
+    });
+    await waitFor(() => expect(start).toBeEnabled());
+    fireEvent.click(incremental);
+    expect(incremental).toHaveAccessibleDescription(
+      "dataCatalog.build.executeIncrementalDescription",
+    );
+    fireEvent.click(start);
+    expect(await screen.findByText(description)).toBeVisible();
+    expect(incremental).toBeChecked();
+    expect(createBuildTaskMock).toHaveBeenCalledExactlyOnceWith({
+      resourceId: resource.id,
+      mode: "batch",
+      executeType: "incremental",
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: /dataCatalog\.build\.executeFull/ }));
+    fireEvent.click(start);
+    await waitFor(() =>
+      expect(createBuildTaskMock).toHaveBeenNthCalledWith(2, {
+        resourceId: resource.id,
+        mode: "batch",
+        executeType: "full",
+      }),
+    );
   });
 
   it("loads only the latest active task for the resource", async () => {

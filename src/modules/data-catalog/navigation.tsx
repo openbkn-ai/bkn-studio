@@ -29,7 +29,6 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       // The community entry explains the licence; installed routes retain their own guards.
       paidCapability: CAPABILITIES.KNOWLEDGE_BASE,
       paidEdition: "professional",
-      stage: "beta",
       key: "knowledge-base",
       labelKey: "shell.items.knowledgeBase",
       icon: <FileTextOutlined />,

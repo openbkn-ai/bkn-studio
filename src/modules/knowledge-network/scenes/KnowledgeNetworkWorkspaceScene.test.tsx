@@ -175,7 +175,7 @@ function renderScene(snapshot: Entitlement, expandGroups = true) {
 
 describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   it("starts collapsed on overview and toggles each group independently", () => {
-    renderScene(entitlement(), false);
+    renderScene(entitlement({ edition: "enterprise", licensed: true }), false);
 
     const verification = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceAbilityVerification",
@@ -226,7 +226,7 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   });
 
   it("keeps only access control and action control under risk control", () => {
-    renderScene(entitlement(), false);
+    renderScene(entitlement({ edition: "enterprise", licensed: true }), false);
 
     const governance = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceRiskControl",
@@ -288,7 +288,11 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   it("highlights version management without expanding a group", () => {
     render(
       <EntitlementContext.Provider
-        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+        value={{
+          loading: false,
+          refresh: async () => {},
+          snapshot: entitlement({ edition: "enterprise", licensed: true }),
+        }}
       >
         <KnowledgeNetworkWorkspaceScene networkId="network-1" section="versions" />
       </EntitlementContext.Provider>,
@@ -570,7 +574,7 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
 
   it("hides the verification group when all its entries are hidden", () => {
     mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop", "evals"];
-    renderScene(entitlement());
+    renderScene(entitlement({ edition: "enterprise", licensed: true }));
 
     expect(
       screen.queryByRole("button", { name: "knowledgeNetwork.workspaceAbilityVerification" }),
@@ -581,12 +585,19 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
 
   it("drops risk control when all its entries are hidden", () => {
     mocks.hiddenNavigation = ["permissions", "action-control"];
-    renderScene(entitlement());
+    renderScene(entitlement({ edition: "enterprise", licensed: true }));
 
     expect(
       screen.queryByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: /智能问答/ })).toBeTruthy();
+  });
+
+  it.each(["community", "professional"] as const)("hides risk control on %s", (edition) => {
+    renderScene(entitlement({ edition, licensed: true }));
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+    ).toBeNull();
   });
 
   it("keeps the ability verification title while an extension entry is still shown", () => {
@@ -670,7 +681,11 @@ it("lets embedded Eval content own its layout while retaining workspace navigati
   mocks.pathname = "/knowledge-network/workspace/network-1/evals";
   render(
     <EntitlementContext.Provider
-      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      value={{
+        loading: false,
+        refresh: async () => {},
+        snapshot: entitlement({ edition: "enterprise", licensed: true }),
+      }}
     >
       <KnowledgeNetworkWorkspaceScene networkId="network-1" section="extension">
         <div data-testid="embedded-eval">Eval content</div>
@@ -703,7 +718,11 @@ it("connects the existing action-control entry to the installed risk-control pag
   });
   render(
     <EntitlementContext.Provider
-      value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      value={{
+        loading: false,
+        refresh: async () => {},
+        snapshot: entitlement({ edition: "industry", licensed: true }),
+      }}
     >
       <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
     </EntitlementContext.Provider>,

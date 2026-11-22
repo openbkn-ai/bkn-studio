@@ -6,7 +6,7 @@
  */
 
 import { CopyOutlined } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Modal, Spin, Tooltip } from "antd";
+import { Alert, Button, Checkbox, Modal, Select, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -27,6 +27,7 @@ import {
   type FilterGroup,
   type FilterQueryPath,
 } from "@/modules/data-catalog/lib/filter-tree";
+import { isLocalIndexReadable } from "@/modules/data-catalog/lib/index-state";
 import {
   resourceCountAsBigInt,
   resourceCountForPagination,
@@ -36,17 +37,32 @@ import { fixedFilterSourceBlockReason } from "@/modules/data-catalog/lib/view-qu
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   CatalogResource,
+  ResourcePreviewQuery,
   ResourcePreviewResult,
 } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 
 import styles from "./ResourcePreviewPanel.module.css";
 
+/** Display data may omit a total when the API response does not provide one. */
+export type ResourcePreviewData = Omit<ResourcePreviewResult, "total"> & {
+  total?: ResourcePreviewResult["total"];
+  warnings?: unknown[];
+};
+
 type ResourcePreviewPanelProps = {
   active: boolean;
   disabled?: boolean;
   disabledMessage?: string;
   resource: CatalogResource;
+  loadPreview?: (
+    id: string,
+    query: ResourcePreviewQuery,
+    signal: AbortSignal,
+  ) => Promise<ResourcePreviewData>;
+  initialPageSize?: number;
+  pageSizeOptions?: string[];
+  apiPagingEnabled?: boolean;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -156,18 +172,23 @@ function ResourcePreviewContent({
   disabled = false,
   disabledMessage,
   resource,
+  loadPreview,
+  initialPageSize = DEFAULT_PAGE_SIZE,
+  pageSizeOptions,
+  apiPagingEnabled = false,
 }: ResourcePreviewPanelProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [page, setPage] = useState(1);
-  const [result, setResult] = useState<ResourcePreviewResult | null>(null);
+  const [result, setResult] = useState<ResourcePreviewData | null>(null);
   const [fullValue, setFullValue] = useState<{ field: string; text: string }>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{
     message: string;
     description?: string;
     invalidResponse?: boolean;
+    retryPage?: { page: number; pageSize: number };
   } | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [sourceReadDetails, setSourceReadDetails] = useState<RequestErrorDetails | null>(null);
@@ -180,15 +201,17 @@ function ResourcePreviewContent({
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const requestVersionRef = useRef(0);
+  const requestController = useRef<AbortController | null>(null);
   const queryBlockReason = resourceQueryBlockReason(resource);
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
   const resourceStale = queryBlockReason === "stale";
   const previewUnavailable = queryBlockReason !== null;
   const canQueryData = hasCatalogResourceOperation(resource, "query_data");
+  const isApiResource = resource.category === "api";
   const hasLocalIndex =
     resource.category === "table" &&
-    resource.localIndexStatus === "available" &&
+    isLocalIndexReadable(resource.localIndexStatus) &&
     Boolean(resource.localIndexName);
   const isDerivedView = resource.category === "logical_view" && resource.logicalType === "derived";
   const sourceId = resource.logicalViewDefinition?.sourceResourceId;
@@ -238,7 +261,7 @@ function ResourcePreviewContent({
   const queryPath: FilterQueryPath =
     (resource.category === "table" && !queriesSource) ||
     (resource.category === "dataset" &&
-      resource.localIndexStatus === "available" &&
+      isLocalIndexReadable(resource.localIndexStatus) &&
       Boolean(resource.localIndexName)) ||
     (isTableView &&
       !ignoreLocalIndex &&
@@ -251,22 +274,26 @@ function ResourcePreviewContent({
         ? "local_index"
         : "source";
   const activeFilter =
-    filterValidationError(appliedFilter, resource.schema, queryPath) === null
+    !isApiResource && filterValidationError(appliedFilter, resource.schema, queryPath) === null
       ? appliedFilter
       : EMPTY_APPLIED_FILTER;
   // An unfiltered request does not depend on the query path learned from its response.
   const filterQueryPath = activeFilter.children.length ? queryPath : "source";
 
   const load = useCallback(
-    async (nextOffset: number, nextLimit: number) => {
+    async (nextOffset: number, nextLimit: number, pendingPage?: number) => {
       if (invalidViewMetadata) return;
       const requestVersion = ++requestVersionRef.current;
+      requestController.current?.abort();
+      const controller = new AbortController();
+      requestController.current = controller;
       setLoading(true);
       setError(null);
       setForbidden(false);
       setSourceReadDetails(null);
+      let targetPage = pendingPage;
       try {
-        const data = await previewCatalogResource(resource.id, {
+        const query: ResourcePreviewQuery = {
           ...(hasBinaryField && queriesSource
             ? { binaryMode: binaryContent ? "content" : "metadata" }
             : {}),
@@ -276,9 +303,25 @@ function ResourcePreviewContent({
             : {}),
           limit: nextLimit,
           offset: nextOffset,
-        });
+        };
+        let data = loadPreview
+          ? await loadPreview(resource.id, query, controller.signal)
+          : await previewCatalogResource(resource.id, query);
         if (requestVersion !== requestVersionRef.current) {
           return;
+        }
+        if (loadPreview && targetPage !== undefined && nextOffset > 0 && data.total !== undefined) {
+          const total = resourceCountAsBigInt(data.total);
+          if (BigInt(nextOffset) >= total) {
+            targetPage = 1;
+            // The first page also stays in range if the source shrinks again.
+            if (total > 0n) {
+              data = await loadPreview(resource.id, { ...query, offset: 0 }, controller.signal);
+              if (requestVersion !== requestVersionRef.current) return;
+            } else {
+              data = { ...data, rows: [] };
+            }
+          }
         }
         if (isDerivedView && data.querySource !== "local_index" && data.querySource !== "source") {
           setError({ message: t("dataCatalog.preview.invalidQuerySource"), invalidResponse: true });
@@ -286,11 +329,16 @@ function ResourcePreviewContent({
           return;
         }
         setResult(data);
+        if (targetPage !== undefined) {
+          setPage(targetPage);
+          setPageSize(nextLimit);
+        }
         if (isTableView && !ignoreLocalIndex) {
           // A forced source response must not remove the option to switch back to the index.
           setViewHasLocalIndex(data.querySource === "local_index");
         }
       } catch (loadError) {
+        if (controller.signal.aborted) return;
         if (requestVersion !== requestVersionRef.current) {
           return;
         }
@@ -299,8 +347,14 @@ function ResourcePreviewContent({
         // their own access is the problem — name it instead.
         const details = extractRequestErrorDetails(loadError);
         const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
+        const forbiddenResponse = isRequestForbidden(loadError);
+        const retryPage =
+          targetPage !== undefined && !sourceDenied && !forbiddenResponse
+            ? { page: targetPage, pageSize: nextLimit }
+            : undefined;
         setSourceReadDetails(sourceDenied ? details : null);
-        setForbidden(!sourceDenied && isRequestForbidden(loadError));
+        setForbidden(!sourceDenied && forbiddenResponse);
+        if (!retryPage) setResult(null);
         if (details.code === "VegaBackend.Resource.QueryValueExceedsKeywordLimit") {
           const field = details.metadata?.field;
           const limit = details.metadata?.limit;
@@ -311,6 +365,7 @@ function ResourcePreviewContent({
             Number.isSafeInteger(limit) &&
             limit > 0;
           setError({
+            retryPage,
             message: validParameters
               ? t("dataCatalog.preview.keywordLimitExceeded", { field, limit })
               : t("dataCatalog.preview.keywordLimitExceededGeneric"),
@@ -320,12 +375,12 @@ function ResourcePreviewContent({
                 : "dataCatalog.preview.keywordLimitShortenHint",
             ),
           });
-          setResult(null);
           return;
         }
         const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
         const explanation = projectionMessage ? t(projectionMessage) : details.description;
         setError({
+          retryPage,
           message: explanation,
           ...(projectionMessage &&
           details.descriptionSource === "response" &&
@@ -333,7 +388,6 @@ function ResourcePreviewContent({
             ? { description: details.description }
             : {}),
         });
-        setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
           setLoading(false);
@@ -342,6 +396,7 @@ function ResourcePreviewContent({
     },
     [
       resource.id,
+      loadPreview,
       resource.schema,
       ignoreLocalIndex,
       binaryContent,
@@ -386,14 +441,19 @@ function ResourcePreviewContent({
       requestVersionRef.current += 1;
       return;
     }
-    setPage(1);
-    setPageSize(DEFAULT_PAGE_SIZE);
-    void load(0, DEFAULT_PAGE_SIZE);
+    if (!isApiResource) {
+      setPage(1);
+      setPageSize(initialPageSize);
+    }
+    void load(0, initialPageSize, isApiResource ? 1 : undefined);
     return () => {
       requestVersionRef.current += 1;
+      requestController.current?.abort();
     };
   }, [
     active,
+    isApiResource,
+    initialPageSize,
     canQueryData,
     disabled,
     filterRetryVersion,
@@ -467,12 +527,14 @@ function ResourcePreviewContent({
     !resource.logicalViewDefinition?.filterCondition &&
     rows.length === pageSize &&
     resourceCountAsBigInt(backendTotal) < BigInt(fetched);
-  const total = totalUnreliable
-    ? resourceCountForPagination(backendTotal, resource.rowCount, fetched)
-    : resourceCountForPagination(backendTotal, fetched);
+  const total = apiPagingEnabled
+    ? resourceCountForPagination(backendTotal)
+    : resourceCountForPagination(backendTotal, fetched, totalUnreliable ? resource.rowCount : null);
   const indexWindowLimited =
     result?.querySource === "local_index" && total > INDEX_PREVIEW_PAGE_LIMIT;
   const paginationTotal = indexWindowLimited ? INDEX_PREVIEW_PAGE_LIMIT : total;
+  const showTotal = (count: number) =>
+    t("common.total", { total: apiPagingEnabled ? backendTotal : count });
   const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {
@@ -480,10 +542,33 @@ function ResourcePreviewContent({
     const resolvedPage = resolvedPageSize !== pageSize ? 1 : nextPage;
     const nextOffset = (resolvedPage - 1) * resolvedPageSize;
 
+    if (isApiResource) {
+      void load(nextOffset, resolvedPageSize, resolvedPage);
+      return;
+    }
     setPage(resolvedPage);
     setPageSize(resolvedPageSize);
     void load(nextOffset, resolvedPageSize);
   };
+
+  const failedPage = error?.retryPage;
+  const showPreviousPage = failedPage !== undefined && result !== null;
+  const queryError = error ? (
+    <Alert
+      role="alert"
+      description={error.description}
+      message={error.message}
+      showIcon
+      type="error"
+      action={
+        failedPage ? (
+          <Button onClick={() => handlePaginationChange(failedPage.page, failedPage.pageSize)}>
+            {t("common.retry")}
+          </Button>
+        ) : undefined
+      }
+    />
+  ) : null;
 
   const copyFullValue = () => {
     if (!fullValue) return;
@@ -496,29 +581,33 @@ function ResourcePreviewContent({
     <div className={styles.panel}>
       <div className={styles.metaRow}>
         <div className={styles.previewControls}>
-          <Button disabled={invalidViewMetadata} onClick={() => setFilterOpen((open) => !open)}>
-            {t("dataCatalog.preview.filter")}
-            {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
-          </Button>
-          <Tooltip
-            title={sourceSwitchHintKey ? t(sourceSwitchHintKey) : undefined}
-            trigger={["hover", "focus"]}
-          >
-            <span tabIndex={sourceSwitchDisabled ? 0 : undefined}>
-              <Checkbox
-                checked={ignoreLocalIndex}
-                disabled={sourceSwitchDisabled}
-                onChange={(event) => {
-                  setSourceSelected(event.target.checked);
-                  if (!event.target.checked) {
-                    setBinaryContent(false);
-                  }
-                }}
+          {!isApiResource ? (
+            <>
+              <Button disabled={invalidViewMetadata} onClick={() => setFilterOpen((open) => !open)}>
+                {t("dataCatalog.preview.filter")}
+                {activeFilter.children.length ? ` (${activeFilter.children.length})` : ""}
+              </Button>
+              <Tooltip
+                title={sourceSwitchHintKey ? t(sourceSwitchHintKey) : undefined}
+                trigger={["hover", "focus"]}
               >
-                {t("dataCatalog.preview.queryOriginalSource")}
-              </Checkbox>
-            </span>
-          </Tooltip>
+                <span tabIndex={sourceSwitchDisabled ? 0 : undefined}>
+                  <Checkbox
+                    checked={ignoreLocalIndex}
+                    disabled={sourceSwitchDisabled}
+                    onChange={(event) => {
+                      setSourceSelected(event.target.checked);
+                      if (!event.target.checked) {
+                        setBinaryContent(false);
+                      }
+                    }}
+                  >
+                    {t("dataCatalog.preview.queryOriginalSource")}
+                  </Checkbox>
+                </span>
+              </Tooltip>
+            </>
+          ) : null}
           {hasBinaryField ? (
             <Checkbox
               checked={binaryContent}
@@ -539,7 +628,7 @@ function ResourcePreviewContent({
           ) : null}
         </div>
       </div>
-      {filterOpen ? (
+      {!isApiResource && filterOpen ? (
         <div className={styles.filterPanel}>
           <FilterTreeEditor
             fields={resource.schema}
@@ -582,6 +671,7 @@ function ResourcePreviewContent({
           </div>
         </div>
       ) : null}
+      {showPreviousPage ? queryError : null}
       {invalidViewMetadata ? (
         <Alert message={t("dataCatalog.preview.invalidViewMetadata")} showIcon type="error" />
       ) : sourceReadDetails ? (
@@ -617,8 +707,8 @@ function ResourcePreviewContent({
           showIcon
           type="warning"
         />
-      ) : error ? (
-        <Alert description={error.description} message={error.message} showIcon type="error" />
+      ) : error && !showPreviousPage ? (
+        queryError
       ) : (
         <Spin spinning={loading} wrapperClassName={styles.tableSection}>
           <div className={styles.tableWrap}>
@@ -738,13 +828,47 @@ function ResourcePreviewContent({
           type="info"
         />
       ) : null}
-      {paginationTotal > 0 ? (
+      {result?.warnings?.length ? (
+        <Alert type="warning" showIcon message={t("dataCatalog.apiResource.warnings")} />
+      ) : null}
+      {result && result.total === undefined ? (
+        <div className={styles.unknownPagination}>
+          <span>
+            {t("dataCatalog.apiResource.total")}: {t("dataCatalog.apiResource.unknown")}
+          </span>
+          <Button
+            disabled={loading || !apiPagingEnabled || page === 1}
+            onClick={() => handlePaginationChange(page - 1, pageSize)}
+          >
+            {t("common.previous")}
+          </Button>
+          <Button
+            disabled={loading || !apiPagingEnabled}
+            onClick={() => handlePaginationChange(page + 1, pageSize)}
+          >
+            {t("common.next")}
+          </Button>
+          {pageSizeOptions ? (
+            <Select
+              aria-label={t("dataCatalog.apiResource.pageSize")}
+              value={String(pageSize)}
+              options={pageSizeOptions.map((value) => ({ value, label: value }))}
+              onChange={(value) => handlePaginationChange(1, Number(value))}
+            />
+          ) : null}
+        </div>
+      ) : result && apiPagingEnabled && paginationTotal === 0 ? (
+        <div className={styles.metaRow} role="status">
+          {showTotal(0)}
+        </div>
+      ) : paginationTotal > 0 && (!apiPagingEnabled || result) ? (
         <TablePaginationBar
           current={page}
           onChange={handlePaginationChange}
           pageSize={pageSize}
+          pageSizeOptions={pageSizeOptions}
           showSizeChanger
-          showTotal={(count) => t("common.total", { total: count })}
+          showTotal={showTotal}
           total={paginationTotal}
         />
       ) : null}
