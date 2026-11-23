@@ -13,6 +13,7 @@ import {
   EllipsisOutlined,
   EditOutlined,
   InfoCircleFilled,
+  LockOutlined,
   MinusOutlined,
   NodeIndexOutlined,
   PlusOutlined,
@@ -116,6 +117,14 @@ type ObjectTypeDataAttributeEditorProps = {
   readResourceFields?: (resourceId: string) => Promise<ObjectTypeResourceField[]>;
   /** The data resource is given and stays: it cannot be replaced or cleared here. */
   resourceFixed?: boolean;
+  /**
+   * Properties, by name, whose name, type and mapped field stay as given and which cannot be
+   * removed, such as those a network already has; their display name, description and title stay
+   * editable. Absent, every property is editable.
+   */
+  lockedProperties?: string[];
+  /** The primary key stays as given: no property is added to or taken out of it here. */
+  primaryKeyLocked?: boolean;
   onChange: (value: {
     dataProperties: ObjectTypeDataProperty[];
     dataSource?: ObjectTypeDataSource;
@@ -337,6 +346,41 @@ function buildMappedPropertiesFromViewFields(
   return [...mappedProperties, ...preservedProperties];
 }
 
+/**
+ * The properties next, with what is locked kept as it is in current: a locked property keeps its
+ * name, type and mapped field, and one left out comes back where it was; with the primary key
+ * locked, every property keeps whether it is in it.
+ */
+function keepLocked(
+  current: ObjectTypeDataProperty[],
+  next: ObjectTypeDataProperty[],
+  locked: ReadonlySet<string>,
+  primaryKeyLocked: boolean,
+): ObjectTypeDataProperty[] {
+  if (!locked.size && !primaryKeyLocked) {
+    return next;
+  }
+  const before = new Map(current.map((item) => [item.name, item]));
+  const kept = next.map((item) => {
+    const was = before.get(item.name);
+    let value = item;
+    if (was && locked.has(item.name)) {
+      value = { ...value, mappedField: was.mappedField, type: was.type };
+    }
+    if (primaryKeyLocked) {
+      value = { ...value, primaryKey: was?.primaryKey ?? false };
+    }
+    return value;
+  });
+  const names = new Set(kept.map((item) => item.name));
+  current.forEach((item, index) => {
+    if (locked.has(item.name) && !names.has(item.name)) {
+      kept.splice(Math.min(index, kept.length), 0, item);
+    }
+  });
+  return kept;
+}
+
 export const ObjectTypeDataAttributeEditor = forwardRef<
   ObjectTypeDataAttributeEditorHandle,
   ObjectTypeDataAttributeEditorProps
@@ -351,6 +395,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     onChange,
     readResourceFields,
     resourceFixed = false,
+    lockedProperties,
+    primaryKeyLocked = false,
   },
   ref,
 ) {
@@ -387,6 +433,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const validProperties = useMemo(() => normalizeProperties(dataProperties), [dataProperties]);
+  const lockedNames = useMemo(() => new Set(lockedProperties ?? []), [lockedProperties]);
   const descriptionFillCandidates = useMemo(
     () => buildDescriptionFillCandidates(dataProperties, viewFields),
     [dataProperties, viewFields],
@@ -498,7 +545,12 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const updateProperties = useCallback(
     (nextProperties: ObjectTypeDataProperty[], nextDataSource?: ObjectTypeDataSource) => {
-      const normalized = nextProperties.map((item) => ({ ...item, incrementalKey: false }));
+      const normalized = keepLocked(
+        dataProperties,
+        nextProperties,
+        lockedNames,
+        primaryKeyLocked,
+      ).map((item) => ({ ...item, incrementalKey: false }));
       const resolvedDataSource = nextDataSource ?? dataSource;
 
       if (
@@ -513,7 +565,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         dataSource: resolvedDataSource,
       });
     },
-    [dataProperties, dataSource, onChange],
+    [dataProperties, dataSource, lockedNames, onChange, primaryKeyLocked],
   );
 
   const clearPendingViewField = useCallback(() => {
@@ -861,6 +913,12 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     if (!pendingViewField) {
       setEditingProperty(property);
       setDrawerOpen(true);
+      return;
+    }
+
+    if (lockedNames.has(property.name)) {
+      void message.warning(t("knowledgeNetwork.objectTypePropertyLocked"));
+      clearPendingViewField();
       return;
     }
 
@@ -1278,7 +1336,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             {renderInfoHint("knowledgeNetwork.objectTypePrimaryKeyTip")}
             <span className={styles.infoLabel}>:</span>
             <Popover
-              content={primaryKeyPopoverOpen ? primaryKeyPopoverContent : null}
+              content={
+                primaryKeyLocked
+                  ? t("knowledgeNetwork.objectTypePrimaryKeyLocked")
+                  : primaryKeyPopoverOpen
+                    ? primaryKeyPopoverContent
+                    : null
+              }
               destroyOnHidden
               onOpenChange={setPrimaryKeyPopoverOpen}
               open={primaryKeyPopoverOpen}
@@ -1669,7 +1733,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                     onClick={(event) => editPropertyFromRow(property, event)}
                                   />
                                 </Tooltip>
-                                {property.mappedField ? (
+                                {property.mappedField && !lockedNames.has(property.name) ? (
                                   <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
                                     <DisconnectOutlined
                                       className={styles.rowActionIcon}
@@ -1704,7 +1768,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                     </Tooltip>
                                   )
                                 ) : null}
-                                {canBePrimaryKey(property.type) ? (
+                                {canBePrimaryKey(property.type) && !primaryKeyLocked ? (
                                   <Tooltip title={t("knowledgeNetwork.objectTypePrimaryKey")}>
                                     <BookOutlined
                                       className={
@@ -1718,14 +1782,23 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                     />
                                   </Tooltip>
                                 ) : null}
-                                <Tooltip title={t("common.delete")}>
-                                  <DeleteOutlined
-                                    className={styles.rowActionIcon}
-                                    onClick={(event) =>
-                                      handleDeletePropertyFromRow(property.name, event)
-                                    }
-                                  />
-                                </Tooltip>
+                                {lockedNames.has(property.name) ? (
+                                  <Tooltip title={t("knowledgeNetwork.objectTypePropertyLocked")}>
+                                    <LockOutlined
+                                      aria-label={t("knowledgeNetwork.objectTypePropertyLocked")}
+                                      className={styles.rowActionIcon}
+                                    />
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip title={t("common.delete")}>
+                                    <DeleteOutlined
+                                      className={styles.rowActionIcon}
+                                      onClick={(event) =>
+                                        handleDeletePropertyFromRow(property.name, event)
+                                      }
+                                    />
+                                  </Tooltip>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1788,7 +1861,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           handleAddProperty(value);
         }}
         open={drawerOpen}
+        primaryKeyLocked={primaryKeyLocked}
         property={editingProperty}
+        typeLocked={Boolean(editingProperty && lockedNames.has(editingProperty.name))}
       />
 
       <ObjectTypeDataAttributePickModal

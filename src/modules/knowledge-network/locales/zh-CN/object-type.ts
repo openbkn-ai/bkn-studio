@@ -332,6 +332,8 @@ export const objecttypePart = {
   objectTypePropertyDisplayNameRequired: "请输入属性显示名。",
   objectTypePropertySearchEmpty: "未找到匹配的属性。",
   objectTypePropertyType: "属性类型",
+  objectTypePropertyLocked: "这是网络已有的属性，字段映射、类型和名称不能在这里修改。",
+  objectTypePrimaryKeyLocked: "主键是网络已有的，不能在这里修改。",
   objectTypePropertyTypeMismatch: "属性类型与资源字段类型不一致。",
   objectTypePropertyMappedField: "映射字段",
   objectTypePropertyIndexFeatures: "数据特征",

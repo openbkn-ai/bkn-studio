@@ -68,7 +68,11 @@ type ObjectTypeDataAttributeFormDrawerProps = {
   onClose: () => void;
   onSubmit: (value: ObjectTypeDataProperty) => Promise<void> | void;
   open: boolean;
+  /** The property's primary key mark stays as given. */
+  primaryKeyLocked?: boolean;
   property?: ObjectTypeDataProperty;
+  /** The property's type stays as given, as its mapped field does. */
+  typeLocked?: boolean;
 };
 
 export function ObjectTypeDataAttributeFormDrawer({
@@ -77,7 +81,9 @@ export function ObjectTypeDataAttributeFormDrawer({
   onClose,
   onSubmit,
   open,
+  primaryKeyLocked = false,
   property,
+  typeLocked = false,
 }: ObjectTypeDataAttributeFormDrawerProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
@@ -521,11 +527,13 @@ export function ObjectTypeDataAttributeFormDrawer({
               />
             </Form.Item>
             <Form.Item
+              extra={typeLocked ? t("knowledgeNetwork.objectTypePropertyLocked") : undefined}
               label={t("knowledgeNetwork.objectTypePropertyType")}
               name="type"
               rules={[{ required: true }]}
             >
               <Select
+                disabled={typeLocked}
                 onChange={handleTypeChange}
                 options={DATA_PROPERTY_TYPES.map((item) => ({ label: item, value: item }))}
                 placeholder={t("knowledgeNetwork.pleaseSelect")}
@@ -626,7 +634,10 @@ export function ObjectTypeDataAttributeFormDrawer({
                 "knowledgeNetwork.objectTypePrimaryKeyTip",
               )}
               <Form.Item name="primaryKey" noStyle valuePropName="checked">
-                <Switch disabled={!canBePrimaryKey(propertyType)} size="small" />
+                <Switch
+                  disabled={primaryKeyLocked || !canBePrimaryKey(propertyType)}
+                  size="small"
+                />
               </Form.Item>
             </div>
             <div className={styles.switchRow}>

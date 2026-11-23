@@ -362,6 +362,10 @@ export const objecttypePart = {
   objectTypePropertyDisplayNameRequired: "Please enter a property display name.",
   objectTypePropertySearchEmpty: "No matching properties found.",
   objectTypePropertyType: "Property type",
+  objectTypePropertyLocked:
+    "This property is already in the network: its field, type and name cannot be changed here.",
+  objectTypePrimaryKeyLocked:
+    "The primary key is already in the network and cannot be changed here.",
   objectTypePropertyTypeMismatch: "Property type does not match the resource field type.",
   objectTypePropertyMappedField: "Mapped field",
   objectTypePropertyIndexFeatures: "Data features",
