@@ -25,9 +25,10 @@ import {
 import type {
   BuildMode,
   BuildTask,
-  BuildTaskExecuteType,
+  BuildTaskLaunchExecuteType,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
+import { INCREMENTAL_BASELINE_UNAVAILABLE } from "@/modules/data-catalog/lib/build-task-error";
 import {
   decimalBuildSchemaIssues,
   invalidKeyFields,
@@ -87,7 +88,7 @@ export function BuildTaskLaunchPanel({
   const executeHintId = useId();
 
   const [mode, setMode] = useState<BuildMode>("batch");
-  const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
+  const [executeType, setExecuteType] = useState<BuildTaskLaunchExecuteType>("full");
   const [activeTaskLookup, setActiveTaskLookup] = useState<{
     resourceId: string;
     status: "loading" | "ready" | "error";
@@ -259,7 +260,17 @@ export function BuildTaskLaunchPanel({
       if (persistError instanceof BuildTaskConflictError) {
         setError({ description: t("dataCatalog.build.conflict") });
       } else {
-        setError(extractRequestErrorDetails(persistError));
+        const details = extractRequestErrorDetails(persistError);
+        setError(
+          details.code === INCREMENTAL_BASELINE_UNAVAILABLE
+            ? {
+                ...details,
+                description: t("dataCatalog.build.incrementalBaselineUnavailable"),
+                descriptionSource: undefined,
+                details: details.details ?? details.description,
+              }
+            : details,
+        );
       }
     } finally {
       setSaving(false);
@@ -327,7 +338,7 @@ export function BuildTaskLaunchPanel({
 
   const executeOptions: Array<{
     description: string;
-    key: BuildTaskExecuteType;
+    key: BuildTaskLaunchExecuteType;
     label: string;
   }> = [
     {

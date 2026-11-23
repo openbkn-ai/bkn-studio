@@ -14,7 +14,10 @@ import { BuildTaskLaunchPanel, STREAMING_BUILD_ENTRY_ENABLED } from "./BuildTask
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { value?: string }) =>
+      key === "common.error.details" ? (options?.value ?? key) : key,
+  }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -286,7 +289,7 @@ describe("BuildTaskLaunchPanel", () => {
     expect(createBuildTaskMock).not.toHaveBeenCalled();
   });
 
-  it("shows the recovery hint and preserves the admission error for an invalid saved cursor", async () => {
+  it("announces rejected incremental admission and lets the user run a full build", async () => {
     const description = "The saved incremental cursor is invalid.";
     createBuildTaskMock
       .mockRejectedValueOnce({
@@ -316,7 +319,10 @@ describe("BuildTaskLaunchPanel", () => {
       "dataCatalog.build.executeIncrementalDescription",
     );
     fireEvent.click(start);
-    expect(await screen.findByText(description)).toBeVisible();
+    const feedback = await screen.findByText("dataCatalog.build.incrementalBaselineUnavailable");
+    expect(feedback.closest('[role="alert"]')).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
+    expect(screen.getByText(description)).toBeVisible();
     expect(incremental).toBeChecked();
     expect(createBuildTaskMock).toHaveBeenCalledExactlyOnceWith({
       resourceId: resource.id,

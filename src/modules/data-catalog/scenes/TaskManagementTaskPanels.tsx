@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Space, type MenuProps } from "antd";
+import { Alert, Dropdown, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -297,9 +297,9 @@ export function DiscoverTaskListPanel() {
       ),
     },
     {
+      // Let the resource column absorb extra space so the outer columns keep their widths.
       dataIndex: "resourceId",
       title: t("dataCatalog.taskManagement.columns.resource"),
-      width: 160,
       ellipsis: true,
       render: (value: string | undefined, record: DataConnectDiscoverTaskSummary) =>
         value ? (
@@ -343,7 +343,8 @@ export function DiscoverTaskListPanel() {
     {
       dataIndex: "queuePriority",
       title: t("dataConnect.discoverQueuePriority"),
-      width: 100,
+      width: 160,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       render: (value: number) => <DiscoverTaskPriority priority={value} />,
     },
     {
@@ -453,7 +454,7 @@ export function DiscoverTaskListPanel() {
   return (
     <TaskPanel>
       <div className={styles.operationBar}>
-        <Space className={styles.toolbarActions}>
+        <div className={styles.toolbarActions}>
           <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>
@@ -469,7 +470,7 @@ export function DiscoverTaskListPanel() {
                 : t("dataCatalog.task.batchDelete")}
             </AppButton>
           </PermissionGate>
-        </Space>
+        </div>
       </div>
       <TaskTable
         canSelect={canManageCatalogTasks}
@@ -665,9 +666,9 @@ export function SemanticUnderstandingTaskListPanel() {
       ),
     },
     {
+      // Let the resource column absorb extra space so the outer columns keep their widths.
       dataIndex: "resourceId",
       title: t("dataCatalog.taskManagement.columns.resource"),
-      width: 160,
       ellipsis: true,
       render: (value: string | undefined, record) =>
         value ? (
@@ -685,7 +686,8 @@ export function SemanticUnderstandingTaskListPanel() {
     {
       dataIndex: "scope",
       title: t("dataCatalog.taskManagement.columns.scope"),
-      width: 100,
+      width: 144,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       filters: ["catalog", "resource"].map((value) => ({
         text: t(`dataCatalog.taskManagement.scope.${value}`),
         value,
@@ -697,7 +699,8 @@ export function SemanticUnderstandingTaskListPanel() {
     {
       dataIndex: "applyMode",
       title: t("dataCatalog.taskManagement.columns.applyMode"),
-      width: 100,
+      width: 144,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       filters: ["dry_run", "fill_empty", "force"].map((value) => ({
         text: t(
           `dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`,
@@ -825,7 +828,7 @@ export function SemanticUnderstandingTaskListPanel() {
   return (
     <TaskPanel>
       <div className={styles.operationBar}>
-        <Space className={styles.toolbarActions}>
+        <div className={styles.toolbarActions}>
           <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>
@@ -841,7 +844,7 @@ export function SemanticUnderstandingTaskListPanel() {
                 : t("dataCatalog.task.batchDelete")}
             </AppButton>
           </PermissionGate>
-        </Space>
+        </div>
       </div>
       <TaskTable
         canSelect={canManageCatalogTasks}
@@ -931,6 +934,7 @@ function TaskTable<T extends { id: string; status: string }>({
           rowSelection={
             canSelect && selectedKeys && onSelectionChange
               ? {
+                  columnWidth: 32,
                   selectedRowKeys: selectedKeys,
                   onChange: (keys) => onSelectionChange(keys.map(String)),
                   getCheckboxProps: (task) => ({ disabled: isSelectionDisabled(task) }),

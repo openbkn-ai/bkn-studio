@@ -17,7 +17,9 @@ import { formatCount, formatTaskDateTime } from "@/modules/data-catalog/lib/form
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { precisionPreservingValueText } from "@/framework/request/precision-safe-json";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { buildTaskExecuteTypeLabelKey } from "@/modules/data-catalog/utils/build-task-guards";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import sharedStyles from "./shared.module.css";
@@ -212,15 +214,11 @@ export function BuildTaskDetailDrawer({
   }
 
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
-  const executeTypeLabel =
-    task.mode === "batch"
-      ? task.executeType === "incremental"
-        ? t("dataCatalog.build.executeIncremental")
-        : task.executeType === "full"
-          ? t("dataCatalog.build.executeFull")
-          : null
-      : null;
+  const executeTypeKey = buildTaskExecuteTypeLabelKey(task);
+  const executeTypeLabel = executeTypeKey ? t(executeTypeKey) : null;
   const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
+  const keys = task.executeType === "keys" && task.primaryKeyFields.length ? task.keys : undefined;
+  const keysTitle = t("dataCatalog.task.detailSections.keys");
 
   return (
     <Drawer
@@ -359,6 +357,40 @@ export function BuildTaskDetailDrawer({
             </Descriptions.Item>
           </Descriptions>
         </section>
+
+        {keys?.length ? (
+          <section
+            aria-label={keysTitle}
+            className={[styles.sectionCard, styles.keysTableRegion].join(" ")}
+            tabIndex={0}
+          >
+            <table className={styles.keysTable}>
+              <caption className={styles.sectionTitle}>{keysTitle}</caption>
+              <thead>
+                <tr>
+                  {task.primaryKeyFields.map((field) => (
+                    <th key={field} scope="col">
+                      {field}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {keys.map((key, index) => (
+                  <tr key={index}>
+                    {task.primaryKeyFields.map((field) => (
+                      <td key={field}>
+                        {Object.hasOwn(key, field)
+                          ? precisionPreservingValueText(key[field])
+                          : EMPTY_VALUE}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
 
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.execution")}</h3>

@@ -315,9 +315,6 @@ export const dataCatalogZhCN = {
         invalidCursorMessage: "索引中的字段值无法组成有效的增量游标。",
         unknownMessage: "Vega 无法从已发布的索引恢复增量游标。",
         fullBuildSuggestion: "请确认已配置增量键，再运行一次全量构建。",
-        queryFailedSuggestion: "请确认已发布的索引可用，再重试增量构建。",
-        unknownSuggestion:
-          "请确认已发布的索引可用，再重试增量构建。若仍无法恢复，请配置增量键并运行一次全量构建。",
       },
       unknown: {
         title: "构建任务执行失败",
@@ -849,13 +846,16 @@ export const dataCatalogZhCN = {
         "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
       executeIncremental: "增量",
       executeIncrementalDescription:
-        "缺少增量游标时，Vega 会在任务入队后尝试从已发布索引恢复。自动恢复支持整数主键（含无符号整数），增量字段须为整数、日期或日期时间类型。恢复失败原因见任务详情。游标位置及之前的变更和源端删除可能不会反映到索引中。",
+        "从上次保存的增量游标继续同步。缺少有效游标时，请按当前增量键配置完成一次全量构建。游标位置及之前的变更和源端删除可能不会反映到索引中。",
+      executeKeys: "按主键",
+      incrementalBaselineUnavailable:
+        "增量构建缺少可用的基线。请按当前增量键配置完成一次全量构建，再执行增量构建。",
       incrementalNeedsPublishedIndex:
         "增量构建需要已发布的可用索引。请先配置增量键并完成一次全量构建。",
       incrementalRequiresFullRebuild:
         "已发布的索引处于只读状态。请先完成一次全量构建，再执行增量构建。",
       fullBuildWithoutIncrementalKey:
-        "未配置增量键时只能运行全量构建。构建期间的源端变更可能不会反映到索引中。",
+        "要执行增量构建，请先配置增量键并完成一次全量构建。构建期间的源端变更可能不会反映到索引中。",
       schemaLoading: "正在加载字段…",
       schemaEmpty: "该资源暂无字段，请先执行探查发现 schema。",
       fulltextTypeHint: "仅支持文本类字段",
@@ -986,6 +986,7 @@ export const dataCatalogZhCN = {
       detailSections: {
         status: "任务状态",
         task: "任务信息",
+        keys: "主键值",
         execution: "执行信息",
         audit: "审计信息",
       },
@@ -1016,6 +1017,7 @@ export const dataCatalogZhCN = {
       rerun: "重跑",
       rerunConfirmTitle: "重跑构建任务",
       rerunResume: "从中断处继续构建",
+      rerunKeys: "按主键重新读取源数据并同步索引",
       rerunReset: "从头开始重新构建",
       rebuildFullConfirmTitle: "确定全量重跑本任务?",
       rebuildFullConfirmContent:

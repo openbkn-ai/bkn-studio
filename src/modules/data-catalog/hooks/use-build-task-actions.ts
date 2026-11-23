@@ -10,7 +10,8 @@ import { createElement, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorMessage, readErrorCode } from "@/framework/request/error-message";
+import { INCREMENTAL_BASELINE_UNAVAILABLE } from "@/modules/data-catalog/lib/build-task-error";
 import {
   deleteBuildTask,
   pauseBuildTask,
@@ -47,6 +48,10 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           await onRefresh();
         } catch (error) {
           const resuming = !ACTIVE_BUILD_TASK_STATUSES.has(task.status);
+          if (resuming && readErrorCode(error) === INCREMENTAL_BASELINE_UNAVAILABLE) {
+            void message.error(t("dataCatalog.build.incrementalBaselineUnavailable"));
+            return;
+          }
           void message.error(
             resuming && isBuildStartRejected(error)
               ? t("dataCatalog.task.startRejected")
@@ -88,6 +93,10 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           }
           await onRefresh();
         } catch (error) {
+          if (readErrorCode(error) === INCREMENTAL_BASELINE_UNAVAILABLE) {
+            void message.error(t("dataCatalog.build.incrementalBaselineUnavailable"));
+            return;
+          }
           void message.error(
             isBuildStartRejected(error)
               ? t("dataCatalog.task.startRejected")
@@ -111,7 +120,11 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
                 createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),
                 createElement(Radio, { value: true }, t("dataCatalog.task.rerunReset")),
               )
-            : t("dataCatalog.task.rerunResume"),
+            : t(
+                task.executeType === "keys"
+                  ? "dataCatalog.task.rerunKeys"
+                  : "dataCatalog.task.rerunResume",
+              ),
         okText: t("common.confirm"),
         cancelText: t("common.cancel"),
         onOk: run,

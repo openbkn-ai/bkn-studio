@@ -6,25 +6,7 @@
  */
 
 .contentSurface {
-  composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-
-  display: grid;
-
-  gap: 12px;
-
-  min-height: auto;
-}
-
-.operationBar {
-  composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-
-  align-items: flex-start;
-
-  flex-wrap: wrap;
-
-  padding-bottom: 0;
-
-  border-bottom: 0;
+  composes: contentSurface from "./TaskManagementTaskPanels.module.css";
 }
 
 .operationPrimary {
@@ -33,12 +15,6 @@
   align-items: flex-start;
 
   flex-wrap: wrap;
-}
-
-.toolbarActions {
-  composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-  flex: 0 0 auto;
-  margin-left: auto;
 }
 
 .toolbarFilters {
@@ -327,14 +303,6 @@
     width: 100%;
 
     justify-content: flex-start;
-  }
-}
-
-@media (max-width: 768px) {
-  .operationBar {
-    flex-direction: column;
-
-    align-items: stretch;
   }
 }
 

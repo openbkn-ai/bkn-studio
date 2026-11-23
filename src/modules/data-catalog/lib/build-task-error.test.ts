@@ -52,7 +52,7 @@ describe("summarizeBuildTaskError", () => {
       language: "en-US",
       title: "Incremental cursor recovery failed",
       message: "Vega could not query the published index.",
-      suggestion: "Check that the published index is available, then retry the incremental build.",
+      suggestion: "Make sure an incremental key is configured, then run a full build.",
     },
     {
       raw: "cannot recover incremental checkpoint: invalid indexed cursor",
@@ -66,8 +66,7 @@ describe("summarizeBuildTaskError", () => {
       language: "zh-CN",
       title: "增量游标恢复失败",
       message: "Vega 无法从已发布的索引恢复增量游标。",
-      suggestion:
-        "请确认已发布的索引可用，再重试增量构建。若仍无法恢复，请配置增量键并运行一次全量构建。",
+      suggestion: "请确认已配置增量键，再运行一次全量构建。",
     },
   ])("explains recovery failure: $raw", ({ raw, language, title, message, suggestion }) => {
     expect(summarizeBuildTaskError(raw, language)).toEqual({ raw, title, message, suggestion });

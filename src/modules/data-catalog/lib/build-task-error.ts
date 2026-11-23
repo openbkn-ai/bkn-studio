@@ -7,6 +7,9 @@
 
 import i18n from "@/app/locales/i18n";
 
+export const INCREMENTAL_BASELINE_UNAVAILABLE =
+  "VegaBackend.BuildTask.IncrementalBaselineUnavailable";
+
 export type BuildTaskErrorSummary = {
   message: string;
   raw: string;
@@ -36,12 +39,7 @@ export function summarizeBuildTaskError(
       title: taskErrorText("incrementalRecovery.title", language),
       message: taskErrorText(`incrementalRecovery.${recoveryError}Message`, language),
       raw,
-      suggestion: taskErrorText(
-        recoveryError === "queryFailed" || recoveryError === "unknown"
-          ? `incrementalRecovery.${recoveryError}Suggestion`
-          : "incrementalRecovery.fullBuildSuggestion",
-        language,
-      ),
+      suggestion: taskErrorText("incrementalRecovery.fullBuildSuggestion", language),
     };
   }
 

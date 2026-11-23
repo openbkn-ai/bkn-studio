@@ -59,7 +59,11 @@ import type {
   BuildTaskStatus,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
+import {
+  BUILD_TASK_EXECUTE_TYPE_LABELS,
+  buildTaskExecuteTypeLabelKey,
+  isActiveBuildTask,
+} from "@/modules/data-catalog/utils/build-task-guards";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
@@ -467,24 +471,16 @@ export function ResourceIndexPanel({
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
       width: 100,
-      filters: ["full", "incremental"].map((value) => ({
-        text: t(
-          value === "incremental"
-            ? "dataCatalog.build.executeIncremental"
-            : "dataCatalog.build.executeFull",
-        ),
+      filters: Object.entries(BUILD_TASK_EXECUTE_TYPE_LABELS).map(([value, label]) => ({
+        text: t(label),
         value,
       })),
       filterMultiple: false,
       filteredValue: executeTypeFilter ? [executeTypeFilter] : null,
-      render: (_value, record) =>
-        record.mode === "batch"
-          ? record.executeType === "incremental"
-            ? t("dataCatalog.build.executeIncremental")
-            : record.executeType === "full"
-              ? t("dataCatalog.build.executeFull")
-              : "-"
-          : "-",
+      render: (_value, record) => {
+        const label = buildTaskExecuteTypeLabelKey(record);
+        return label ? t(label) : "-";
+      },
     },
     {
       dataIndex: "triggerType",
