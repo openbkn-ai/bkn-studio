@@ -7,7 +7,77 @@
 
 import { describe, expect, it } from "vitest";
 
-import { summarizeBuildTaskError } from "./build-task-error";
+import i18n from "@/app/locales/i18n";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
+
+import {
+  buildTaskStartErrorMessage,
+  extractBuildTaskErrorDetails,
+  summarizeBuildTaskError,
+} from "./build-task-error";
+
+describe("build-task request errors", () => {
+  it("gives the shared request toast localized full-build guidance", async () => {
+    const previousLanguage = i18n.language;
+    const error = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          error_code: "VegaBackend.BuildTask.IncrementalBaselineUnavailable",
+          description: "The saved incremental cursor is invalid.",
+        },
+      },
+    };
+
+    try {
+      await i18n.changeLanguage("en-US");
+      expect(extractRequestErrorMessage(error)).toBe(
+        "There is no usable incremental baseline. Complete a full build with the current incremental keys, then start an incremental build.",
+      );
+      await i18n.changeLanguage("zh-CN");
+      expect(extractRequestErrorMessage(error)).toBe(
+        "增量构建缺少可用的基线。请按当前增量键配置完成一次全量构建，再执行增量构建。",
+      );
+    } finally {
+      await i18n.changeLanguage(previousLanguage);
+    }
+  });
+
+  it("retains structured diagnostics ahead of the backend description", () => {
+    const code = "VegaBackend.BuildTask.IncrementalBaselineUnavailable";
+    const metadata = { task_id: "task-1" };
+    const error = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          error_code: code,
+          description: "The saved incremental cursor is invalid.",
+          error_details: "The cursor field no longer matches the task configuration.",
+          metadata,
+        },
+      },
+    };
+
+    expect(extractBuildTaskErrorDetails(error)).toEqual({
+      code,
+      description: i18n.t("dataCatalog.build.incrementalBaselineUnavailable"),
+      descriptionSource: undefined,
+      details: error.response.data.error_details,
+      metadata,
+    });
+  });
+
+  it("keeps generic guidance for other build start conflicts", () => {
+    const error = {
+      isAxiosError: true,
+      response: { status: 409, data: { description: "The task configuration changed." } },
+    };
+
+    expect(buildTaskStartErrorMessage(error)).toBe(i18n.t("dataCatalog.task.startRejected"));
+  });
+});
 
 describe("summarizeBuildTaskError", () => {
   it("summarizes repeated missing document id errors", () => {

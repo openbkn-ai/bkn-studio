@@ -5,10 +5,46 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import i18n from "@/app/locales/i18n";
+import axios from "axios";
 
-export const INCREMENTAL_BASELINE_UNAVAILABLE =
-  "VegaBackend.BuildTask.IncrementalBaselineUnavailable";
+import i18n from "@/app/locales/i18n";
+import {
+  extractRequestErrorDetails,
+  extractRequestErrorMessage,
+  readErrorCode,
+  registerErrorCodeMessage,
+} from "@/framework/request/error-message";
+import { isBuildStartRejected } from "@/modules/data-catalog/utils/build-task-guards";
+
+const INCREMENTAL_BASELINE_UNAVAILABLE = "VegaBackend.BuildTask.IncrementalBaselineUnavailable";
+
+registerErrorCodeMessage(INCREMENTAL_BASELINE_UNAVAILABLE, () =>
+  i18n.t("dataCatalog.build.incrementalBaselineUnavailable"),
+);
+
+export function extractBuildTaskErrorDetails(error: unknown) {
+  const details = extractRequestErrorDetails(error);
+  // The localized message replaces the backend description. Retain it as a
+  // diagnostic fallback when the response has no separate error details.
+  if (
+    details.code === INCREMENTAL_BASELINE_UNAVAILABLE &&
+    !details.details &&
+    axios.isAxiosError<{ description?: unknown }>(error)
+  ) {
+    const description = error.response?.data?.description;
+    if (typeof description === "string" && description.trim()) {
+      return { ...details, details: description };
+    }
+  }
+  return details;
+}
+
+export function buildTaskStartErrorMessage(error: unknown) {
+  if (readErrorCode(error) !== INCREMENTAL_BASELINE_UNAVAILABLE && isBuildStartRejected(error)) {
+    return i18n.t("dataCatalog.task.startRejected");
+  }
+  return extractRequestErrorMessage(error);
+}
 
 export type BuildTaskErrorSummary = {
   message: string;

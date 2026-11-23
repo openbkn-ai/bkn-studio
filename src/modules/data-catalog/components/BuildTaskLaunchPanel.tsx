@@ -11,10 +11,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  extractRequestErrorDetails,
-  type RequestErrorDetails,
-} from "@/framework/request/error-message";
+import type { RequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import {
@@ -28,7 +25,7 @@ import type {
   BuildTaskLaunchExecuteType,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { INCREMENTAL_BASELINE_UNAVAILABLE } from "@/modules/data-catalog/lib/build-task-error";
+import { extractBuildTaskErrorDetails } from "@/modules/data-catalog/lib/build-task-error";
 import {
   decimalBuildSchemaIssues,
   invalidKeyFields,
@@ -260,17 +257,7 @@ export function BuildTaskLaunchPanel({
       if (persistError instanceof BuildTaskConflictError) {
         setError({ description: t("dataCatalog.build.conflict") });
       } else {
-        const details = extractRequestErrorDetails(persistError);
-        setError(
-          details.code === INCREMENTAL_BASELINE_UNAVAILABLE
-            ? {
-                ...details,
-                description: t("dataCatalog.build.incrementalBaselineUnavailable"),
-                descriptionSource: undefined,
-                details: details.details ?? details.description,
-              }
-            : details,
-        );
+        setError(extractBuildTaskErrorDetails(persistError));
       }
     } finally {
       setSaving(false);

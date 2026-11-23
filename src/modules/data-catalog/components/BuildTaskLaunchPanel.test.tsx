@@ -8,6 +8,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import { BuildTaskLaunchPanel, STREAMING_BUILD_ENTRY_ENABLED } from "./BuildTaskLaunchPanel";
@@ -319,7 +320,9 @@ describe("BuildTaskLaunchPanel", () => {
       "dataCatalog.build.executeIncrementalDescription",
     );
     fireEvent.click(start);
-    const feedback = await screen.findByText("dataCatalog.build.incrementalBaselineUnavailable");
+    const feedback = await screen.findByText(
+      i18n.t("dataCatalog.build.incrementalBaselineUnavailable"),
+    );
     expect(feedback.closest('[role="alert"]')).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "common.viewDetails" }));
     expect(screen.getByText(description)).toBeVisible();

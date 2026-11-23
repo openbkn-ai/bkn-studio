@@ -6,11 +6,9 @@
  */
 
 import { renderHook } from "@testing-library/react";
-import { createInstance } from "i18next";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { dataCatalogEnUS } from "@/modules/data-catalog/locales/en-US";
-import { dataCatalogZhCN } from "@/modules/data-catalog/locales/zh-CN";
+import i18n from "@/app/locales/i18n";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
 const {
@@ -50,6 +48,8 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
 
 import { useBuildTaskActions } from "./use-build-task-actions";
 
+const initialLanguage = i18n.language;
+
 describe.each([
   {
     language: "en-US",
@@ -80,15 +80,12 @@ describe.each([
     pauseBuildTaskMock.mockResolvedValue(undefined);
     resumeBuildTaskMock.mockResolvedValue(undefined);
     retryBuildTaskMock.mockResolvedValue(null);
-    const i18n = createInstance();
-    await i18n.init({
-      lng: copy.language,
-      resources: {
-        "en-US": { translation: dataCatalogEnUS },
-        "zh-CN": { translation: dataCatalogZhCN },
-      },
-    });
+    await i18n.changeLanguage(copy.language);
     translateMock.mockImplementation((key: string) => i18n.t(key));
+  });
+
+  afterEach(async () => {
+    await i18n.changeLanguage(initialLanguage);
   });
 
   it.each([
