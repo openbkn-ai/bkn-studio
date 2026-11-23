@@ -108,7 +108,11 @@ export const agentChatPart = {
         max_turns: { label: "步数上限", hint: "一轮最多执行多少步" },
         max_tool_calls: { label: "工具调用上限", hint: "一轮最多调用多少次工具" },
         timeout_s: { label: "超时（秒）", hint: "一轮最长执行时间" },
-        max_output_tokens: { label: "单次输出上限", hint: "单次模型调用最多输出的 token 数" },
+        max_output_tokens: {
+          label: "单次输出上限",
+          unit: "tokens",
+          hint: "单次模型调用最多输出的 token 数，最大 1,000,000；实际以所选模型自身的输出上限为准，超出时运行会失败",
+        },
         keep_tool_results: {
           label: "保留完整结果数",
           hint: "本轮只给模型最近几次工具结果的全文，更早的用占位代替；之前问题的工具结果只保留占位",
