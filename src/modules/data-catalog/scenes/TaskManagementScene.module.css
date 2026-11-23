@@ -32,6 +32,6 @@
   line-height: 1.7;
 }
 
-.tabs :global(.ant-tabs-nav) {
-  margin-bottom: 16px;
+.tabs:global(.ant-tabs-top) > :global(.ant-tabs-nav) {
+  margin-block-end: 0;
 }

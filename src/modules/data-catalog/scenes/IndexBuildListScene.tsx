@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Space, Tooltip, type MenuProps } from "antd";
+import { Alert, Dropdown, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -49,7 +49,11 @@ import type {
   BuildTaskStatus,
   BuildTaskTriggerType,
 } from "@/modules/data-catalog/types/data-catalog";
-import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
+import {
+  BUILD_TASK_EXECUTE_TYPE_LABELS,
+  buildTaskExecuteTypeLabelKey,
+  isActiveBuildTask,
+} from "@/modules/data-catalog/utils/build-task-guards";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
 import taskPanelStyles from "./TaskManagementTaskPanels.module.css";
@@ -269,8 +273,8 @@ export function IndexBuildListScene() {
       },
     },
     {
+      // Let the resource column absorb extra space so the outer columns keep their widths.
       dataIndex: "resourceId",
-      width: 160,
       title: t("dataCatalog.taskManagement.columns.resource"),
       render: (value: string, record) => {
         const label = record.resourceName ?? value;
@@ -326,30 +330,17 @@ export function IndexBuildListScene() {
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
       width: 150,
-      filters: ["full", "incremental"].map((value) => ({
-        text: t(
-          value === "incremental"
-            ? "dataCatalog.build.executeIncremental"
-            : "dataCatalog.build.executeFull",
-        ),
+      filters: Object.entries(BUILD_TASK_EXECUTE_TYPE_LABELS).map(([value, label]) => ({
+        text: t(label),
         value,
       })),
       filterMultiple: false,
       filteredValue: listFilters.executeType ? [listFilters.executeType] : null,
       onHeaderCell: () => ({ className: taskPanelStyles.taskFilterHeader }),
-      render: (_value: BuildTask["executeType"], record) => (
-        <EllipsisText
-          text={
-            record.mode === "batch"
-              ? record.executeType === "incremental"
-                ? t("dataCatalog.build.executeIncremental")
-                : record.executeType === "full"
-                  ? t("dataCatalog.build.executeFull")
-                  : "-"
-              : "-"
-          }
-        />
-      ),
+      render: (_value: BuildTask["executeType"], record) => {
+        const label = buildTaskExecuteTypeLabelKey(record);
+        return <EllipsisText text={label ? t(label) : "-"} />;
+      },
     },
     {
       dataIndex: "triggerType",
@@ -481,8 +472,8 @@ export function IndexBuildListScene() {
           type="info"
         />
       ) : null}
-      <div className={sceneStyles.operationBar}>
-        <Space className={sceneStyles.toolbarActions}>
+      <div className={taskPanelStyles.operationBar}>
+        <div className={taskPanelStyles.toolbarActions}>
           <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
             {t("common.refresh")}
           </AppButton>
@@ -498,7 +489,7 @@ export function IndexBuildListScene() {
                 : t("dataCatalog.task.batchDelete")}
             </AppButton>
           </PermissionGate>
-        </Space>
+        </div>
       </div>
 
       <TableSurface className={sceneStyles.tableSurface}>
@@ -540,6 +531,7 @@ export function IndexBuildListScene() {
             rowSelection={
               canManageResourceTasks
                 ? {
+                    columnWidth: 32,
                     selectedRowKeys: selectedKeys,
                     onChange: (keys) => setSelectedKeys(keys.map(String)),
                     getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),

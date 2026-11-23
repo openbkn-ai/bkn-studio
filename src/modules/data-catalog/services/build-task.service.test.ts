@@ -7,6 +7,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { precisionPreservingValueText } from "@/framework/request/precision-safe-json";
+
 const getMock = vi.hoisted(() => vi.fn());
 const postMock = vi.hoisted(() => vi.fn());
 
@@ -16,6 +18,7 @@ vi.mock("@/framework/request/http", () => ({
 
 import {
   createBuildTask,
+  getBuildTask,
   mapBuildTask,
   pauseBuildTask,
   snapshotFieldsOf,
@@ -159,14 +162,14 @@ describe("mapBuildTask", () => {
     expect(task.finishTime).toBeNull();
   });
 
-  it("retains the persisted batch execute type", () => {
+  it.each(["full", "incremental", "keys"] as const)("retains the batch execute type %s", (type) => {
     const task = mapBuildTask({
       id: "task-1",
       mode: "batch",
-      execute_type: "incremental",
+      execute_type: type,
     });
 
-    expect(task.executeType).toBe("incremental");
+    expect(task.executeType).toBe(type);
   });
 
   it("does not invent an execution type when the backend response is incomplete", () => {
@@ -185,6 +188,73 @@ describe("mapBuildTask", () => {
     expect(mapBuildTask({ id: "task-1", status: "stopping" }).status).toBe("stopping");
     expect(mapBuildTask({ id: "task-2", status: "stopped" }).status).toBe("stopped");
     expect(mapBuildTask({ id: "task-3", status: "cancelled" }).status).toBe("cancelled");
+  });
+});
+
+describe("getBuildTask", () => {
+  it("returns the stored primary key values for a mock task", async () => {
+    const task = await getBuildTask("bt-keys-completed-01");
+
+    expect(task?.keys).toHaveLength(4);
+    expect(task?.keys?.[0]).toEqual({ customer_id: 101 });
+  });
+
+  describe("when using the API", () => {
+    beforeEach(() => {
+      vi.resetModules();
+      vi.stubEnv("VITE_USE_MOCK", "false");
+      getMock.mockReset();
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it("reads full integer key literals without changing timestamps and counts", async () => {
+      const raw =
+        '{"id":"task-1","mode":"batch","execute_type":"keys","create_time":1795000000000000,"total_count":1000000000000000,"synced_count":1,"index_config":{"primary_key_fields":["tenant","order_id"]},"keys":[{"order_id":9223372036854775807,"tenant":"0002"},{"order_id":-9223372036854775808,"tenant":"0003"}]}';
+      getMock.mockImplementationOnce(
+        (_url: string, options: { transformResponse: (data: unknown) => unknown }) =>
+          Promise.resolve({ data: options.transformResponse(raw) }),
+      );
+      const { getBuildTask: getWithAPI } = await import("./build-task.service");
+      const task = await getWithAPI("task-1");
+
+      expect(getMock).toHaveBeenCalledOnce();
+      expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/build-tasks/task-1");
+      expect(task).toMatchObject({
+        createTime: 1795000000000000,
+        totalCount: 1000000000000000,
+        syncedCount: 1,
+        primaryKeyFields: ["tenant", "order_id"],
+      });
+      expect(
+        task?.keys?.map(({ order_id, tenant }) => [tenant, precisionPreservingValueText(order_id)]),
+      ).toEqual([
+        ["0002", "9223372036854775807"],
+        ["0003", "-9223372036854775808"],
+      ]);
+    });
+
+    it.each(["keys", "full", "incremental"] as const)(
+      "accepts a %s detail without primary key values",
+      async (executeType) => {
+        getMock.mockImplementationOnce(
+          (_url: string, options: { transformResponse: (data: unknown) => unknown }) =>
+            Promise.resolve({
+              data: options.transformResponse(
+                JSON.stringify({ id: "task-1", mode: "batch", execute_type: executeType }),
+              ),
+            }),
+        );
+        const { getBuildTask: getWithAPI } = await import("./build-task.service");
+
+        const task = await getWithAPI("task-1");
+        expect(task?.executeType).toBe(executeType);
+        expect(task).not.toHaveProperty("keys");
+      },
+    );
   });
 });
 

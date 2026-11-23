@@ -8,6 +8,7 @@
 import axios from "axios";
 
 import { http } from "@/framework/request/http";
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
 import {
   emitMockChange,
@@ -21,6 +22,7 @@ import type {
   BuildMode,
   BuildTask,
   BuildTaskCreateInput,
+  BuildTaskExecuteType,
   BuildTaskSort,
   BuildTaskPageQuery,
   BuildTaskPageResult,
@@ -54,11 +56,12 @@ type BackendBuildTask = {
   embedding_fields?: string | string[];
   embedding_model?: string;
   error_msg?: string;
-  execute_type?: "incremental" | "full";
+  execute_type?: BuildTaskExecuteType;
   fulltext_analyzer?: string;
   fulltext_fields?: string | string[];
   id: string;
   index_config?: BackendBuildTaskIndexConfig | null;
+  keys?: BuildTask["keys"];
   mode?: string;
   model_dimensions?: number;
   resource_id?: string;
@@ -75,7 +78,7 @@ type BackendBuildTask = {
   last_progress_time?: number;
 };
 
-type BackendBuildTaskSummary = Omit<BackendBuildTask, "index_config">;
+type BackendBuildTaskSummary = Omit<BackendBuildTask, "index_config" | "keys">;
 
 type ListResponse<T> = {
   entries: T[];
@@ -244,6 +247,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     resourceName: item.resource_name,
     mode,
     executeType: mode === "batch" ? item.execute_type : undefined,
+    ...(mode === "batch" && item.execute_type === "keys" && item.keys ? { keys: item.keys } : {}),
     status,
     embeddingFields: snapshot.embeddingFields,
     embeddingConfigs: snapshot.embeddingConfigs,
@@ -385,6 +389,25 @@ export async function listBuildTaskPage(
   };
 }
 
+function transformBuildTaskDetailResponse(data: unknown): unknown {
+  if (typeof data !== "string" || !data) return data;
+
+  let task: BackendBuildTask | null;
+  try {
+    task = JSON.parse(data) as BackendBuildTask | null;
+  } catch {
+    return data;
+  }
+  if (task?.execute_type === "keys" && Array.isArray(task.keys)) {
+    // Preserve key literals while keeping task timestamps, counts, and config numbers unchanged.
+    const precise = parsePrecisionPreservingJSON(data, {
+      allowSpecialKeys: true,
+    }) as BackendBuildTask;
+    task.keys = precise.keys;
+  }
+  return task;
+}
+
 export async function getBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
@@ -403,7 +426,9 @@ export async function getBuildTask(id: string) {
     );
   }
 
-  const response = await http.get<BackendBuildTask>(`/vega-backend/v1/build-tasks/${id}`);
+  const response = await http.get<BackendBuildTask>(`/vega-backend/v1/build-tasks/${id}`, {
+    transformResponse: transformBuildTaskDetailResponse,
+  });
 
   return response.data ? mapBuildTask(response.data) : null;
 }
@@ -569,7 +594,7 @@ export async function deleteBuildTask(id: string, options: { stopFirst?: boolean
 }
 
 /**
- * Restarts a task. reset applies only to full tasks; the backend forces incremental tasks to resume from their checkpoint.
+ * Restarts a task. reset applies only to full tasks. Incremental tasks use their checkpoint and keys tasks reconcile their key set again.
  */
 export async function retryBuildTask(id: string, reset = false): Promise<BuildTask | null> {
   if (useMock) {

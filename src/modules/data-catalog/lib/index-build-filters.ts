@@ -10,6 +10,7 @@ import type {
   BuildTaskExecuteType,
   BuildTaskStatus,
 } from "@/modules/data-catalog/types/data-catalog";
+import { isBuildTaskExecuteType } from "@/modules/data-catalog/utils/build-task-guards";
 
 const STATUS_SET = new Set<BuildTaskStatus>([
   "cancelled",
@@ -50,8 +51,7 @@ export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildLi
   const rawMode = params.get("mode");
   const mode = rawMode === "batch" || rawMode === "streaming" ? rawMode : undefined;
   const rawExecuteType = params.get("execute_type");
-  const executeType =
-    rawExecuteType === "full" || rawExecuteType === "incremental" ? rawExecuteType : undefined;
+  const executeType = isBuildTaskExecuteType(rawExecuteType) ? rawExecuteType : undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
   const rawTriggerType = params.get("trigger_type");
   const triggerType =

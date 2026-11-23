@@ -11,10 +11,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  extractRequestErrorDetails,
-  type RequestErrorDetails,
-} from "@/framework/request/error-message";
+import type { RequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import {
@@ -25,9 +22,10 @@ import {
 import type {
   BuildMode,
   BuildTask,
-  BuildTaskExecuteType,
+  BuildTaskLaunchExecuteType,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
+import { extractBuildTaskErrorDetails } from "@/modules/data-catalog/lib/build-task-error";
 import {
   decimalBuildSchemaIssues,
   invalidKeyFields,
@@ -87,7 +85,7 @@ export function BuildTaskLaunchPanel({
   const executeHintId = useId();
 
   const [mode, setMode] = useState<BuildMode>("batch");
-  const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
+  const [executeType, setExecuteType] = useState<BuildTaskLaunchExecuteType>("full");
   const [activeTaskLookup, setActiveTaskLookup] = useState<{
     resourceId: string;
     status: "loading" | "ready" | "error";
@@ -259,7 +257,7 @@ export function BuildTaskLaunchPanel({
       if (persistError instanceof BuildTaskConflictError) {
         setError({ description: t("dataCatalog.build.conflict") });
       } else {
-        setError(extractRequestErrorDetails(persistError));
+        setError(extractBuildTaskErrorDetails(persistError));
       }
     } finally {
       setSaving(false);
@@ -327,7 +325,7 @@ export function BuildTaskLaunchPanel({
 
   const executeOptions: Array<{
     description: string;
-    key: BuildTaskExecuteType;
+    key: BuildTaskLaunchExecuteType;
     label: string;
   }> = [
     {
