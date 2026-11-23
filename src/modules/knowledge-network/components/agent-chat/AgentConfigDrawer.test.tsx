@@ -204,6 +204,30 @@ describe("AgentConfigDrawer", { timeout: 20_000 }, () => {
     expect(userField().value).toBe("Draft");
   });
 
+  it("shows the output cap unit and bounds it by 1,000,000 or the layer above", async () => {
+    getAgentConfig.mockResolvedValue(
+      config({
+        can_edit_network: true,
+        shared: { limits: { max_turns: 40, max_output_tokens: 8192 }, allowed_tools: null },
+        effective: { limits: { max_turns: 40, max_output_tokens: 8192 }, allowed_tools: null },
+      }),
+    );
+    renderDrawer();
+
+    await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.networkDescription"));
+    const unit = i18n.t("knowledgeNetwork.agentChat.config.limitFields.max_output_tokens.unit");
+    const capInputs = Array.from(document.querySelectorAll("input")).filter((el) =>
+      el.closest(".ant-input-number-group-wrapper")?.textContent?.includes(unit),
+    );
+    expect(capInputs.length).toBeGreaterThan(0);
+    // Beneath a shared cap of 8192 the bound is that cap; it never exceeds 1,000,000.
+    for (const el of capInputs) {
+      const max = Number(el.getAttribute("aria-valuemax"));
+      expect(max).toBeLessThanOrEqual(1_000_000);
+      expect(max).toBe(8192);
+    }
+  });
+
   it("never offers lifecycle or unscoped tools from an explicit shared list", async () => {
     getAgentConfig.mockResolvedValue(
       config({

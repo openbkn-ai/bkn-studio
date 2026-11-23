@@ -439,6 +439,28 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     });
   });
 
+  it("shows the output cap in tokens and applies the 1,000,000 upper bound", async () => {
+    getShared.mockResolvedValue(
+      shared({
+        agent_id: "catalog-semantic-understanding",
+        layered: false,
+        uses_context_loader: false,
+        limits: { max_turns: 5, max_output_tokens: 131072 },
+      }),
+    );
+    getSharedPrompt.mockResolvedValue(PROMPT);
+    renderScene("catalog-semantic-understanding");
+
+    await screen.findByText(i18n.t("systemAdmin.agentConfig.introPlain"));
+    const input = screen.getByDisplayValue("131072");
+    expect(input.getAttribute("aria-valuemax")).toBe("1000000");
+    expect(input.getAttribute("aria-valuemin")).toBe("10");
+    // The unit sits on the field itself, not only in the tooltip.
+    expect(input.closest(".ant-input-number-group-wrapper")?.textContent).toContain(
+      i18n.t("knowledgeNetwork.agentChat.config.limitFields.max_output_tokens.unit"),
+    );
+  });
+
   it("lists the Agent's tools by source, outside the danger zone", async () => {
     getShared.mockResolvedValue(
       shared({

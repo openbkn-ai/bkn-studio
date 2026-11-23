@@ -38,6 +38,7 @@ import type { AgentTokenProvider } from "@/modules/knowledge-network/services/ag
 import {
   AGENT_LIMIT_KEYS,
   getAgentConfig,
+  LIMIT_MAX,
   narrow,
   resetNetworkSetting,
   resetUserSetting,
@@ -106,7 +107,12 @@ function LimitFields({
               <InputNumber
                 style={{ width: "100%" }}
                 min={MIN[key]}
-                max={cap}
+                max={cap == null ? LIMIT_MAX[key] : Math.min(cap, LIMIT_MAX[key] ?? cap)}
+                addonAfter={
+                  key === "max_output_tokens"
+                    ? t(`${P}.limitFields.max_output_tokens.unit`)
+                    : undefined
+                }
                 precision={0}
                 disabled={disabled}
                 value={value?.[key] ?? null}
