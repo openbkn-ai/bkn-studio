@@ -198,6 +198,11 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "versions",
         label: t("knowledgeNetwork.versions.nav"),
         icon: <BranchesOutlined />,
+        // Marked, not blocked: the draft and the running version are community; the full history,
+        // compare and rollback are Enterprise. bkn-backend enforces that by the licence tier, so the
+        // badge goes once an Enterprise licence is in force (no service reports version_mgmt).
+        paidCapability: CAPABILITIES.VERSION_MGMT,
+        paidEdition: "enterprise",
       },
       {
         key: "experience-agent",

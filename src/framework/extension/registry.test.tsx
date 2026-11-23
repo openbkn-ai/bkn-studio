@@ -148,26 +148,54 @@ describe("extension registry", () => {
     expect(screen.getByText("demo page")).toBeInTheDocument();
   });
 
-  // The edition page sells Workshop in Enterprise, but the service still lets Professional in.
-  // The route guard follows today's gate, so a Professional licence keeps the page (#1453).
-  it("lets a Professional licence into Workshop although the edition page sells it in Enterprise", () => {
-    registerExtension({
-      capability: "workshop",
-      id: "demo",
-      standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
-    });
-    renderStandalone(
-      "/demo",
-      entitlement({
-        capabilities: ["workshop"],
-        edition: "professional",
-        extensions: ["workshop"],
-        licensed: true,
-        state: "valid",
-      }),
-    );
+  // Workshop is Enterprise: bkn-safe-ee reports it only under an Enterprise licence, and the page
+  // opens only once both the licence and the enterprise services are there.
+  describe("Workshop at the Enterprise tier", () => {
+    function renderWorkshop(snapshot: Entitlement) {
+      registerExtension({
+        capability: "workshop",
+        id: "demo",
+        standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
+      });
+      renderStandalone("/demo", snapshot);
+    }
 
-    expect(screen.getByText("demo page")).toBeInTheDocument();
+    it("offers the Enterprise upgrade to a Professional licence", () => {
+      renderWorkshop(
+        entitlement({
+          edition: "professional",
+          extensions: ["workshop"],
+          licensed: true,
+          state: "valid",
+        }),
+      );
+
+      expect(screen.queryByText("demo page")).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "升级到企业版" })).toBeInTheDocument();
+    });
+
+    it("keeps the page locked under an Enterprise licence until the services report it", () => {
+      renderWorkshop(
+        entitlement({ edition: "enterprise", extensions: [], licensed: true, state: "valid" }),
+      );
+
+      expect(screen.queryByText("demo page")).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "升级到企业版" })).not.toBeInTheDocument();
+    });
+
+    it("opens with an Enterprise licence and the enterprise services", () => {
+      renderWorkshop(
+        entitlement({
+          capabilities: ["workshop"],
+          edition: "enterprise",
+          extensions: ["workshop"],
+          licensed: true,
+          state: "valid",
+        }),
+      );
+
+      expect(screen.getByText("demo page")).toBeInTheDocument();
+    });
   });
 
   // Entering the catalog does not move the knowledge base off its capability guard: without the

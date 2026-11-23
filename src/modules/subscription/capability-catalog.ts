@@ -221,10 +221,11 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.2",
   },
   {
-    // 知识网络版本管理(草稿、发布、比较、回退)。上游登记表里是 planned 的 version_mgmt;
-    // 没有服务登记装配表,端点报不出。
+    // 知识网络版本管理(完整版本历史、比较、回退)。上游登记表里是 planned 的 version_mgmt。
+    // 由社区版 bkn-backend 按证书档位放行,没有服务登记装配表,端点报不出:工作区侧栏的
+    // 徽标按证书档位判,企业证生效即消失。
     category: "modeling",
-    key: "version_mgmt",
+    key: CAPABILITIES.VERSION_MGMT,
     reportedByEndpoint: false,
     minEdition: "enterprise",
     sinceVersion: "0.2.2",
@@ -232,16 +233,12 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   {
     // 应用工坊整体归企业档(2026-11-19),方案推演、模型试算与执行行动都在这一行里,不另列
     // scenario。页面在企业版前端镜像,服务是 openbkn-ee 的 workshop;bkn-safe-ee 登记进装配表,
-    // 端点报得出。
-    //
-    // 上游登记表与 bkn-safe-ee 的 workshop.MinEdition 此刻仍是 professional;这里先改展示
-    // (版本页、锁定徽标与升级页上写的档位),实际放行仍由服务端按专业档判。登记表那一行还是
-    // planned、没签进过证书,可以按 reconcileTierCorrections 的做法改档。
+    // 端点报得出。bkn-safe-ee 的 workshop.MinEdition 与登记表都已是企业档,入口守卫、锁定
+    // 徽标与升级页按售卖档位走:企业证且装了企业版服务(`capabilities[]` 报出)才放行、才撤徽标。
     category: "semantic",
     key: CAPABILITIES.WORKSHOP,
     reportedByEndpoint: true,
     minEdition: "enterprise",
-    gateEdition: "professional",
     sinceVersion: "0.2.2",
   },
   {

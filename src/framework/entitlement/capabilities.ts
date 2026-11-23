@@ -66,7 +66,7 @@ export const CAPABILITIES = {
    */
   KNOWLEDGE_BASE: "knowledge_base",
   /**
-   * 应用工坊(Workshop):在知识网络上搭建业务应用。专业档起。
+   * 应用工坊(Workshop):在知识网络上搭建业务应用。企业档起(2026-11-19)。
    *
    * 与图探索同一种做法:页面代码在企业版前端镜像里,经 `@/app/extensions/installed` 注册;
    * bkn-safe-ee 登记装配表,`/api/safe/v1/capabilities` 报得出它,入口按 `capabilityState()` 判。
@@ -79,6 +79,13 @@ export const CAPABILITIES = {
    * 社区构建只保留侧栏入口和带遮罩的许可提示页。
    */
   BKN_PROJECT: "bkn_project",
+  /**
+   * 知识网络版本管理:完整版本历史、按历史版本查询、废止 / 恢复 / 清理。企业档起。
+   *
+   * 由社区版 bkn-backend 按证书档位实现(社区版只留运行版本与上一版),没有企业版服务登记装配表,
+   * 端点报不出,入口只按证书档位标。草稿与运行版本随社区版提供,入口不挡。
+   */
+  VERSION_MGMT: "version_mgmt",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
