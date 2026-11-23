@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { versionNotesText } from "@/framework/extension/registry";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { KnDiffModal } from "@/modules/knowledge-network/components/versions/KnDiffModal";
 import {
@@ -160,7 +161,9 @@ export function KnVersionsPanel({
     {
       dataIndex: "notes",
       key: "notes",
-      render: (value?: string) => <div className={styles.notes}>{value || "-"}</div>,
+      render: (value?: string) => (
+        <div className={styles.notes}>{(value && versionNotesText(value)) || "-"}</div>
+      ),
       title: t("knowledgeNetwork.versions.columns.notes"),
     },
     {
@@ -298,7 +301,7 @@ export function KnVersionsPanel({
         <div className={styles.notes}>
           {record.reason === "retention"
             ? t("knowledgeNetwork.versions.event.retention")
-            : record.notes || "-"}
+            : (record.notes && versionNotesText(record.notes)) || "-"}
         </div>
       ),
       title: t("knowledgeNetwork.versions.columns.notes"),

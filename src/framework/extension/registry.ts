@@ -66,6 +66,12 @@ export type StudioExtension = {
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
   /** The knowledge-bases section of the knowledge-network workspace. */
   knowledgeNetworkResourcePanel?: ComponentType<KnowledgeNetworkResourcePanelProps>;
+  /**
+   * How a version's notes read on the versions page, when the extension that published the
+   * version wrote part of them for itself (such as what was accepted to publish it). Returns
+   * the notes as people should read them; notes it does not recognise come back as they are.
+   */
+  versionNotes?: (notes: string) => string;
 };
 
 export type ActionGovernanceExecutionInput = {
@@ -201,6 +207,15 @@ export function handOverLimit(handOver: InstanceHandOver): number {
   return typeof handOver.maxInstances === "function"
     ? handOver.maxInstances()
     : handOver.maxInstances;
+}
+
+/**
+ * A version's notes as the versions page shows them: worded by the extension that reads them,
+ * else as they were written.
+ */
+export function versionNotesText(notes: string): string {
+  const read = installed.find((extension) => extension.versionNotes)?.versionNotes;
+  return read ? read(notes) : notes;
 }
 
 export function extensionAccountPendingCount() {

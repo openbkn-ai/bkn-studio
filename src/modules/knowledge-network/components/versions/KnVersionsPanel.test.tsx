@@ -5,9 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import type { KnVersioning } from "@/modules/knowledge-network/types/kn-version";
 
 const { listEvents, listVersions } = vi.hoisted(() => ({
@@ -103,6 +104,41 @@ describe("KnVersionsPanel", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    resetExtensionsForTesting();
+  });
+
+  it("shows version and event notes as the installed extension words them", async () => {
+    registerExtension({
+      capability: "project",
+      id: "project",
+      versionNotes: (notes) => notes.replace("Accepted: regression_not_passed", "Published anyway"),
+    });
+    listVersions.mockResolvedValue({
+      items: [
+        { notes: "Accepted: regression_not_passed\nFirst release", status: "running", version: 3 },
+      ],
+      total: 1,
+    });
+    listEvents.mockResolvedValue({
+      items: [
+        {
+          id: "e1",
+          notes: "Accepted: regression_not_passed\nFirst release",
+          to_version: 3,
+          type: "publish",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel({});
+
+    // The version list words the notes, and so does the events list.
+    expect(await screen.findByText("Published anyway First release")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "knowledgeNetwork.versions.tabEvents" }));
+    await waitFor(() =>
+      expect(screen.getAllByText("Published anyway First release")).toHaveLength(2),
+    );
+    expect(screen.queryByText(/regression_not_passed/)).toBeNull();
   });
 
   it("keeps discarding the draft and rolling back in the danger zone", () => {
