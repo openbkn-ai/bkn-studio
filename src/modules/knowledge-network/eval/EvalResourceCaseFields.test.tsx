@@ -365,7 +365,16 @@ it.each(resourceCaseKinds)(
         onPrepared={onPrepared}
       />,
     );
-    expect(await screen.findByText("可保存用例定义，暂不能自动执行")).toBeInTheDocument();
+    expect(
+      await screen.findByText("保存后为未启用用例，当前暂不支持自动执行。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen
+        .getByRole("textbox", { name: "测试步骤与验证目标" })
+        .compareDocumentPosition(screen.getByText("保存后为未启用用例，当前暂不支持自动执行。")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await waitFor(() =>
       expect(onPrepared).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -396,12 +405,12 @@ it("lets a supported check with missing runtime authorization save an explicit d
       onDefinitionOnlyChange={onDefinitionOnlyChange}
     />,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "先配置用例定义" }));
+  fireEvent.click(await screen.findByRole("button", { name: "填写用例定义" }));
   expect(onDefinitionOnlyChange).toHaveBeenLastCalledWith(true);
   fireEvent.change(screen.getByRole("textbox", { name: "测试步骤与验证目标" }), {
     target: { value: "授权可用后检查真实调用，不在保存时调用" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "正确值 1" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "预期值 1" }), {
     target: { value: "独立确认的业务结果" },
   });
   fireEvent.change(screen.getByRole("textbox", { name: "预期依据" }), {

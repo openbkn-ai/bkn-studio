@@ -593,7 +593,7 @@ it("saves a business goal without binding a function or a resource", async () =>
   fireEvent.change(screen.getByLabelText("输出要求", { selector: "textarea" }), {
     target: { value: "给出是否齐套及缺料说明" },
   });
-  fireEvent.change(screen.getByLabelText("正确值 1", { selector: "textarea" }), {
+  fireEvent.change(screen.getByLabelText("预期值 1", { selector: "textarea" }), {
     target: { value: "不能齐套" },
   });
   fireEvent.click(screen.getByRole("button", { name: "确定" }));
@@ -1695,7 +1695,7 @@ const renderFalseResultCase = async () => {
   });
   fireEvent.click(screen.getByText("自定义结果判定"));
   fireEvent.mouseDown(
-    await screen.findByLabelText("正确值 1", { exact: true, selector: '[role="combobox"]' }),
+    await screen.findByLabelText("预期值 1", { exact: true, selector: '[role="combobox"]' }),
   );
   fireEvent.click(
     await screen.findByText("否（false）", { selector: ".ant-select-item-option-content" }),
@@ -1708,7 +1708,7 @@ it.each(["business_expert", "independent_sample"])(
     await renderFalseResultCase();
     if (kind === "independent_sample") {
       fireEvent.mouseDown(
-        screen.getByLabelText("正确值从哪里来", { exact: true, selector: '[role="combobox"]' }),
+        screen.getByLabelText("预期值来源", { exact: true, selector: '[role="combobox"]' }),
       );
       fireEvent.click(
         screen.getByText("已核对的对照样本", { selector: ".ant-select-item-option-content" }),
@@ -1728,7 +1728,7 @@ it.each(["business_expert", "independent_sample"])(
 it("validates independent-sample evidence length and saves a valid reference", async () => {
   await renderFalseResultCase();
   fireEvent.mouseDown(
-    screen.getByLabelText("正确值从哪里来", { exact: true, selector: '[role="combobox"]' }),
+    screen.getByLabelText("预期值来源", { exact: true, selector: '[role="combobox"]' }),
   );
   fireEvent.click(
     screen.getByText("已核对的对照样本", { selector: ".ant-select-item-option-content" }),
@@ -2040,7 +2040,7 @@ it("keeps scoring and expectation provenance explanations in field tooltips", as
     screen.queryByText("依据应独立于本次实际输出；不要直接把试运行结果当作正确答案。"),
   ).toBeNull();
   const source = screen
-    .getByLabelText("正确值从哪里来", { exact: true, selector: '[role="combobox"]' })
+    .getByLabelText("预期值来源", { exact: true, selector: '[role="combobox"]' })
     .closest(".ant-form-item");
   const help = source?.querySelector(".ant-form-item-tooltip");
   expect(help).toBeTruthy();
