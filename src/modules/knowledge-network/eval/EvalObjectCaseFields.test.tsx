@@ -266,7 +266,7 @@ it("lets users select an inapplicable property and explains it only after select
   choose("检查项", "属性值唯一");
   await waitFor(() => expect(previewRuleApplication).toHaveBeenCalled());
   expect(screen.queryByText("尚未具备完整运行条件")).toBeNull();
-  expect(screen.queryByRole("button", { name: "先配置用例定义" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "填写用例定义" })).toBeNull();
   choose("检查属性", "联系人");
   expect(
     screen.getByRole("combobox", { name: "检查属性" }).closest(".ant-select"),
@@ -274,7 +274,7 @@ it("lets users select an inapplicable property and explains it only after select
   expect(screen.getByRole("alert")).toHaveTextContent("属性明确设置了唯一约束");
   expect(screen.getByRole("alert")).toHaveTextContent("联系人");
   expect(onPrepared).not.toHaveBeenCalledWith(prepared);
-  fireEvent.click(screen.getByRole("button", { name: "先配置用例定义" }));
+  fireEvent.click(screen.getByRole("button", { name: "填写用例定义" }));
   expect(await screen.findByRole("textbox", { name: "测试步骤与验证目标" })).toBeVisible();
   expect(onPrepared).not.toHaveBeenCalledWith(prepared);
 });
@@ -527,19 +527,24 @@ it.each([true, false])(
     choose("检查项", "实例定位正确");
     await waitFor(() => expect(previewRuleApplication).toHaveBeenCalledTimes(1));
     expect(onPrepared).not.toHaveBeenCalledWith(prepared);
-    fireEvent.change(screen.getByLabelText("独立样本（JSON数组）"), {
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByText("填写 JSON 数组格式的独立样本后，可校验并生成检查配置。"),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "校验并生成检查配置" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("独立样本"), {
       target: { value: '[{"id":9007199254740993,"__matches":1},{"id":-1,"__matches":0}]' },
     });
     if (includeNotes)
       fireEvent.change(screen.getByLabelText("独立依据（选填，每行一条）"), {
         target: { value: "业务核对表" },
       });
-    fireEvent.click(screen.getByRole("button", { name: "校验样本并配置检查" }));
+    fireEvent.click(screen.getByRole("button", { name: "校验并生成检查配置" }));
     await waitFor(() => expect(onPrepared).toHaveBeenCalledWith(prepared));
     const sample = vi.mocked(previewRuleApplication).mock.calls[1][1].samples![0];
     expect(sample.arguments.evidence_refs).toEqual(includeNotes ? ["业务核对表"] : []);
     expect(String((sample.arguments.rows as { id: unknown }[])[0].id)).toBe("9007199254740993");
-    fireEvent.change(screen.getByLabelText("独立样本（JSON数组）"), { target: { value: "[]" } });
+    fireEvent.change(screen.getByLabelText("独立样本"), { target: { value: "[]" } });
     expect(onPrepared).toHaveBeenLastCalledWith(undefined);
   },
 );
@@ -562,18 +567,18 @@ it("ignores a late sample validation response after the sample is changed", asyn
   await waitFor(() => expect(getEvalTemplateConfig).toHaveBeenCalled());
   choose("检查项", "实例定位正确");
   await waitFor(() => expect(previewRuleApplication).toHaveBeenCalledTimes(1));
-  fireEvent.change(screen.getByLabelText("独立样本（JSON数组）"), {
+  fireEvent.change(screen.getByLabelText("独立样本"), {
     target: { value: '[{"id":1,"__matches":1},{"id":-1,"__matches":0}]' },
   });
   fireEvent.change(screen.getByLabelText("独立依据（选填，每行一条）"), {
     target: { value: "核对记录" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "校验样本并配置检查" }));
+  fireEvent.click(screen.getByRole("button", { name: "校验并生成检查配置" }));
   await waitFor(() => expect(previewRuleApplication).toHaveBeenCalledTimes(2));
-  fireEvent.change(screen.getByLabelText("独立样本（JSON数组）"), { target: { value: "[]" } });
+  fireEvent.change(screen.getByLabelText("独立样本"), { target: { value: "[]" } });
   await act(() => Promise.resolve(resolve(preview([row]))));
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "校验样本并配置检查" })).not.toHaveClass(
+    expect(screen.getByRole("button", { name: "校验并生成检查配置" })).not.toHaveClass(
       "ant-btn-loading",
     ),
   );
@@ -624,7 +629,7 @@ it("allows a real logical property without an executable source to be authored b
   fireEvent.change(await screen.findByRole("textbox", { name: "测试步骤与验证目标" }), {
     target: { value: "对独立实例核对利润公式" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "正确值 1" }), { target: { value: "10" } });
+  fireEvent.change(screen.getByRole("textbox", { name: "预期值 1" }), { target: { value: "10" } });
   fireEvent.change(screen.getByRole("textbox", { name: "预期依据" }), {
     target: { value: "财务确认表" },
   });

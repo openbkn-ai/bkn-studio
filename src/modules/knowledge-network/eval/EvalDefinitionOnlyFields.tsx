@@ -7,7 +7,7 @@
 
 import { evalScalarText } from "./eval-scalar-text";
 
-import { Alert, Collapse, Input, Select, Space } from "antd";
+import { Alert, Collapse, Input, Select, Space, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { EvalCaseCriteria } from "./EvalCaseCriteria";
 import { newCriterion, readCriteria, type CaseCriterion } from "./case-form-model";
@@ -116,7 +116,6 @@ export function EvalDefinitionOnlyFields({
   ]);
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Alert type="info" showIcon message={text("title")} description={reason} />
       <label style={{ width: "100%" }}>
         <EvalFieldLabel required>{text("steps")}</EvalFieldLabel>
         <Input.TextArea
@@ -128,6 +127,22 @@ export function EvalDefinitionOnlyFields({
           placeholder={text("stepsPlaceholder")}
         />
       </label>
+      <div>
+        <EvalFieldLabel required>{text("criteria")}</EvalFieldLabel>
+        <EvalCaseCriteria
+          value={criteria}
+          onChange={setCriteria}
+          predicates={[
+            "equals",
+            "exists",
+            "contains",
+            "regex",
+            "numeric_range",
+            "approx",
+            "json_schema",
+          ]}
+        />
+      </div>
       <Collapse
         size="small"
         items={[
@@ -145,22 +160,6 @@ export function EvalDefinitionOnlyFields({
           },
         ]}
       />
-      <div>
-        <EvalFieldLabel required>{text("criteria")}</EvalFieldLabel>
-        <EvalCaseCriteria
-          value={criteria}
-          onChange={setCriteria}
-          predicates={[
-            "equals",
-            "exists",
-            "contains",
-            "regex",
-            "numeric_range",
-            "approx",
-            "json_schema",
-          ]}
-        />
-      </div>
       <div>
         <EvalFieldLabel required hint={text("hint")}>
           {text("source")}
@@ -187,6 +186,12 @@ export function EvalDefinitionOnlyFields({
         />
       </label>
 
+      <Typography.Text type="secondary">{text("title")}</Typography.Text>
+      <Collapse
+        size="small"
+        ghost
+        items={[{ key: "execution", label: text("executionDetails"), children: reason }]}
+      />
       {error && <Alert type="warning" message={error} />}
     </Space>
   );
