@@ -14,7 +14,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
  * Workshop builds business apps on knowledge networks. Its pages are in the enterprise image
  * (openbkn-ee studio/ registers /workshop), so extensionPage keeps the entry out of a community
  * build whatever the entitlement snapshot says. Its capability is the one the enterprise build
- * registers those pages under; a licence without it keeps the entry locked as professional.
+ * registers those pages under; a licence without it keeps the entry locked as enterprise.
  *
  * It sits right below project management, by its place in console-navigation's list.
  */

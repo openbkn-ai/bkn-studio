@@ -68,7 +68,7 @@ export const versionsPart = {
     capabilityNote:
       "Functions and Skills are bound by ID, not by version. After a switch they run with their current code and content.",
     communityNote:
-      "The Community edition keeps only the running and the previous version. Deprecate, restore and purge need the Professional edition.",
+      "The Community and Professional editions keep only the running and the previous version. Deprecate, restore and purge need the Enterprise edition.",
     metricSaveAndValidate: "Save and validate",
     metricValidated:
       "The metric is saved and validated. It goes live when the knowledge network is published.",
@@ -120,12 +120,12 @@ export const versionsPart = {
       diffAgainstBase: "Your changes compared with the draft's upstream ({{version}})",
       confirmOutdated: "I understand that publishing brings back changes that were rolled back.",
       communityPurge:
-        "The Community edition keeps two versions. Publishing purges {{version}} for good.",
+        "The Community and Professional editions keep two versions. Publishing purges {{version}} for good.",
       nothingToPublish: "The draft has no unpublished changes.",
       validationFailed: "The draft cannot be published yet. Fix these problems first.",
       doneTitle: "Published {{version}}",
       doneBody: "{{version}} is now the running version.",
-      purgedNotice: "{{version}} was purged by the Community edition retention rule.",
+      purgedNotice: "{{version}} was purged by the retention rule.",
       warnings: "Published with warnings",
     },
     activate: {
