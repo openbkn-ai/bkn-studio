@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { mockApiResourceFixtures } from "../services/api-resource-mock-data";
 import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { findMockCatalog } from "@/shared/catalog/catalog-mock";
@@ -86,8 +86,10 @@ function show(
 }
 
 describe("API Resource table-style workspace", () => {
+  let consoleError: MockInstance<typeof console.error>;
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleError = vi.spyOn(console, "error");
     vi.stubEnv("VITE_USE_MOCK", "false");
     window.matchMedia = vi.fn().mockImplementation((media: string) => ({
       matches: false,
@@ -112,7 +114,19 @@ describe("API Resource table-style workspace", () => {
       paging: { next_cursor: null, expires_at_sec: null },
     });
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    const focusWarnings = consoleError.mock.calls.filter((args) => {
+      const message: unknown = args[0];
+      return (
+        typeof message === "string" &&
+        message.includes("[antd: Input]") &&
+        message.includes("dynamic add or remove prefix / suffix")
+      );
+    });
+    consoleError.mockRestore();
+    expect(focusWarnings).toEqual([]);
+  });
 
   it("uses the shared basic/field panels, exposes exactly detail and preview, and keeps editing explicit", () => {
     const edit = vi.fn();

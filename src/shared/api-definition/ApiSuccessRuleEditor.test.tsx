@@ -105,7 +105,7 @@ describe("Success HTTP status tags", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it.each([{}, { http_status: [] }, { http_status: ["200"] }, { http_status: [200, 200] }])(
+  it.each([{}, { http_status: [] }, { http_status: ["200"] }])(
     "does not fill or rewrite invalid loaded values %j on mount",
     async (initial) => {
       const editor = renderEditor(initial);
@@ -114,6 +114,37 @@ describe("Success HTTP status tags", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     },
   );
+
+  it("keeps duplicate loaded codes invalid until the user edits the tags", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      const initial = { http_status: [200, 200] };
+      const editor = renderEditor(initial);
+      const input = screen.getByRole("combobox", { name: title("allowedStatuses") });
+      await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(false));
+      expect(editor.changed).not.toHaveBeenCalled();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(consoleError.mock.calls).not.toContainEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Encountered two children with the same key"),
+        ]),
+      );
+      expect(tags()).toHaveLength(1);
+      expect(tags()[0]).toHaveTextContent("200");
+
+      fireEvent.blur(input);
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent(title("errors.status"));
+      expect(editor.latest()).toEqual({ http_status: [200, 200] });
+
+      addStatus("201");
+      expect(editor.latest()).toEqual({ http_status: [200, 201] });
+      await waitFor(() => expect(editor.validity).toHaveBeenLastCalledWith(true));
+      expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 
   it("displays a precision-preserving loaded number without rewriting it", async () => {
     const editor = renderEditor({ http_status: [new BigNumber(200)] });

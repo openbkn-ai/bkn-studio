@@ -25,21 +25,12 @@ import {
   ApiCatalogConnectionTestModal,
   ApiCatalogTestResultNotice,
   type ApiCatalogTestScope,
-  type ApiCatalogTestKind,
   type ApiCatalogTestResult,
-  type ApiCatalogBusinessTestInput,
 } from "@/modules/data-connect/components/ApiCatalogConnectionTestModal";
 import {
   buildApiCatalogPreview,
   prepareApiCatalogConfigForEdit,
-  validateApiCatalogConfig,
 } from "@/modules/data-connect/lib/api-catalog-config";
-import { validateApiLoginDefinition } from "@/shared/api-definition";
-import {
-  canTestApiCatalogResource,
-  getApiCatalogTestResource,
-} from "@/modules/data-connect/services/api-catalog-test.service";
-import type { CatalogConnectionTestResult } from "@/shared/catalog";
 import apiStyles from "@/modules/data-connect/components/ApiCatalogConfigEditor.module.css";
 import {
   getConnectorConfigDefaults,
@@ -587,11 +578,7 @@ export function DataConnectFormScene({
     }
   };
 
-  const handleApiTest = async (
-    scope: ApiCatalogTestScope,
-    kind: ApiCatalogTestKind,
-    input?: ApiCatalogBusinessTestInput,
-  ) => {
+  const handleApiTest = async (scope: ApiCatalogTestScope) => {
     if (apiUnavailable) return;
     if (
       (scope === "draft" && !canTestUnsavedConfig) ||
@@ -607,37 +594,10 @@ export function DataConnectFormScene({
     setApiTestResult(null);
     setTestingConnection(true);
     try {
-      let response: CatalogConnectionTestResult | undefined;
-      let resourceName: string | undefined;
-      if (kind === "resource") {
-        if (scope !== "saved" || !recordId || !record?.enabled || !input?.resourceId)
-          throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
-        const resource = await getApiCatalogTestResource(input.resourceId, {
-          signal: controller.signal,
-        });
-        if (!resource || !canTestApiCatalogResource(resource, recordId))
-          throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
-        resourceName = resource.name;
-      }
       if (scope === "draft" && !apiEditorValid)
         throw new Error(t("dataConnect.apiCatalog.errors.incompleteInput"));
-      if (kind === "local") {
-        const config =
-          scope === "saved"
-            ? record!.connectorConfig
-            : (form.getFieldValue("connectorConfig") as Record<string, unknown>);
-        const error =
-          validateApiCatalogConfig(config, { requireSecrets: scope === "draft" }) ??
-          (config.login_request ? validateApiLoginDefinition(config.login_request) : undefined);
-        if (error) throw new Error(t(error));
-      } else if (scope === "saved") {
-        response = await testDataConnectRecord(recordId!, {
-          signal: controller.signal,
-          ...(kind === "transport" ? {} : { scope: kind }),
-          ...(kind === "resource"
-            ? { resourceId: input?.resourceId, ...(input?.paging ? { paging: input.paging } : {}) }
-            : {}),
-        });
+      if (scope === "saved") {
+        await testDataConnectRecord(recordId!, { signal: controller.signal });
       } else {
         const payload = await buildConnectionTestPayload();
         if (
@@ -646,11 +606,7 @@ export function DataConnectFormScene({
           controller.signal.aborted
         )
           return;
-        if (kind === "resource") throw new Error(t("dataConnect.apiCatalog.resourceRequired"));
-        response = await testDataConnectConfig(
-          { ...payload, ...(kind === "login" ? { scope: "login" as const } : {}) },
-          { signal: controller.signal },
-        );
+        await testDataConnectConfig(payload, { signal: controller.signal });
       }
       if (
         identity !== recordIdentityRef.current ||
@@ -662,20 +618,7 @@ export function DataConnectFormScene({
         scope,
         revision,
         type: "success",
-        message: t(
-          `dataConnect.apiCatalog.${kind === "local" ? "localSuccess" : kind === "login" ? "loginSuccess" : kind === "resource" ? "resourceSuccess" : "transportSuccess"}`,
-        ),
-        resourceName,
-        preview:
-          kind === "resource" && response
-            ? buildApiCatalogPreview(
-                (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>,
-                {
-                  entries: response.entries,
-                  ...(response.paging ? { paging: response.paging } : {}),
-                },
-              )
-            : undefined,
+        message: t("dataConnect.apiCatalog.connectionSuccess"),
       });
     } catch (error) {
       if (
@@ -926,8 +869,6 @@ export function DataConnectFormScene({
         {apiTestOpen && isApiConnector ? (
           <ApiCatalogConnectionTestModal
             saved={!!record}
-            catalogId={recordId}
-            catalogEnabled={record?.enabled}
             draftLogin={!!apiDraftConfig?.login_request}
             savedLogin={!!record?.connectorConfig.login_request}
             defaultScope={
@@ -938,8 +879,8 @@ export function DataConnectFormScene({
             loading={testingConnection}
             result={apiTestResult}
             revision={configRevision}
-            onRun={(scope, kind, input) => {
-              void handleApiTest(scope, kind, input);
+            onRun={(scope) => {
+              void handleApiTest(scope);
             }}
             onClose={() => {
               apiTestController.current?.abort();

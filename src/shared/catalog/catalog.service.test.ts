@@ -568,141 +568,47 @@ describe("catalog.service · test connection", () => {
     vi.unstubAllEnvs();
   });
 
-  it("submits an explicit draft login scope with the original configuration and cancellation", async () => {
-    const result = { success: true, scope: "login", message: "Login verified." };
+  it("tests draft login configuration without sending retired validation options", async () => {
+    const result = { success: true, message: "Connection test succeeded." };
     postMock.mockResolvedValue({ data: result });
     const { testCatalogConnectionConfig } = await import("@/shared/catalog/catalog.service");
     const input = {
       connectorType: "http",
-      connectorConfig: { base_url: "https://api.example.com/" },
-      scope: "login" as const,
+      connectorConfig: {
+        base_url: "https://api.example.com/",
+        login_request: { request: { method: "GET", path: "login" } },
+      },
+      scope: "login",
     };
     const signal = new AbortController().signal;
     await expect(testCatalogConnectionConfig(input, { signal })).resolves.toEqual(result);
     expect(postMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/test-connection",
-      { connector_type: "http", connector_config: input.connectorConfig, scope: "login" },
+      { connector_type: "http", connector_config: input.connectorConfig },
       expect.objectContaining({ signal }),
     );
   });
 
-  it("submits saved login without credentials or draft configuration", async () => {
-    postMock.mockResolvedValue({ data: { success: true, scope: "login" } });
+  it("tests saved configuration without a request body or Resource options", async () => {
+    const result = { success: true, message: "Connection test succeeded." };
+    postMock.mockResolvedValue({ data: result });
     const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
     const signal = new AbortController().signal;
-    await testCatalogConnection("api", { scope: "login", signal });
+    const options = {
+      signal,
+      scope: "resource",
+      resourceId: "orders",
+      paging: { offset: 0, limit: 1 },
+    };
+    await expect(testCatalogConnection("api", options)).resolves.toEqual(result);
     expect(postMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/api/test-connection",
-      { scope: "login" },
+      undefined,
       { skipErrorToast: true, timeout: 60_000, signal },
     );
   });
 
-  it("serializes the saved Resource request and reads exact entries with presence-safe paging", async () => {
-    const raw =
-      '{"success":true,"scope":"resource","entries":[{"id":9007199254740993,"amount":1234567890.123456789}],"paging":{"mode":"offset","offset":0,"limit":1,"total":0,"has_more":false}}';
-    postMock.mockImplementation(
-      (
-        _url: string,
-        _body: unknown,
-        options: { transformResponse: (data: string) => unknown },
-      ) => ({ data: options.transformResponse(raw) }),
-    );
-    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
-    const signal = new AbortController().signal;
-    const paging = { offset: 0, limit: 1 };
-    const result = await testCatalogConnection("api", {
-      scope: "resource",
-      resourceId: "orders",
-      paging,
-      signal,
-    });
-    const entry = result.entries?.[0] as Record<string, unknown>;
-    expect(BigNumber.isBigNumber(entry.id)).toBe(true);
-    expect(String(entry.id)).toBe("9007199254740993");
-    expect(String(entry.amount)).toBe("1234567890.123456789");
-    expect(result.paging).toEqual({
-      mode: "offset",
-      offset: 0,
-      limit: 1,
-      total: 0,
-      has_more: false,
-    });
-    const [, body, options] = postMock.mock.lastCall as [
-      string,
-      unknown,
-      { signal: AbortSignal; transformRequest: (data: unknown) => string },
-    ];
-    expect(body).toEqual({ scope: "resource", resource_id: "orders", paging });
-    expect(options.signal).toBe(signal);
-    expect(options.transformRequest(body)).toBe(
-      '{"scope":"resource","resource_id":"orders","paging":{"offset":0,"limit":1}}',
-    );
-  });
-
-  it("supports an inferred Resource scope and accepts an empty Resource result", async () => {
-    const result = { success: true, scope: "resource", entries: [] };
-    postMock.mockResolvedValue({ data: result });
-    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
-    await expect(testCatalogConnection("api", { resourceId: "orders" })).resolves.toEqual(result);
-    expect(postMock).toHaveBeenCalledWith(
-      "/vega-backend/v1/catalogs/api/test-connection",
-      { resource_id: "orders" },
-      expect.objectContaining({ transformResponse: expect.any(Function) as unknown }),
-    );
-  });
-
-  it("keeps special business keys in precise Resource test entries", async () => {
-    const raw =
-      '{"success":true,"scope":"resource","entries":[{"constructor":"sample","__proto__":{"polluted":true},"amount":9007199254740993}]}';
-    postMock.mockImplementation(
-      (
-        _url: string,
-        _body: unknown,
-        options: { transformResponse: (data: string) => unknown },
-      ) => ({
-        data: options.transformResponse(raw),
-      }),
-    );
-    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
-    const result = await testCatalogConnection("api", { resourceId: "orders" });
-    const entry = result.entries?.[0] as Record<string, unknown>;
-    expect(Object.hasOwn(entry, "constructor")).toBe(true);
-    expect(entry.constructor).toBe("sample");
-    expect(Object.hasOwn(entry, "__proto__")).toBe(true);
-    expect(Object.getPrototypeOf(entry)).toBe(Object.prototype);
-    expect(Object.hasOwn(Object.prototype, "polluted")).toBe(false);
-    expect(String(entry.amount)).toBe("9007199254740993");
-  });
-
-  it("serializes a precise Resource paging offset as an unquoted JSON integer", async () => {
-    postMock.mockResolvedValue({ data: { success: true, scope: "resource", entries: [] } });
-    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
-    await testCatalogConnection("api", {
-      scope: "resource",
-      resourceId: "orders",
-      paging: { offset: new BigNumber("9007199254740993"), limit: 1 },
-    });
-    const [, body, options] = postMock.mock.lastCall as [
-      string,
-      unknown,
-      { headers: Record<string, string>; transformRequest: (data: unknown) => string },
-    ];
-    expect(options.headers["Content-Type"]).toBe("application/json");
-    const text = options.transformRequest(body);
-    expect(text).toContain('"offset":9007199254740993');
-    expect(text).not.toContain('"offset":"9007199254740993"');
-  });
-
-  it("rejects Resource validation without a Resource before making a request", async () => {
-    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
-    await expect(testCatalogConnection("api", { scope: "resource" })).rejects.toThrow(
-      "requires a saved Resource",
-    );
-    expect(postMock).not.toHaveBeenCalled();
-  });
-
-  it("keeps an empty options object on the legacy undefined-body transport contract", async () => {
+  it("keeps an empty options object on the bodyless connection test contract", async () => {
     postMock.mockResolvedValue({ data: { success: true } });
     const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
     await testCatalogConnection("api", {});

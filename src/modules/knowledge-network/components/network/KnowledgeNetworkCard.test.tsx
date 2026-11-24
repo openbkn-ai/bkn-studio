@@ -128,7 +128,7 @@ describe("KnowledgeNetworkCard export menu interaction", () => {
     cleanup();
   });
 
-  function renderCard() {
+  function renderCard(operations = ["view_detail"]) {
     const handlers = {
       onAuthorize: vi.fn(),
       onCheck: vi.fn(),
@@ -137,23 +137,32 @@ describe("KnowledgeNetworkCard export menu interaction", () => {
       onExport: vi.fn(),
       onOpen: vi.fn(),
     };
-    const view = render(
-      <KnowledgeNetworkCard {...handlers} record={createRecord(["view_detail"])} />,
-    );
+    const view = render(<KnowledgeNetworkCard {...handlers} record={createRecord(operations)} />);
 
     return { ...handlers, view };
   }
 
   it("expands the export formats without opening the workspace", async () => {
-    const { onExport, onOpen, view } = renderCard();
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      const { onExport, onOpen, view } = renderCard(["view_detail", "delete"]);
 
-    fireEvent.click(view.container.querySelector("button") as HTMLButtonElement);
+      fireEvent.click(view.container.querySelector("button") as HTMLButtonElement);
 
-    const exportItem = await screen.findByText("knowledgeNetwork.export");
-    fireEvent.click(exportItem);
+      const exportItem = await screen.findByText("knowledgeNetwork.export");
+      expect(screen.getByRole("menuitem", { name: "common.delete" })).toHaveClass(
+        "ant-dropdown-menu-item-danger",
+      );
+      fireEvent.click(exportItem);
 
-    expect(onOpen).not.toHaveBeenCalled();
-    expect(onExport).not.toHaveBeenCalled();
+      expect(onOpen).not.toHaveBeenCalled();
+      expect(onExport).not.toHaveBeenCalled();
+      expect(consoleError.mock.calls).not.toContainEqual(
+        expect.arrayContaining([expect.stringContaining("non-boolean attribute"), "danger"]),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("runs the network check without opening the workspace", async () => {

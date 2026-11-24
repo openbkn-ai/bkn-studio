@@ -447,7 +447,7 @@ export function EventClassFormDrawer({
         />
         {schedule.kind === "minutes" ? (
           <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
+            suffix={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.minutes")}
             max={59}
             min={MIN_CHECK_MINUTES}
@@ -460,7 +460,7 @@ export function EventClassFormDrawer({
         ) : null}
         {schedule.kind === "hours" ? (
           <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
+            suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.hours")}
             max={23}
             min={1}
@@ -643,10 +643,7 @@ export function EventClassFormDrawer({
             label={t("knowledgeNetwork.eventClasses.form.mergeHours")}
             name="mergeHours"
           >
-            <InputNumber
-              addonAfter={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
-              min={0}
-            />
+            <InputNumber suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")} min={0} />
           </Form.Item>
         ) : (
           <>

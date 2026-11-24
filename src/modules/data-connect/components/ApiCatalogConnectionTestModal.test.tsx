@@ -5,21 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiCatalogConnectionTestModal } from "./ApiCatalogConnectionTestModal";
-
-const listResourcesMock = vi.hoisted(() => vi.fn());
-const getResourceMock = vi.hoisted(() => vi.fn());
-vi.mock("@/modules/data-connect/services/api-catalog-test.service", () => {
-  return {
-    listApiCatalogTestResources: listResourcesMock,
-    getApiCatalogTestResource: getResourceMock,
-    canTestApiCatalogResource: (resource: { operations: string[] }) =>
-      resource.operations.includes("query_data"),
-  };
-});
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -28,10 +17,6 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 describe("ApiCatalogConnectionTestModal", () => {
   beforeEach(() => {
-    listResourcesMock.mockReset();
-    listResourcesMock.mockResolvedValue({ items: [], total: 0 });
-    getResourceMock.mockReset();
-    getResourceMock.mockResolvedValue(null);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: () => undefined,
       addListener: () => undefined,
@@ -96,14 +81,15 @@ describe("ApiCatalogConnectionTestModal", () => {
     fireEvent.click(draft);
     fireEvent.keyDown(scope, { key: "Escape", keyCode: 27, which: 27 });
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
-    expect(onRun).toHaveBeenCalledWith("saved", "transport");
+    expect(onRun).toHaveBeenCalledWith("saved");
   });
 
-  it("keeps unsupported login and Resource tests disabled without silently selecting them", async () => {
+  it.each([true, false])("offers one connection test with login configured: %s", (hasLogin) => {
     const onRun = vi.fn();
     render(
       <ApiCatalogConnectionTestModal
         saved
+        savedLogin={hasLogin}
         defaultScope="saved"
         canTestDraft
         canTestSaved
@@ -114,31 +100,27 @@ describe("ApiCatalogConnectionTestModal", () => {
         onClose={vi.fn()}
       />,
     );
-    const target = screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" });
-    fireEvent.mouseDown(target);
-    for (const name of [
-      "dataConnect.apiCatalog.loginScope",
-      "dataConnect.apiCatalog.resourceScope",
-    ]) {
-      const option = await screen.findByText(name);
-      expect(option.closest(".ant-select-item-option")).toHaveClass(
-        "ant-select-item-option-disabled",
-      );
-      fireEvent.click(option);
-    }
-    fireEvent.keyDown(target, { key: "Escape", keyCode: 27, which: 27 });
+    expect(
+      screen.queryByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        `dataConnect.apiCatalog.${hasLogin ? "loginTestHint" : "transportTestHint"}`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("dataConnect.apiCatalog.resourceTestHint")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
-    expect(onRun).toHaveBeenCalledWith("saved", "transport");
+    expect(onRun).toHaveBeenCalledWith("saved");
   });
 
-  it("offers explicit login only for a selected configuration with a login definition", async () => {
+  it("updates the explanation for the selected configuration", async () => {
     const onRun = vi.fn();
     render(
       <ApiCatalogConnectionTestModal
         saved
-        catalogId="catalog-1"
-        catalogEnabled
         savedLogin
+        draftLogin={false}
         defaultScope="saved"
         canTestDraft
         canTestSaved
@@ -149,121 +131,12 @@ describe("ApiCatalogConnectionTestModal", () => {
         onClose={vi.fn()}
       />,
     );
-    fireEvent.mouseDown(
-      screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
-    );
-    fireEvent.click(await screen.findByText("dataConnect.apiCatalog.loginScope"));
+    expect(screen.getByText("dataConnect.apiCatalog.loginTestHint")).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testScope" }));
+    fireEvent.click(await screen.findByText("dataConnect.apiCatalog.draft"));
+    expect(screen.getByText("dataConnect.apiCatalog.transportTestHint")).toBeInTheDocument();
+    expect(screen.queryByText("dataConnect.apiCatalog.loginTestHint")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
-    expect(onRun).toHaveBeenCalledWith("saved", "login");
-  });
-
-  it("loads permission-checked read candidates and submits paging only for the selected saved Resource", async () => {
-    const resource = {
-      id: "orders",
-      name: "Orders",
-      catalogId: "catalog-1",
-      category: "api",
-      effectType: "read",
-      enabled: true,
-      status: "active",
-      operations: ["query_data"],
-    };
-    listResourcesMock.mockResolvedValue({
-      items: [resource, { ...resource, id: "private", name: "Private", operations: [] }],
-      total: 2,
-    });
-    getResourceMock.mockResolvedValue({
-      ...resource,
-      pagingRule: { mode: "offset", default_limit: 10, max_limit: 20 },
-    });
-    const onRun = vi.fn();
-    render(
-      <ApiCatalogConnectionTestModal
-        saved
-        catalogId="catalog-1"
-        catalogEnabled
-        defaultScope="saved"
-        canTestDraft
-        canTestSaved
-        loading={false}
-        result={null}
-        revision={0}
-        onRun={onRun}
-        onClose={vi.fn()}
-      />,
-    );
-    fireEvent.mouseDown(
-      screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
-    );
-    fireEvent.click(await screen.findByText("dataConnect.apiCatalog.resourceScope"));
-    await waitFor(() => expect(listResourcesMock).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" })).toBeDisabled();
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataConnect.apiCatalog.resource" }));
-    const privateOption = await screen.findByText(
-      "Private — dataConnect.apiCatalog.resourceDenied",
-    );
-    expect(privateOption.closest(".ant-select-item-option")).toHaveClass(
-      "ant-select-item-option-disabled",
-    );
-    fireEvent.click(await screen.findByText("Orders"));
-    await screen.findByRole("checkbox", { name: "dataConnect.apiCatalog.paging" });
-    fireEvent.click(screen.getByRole("checkbox", { name: "dataConnect.apiCatalog.paging" }));
-    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.offset"), {
-      target: { value: "0" },
-    });
-    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.limit"), {
-      target: { value: "21" },
-    });
-    expect(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("dataConnect.apiCatalog.limit"), {
-      target: { value: "2" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
-    expect(onRun).toHaveBeenCalledWith("saved", "resource", {
-      resourceId: "orders",
-      paging: { offset: 0, limit: 2 },
-    });
-    expect(getResourceMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("rejects a candidate whose detail no longer grants query permission", async () => {
-    const resource = {
-      id: "orders",
-      name: "Orders",
-      catalogId: "catalog-1",
-      category: "api",
-      effectType: "read",
-      enabled: true,
-      status: "active",
-      operations: ["query_data"],
-    };
-    listResourcesMock.mockResolvedValue({ items: [resource], total: 1 });
-    getResourceMock.mockResolvedValue({ ...resource, operations: [] });
-    const onRun = vi.fn();
-    render(
-      <ApiCatalogConnectionTestModal
-        saved
-        catalogId="catalog-1"
-        catalogEnabled
-        defaultScope="saved"
-        canTestDraft
-        canTestSaved
-        loading={false}
-        result={null}
-        revision={0}
-        onRun={onRun}
-        onClose={vi.fn()}
-      />,
-    );
-    fireEvent.mouseDown(
-      screen.getByRole("combobox", { name: "dataConnect.apiCatalog.testTarget" }),
-    );
-    fireEvent.click(await screen.findByText("dataConnect.apiCatalog.resourceScope"));
-    await waitFor(() => expect(listResourcesMock).toHaveBeenCalledTimes(1));
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataConnect.apiCatalog.resource" }));
-    fireEvent.click(await screen.findByText("Orders"));
-    await screen.findByText("dataConnect.apiCatalog.resourceRequired");
-    fireEvent.click(screen.getByRole("button", { name: "dataConnect.apiCatalog.startTest" }));
-    expect(onRun).not.toHaveBeenCalled();
+    expect(onRun).toHaveBeenCalledWith("draft");
   });
 });

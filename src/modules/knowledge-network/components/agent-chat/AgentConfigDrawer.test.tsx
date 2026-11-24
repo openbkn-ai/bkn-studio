@@ -7,12 +7,23 @@
 
 import { App } from "antd";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import type { AgentConfig } from "@/modules/knowledge-network/services/bkn-agent-settings.service";
 
 import { AgentConfigDrawer } from "./AgentConfigDrawer";
+
+let consoleError: MockInstance<typeof console.error>;
 
 type SettingsModule =
   typeof import("@/modules/knowledge-network/services/bkn-agent-settings.service");
@@ -95,6 +106,7 @@ beforeAll(() => {
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   vi.resetAllMocks();
+  consoleError = vi.spyOn(console, "error");
   listMcpTools.mockResolvedValue([
     { name: "search_schema" },
     { name: "run_code" },
@@ -102,7 +114,19 @@ beforeEach(async () => {
   ]);
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  const addonWarnings = consoleError.mock.calls.filter((args) => {
+    const message: unknown = args[0];
+    return (
+      typeof message === "string" &&
+      message.includes("[antd: InputNumber]") &&
+      /addonAfter|addonBefore/.test(message)
+    );
+  });
+  consoleError.mockRestore();
+  expect(addonWarnings).toEqual([]);
+});
 
 // Each case renders both settings tabs with a dozen antd number fields; shared CI runners
 // take well over the default 10s on the tab-switching ones.
@@ -216,9 +240,10 @@ describe("AgentConfigDrawer", { timeout: 20_000 }, () => {
 
     await screen.findByText(i18n.t("knowledgeNetwork.agentChat.config.networkDescription"));
     const unit = i18n.t("knowledgeNetwork.agentChat.config.limitFields.max_output_tokens.unit");
-    const capInputs = Array.from(document.querySelectorAll("input")).filter((el) =>
-      el.closest(".ant-input-number-group-wrapper")?.textContent?.includes(unit),
-    );
+    const capInputs = Array.from(document.querySelectorAll("input")).filter((el) => {
+      const field = el.closest<HTMLElement>(".ant-form-item");
+      return field && within(field).queryByText(unit, { exact: true });
+    });
     expect(capInputs.length).toBeGreaterThan(0);
     // Beneath a shared cap of 8192 the bound is that cap; it never exceeds 1,000,000.
     for (const el of capInputs) {

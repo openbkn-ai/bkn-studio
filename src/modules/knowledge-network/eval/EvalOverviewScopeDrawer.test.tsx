@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@ant-design/v5-patch-for-react-19";
+import "@/app/locales/i18n";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 

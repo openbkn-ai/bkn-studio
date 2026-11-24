@@ -5,10 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Button } from "antd";
+import { Button, Input } from "antd";
 import { render } from "@testing-library/react";
 import { createElement } from "react";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 it("reads the scrollbar pseudo-element without a jsdom not-implemented warning", () => {
   const element = document.createElement("div");
@@ -57,4 +57,36 @@ it("still hides what antd marks with a hidden state class", () => {
   } finally {
     closedDropdown.remove();
   }
+});
+
+it("keeps autosizing textarea heights finite without the injected antd styles", () => {
+  const consoleError = vi.spyOn(console, "error");
+  try {
+    const { getByRole } = render(
+      createElement(Input.TextArea, {
+        autoSize: { minRows: 2, maxRows: 5 },
+        variant: "borderless",
+        "aria-label": "Prompt",
+      }),
+    );
+    const textarea = getByRole("textbox") as HTMLTextAreaElement;
+    expect(Number.isFinite(Number.parseFloat(textarea.style.height))).toBe(true);
+    const heightWarnings = consoleError.mock.calls.filter((args) =>
+      args.some((value: unknown) => typeof value === "string" && value.includes("height")),
+    );
+    expect(heightWarnings).toEqual([]);
+  } finally {
+    consoleError.mockRestore();
+  }
+});
+
+it("preserves explicit textarea sizing styles over the test defaults", () => {
+  const { getByRole } = render(
+    createElement(Input.TextArea, { style: { padding: "7px", border: "3px solid" } }),
+  );
+  const style = getComputedStyle(getByRole("textbox"));
+  expect(style.paddingTop).toBe("7px");
+  expect(style.paddingBottom).toBe("7px");
+  expect(style.borderTopWidth).toBe("3px");
+  expect(style.borderBottomWidth).toBe("3px");
 });

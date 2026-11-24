@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@/app/locales/i18n";
 import { render } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { EvalDeclarationCheckResult } from "./EvalDeclarationCheckResult";

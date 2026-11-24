@@ -10,7 +10,6 @@ export type {
   CatalogConnectionTestInput,
   CatalogConnectionTestOptions,
   CatalogConnectionTestResult,
-  CatalogConnectionTestScope,
   CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
   CatalogDeletionImpact,

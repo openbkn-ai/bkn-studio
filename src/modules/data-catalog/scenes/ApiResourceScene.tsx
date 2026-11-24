@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Form, Input, Space, Spin, Switch } from "antd";
+import { Alert, Button, Form, Input, Space, Spin, Switch, type FormInstance } from "antd";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -69,7 +69,7 @@ export function ApiResourceScene({
   const configTitleId = useId();
   const basicTitleId = useId();
   const validationTitleId = useId();
-  const [form] = Form.useForm();
+  const formRef = useRef<FormInstance<ApiResourceInput>>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [saved, setSaved] = useState<ApiResource>();
   const [draft, setDraft] = useState<ApiResourceInput>();
@@ -139,7 +139,6 @@ export function ApiResourceScene({
       const input = resource ?? createApiResourceInput(selectedCatalog?.id ?? catalogId ?? "");
       initialDraft.current = input;
       setDraft(input);
-      form.setFieldsValue(input);
       setConflict(false);
       setNotice(undefined);
     } catch (failure) {
@@ -150,7 +149,7 @@ export function ApiResourceScene({
     } finally {
       if (mounted.current && current === generation.current) setLoading(false);
     }
-  }, [resourceId, catalogId, form, startInEditMode]);
+  }, [resourceId, catalogId, startInEditMode]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -197,7 +196,6 @@ export function ApiResourceScene({
     setShowOutputFieldErrors(false);
     initialDraft.current = latest;
     setDraft(latest);
-    form.setFieldsValue(latest);
     setPendingReadback(undefined);
     const success = t(readback.noticeKey);
     setNotice(success);
@@ -215,7 +213,8 @@ export function ApiResourceScene({
     }
   };
   const submit = async () => {
-    if (!draft || !maySave || busy) return;
+    const form = formRef.current;
+    if (!draft || !maySave || busy || !form) return;
     setError(undefined);
     try {
       await form.validateFields();
@@ -264,7 +263,6 @@ export function ApiResourceScene({
         setValidationInput({});
         setValidationInputValid(true);
         setDraft(saved);
-        form.setFieldsValue(saved);
         setEditorValid(true);
         setShowOutputFieldErrors(false);
         setEditing(false);
@@ -453,11 +451,17 @@ export function ApiResourceScene({
           </header>
           <section className={viewStyles.configSection} aria-labelledby={basicTitleId}>
             <h3 id={basicTitleId}>{t("dataCatalog.viewEditor.basic")}</h3>
-            <Form
+            <Form<ApiResourceInput>
+              key={generation.current}
               aria-labelledby={basicTitleId}
               className={`${viewStyles.basicGrid} ${styles.basicForm}`}
               colon={false}
-              form={form}
+              ref={formRef}
+              initialValues={{
+                name: draft.name,
+                description: draft.description,
+                tags: draft.tags,
+              }}
               layout="horizontal"
               disabled={disabled}
               validateTrigger="onBlur"

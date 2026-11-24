@@ -12,6 +12,7 @@ import { ResourcePermissionRequestAction } from "./ResourcePermissionRequestActi
 
 const mocks = vi.hoisted(() => ({
   capability: "unknown",
+  createPermissionRequest: vi.fn(),
   getPermissionRequestProposalPreview: vi.fn(),
   message: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
   registry: {
@@ -51,6 +52,7 @@ vi.mock("@/modules/account/services/permission-requests.service", async (importO
   ...(await importOriginal<
     typeof import("@/modules/account/services/permission-requests.service")
   >()),
+  createPermissionRequest: mocks.createPermissionRequest,
   getPermissionRequestProposalPreview: mocks.getPermissionRequestProposalPreview,
   listPermissionRequests: () => Promise.resolve({ entries: [] }),
 }));
@@ -88,11 +90,15 @@ beforeEach(() => {
 
 afterEach(() => {
   mocks.capability = "unknown";
+  mocks.createPermissionRequest.mockReset();
   mocks.getPermissionRequestProposalPreview.mockReset();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 it("preserves an open operation request when policy preview becomes available", async () => {
+  const consoleError = vi.spyOn(console, "error");
+  mocks.createPermissionRequest.mockResolvedValue(undefined);
   mocks.getPermissionRequestProposalPreview.mockResolvedValue({});
   const props = {
     initialReason: "original reason",
@@ -121,4 +127,20 @@ it("preserves an open operation request when policy preview becomes available", 
   await waitFor(() => expect(mocks.getPermissionRequestProposalPreview).toHaveBeenCalledOnce());
   expect((reason as HTMLInputElement).value).toBe("edited reason");
   expect(operation.getAttribute("aria-pressed")).toBe("true");
+
+  fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.permissionRequestSubmit" }));
+  await waitFor(() =>
+    expect(mocks.createPermissionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operations: ["query_data"],
+        reason: "edited reason",
+        resourceID: props.resourceID,
+      }),
+    ),
+  );
+  expect(consoleError.mock.calls).not.toContainEqual(
+    expect.arrayContaining([
+      expect.stringContaining("Cannot update during an existing state transition"),
+    ]),
+  );
 });

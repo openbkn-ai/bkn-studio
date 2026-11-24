@@ -158,7 +158,10 @@ it("prepares query availability without exposing meaningless invocation paramete
     />,
   );
   choose("检查项", "关系查询可用");
+  const progress = screen.getByRole("progressbar", { name: "正在校验检查配置…" });
+  expect(progress).toHaveTextContent("正在校验检查配置…");
   await waitFor(() => expect(onPrepared).toHaveBeenCalledWith(prepared));
+  expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText("调用参数")).toBeNull();
   expect(screen.queryByText(/零关联允许通过/)).toBeNull();
   fireEvent.mouseEnter(screen.getByRole("button", { name: "判定标准 ?" }));
