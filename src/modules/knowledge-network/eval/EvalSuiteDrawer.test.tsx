@@ -7,6 +7,8 @@
 
 import "@ant-design/v5-patch-for-react-19";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { App } from "antd";
+import type { ReactNode } from "react";
 import { beforeAll, beforeEach, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -22,6 +24,8 @@ import {
   type EvalCaseSummary,
   type EvalSuiteVersion,
 } from "./m0-run.service";
+
+const renderDrawer = (node: ReactNode) => render(<App>{node}</App>);
 
 vi.mock("./m0-run.service", () => ({
   CASE_LIST_BATCH_SIZE: 50,
@@ -97,7 +101,7 @@ beforeEach(() => {
 
 it("updates and freezes the test set in one request", async () => {
   const onSaved = vi.fn();
-  render(
+  const { unmount } = renderDrawer(
     <EvalSuiteDrawer networkId="kn-1" open suite={published} onClose={vi.fn()} onSaved={onSaved} />,
   );
 
@@ -114,11 +118,14 @@ it("updates and freezes the test set in one request", async () => {
     ),
   );
   expect(onSaved).toHaveBeenCalledWith(published);
+  const feedback = await screen.findByText("测试集已更新");
+  unmount();
+  expect(feedback).not.toBeInTheDocument();
 });
 
 it("allows the test set name to be changed without a publish step", async () => {
   const onSaved = vi.fn();
-  render(
+  renderDrawer(
     <EvalSuiteDrawer networkId="kn-1" open suite={published} onClose={vi.fn()} onSaved={onSaved} />,
   );
 
@@ -142,7 +149,7 @@ it("allows the test set name to be changed without a publish step", async () => 
 
 it("selects cases from a searchable table when creating a test set", async () => {
   const onSaved = vi.fn();
-  render(<EvalSuiteDrawer networkId="kn-1" open onClose={vi.fn()} onSaved={onSaved} />);
+  renderDrawer(<EvalSuiteDrawer networkId="kn-1" open onClose={vi.fn()} onSaved={onSaved} />);
 
   fireEvent.change(screen.getByRole("textbox", { name: "测试集名称" }), {
     target: { value: "供应链回归" },
@@ -197,7 +204,7 @@ it("shows only current members while editing and supports adding and removing ca
     next_cursor: null,
   });
 
-  render(
+  renderDrawer(
     <EvalSuiteDrawer networkId="kn-1" open suite={published} onClose={vi.fn()} onSaved={vi.fn()} />,
   );
 
@@ -233,7 +240,7 @@ it("shows only current members while editing and supports adding and removing ca
 it("loads member summaries from the exact suite version without scanning all cases", async () => {
   const suiteWithoutSummaries = { ...published, member_summaries: undefined };
 
-  render(
+  renderDrawer(
     <EvalSuiteDrawer
       networkId="kn-1"
       open
@@ -249,7 +256,7 @@ it("loads member summaries from the exact suite version without scanning all cas
 });
 
 it("separates the description counter and selected-case toolbar and puts actions second", () => {
-  render(
+  renderDrawer(
     <EvalSuiteDrawer networkId="kn-1" open suite={published} onClose={vi.fn()} onSaved={vi.fn()} />,
   );
   expect(screen.getByLabelText("描述字数")).toHaveTextContent(
@@ -304,7 +311,7 @@ it("reuses resource navigation and retains selected cases across resource filter
       next_cursor: null,
     }),
   );
-  render(<EvalSuiteDrawer networkId="kn-1" open onClose={vi.fn()} onSaved={vi.fn()} />);
+  renderDrawer(<EvalSuiteDrawer networkId="kn-1" open onClose={vi.fn()} onSaved={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: /新增用例/ }));
   const selector = await screen.findByRole("dialog", { name: "新增用例" });
   const resources = within(selector).getByRole("navigation", { name: "资源列表" });

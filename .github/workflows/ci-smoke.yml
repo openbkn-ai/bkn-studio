@@ -65,4 +65,4 @@ jobs:
       - name: Run route smoke tests
         env:
           E2E_BASE_URL: http://127.0.0.1:5173
-        run: npm run test:smoke --prefix tests/e2e
+        run: npm run test:smoke --prefix tests/e2e -- --workers=50%
