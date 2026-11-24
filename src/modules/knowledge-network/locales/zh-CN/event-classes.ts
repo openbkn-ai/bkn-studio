@@ -23,7 +23,7 @@ export const eventClassesPart = {
       createTitle: "新建事件类",
       editTitle: "编辑事件类",
       versionedHint:
-        "这个知识网络有版本：事件类型与规则检查保存后立即生效；事件类写入草稿，发布版本后才能按对象查询。",
+        "这个知识网络有版本：事件类和它的识别行动类写入草稿，发布版本后才生效，平台从那时起按检查时间检查。",
       legacyRuleHint:
         "这个事件类还没有识别行动类，平台不会检查它。选一个规则工具和检查时间后，由平台按时检查。",
       otherBasisHint:

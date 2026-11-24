@@ -26,7 +26,7 @@ export const eventClassesPart = {
       createTitle: "New event class",
       editTitle: "Edit event class",
       versionedHint:
-        "This knowledge network has versions. The event type and its rule checks take effect when saved; the event class goes into the draft and can be queried as objects once a version is published.",
+        "This knowledge network has versions. The event class and its recognition action go into the draft and take effect once a version is published; the platform checks on schedule from then on.",
       legacyRuleHint:
         "This event class has no recognition action, so the platform does not check it. Choose a rule tool and a schedule to have the platform check it.",
       otherBasisHint:
