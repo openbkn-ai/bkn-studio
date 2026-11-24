@@ -237,10 +237,33 @@ function basisOf(action: BackendRecognitionAction): KnEventRecognitionBasis {
   return "condition";
 }
 
+/**
+ * A fixed rate in the cron the form edits, when one says the same thing: a step that divides an
+ * hour or a day evenly. Any other rate has no cron of the same meaning and shows as none.
+ */
+export function cronOfFixedRate(expression: string): string | undefined {
+  const match = /^(\d+)([mhd])$/.exec(expression.trim());
+  if (!match) return undefined;
+  const minutes = Number(match[1]) * { d: 1440, h: 60, m: 1 }[match[2] as "d" | "h" | "m"];
+  if (minutes === 1440) return "0 0 * * *";
+  if (minutes > 0 && minutes < 60 && 60 % minutes === 0) return `*/${minutes} * * * *`;
+  const hours = minutes / 60;
+  if (Number.isInteger(hours) && hours > 0 && hours < 24 && 24 % hours === 0) {
+    return hours === 1 ? "0 * * * *" : `0 */${hours} * * *`;
+  }
+  return undefined;
+}
+
 function scheduleFromBackend(action: BackendRecognitionAction): KnEventCheckSchedule | null {
   const schedule = action.schedule;
-  if (!schedule?.expression || (schedule.type && schedule.type !== "CRON")) return null;
-  return { cron: schedule.expression, timezone: schedule.timezone || undefined };
+  if (!schedule?.expression) return null;
+  const timezone = schedule.timezone || undefined;
+  if (schedule.type === "FIX_RATE") {
+    const cron = cronOfFixedRate(schedule.expression);
+    return cron ? { cron, timezone } : null;
+  }
+  if (schedule.type && schedule.type !== "CRON") return null;
+  return { cron: schedule.expression, timezone };
 }
 
 function accountFromBackend(account: BackendAccount | undefined): KnEventCheckSubject | null {

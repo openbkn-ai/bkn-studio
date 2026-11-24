@@ -42,6 +42,7 @@ vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
 import {
   checkKnEventType,
   createKnEventType,
+  cronOfFixedRate,
   deleteKnEventType,
   getKnEventType,
   listKnEventRuleTools,
@@ -661,5 +662,28 @@ describe("event-type.service", () => {
     for (const [, config] of getMock.mock.calls as [string, { params: { page_size: number } }][]) {
       expect(config.params.page_size).toBeLessThanOrEqual(100);
     }
+  });
+
+  it("reads a fixed rate as the cron of the same meaning, when there is one", () => {
+    expect(cronOfFixedRate("30m")).toBe("*/30 * * * *");
+    expect(cronOfFixedRate("60m")).toBe("0 * * * *");
+    expect(cronOfFixedRate("6h")).toBe("0 */6 * * *");
+    expect(cronOfFixedRate("1d")).toBe("0 0 * * *");
+    expect(cronOfFixedRate("45m")).toBeUndefined();
+    expect(cronOfFixedRate("5h")).toBeUndefined();
+    expect(cronOfFixedRate("2d")).toBeUndefined();
+  });
+
+  it("shows the schedule of a recognition action that runs at a fixed rate", async () => {
+    serve({
+      action: recognition({
+        schedule: { expression: "30m", timezone: "Asia/Shanghai", type: "FIX_RATE" },
+      }),
+      schedule,
+    });
+
+    const eventType = await getKnEventType("kn-1", "order_overdue");
+
+    expect(eventType.check_schedule).toEqual({ cron: "*/30 * * * *", timezone: "Asia/Shanghai" });
   });
 });
