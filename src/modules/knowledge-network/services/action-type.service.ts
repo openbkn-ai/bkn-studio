@@ -410,6 +410,22 @@ export async function listKnowledgeNetworkActionTypeExecutionResults(
   }
 }
 
+/** Retry failed index synchronization intents without executing the action again. */
+export async function retryKnowledgeNetworkActionTypeIndexSync(
+  networkId: string,
+  executionId: string,
+): Promise<number> {
+  if (useMock) {
+    throw new Error("Index synchronization retry requires a backend execution");
+  }
+  const { data } = await http.post<{ retried_results: number }>(
+    `/ontology-query/v1/knowledge-networks/${encodeURIComponent(networkId)}/action-executions/${encodeURIComponent(executionId)}/index-sync/retry`,
+    {},
+    { skipErrorToast: true },
+  );
+  return data.retried_results;
+}
+
 /** Discovery returns the execution contract without scanning objects. */
 export async function getActionTypeExecutionSchema(
   networkId: string,

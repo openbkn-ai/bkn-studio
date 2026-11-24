@@ -153,10 +153,14 @@ export type ActionTypeExecutionLogQuery = {
 
 export type ActionTypeExecutionLogResultStatus = "cancelled" | "failed" | "pending" | "success";
 
+export type ActionIndexSyncStatus =
+  "pending" | "submitted" | "retrying" | "completed" | "failed" | "invalid";
+
 export type ActionTypeExecutionLogResultItem = {
   displayName?: string;
   durationMs?: number;
   errorMessage?: string;
+  indexSync?: { status: ActionIndexSyncStatus; error?: string };
   status: ActionTypeExecutionLogResultStatus;
 };
 
@@ -176,6 +180,7 @@ export type ActionTypeExecutionResultPage = {
 
 export type ActionTypeExecutionLogDetail = ActionTypeExecutionLog & {
   endTime?: string;
+  executorId?: string;
   executorName?: string;
   results?: ActionTypeExecutionLogResultItem[];
   /** How many results the execution has; `results` holds only the detail response's first page. */
