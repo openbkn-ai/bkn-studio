@@ -1115,3 +1115,55 @@ describe("action-type.service - optional reads", () => {
     );
   });
 });
+
+describe("action-type.service synchronization contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("preserves executor identity and index synchronization independently of action success", async () => {
+    const service = await import("./action-type.service");
+    const result = {
+      _display: "Huawei",
+      status: "success",
+      index_sync: { status: "failed", error: "index unavailable" },
+    };
+    getMock.mockResolvedValueOnce({
+      data: { id: "exec-1", executor: { id: "alice", name: "Alice" }, results: [result] },
+    });
+    const detail = await service.getKnowledgeNetworkActionTypeExecutionLogDetail("kn", "exec-1");
+    expect(detail).toMatchObject({
+      executorId: "alice",
+      results: [{ status: "success", indexSync: result.index_sync }],
+    });
+    getMock.mockResolvedValueOnce({ data: { entries: [result], total_count: 1 } });
+    expect(
+      await service.listKnowledgeNetworkActionTypeExecutionResults("kn", "exec-1", {
+        offset: 0,
+        limit: 20,
+      }),
+    ).toMatchObject({ entries: [{ indexSync: result.index_sync }] });
+  });
+
+  it("only calls the sync retry endpoint and propagates permission failures", async () => {
+    const service = await import("./action-type.service");
+    postMock.mockResolvedValueOnce({ data: { retried_results: 2 } });
+    expect(await service.retryKnowledgeNetworkActionTypeIndexSync("kn", "exec-1")).toBe(2);
+    expect(postMock).toHaveBeenCalledWith(
+      "/ontology-query/v1/knowledge-networks/kn/action-executions/exec-1/index-sync/retry",
+      {},
+      { skipErrorToast: true },
+    );
+    const error = { response: { status: 403 } };
+    postMock.mockRejectedValueOnce(error);
+    await expect(service.retryKnowledgeNetworkActionTypeIndexSync("kn", "exec-1")).rejects.toEqual(
+      error,
+    );
+  });
+});

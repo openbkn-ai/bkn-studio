@@ -20,10 +20,12 @@ const mocks = vi.hoisted(() => ({
   detail: vi.fn(),
   list: vi.fn(),
   results: vi.fn(),
+  retry: vi.fn(),
   // A stable services object, as the app context provides.
   services: {
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
+    runtimeConfig: { currentUser: { id: "initiator" } },
   },
 }));
 
@@ -41,6 +43,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   getKnowledgeNetworkActionTypeExecutionLogDetail: mocks.detail,
   listKnowledgeNetworkActionTypeExecutionLogs: mocks.list,
   listKnowledgeNetworkActionTypeExecutionResults: mocks.results,
+  retryKnowledgeNetworkActionTypeIndexSync: mocks.retry,
 }));
 
 const log = {
@@ -120,29 +123,38 @@ async function openRow(index: number) {
   fireEvent.click((await screen.findAllByText("common.detail")).at(-1)!);
 }
 
+beforeEach(() => {
+  // antd's responsive pagination queries media; jsdom does not implement matchMedia.
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: false,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  );
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("ActionTypeTaskManagementPanel execution results", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // antd's responsive pagination queries media; jsdom does not implement matchMedia.
-    vi.stubGlobal(
-      "matchMedia",
-      vi.fn((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: false,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    );
+    mocks.services.runtimeConfig.currentUser.id = "initiator";
+    mocks.retry.mockResolvedValue(1);
     mocks.list.mockResolvedValue({ entries: [log], totalCount: 1 });
     mocks.detail.mockResolvedValue(detail);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("pages results through the results endpoint", async () => {
@@ -523,4 +535,170 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
 
     expect(mocks.services.message.error).not.toHaveBeenCalled();
   }, 15_000);
+});
+
+describe("ActionTypeTaskManagementPanel data synchronization", () => {
+  const failedSync: ActionTypeExecutionLogResultItem = {
+    displayName: "Huawei",
+    status: "success",
+    indexSync: { status: "failed", error: "index service unavailable" },
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.services.runtimeConfig.currentUser.id = "initiator";
+    mocks.list.mockResolvedValue({ entries: [log], totalCount: 1 });
+    mocks.detail.mockResolvedValue({ ...detail, executorId: "initiator" });
+    mocks.results.mockResolvedValue({ entries: [failedSync], totalCount: 1 });
+    mocks.retry.mockResolvedValue(1);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("shows synchronization failure separately from a successful direct/MCP execution", async () => {
+    await openDetail();
+    expect(await screen.findByText("index service unavailable")).toBeVisible();
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionResultSuccess")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    ).toBeVisible();
+  });
+
+  it("does not offer synchronization retry to another user", async () => {
+    mocks.services.runtimeConfig.currentUser.id = "another-user";
+    await openDetail();
+    await screen.findByText("index service unavailable");
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    ).toBeNull();
+  });
+
+  it("does not claim completion or offer retry for missing or invalid metadata", async () => {
+    mocks.results.mockResolvedValue({
+      entries: [
+        { displayName: "historical", status: "success" },
+        { displayName: "incomplete", status: "success", indexSync: { status: "invalid" } },
+      ],
+      totalCount: 2,
+    });
+    await openDetail();
+    await screen.findByText("knowledgeNetwork.actionTypeIndexSyncUnreported");
+    expect(screen.getByText("knowledgeNetwork.actionTypeIndexSyncInvalid")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    ).toBeNull();
+  });
+
+  it("prevents duplicate retries and refreshes actual synchronization status", async () => {
+    const pending = deferred<number>();
+    mocks.retry.mockReturnValue(pending.promise);
+    await openDetail();
+    const button = await screen.findByRole("button", {
+      name: "knowledgeNetwork.actionTypeIndexSyncRetry",
+    });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(mocks.retry).toHaveBeenCalledTimes(1);
+    expect(mocks.retry).toHaveBeenCalledWith("network-1", "exec-1");
+    mocks.results.mockResolvedValue({
+      entries: [{ ...failedSync, indexSync: { status: "submitted" } }],
+      totalCount: 1,
+    });
+    await act(async () => {
+      pending.resolve(1);
+      await pending.promise;
+    });
+    await screen.findByText("knowledgeNetwork.actionTypeIndexSyncSubmitted");
+    expect(mocks.services.message.success).toHaveBeenCalledWith(
+      "knowledgeNetwork.actionTypeIndexSyncRetryQueued",
+    );
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  });
+
+  it("handles revoked permissions and refreshes without claiming retry succeeded", async () => {
+    mocks.retry.mockRejectedValue({ response: { status: 403 } });
+    await openDetail();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    );
+    await waitFor(() =>
+      expect(mocks.services.message.error).toHaveBeenCalledWith(
+        "knowledgeNetwork.actionTypeIndexSyncForbidden",
+      ),
+    );
+    expect(mocks.services.message.success).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.results).toHaveBeenCalledTimes(2));
+  });
+
+  it("can discover a failed synchronization on a later result page", async () => {
+    serveResults([...rows(20), failedSync]);
+    await openDetail();
+    await within(resultTable()).findByText("result-0");
+    expect(
+      screen.queryByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    ).toBeNull();
+    fireEvent.click(within(resultTable()).getByTitle("2"));
+    await screen.findByText("index service unavailable");
+    expect(
+      screen.getByRole("button", { name: "knowledgeNetwork.actionTypeIndexSyncRetry" }),
+    ).toBeVisible();
+  });
+
+  it("polls active synchronization and stops after completion or closing", async () => {
+    await openDetail();
+    await screen.findByText("index service unavailable");
+    vi.useFakeTimers();
+    mocks.results.mockResolvedValue({
+      entries: [{ ...failedSync, indexSync: { status: "submitted" } }],
+      totalCount: 1,
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.actionTypeExecutionRefreshResults" }),
+      );
+      await Promise.resolve();
+    });
+    expect(screen.getByText("knowledgeNetwork.actionTypeIndexSyncSubmitted")).toBeVisible();
+    mocks.results.mockResolvedValue({
+      entries: [{ ...failedSync, indexSync: { status: "completed" } }],
+      totalCount: 1,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText("knowledgeNetwork.actionTypeIndexSyncCompleted")).toBeVisible();
+    const calls = mocks.results.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+    expect(mocks.results).toHaveBeenCalledTimes(calls);
+    mocks.results.mockResolvedValue({
+      entries: [{ ...failedSync, indexSync: { status: "submitted" } }],
+      totalCount: 1,
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.actionTypeExecutionRefreshResults" }),
+      );
+      await Promise.resolve();
+    });
+    const activeCalls = mocks.results.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(mocks.results).toHaveBeenCalledTimes(activeCalls);
+  });
+
+  it("opens an execution directly without a governance request", async () => {
+    render(
+      <ActionTypeTaskManagementPanel
+        actionTypeId="action-1"
+        networkId="network-1"
+        initialExecutionId="exec-1"
+      />,
+    );
+    await screen.findByText("index service unavailable");
+    expect(mocks.detail).toHaveBeenCalledWith("network-1", "exec-1");
+  });
 });

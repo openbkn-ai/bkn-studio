@@ -6,6 +6,29 @@
  */
 
 export const actiontypePart = {
+  actionTypeIndexSyncUnreportedHint:
+    "This execution contains no synchronization information. Its synchronization outcome cannot be determined.",
+  actionTypeIndexSyncUnreportedDescription:
+    "This execution contains no synchronization information.",
+
+  actionTypeIndexSync: "Data synchronization",
+  actionTypeIndexSyncHint:
+    "Data synchronization is separate from action execution. Retry resubmits failed synchronization for this execution without executing the business action again.",
+  actionTypeExecutionRefreshResults: "Refresh results",
+  actionTypeIndexSyncRetry: "Retry data synchronization",
+  actionTypeIndexSyncRetryQueued: "Data synchronization resubmitted.",
+  actionTypeIndexSyncNothingToRetry: "No failed synchronization needs retrying.",
+  actionTypeIndexSyncForbidden:
+    "Only the original executor with the currently required permissions can retry.",
+  actionTypeIndexSyncRetryFailed: "Retry failed. Refresh the status and try again.",
+  actionTypeIndexSyncPending: "Awaiting synchronization",
+  actionTypeIndexSyncSubmitted: "Synchronizing",
+  actionTypeIndexSyncRetrying: "Retrying automatically",
+  actionTypeIndexSyncCompleted: "Completed",
+  actionTypeIndexSyncFailed: "Synchronization failed",
+  actionTypeIndexSyncInvalid: "Incomplete change metadata",
+  actionTypeIndexSyncUnreported: "No synchronization information",
+
   actionTypeBasicInfo: "Basic information",
   actionTypeConceptDefinitionStep: "Rule definition",
   actionTypeConfigStep: "Action configuration",
@@ -190,7 +213,7 @@ export const actiontypePart = {
   actionTypeExecutionToolIdPlaceholder: "Tool ID",
   actionTypeEmptyValue: "--",
   actionTypeDetailOverview: "Overview",
-  actionTypeDetailTaskManagement: "Task management",
+  actionTypeDetailTaskManagement: "Execution records",
   actionTypeExecuteImmediately: "Execute now",
   actionTypeExecuteSuccess: "The action type execution has started.",
   actionTypeExecuteParamsTitle: "Runtime parameters",

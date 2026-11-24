@@ -6,6 +6,26 @@
  */
 
 export const actiontypePart = {
+  actionTypeIndexSyncUnreportedHint: "此执行记录未包含数据同步信息，不能据此判断同步成功或失败。",
+  actionTypeIndexSyncUnreportedDescription: "此执行记录未包含数据同步信息。",
+
+  actionTypeIndexSync: "数据同步",
+  actionTypeIndexSyncHint:
+    "数据同步与行动执行结果独立。重试会重新提交此执行记录中失败的同步，不会再次执行业务行动。",
+  actionTypeExecutionRefreshResults: "刷新结果",
+  actionTypeIndexSyncRetry: "重试数据同步",
+  actionTypeIndexSyncRetryQueued: "数据同步已重新提交。",
+  actionTypeIndexSyncNothingToRetry: "当前没有需要重试的数据同步。",
+  actionTypeIndexSyncForbidden: "仅原执行人且具备当前所需权限时可以重试。",
+  actionTypeIndexSyncRetryFailed: "重试失败，请刷新状态后再试。",
+  actionTypeIndexSyncPending: "等待同步",
+  actionTypeIndexSyncSubmitted: "同步中",
+  actionTypeIndexSyncRetrying: "自动重试中",
+  actionTypeIndexSyncCompleted: "已完成",
+  actionTypeIndexSyncFailed: "同步失败",
+  actionTypeIndexSyncInvalid: "变更信息不完整",
+  actionTypeIndexSyncUnreported: "暂无同步信息",
+
   actionTypeBasicInfo: "基础信息",
   actionTypeConceptDefinitionStep: "规则定义",
   actionTypeConfigStep: "行动配置",
@@ -178,7 +198,7 @@ export const actiontypePart = {
   actionTypeExecutionToolIdPlaceholder: "工具 ID",
   actionTypeEmptyValue: "--",
   actionTypeDetailOverview: "概览",
-  actionTypeDetailTaskManagement: "任务管理",
+  actionTypeDetailTaskManagement: "执行记录",
   actionTypeExecuteImmediately: "立即执行",
   actionTypeExecuteSuccess: "行动类已开始执行。",
   actionTypeExecuteParamsTitle: "运行时参数",

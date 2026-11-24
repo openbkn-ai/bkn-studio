@@ -348,6 +348,7 @@ export function ActionTypeExecutionScene() {
                   canManage={canExecute}
                   networkId={networkId}
                   refreshToken={taskRefreshToken}
+                  initialExecutionId={searchParams.get("execution_id") ?? undefined}
                 />
               ) : null}
             </div>

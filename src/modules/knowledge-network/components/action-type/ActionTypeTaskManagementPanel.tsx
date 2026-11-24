@@ -10,9 +10,24 @@ import {
   CloseCircleOutlined,
   EllipsisOutlined,
   ReloadOutlined,
+  QuestionCircleOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Badge, Descriptions, Drawer, Dropdown, Empty, Input, Select, Spin, Table } from "antd";
+import {
+  Badge,
+  Descriptions,
+  Drawer,
+  Dropdown,
+  Empty,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +40,7 @@ import {
   getKnowledgeNetworkActionTypeExecutionLogDetail,
   listKnowledgeNetworkActionTypeExecutionLogs,
   listKnowledgeNetworkActionTypeExecutionResults,
+  retryKnowledgeNetworkActionTypeIndexSync,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ActionTypeExecutionLog,
@@ -46,6 +62,7 @@ type ActionTypeTaskManagementPanelProps = {
   canManage?: boolean;
   networkId: string;
   refreshToken?: number;
+  initialExecutionId?: string;
 };
 
 function formatDuration(durationMs: number) {
@@ -86,9 +103,10 @@ export function ActionTypeTaskManagementPanel({
   canManage = true,
   networkId,
   refreshToken = 0,
+  initialExecutionId,
 }: ActionTypeTaskManagementPanelProps) {
   const { t } = useTranslation();
-  const { modal, message } = useAppServices();
+  const { modal, message, runtimeConfig } = useAppServices();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<ActionTypeExecutionLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -112,6 +130,10 @@ export function ActionTypeTaskManagementPanel({
   const [resultsLoading, setResultsLoading] = useState(false);
   // An older backend has no results endpoint; the detail response then carries the first page.
   const [embeddedResultsOnly, setEmbeddedResultsOnly] = useState(false);
+  const [resultRefresh, setResultRefresh] = useState(0);
+  const [resultsFailed, setResultsFailed] = useState(false);
+  const [syncRetrying, setSyncRetrying] = useState(false);
+  const retryRef = useRef(false);
   const detailRequestRef = useRef(0);
   const isCurrentContext =
     detailContext?.actionTypeId === actionTypeId && detailContext?.networkId === networkId;
@@ -124,6 +146,7 @@ export function ActionTypeTaskManagementPanel({
     setResultRows([]);
     setResultTotal(0);
     setResultsLoading(false);
+    setSyncRetrying(false);
     return () => {
       // A context change or unmount makes every outstanding detail response obsolete.
       detailRequestRef.current += 1;
@@ -235,34 +258,47 @@ export function ActionTypeTaskManagementPanel({
     void loadLogs();
   }, [loadLogs, refreshToken]);
 
-  const openLogDetail = async (record: ActionTypeExecutionLog) => {
-    const requestId = ++detailRequestRef.current;
-    setDetailContext({ actionTypeId, networkId });
-    setDrawerOpen(true);
-    setDrawerLoading(true);
-    setCurrentLog(null);
-    setResultPage(1);
-    setResultStatus("");
-    setResultRows([]);
-    setResultTotal(0);
-    setEmbeddedResultsOnly(false);
+  const openLogDetail = useCallback(
+    async (record: Pick<ActionTypeExecutionLog, "id">) => {
+      const requestId = ++detailRequestRef.current;
+      setDetailContext({ actionTypeId, networkId });
+      setDrawerOpen(true);
+      setDrawerLoading(true);
+      setCurrentLog(null);
+      setResultPage(1);
+      setResultStatus("");
+      setResultRows([]);
+      setResultTotal(0);
+      setEmbeddedResultsOnly(false);
+      setSyncRetrying(false);
 
-    try {
-      const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(networkId, record.id);
-      if (requestId === detailRequestRef.current) {
-        setCurrentLog(detail);
+      try {
+        const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(networkId, record.id);
+        if (requestId === detailRequestRef.current) {
+          if (detail && detail.actionTypeId !== actionTypeId) throw new Error(t("common.notFound"));
+          setCurrentLog(detail);
+        }
+      } catch (error) {
+        if (requestId === detailRequestRef.current) {
+          setCurrentLog(null);
+          void message.error(extractRequestErrorMessage(error));
+        }
+      } finally {
+        if (requestId === detailRequestRef.current) {
+          setDrawerLoading(false);
+        }
       }
-    } catch (error) {
-      if (requestId === detailRequestRef.current) {
-        setCurrentLog(null);
-        void message.error(extractRequestErrorMessage(error));
-      }
-    } finally {
-      if (requestId === detailRequestRef.current) {
-        setDrawerLoading(false);
-      }
-    }
-  };
+    },
+    [actionTypeId, networkId, message, t],
+  );
+
+  const openDetailRef = useRef(openLogDetail);
+  useEffect(() => {
+    openDetailRef.current = openLogDetail;
+  });
+  useEffect(() => {
+    if (initialExecutionId) void openDetailRef.current({ id: initialExecutionId });
+  }, [initialExecutionId, networkId, actionTypeId]);
 
   const closeLogDetail = () => {
     detailRequestRef.current += 1;
@@ -277,42 +313,61 @@ export function ActionTypeTaskManagementPanel({
     }
 
     let stale = false;
-    setResultsLoading(true);
-    listKnowledgeNetworkActionTypeExecutionResults(networkId, currentLogId, {
-      limit: resultPageSize,
-      offset: (resultPage - 1) * resultPageSize,
-      status: resultStatus,
-    })
-      .then((page) => {
-        if (stale) {
-          return;
-        }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      setResultsLoading(true);
+      setResultsFailed(false);
+      try {
+        const page = await listKnowledgeNetworkActionTypeExecutionResults(networkId, currentLogId, {
+          limit: resultPageSize,
+          offset: (resultPage - 1) * resultPageSize,
+          status: resultStatus,
+        });
+        if (stale) return;
         if (page === null) {
           setEmbeddedResultsOnly(true);
           return;
         }
         setResultRows(page.entries);
         setResultTotal(page.totalCount);
-      })
-      .catch((error: unknown) => {
-        if (stale) {
-          return;
+        let executionStatus = currentLog?.status;
+        if (executionStatus === "pending" || executionStatus === "running") {
+          const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(
+            networkId,
+            currentLogId,
+          );
+          if (stale) return;
+          if (detail) {
+            setCurrentLog(detail);
+            executionStatus = detail.status;
+          }
         }
-        setResultRows([]);
-        setResultTotal(0);
-        void message.error(extractRequestErrorMessage(error));
-      })
-      .finally(() => {
+        if (
+          ["pending", "running"].includes(executionStatus ?? "") ||
+          page.entries.some((row) =>
+            ["pending", "submitted", "retrying"].includes(row.indexSync?.status ?? ""),
+          )
+        )
+          timer = setTimeout(() => void load(), 5000);
+      } catch (error) {
         if (!stale) {
-          setResultsLoading(false);
+          setResultRows([]);
+          setResultTotal(0);
+          setResultsFailed(true);
+          void message.error(extractRequestErrorMessage(error));
         }
-      });
-
+      } finally {
+        if (!stale) setResultsLoading(false);
+      }
+    };
+    void load();
     return () => {
       stale = true;
+      clearTimeout(timer);
     };
   }, [
     currentLogId,
+    currentLog?.status,
     drawerOpen,
     embeddedResultsOnly,
     isCurrentContext,
@@ -321,6 +376,7 @@ export function ActionTypeTaskManagementPanel({
     resultPage,
     resultPageSize,
     resultStatus,
+    resultRefresh,
   ]);
 
   // Without the results endpoint, page and filter the results embedded in the detail response.
@@ -350,6 +406,47 @@ export function ActionTypeTaskManagementPanel({
     : resultTotal > RESULT_WINDOW
       ? { count: RESULT_WINDOW, total: resultTotal }
       : null;
+
+  const canRetrySync = Boolean(
+    drawerOpen &&
+    isCurrentContext &&
+    runtimeConfig.currentUser.id &&
+    currentLog?.executorId === runtimeConfig.currentUser.id &&
+    shownResultRows.some((row) => row.indexSync?.status === "failed"),
+  );
+  const retrySync = async () => {
+    if (!canRetrySync || !currentLogId || resultsLoading || resultsFailed || retryRef.current)
+      return;
+    retryRef.current = true;
+    setSyncRetrying(true);
+    const revision = detailRequestRef.current;
+    try {
+      const count = await retryKnowledgeNetworkActionTypeIndexSync(networkId, currentLogId);
+      if (revision === detailRequestRef.current)
+        void message.success(
+          t(
+            count
+              ? "knowledgeNetwork.actionTypeIndexSyncRetryQueued"
+              : "knowledgeNetwork.actionTypeIndexSyncNothingToRetry",
+          ),
+        );
+    } catch (error) {
+      if (revision === detailRequestRef.current)
+        void message.error(
+          t(
+            (error as { response?: { status?: number } }).response?.status === 403
+              ? "knowledgeNetwork.actionTypeIndexSyncForbidden"
+              : "knowledgeNetwork.actionTypeIndexSyncRetryFailed",
+          ),
+        );
+    } finally {
+      retryRef.current = false;
+      if (revision === detailRequestRef.current) {
+        setSyncRetrying(false);
+        setResultRefresh((value) => value + 1);
+      }
+    }
+  };
 
   const confirmCancel = (record: ActionTypeExecutionLog) => {
     void modal.confirm({
@@ -531,7 +628,7 @@ export function ActionTypeTaskManagementPanel({
         onClose={closeLogDetail}
         open={drawerOpen && isCurrentContext}
         title={t("knowledgeNetwork.actionTypeExecutionLogDetailTitle")}
-        width={720}
+        width={960}
       >
         {drawerLoading ? (
           <div className={styles.drawerLoading}>
@@ -563,16 +660,42 @@ export function ActionTypeTaskManagementPanel({
 
             <div className={styles.resultHeader}>
               <h4>{t("knowledgeNetwork.actionTypeExecutionResultTitle")}</h4>
-              <Select
-                aria-label={t("knowledgeNetwork.actionTypeExecutionResultStatusFilter")}
-                className={styles.filterSelect}
-                onChange={(value: ActionTypeExecutionResultStatusFilter) => {
-                  setResultStatus(value);
-                  setResultPage(1);
-                }}
-                options={resultStatusOptions}
-                value={resultStatus}
-              />
+              <Space wrap>
+                <Tooltip title={t("knowledgeNetwork.actionTypeIndexSyncHint")}>
+                  <QuestionCircleOutlined
+                    aria-label={t("knowledgeNetwork.actionTypeIndexSyncHint")}
+                  />
+                </Tooltip>
+                <AppButton
+                  size="small"
+                  disabled={syncRetrying}
+                  loading={resultsLoading}
+                  onClick={() => setResultRefresh((value) => value + 1)}
+                >
+                  {t("knowledgeNetwork.actionTypeExecutionRefreshResults")}
+                </AppButton>
+                {canRetrySync ? (
+                  <AppButton
+                    size="small"
+                    type="primary"
+                    loading={syncRetrying}
+                    disabled={resultsLoading || resultsFailed}
+                    onClick={() => void retrySync()}
+                  >
+                    {t("knowledgeNetwork.actionTypeIndexSyncRetry")}
+                  </AppButton>
+                ) : null}
+                <Select
+                  aria-label={t("knowledgeNetwork.actionTypeExecutionResultStatusFilter")}
+                  className={styles.filterSelect}
+                  onChange={(value: ActionTypeExecutionResultStatusFilter) => {
+                    setResultStatus(value);
+                    setResultPage(1);
+                  }}
+                  options={resultStatusOptions}
+                  value={resultStatus}
+                />
+              </Space>
             </div>
             {browsableResults ? (
               <div className={styles.resultHint}>
@@ -586,6 +709,12 @@ export function ActionTypeTaskManagementPanel({
                   dataIndex: "displayName",
                   key: "displayName",
                   title: t("knowledgeNetwork.actionTypeExecutionResultTarget"),
+                  width: 200,
+                  render: (value?: string) => (
+                    <Typography.Text style={{ maxWidth: "100%" }} ellipsis={{ tooltip: value }}>
+                      {value || "—"}
+                    </Typography.Text>
+                  ),
                 },
                 {
                   dataIndex: "status",
@@ -593,6 +722,59 @@ export function ActionTypeTaskManagementPanel({
                   render: (value: ActionTypeExecutionLogResultStatus) =>
                     getResultStatusLabel(value),
                   title: t("knowledgeNetwork.actionTypeExecutionRunStatus"),
+                },
+                {
+                  key: "indexSync",
+                  title: t("knowledgeNetwork.actionTypeIndexSync"),
+                  width: 240,
+                  render: (_, row) => {
+                    const status = row.indexSync?.status;
+                    const known = [
+                      "pending",
+                      "submitted",
+                      "retrying",
+                      "completed",
+                      "failed",
+                      "invalid",
+                    ].includes(status ?? "");
+                    return (
+                      <Space direction="vertical" size={4}>
+                        <Tooltip
+                          title={
+                            !known
+                              ? t("knowledgeNetwork.actionTypeIndexSyncUnreportedHint")
+                              : undefined
+                          }
+                        >
+                          <Tag
+                            color={
+                              status === "completed"
+                                ? "success"
+                                : status === "failed"
+                                  ? "error"
+                                  : status === "invalid"
+                                    ? "warning"
+                                    : known
+                                      ? "processing"
+                                      : undefined
+                            }
+                          >
+                            {t(
+                              `knowledgeNetwork.actionTypeIndexSync${known ? status!.charAt(0).toUpperCase() + status!.slice(1) : "Unreported"}`,
+                            )}
+                          </Tag>
+                        </Tooltip>
+                        {row.indexSync?.error ? (
+                          <Typography.Text type="secondary">{row.indexSync.error}</Typography.Text>
+                        ) : null}
+                        {!known ? (
+                          <Typography.Text type="secondary">
+                            {t("knowledgeNetwork.actionTypeIndexSyncUnreportedDescription")}
+                          </Typography.Text>
+                        ) : null}
+                      </Space>
+                    );
+                  },
                 },
                 {
                   dataIndex: "durationMs",
@@ -607,6 +789,7 @@ export function ActionTypeTaskManagementPanel({
                   title: t("knowledgeNetwork.actionTypeExecutionResultError"),
                 },
               ]}
+              tableLayout="fixed"
               dataSource={shownResultRows}
               loading={resultsLoading}
               locale={{ emptyText: t("knowledgeNetwork.actionTypeExecutionResultEmpty") }}
