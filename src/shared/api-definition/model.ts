@@ -9,6 +9,30 @@ import BigNumber from "bignumber.js";
 
 export type DefinitionObject = Record<string, unknown>;
 
+export const schemaMapKeywords: ReadonlySet<string> = new Set([
+  "properties",
+  "patternProperties",
+  "$defs",
+  "dependentSchemas",
+]);
+export const schemaSingleKeywords: ReadonlySet<string> = new Set([
+  "items",
+  "additionalProperties",
+  "unevaluatedProperties",
+  "unevaluatedItems",
+  "contains",
+  "not",
+  "if",
+  "then",
+  "else",
+]);
+export const schemaArrayKeywords: ReadonlySet<string> = new Set([
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "prefixItems",
+]);
+
 export function isDefinitionObject(value: unknown): value is DefinitionObject {
   return (
     value !== null &&
@@ -99,27 +123,17 @@ function checkSchema(value: unknown): boolean {
   if (!isDefinitionObject(value)) return false;
   if (["$ref", "$dynamicRef", "$recursiveRef"].some((key) => Object.hasOwn(value, key)))
     return false;
-  for (const name of ["properties", "patternProperties", "$defs", "dependentSchemas"]) {
+  for (const name of schemaMapKeywords) {
     if (
       Object.hasOwn(value, name) &&
       (!isDefinitionObject(value[name]) || !Object.values(value[name]).every(checkSchema))
     )
       return false;
   }
-  for (const name of [
-    "items",
-    "additionalProperties",
-    "unevaluatedProperties",
-    "unevaluatedItems",
-    "contains",
-    "not",
-    "if",
-    "then",
-    "else",
-  ]) {
+  for (const name of schemaSingleKeywords) {
     if (Object.hasOwn(value, name) && !checkSchema(value[name])) return false;
   }
-  for (const name of ["allOf", "anyOf", "oneOf", "prefixItems"]) {
+  for (const name of schemaArrayKeywords) {
     if (
       Object.hasOwn(value, name) &&
       (!Array.isArray(value[name]) || !value[name].every(checkSchema))
