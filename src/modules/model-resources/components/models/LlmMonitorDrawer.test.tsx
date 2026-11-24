@@ -32,7 +32,6 @@ async function renderMonitor(locale: string, data: LlmMonitorData) {
   const i18n = createInstance();
   await i18n.init({
     lng: locale,
-    showSupportNotice: false,
     resources: {
       "en-US": { translation: modelResourcesEnUS },
       "zh-CN": { translation: modelResourcesZhCN },

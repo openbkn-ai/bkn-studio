@@ -1147,6 +1147,28 @@ describe("ResourcePreviewPanel", () => {
     }
   });
 
+  it.each([
+    { displayName: undefined, description: undefined },
+    { displayName: "客户档案审核次数", description: "Read-only source field description" },
+  ])("reveals complete header metadata on focus: %j", async ({ displayName, description }) => {
+    const name = "reporting_customer_profile_recent_review_request_comment_count";
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0, querySource: "source" });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name, type: "text", displayName, description }] }}
+      />,
+    );
+    const header = screen.getByRole("columnheader", { name: new RegExp(name) });
+    const trigger = within(header).getByRole("button", { name: new RegExp(name) });
+    fireEvent.focus(trigger);
+    const tooltip = await screen.findByRole("tooltip");
+    expect(within(tooltip).getByText(name)).toBeTruthy();
+    if (displayName) expect(within(tooltip).getByText(displayName)).toBeTruthy();
+    if (description) expect(within(tooltip).getByText(description)).toBeTruthy();
+    expect(trigger).toHaveAccessibleDescription(description ?? "");
+  });
+
   it.each(["table", "logical_view"] as const)(
     "submits typed time bounds for a %s preview",
     async (category) => {
@@ -2109,8 +2131,8 @@ describe("ResourcePreviewPanel", () => {
     expect(screen.queryByText(content)).toBeNull();
   });
 
-  it("truncates string and text cells while preserving their full values for tooltips", async () => {
-    const content = "x".repeat(80);
+  it("keeps complete string and text values for width-based ellipsis", async () => {
+    const content = "feat/bkn-safe/casdoor-sso-中文👩🏽‍💻";
     previewCatalogResourceMock.mockResolvedValue({
       rows: [{ description: content, name: content }],
       total: 1,
@@ -2130,8 +2152,8 @@ describe("ResourcePreviewPanel", () => {
       />,
     );
 
-    expect(await screen.findAllByText(`${"x".repeat(20)}…`)).toHaveLength(2);
-    expect(screen.queryByText(content)).toBeNull();
+    expect(await screen.findAllByRole("button", { name: content })).toHaveLength(2);
+    expect(screen.queryByText(`${content.slice(0, 20)}…`)).toBeNull();
     expect(screen.queryByLabelText("dataCatalog.preview.loadBinaryContent")).toBeNull();
   });
 
@@ -2150,16 +2172,158 @@ describe("ResourcePreviewPanel", () => {
       />,
     );
 
-    const preview = await screen.findByRole("button", { name: `${"x".repeat(20)}…` });
+    const preview = await screen.findByRole("button", { name: content });
     expect(preview).toBeTruthy();
     fireEvent.click(preview);
 
-    expect(await screen.findByText(content)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.copyFullValue" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(content)).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "dataCatalog.preview.copyFullValue" }),
+    );
     expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
     await waitFor(() => {
       expect(messageMock.success).toHaveBeenCalledWith("dataCatalog.preview.copyFullValueSuccess");
     });
+  });
+
+  it("opens and copies short text that may overflow a narrow column", async () => {
+    const content = "中文字段内容👩🏽‍💻";
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    previewCatalogResourceMock.mockResolvedValue({ rows: [{ name: content }], total: 1 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "name", type: "string" }] }}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: content }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(content)).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "dataCatalog.preview.copyFullValue" }),
+    );
+    expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
+  });
+
+  it.each(
+    ["en-US", "zh-CN"].flatMap((language) =>
+      ["   ", "\n\t", "\u00a0"].map((content) => ({ language, content })),
+    ),
+  )(
+    "names whitespace text buttons in $language and preserves $content",
+    async ({ language, content }) => {
+      const translator = createInstance();
+      await translator.init({
+        lng: language,
+        resources: {
+          "en-US": { translation: dataCatalogEnUS },
+          "zh-CN": { translation: dataCatalogZhCN },
+        },
+      });
+      const original = translateMock.getMockImplementation()!;
+      translateMock.mockImplementation((key, options) => translator.t(key, options));
+      try {
+        writeTextToClipboardMock.mockResolvedValue(undefined);
+        previewCatalogResourceMock.mockResolvedValue({
+          rows: [{ name: content, notes: content }],
+          total: 1,
+        });
+        const { unmount } = render(
+          <ResourcePreviewPanel
+            active
+            resource={{
+              ...resource,
+              schema: [
+                { name: "name", type: "string" },
+                { name: "notes", type: "text" },
+              ],
+            }}
+          />,
+        );
+        const name = language === "en-US" ? "Full value: name" : "完整内容：name";
+        const notes = language === "en-US" ? "Full value: notes" : "完整内容：notes";
+        const preview = await screen.findByRole("button", { name });
+        expect(preview.textContent).toBe(content);
+        expect(screen.getByRole("button", { name: notes }).textContent).toBe(content);
+        fireEvent.click(preview);
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.querySelector("pre")?.textContent).toBe(content);
+        fireEvent.click(
+          within(dialog).getByRole("button", {
+            name: language === "en-US" ? "Copy full value" : "复制完整内容",
+          }),
+        );
+        expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
+        unmount();
+      } finally {
+        translateMock.mockImplementation(original);
+      }
+    },
+  );
+
+  it.each(["string", "text"])(
+    "previews %s values without Intl.Segmenter and preserves full-value access",
+    async (type) => {
+      const segmenterDescriptor = Object.getOwnPropertyDescriptor(Intl, "Segmenter")!;
+      Object.defineProperty(Intl, "Segmenter", { value: undefined });
+      try {
+        const short = "feat/bkn-safe/casdoor-sso-中文👩🏽‍💻";
+        const atLimit = "x".repeat(10_000);
+        const oversized = `${"x".repeat(9_999)}👩🏽‍💻e\u0301${"尾".repeat(20_000)}`;
+        writeTextToClipboardMock.mockResolvedValue(undefined);
+        previewCatalogResourceMock.mockResolvedValue({
+          rows: [{ short, atLimit, oversized }],
+          total: 1,
+        });
+        render(
+          <ResourcePreviewPanel
+            active
+            resource={{
+              ...resource,
+              schema: ["short", "atLimit", "oversized"].map((name) => ({ name, type })),
+            }}
+          />,
+        );
+        const preview = await screen.findByRole("button", { name: "…" });
+        expect(screen.getByRole("button", { name: short }).textContent).toBe(short);
+        expect(screen.getByRole("button", { name: atLimit }).textContent).toBe(atLimit);
+        expect(preview.textContent).toBe("…");
+        expect(screen.queryByText(oversized)).toBeNull();
+        fireEvent.click(preview);
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.querySelector("pre")?.textContent).toBe(oversized);
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: "dataCatalog.preview.copyFullValue" }),
+        );
+        expect(writeTextToClipboardMock).toHaveBeenCalledWith(oversized);
+      } finally {
+        Object.defineProperty(Intl, "Segmenter", segmenterDescriptor);
+      }
+    },
+  );
+
+  it("bounds oversized text without splitting graphemes and copies the original value", async () => {
+    const prefix = "x".repeat(9_999);
+    const content = `${prefix}👩🏽‍💻${"尾".repeat(20_000)}`;
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    previewCatalogResourceMock.mockResolvedValue({ rows: [{ body: content }], total: 1 });
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, schema: [{ name: "body", type: "text" }] }}
+      />,
+    );
+    const preview = await screen.findByRole("button", { name: `${prefix}…` });
+    expect(preview.textContent).not.toContain("\uFFFD");
+    expect(screen.queryByText(content)).toBeNull();
+    fireEvent.click(preview);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(content)).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "dataCatalog.preview.copyFullValue" }),
+    );
+    expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
   });
 
   it("opens and copies Binary content when it was explicitly loaded", async () => {

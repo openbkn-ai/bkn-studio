@@ -19,7 +19,6 @@ beforeEach(async () => {
   await i18n.init({
     lng: "zh-CN",
     resources: evalLocales,
-    showSupportNotice: false,
     interpolation: { escapeValue: false },
   });
 });

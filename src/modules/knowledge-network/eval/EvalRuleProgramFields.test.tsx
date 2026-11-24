@@ -18,9 +18,7 @@ import { evalLocales } from "./locales";
 import { EvalRuleProgramFields } from "./EvalRuleProgramFields";
 import { newRuleProgram, validateRuleProgram, type EvalRuleProgram } from "./rule-check-model";
 beforeAll(async () => {
-  await i18n
-    .use(initReactI18next)
-    .init({ lng: "zh-CN", resources: evalLocales, showSupportNotice: false });
+  await i18n.use(initReactI18next).init({ lng: "zh-CN", resources: evalLocales });
 });
 
 function Editor() {
