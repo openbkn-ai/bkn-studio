@@ -8,12 +8,23 @@
 import { App } from "antd";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import { BknAgentExecutionError } from "@/modules/knowledge-network/services/bkn-agent-execution.service";
 
 import { AgentConfigScene } from "./AgentConfigScene";
+
+let consoleError: MockInstance<typeof console.error>;
 
 type SettingsModule =
   typeof import("@/modules/knowledge-network/services/bkn-agent-settings.service");
@@ -114,10 +125,23 @@ beforeAll(() => {
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");
   vi.resetAllMocks();
+  consoleError = vi.spyOn(console, "error");
   listVersions.mockResolvedValue([version(1, { current: true, initial: true })]);
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  const addonWarnings = consoleError.mock.calls.filter((args) => {
+    const message: unknown = args[0];
+    return (
+      typeof message === "string" &&
+      message.includes("[antd: InputNumber]") &&
+      /addonAfter|addonBefore/.test(message)
+    );
+  });
+  consoleError.mockRestore();
+  expect(addonWarnings).toEqual([]);
+});
 
 function renderScene(agentId = "studio_smart_qa") {
   const router = createMemoryRouter(
@@ -456,9 +480,14 @@ describe("AgentConfigScene", { timeout: 40_000 }, () => {
     expect(input.getAttribute("aria-valuemax")).toBe("1000000");
     expect(input.getAttribute("aria-valuemin")).toBe("10");
     // The unit sits on the field itself, not only in the tooltip.
-    expect(input.closest(".ant-input-number-group-wrapper")?.textContent).toContain(
-      i18n.t("knowledgeNetwork.agentChat.config.limitFields.max_output_tokens.unit"),
-    );
+    const field = input.closest<HTMLElement>(".ant-form-item");
+    expect(field).not.toBeNull();
+    expect(
+      within(field!).getByText(
+        i18n.t("knowledgeNetwork.agentChat.config.limitFields.max_output_tokens.unit"),
+        { exact: true },
+      ),
+    ).toBeVisible();
   });
 
   it("lists the Agent's tools by source, outside the danger zone", async () => {

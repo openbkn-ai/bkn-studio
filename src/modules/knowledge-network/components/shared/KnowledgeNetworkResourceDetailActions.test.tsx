@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -91,7 +93,9 @@ describe("KnowledgeNetworkResourceDetailActions", () => {
       />,
     );
     expect(screen.getByRole("button", { name: /Authorize/ })).not.toBeNull();
-    expect(screen.getByText("common.entitlement.editionsShort.professional")).not.toBeNull();
+    expect(
+      screen.getByText(i18n.t("common.entitlement.editionsShort.professional")),
+    ).not.toBeNull();
 
     networkAuthorize.current = false;
     rerender(

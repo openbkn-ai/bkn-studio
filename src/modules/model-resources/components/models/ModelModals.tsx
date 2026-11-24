@@ -311,7 +311,7 @@ export function LlmModelFormModal({
           name="maxModelLen"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
-          <InputNumber addonAfter="K" controls={false} min={1} style={{ width: "100%" }} />
+          <InputNumber suffix="K" controls={false} min={1} style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item
           label={t("modelResources.models.columns.parameterQuantity")}
@@ -333,7 +333,7 @@ export function LlmModelFormModal({
           ]}
         >
           <InputNumber
-            addonAfter="B"
+            suffix="B"
             controls={false}
             min={1}
             precision={0}

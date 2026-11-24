@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@/app/locales/i18n";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

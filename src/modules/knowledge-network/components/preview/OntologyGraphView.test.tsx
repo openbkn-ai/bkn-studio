@@ -17,27 +17,24 @@ vi.mock("react-i18next", () => ({
 
 // G6 cannot draw in jsdom; the stand-in records what the view hands it.
 const canvas: { props: OntologyG6CanvasProps | null } = { props: null };
-vi.mock("./OntologyG6Canvas", async () => {
-  const { forwardRef } = await import("react");
-  return {
-    OntologyG6Canvas: forwardRef<unknown, OntologyG6CanvasProps>(function Stub(props) {
-      canvas.props = props;
-      return (
-        <div data-testid="ontology-graph-canvas">
-          {props.structure.combos?.map((combo) => (
-            <span key={combo.id}>{String(combo.style?.labelText ?? "")}</span>
-          ))}
-          <button onClick={() => props.onNodeClick("customer")} type="button">
-            customer
-          </button>
-          <button onClick={() => props.onBlankClick()} type="button">
-            blank
-          </button>
-        </div>
-      );
-    }),
-  };
-});
+vi.mock("./OntologyG6Canvas", () => ({
+  OntologyG6Canvas: function Stub(props: OntologyG6CanvasProps) {
+    canvas.props = props;
+    return (
+      <div data-testid="ontology-graph-canvas">
+        {props.structure.combos?.map((combo) => (
+          <span key={combo.id}>{String(combo.style?.labelText ?? "")}</span>
+        ))}
+        <button onClick={() => props.onNodeClick("customer")} type="button">
+          customer
+        </button>
+        <button onClick={() => props.onBlankClick()} type="button">
+          blank
+        </button>
+      </div>
+    );
+  },
+}));
 
 const graph = {
   nodes: [

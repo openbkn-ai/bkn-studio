@@ -4,6 +4,7 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
+import "@ant-design/v5-patch-for-react-19";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { App, Modal } from "antd";
 import i18n from "i18next";

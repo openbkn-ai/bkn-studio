@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@ant-design/v5-patch-for-react-19";
 import {
   parsePrecisionPreservingJSON,
   transformPrecisionSafeJSONRequest,
 } from "@/framework/request/precision-safe-json";
 import type { ReactElement } from "react";
-import { ConfigProvider } from "antd";
+import { App, ConfigProvider } from "antd";
 import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { EvalRuleApplicationDrawer } from "./EvalRuleApplicationDrawer";
@@ -45,7 +46,7 @@ const footer = () => within(document.querySelector<HTMLElement>(".ant-drawer-foo
 function render(ui: ReactElement) {
   return renderUI(
     <ConfigProvider virtual={false} theme={{ token: { motion: false } }}>
-      {ui}
+      <App>{ui}</App>
     </ConfigProvider>,
   );
 }

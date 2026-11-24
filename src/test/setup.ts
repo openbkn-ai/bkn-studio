@@ -43,10 +43,11 @@ if (readInnerHtml && writeInnerHtml) {
   });
 }
 
-// The one thing tests do rely on from antd's CSS: a closed dropdown, tooltip,
-// popover, drawer or inactive tab pane stays in the DOM and is only hidden by
-// a state class. Keep those rules so closed overlays stay out of *ByRole
-// queries and toBeVisible() keeps its meaning. The list mirrors the
+// Keep the minimal CSS tests rely on. Autosizing textareas parse their padding
+// and border widths; jsdom returns empty values without the removed antd styles,
+// causing NaN heights. Zero-specificity defaults leave caller styles in control.
+// Closed overlays also need their state classes to stay out of *ByRole queries
+// and keep toBeVisible() meaningful. The list mirrors the
 // `display: none` state classes in antd's component styles.
 const antdHiddenStateClasses = [
   "ant-collapse-content-hidden",
@@ -71,9 +72,8 @@ const antdHiddenStateClasses = [
 ];
 const antdHiddenState = document.createElement("style");
 antdHiddenState.dataset.testAntdHiddenState = "";
-antdHiddenState.textContent = `${antdHiddenStateClasses
-  .map((name) => `.${name}`)
-  .join(", ")} { display: none; }`;
+antdHiddenState.textContent = `:where(textarea.ant-input) { padding: 0; border: 0; }
+${antdHiddenStateClasses.map((name) => `.${name}`).join(", ")} { display: none; }`;
 document.head.append(antdHiddenState);
 
 afterEach(() => {

@@ -6,7 +6,17 @@
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
@@ -42,6 +52,8 @@ vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
 }));
 
 import { EventClassFormDrawer } from "./EventClassFormDrawer";
+
+let consoleError: MockInstance<typeof console.error>;
 
 const overdue: KnEventType = {
   check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
@@ -81,6 +93,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
+  consoleError = vi.spyOn(console, "error");
   mocks.listObjectTypes.mockResolvedValue([{ id: "order", name: "Order" }]);
   mocks.listRuleTools.mockResolvedValue([
     {
@@ -105,6 +118,17 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  const addonWarnings = consoleError.mock.calls.filter((args) => {
+    const message: unknown = args[0];
+    return (
+      typeof message === "string" &&
+      message.includes("[antd: InputNumber]") &&
+      /addonAfter|addonBefore/.test(message)
+    );
+  });
+  consoleError.mockRestore();
+  expect(addonWarnings).toEqual([]);
+
   vi.clearAllMocks();
 });
 

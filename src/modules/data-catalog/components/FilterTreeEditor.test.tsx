@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { FilterGroup, FilterRule } from "@/modules/data-catalog/lib/filter-tree";
@@ -14,6 +14,7 @@ import { parseFilterTree } from "@/modules/data-catalog/lib/filter-tree";
 import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 
 import { FilterTreeEditor } from "./FilterTreeEditor";
+import { FilterRuleValueEditor } from "./FilterRuleValueEditor";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -238,6 +239,28 @@ function chooseFilterOption(label: string, text: string) {
 }
 
 describe("structured filter inputs", () => {
+  it("keeps the focused value input when its hints change", () => {
+    const editor = (type: string) => (
+      <FilterRuleValueEditor
+        fields={[]}
+        field={{ name: "value", type }}
+        queryPath="source"
+        rule={{ kind: "rule", field: "value", operation: "==", value: "123" }}
+        onChange={vi.fn()}
+      />
+    );
+    const view = render(editor("integer"));
+    const input = screen.getByRole("textbox", { name: "dataCatalog.filter.value" });
+    act(() => input.focus());
+    expect(input).toHaveFocus();
+    for (const type of ["string", "datetime", "integer"]) {
+      view.rerender(editor(type));
+      expect(screen.getByRole("textbox", { name: "dataCatalog.filter.value" })).toBe(input);
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue("123");
+    }
+  });
+
   it("switches scalar, set and no-value operators without retaining stale values", () => {
     const changed = vi.fn();
     render(

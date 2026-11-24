@@ -313,8 +313,8 @@ service 不负责：
 
 ### 单元测试里没有 antd 的样式
 
-`src/test/setup.ts` 会清空 antd 注入的样式，只保留一条规则：带 antd 隐藏状态类
-（如 `ant-dropdown-hidden`，完整列表见该文件）的元素为 `display: none`。原因是 jsdom 每次计算样式都要把
+`src/test/setup.ts` 会清空 antd 注入的样式，只保留测试必需的最小规则：带 antd 隐藏状态类
+（如 `ant-dropdown-hidden`，完整列表见该文件）的元素为 `display: none`，并为 textarea 提供零优先级的数值边距和边框默认值，避免自动高度计算得到 `NaN`；用例自定义的样式仍可覆盖这些默认值。原因是 jsdom 每次计算样式都要把
 全部 CSS 规则逐条匹配一遍，带着 antd 的样式时场景测试会慢一个数量级。
 
 写用例时注意：
