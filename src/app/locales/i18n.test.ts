@@ -7,17 +7,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const supportNoticeMarker = "__i18next_supportNoticeShown";
-
-function clearSupportNoticeMarker() {
-  Reflect.deleteProperty(globalThis, supportNoticeMarker);
-}
-
 describe("i18n configuration", () => {
   it("keeps the vendor support notice out of application and test logs", async () => {
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
     try {
-      clearSupportNoticeMarker();
       vi.resetModules();
 
       await import("@/app/locales/i18n");
@@ -27,7 +20,6 @@ describe("i18n configuration", () => {
       );
     } finally {
       consoleInfo.mockRestore();
-      clearSupportNoticeMarker();
     }
   });
 });

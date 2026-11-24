@@ -74,6 +74,10 @@ type ResourcePreviewPanelProps = {
 const DEFAULT_PAGE_SIZE = 10;
 const INDEX_PREVIEW_PAGE_LIMIT = 10_000;
 const PREVIEW_CONTENT_LENGTH = 20;
+// Bound cell rendering separately from the original value used by the dialog and clipboard.
+const MAX_TEXT_PREVIEW_LENGTH = 10_000;
+const PREVIEW_COLUMN_MIN_WIDTH = 160;
+const ROW_INDEX_WIDTH = 84;
 const EMPTY_APPLIED_FILTER = emptyFilterGroup();
 
 const PROJECTION_ERROR_MESSAGES = new Map([
@@ -126,7 +130,17 @@ function formatTextPreviewCell(value: unknown): PreviewCellDisplay {
   if (typeof value !== "string") {
     return { text };
   }
-  return formatExpandablePreviewCell(text);
+  if (text.length <= MAX_TEXT_PREVIEW_LENGTH) {
+    return { text, tooltip: text, fullText: text };
+  }
+  // Stop at a complete grapheme so the rendering budget cannot split emoji or combining marks.
+  let end = 0;
+  for (const part of new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)) {
+    const nextEnd = part.index + part.segment.length;
+    if (nextEnd > MAX_TEXT_PREVIEW_LENGTH) break;
+    end = nextEnd;
+  }
+  return { text: `${text.slice(0, end)}…`, tooltip: text, fullText: text };
 }
 
 function formatExpandablePreviewCell(value: unknown): PreviewCellDisplay {
@@ -735,15 +749,47 @@ function ResourcePreviewContent({
       ) : (
         <Spin spinning={loading} wrapperClassName={styles.tableSection}>
           <div className={styles.tableWrap}>
-            <table className={styles.table}>
+            <table
+              className={styles.table}
+              style={{ minWidth: ROW_INDEX_WIDTH + columns.length * PREVIEW_COLUMN_MIN_WIDTH }}
+            >
+              <colgroup>
+                <col style={{ width: ROW_INDEX_WIDTH }} />
+                {columns.map((field) => (
+                  <col key={field.name} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   <th className={[styles.rowIndexHead, styles.rowIndex].join(" ")}>#</th>
-                  {columns.map((field) => (
-                    <th key={field.name}>
-                      <FieldIdentity field={field} name={field.name} />
-                    </th>
-                  ))}
+                  {columns.map((field) => {
+                    const displayName = field.displayName?.trim() || field.name;
+                    const description = field.description?.trim();
+                    return (
+                      <th key={field.name}>
+                        <Tooltip
+                          classNames={{ root: styles.previewValueTooltip }}
+                          trigger={["hover", "focus", "click"]}
+                          title={
+                            <>
+                              <div aria-hidden="true">{displayName}</div>
+                              {displayName !== field.name ? (
+                                <div aria-hidden="true">{field.name}</div>
+                              ) : null}
+                              {description ? <div>{description}</div> : null}
+                            </>
+                          }
+                        >
+                          <button className={styles.previewFieldButton} type="button">
+                            <FieldIdentity
+                              field={{ ...field, description: undefined }}
+                              name={field.name}
+                            />
+                          </button>
+                        </Tooltip>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -814,14 +860,24 @@ function ResourcePreviewContent({
                           >
                             {fullText ? (
                               <button
-                                className={styles.previewValueButton}
+                                aria-label={
+                                  text.trim()
+                                    ? undefined
+                                    : t("dataCatalog.preview.fullValue", { field: field.name })
+                                }
+                                className={[
+                                  styles.previewValueButton,
+                                  textDisplay ? styles.textPreviewValue : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
                                 onClick={() => setFullValue({ field: field.name, text: fullText })}
                                 type="button"
                               >
                                 {text}
                               </button>
                             ) : (
-                              <span>{text}</span>
+                              <span className={styles.previewValueText}>{text}</span>
                             )}
                           </Tooltip>
                         </td>

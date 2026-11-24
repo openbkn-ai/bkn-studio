@@ -71,14 +71,15 @@
 
 .tableWrap {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
   border: 1px solid var(--color-border);
 }
 
 .table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -104,10 +105,17 @@
   text-align: left;
 }
 
+.previewValueText,
 .previewValueButton {
   display: block;
-  max-width: 280px;
+  max-width: 100%;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewValueButton,
+.previewFieldButton {
   padding: 0;
   border: 0;
   background: transparent;
@@ -115,8 +123,23 @@
   cursor: pointer;
   font: inherit;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.previewValueButton {
+  max-width: min(280px, 100%);
+}
+
+.previewFieldButton {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.textPreviewValue {
+  width: 100%;
+  max-width: 100%;
+  /* Whitespace-only values still need a focusable click target. */
+  min-height: 1em;
 }
 
 .previewValueTooltip:global(.ant-tooltip) {

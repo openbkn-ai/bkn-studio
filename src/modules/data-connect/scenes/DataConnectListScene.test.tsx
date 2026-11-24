@@ -19,7 +19,7 @@ const deletionI18n = createInstance();
 void deletionI18n.init({
   lng: "en-US",
   resources: { "en-US": { translation: dataConnectEnUS } },
-  initImmediate: false,
+  initAsync: false,
 });
 
 const previewCatalogDeletionMock = vi.hoisted(() => vi.fn());
