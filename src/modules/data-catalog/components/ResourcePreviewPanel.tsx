@@ -919,17 +919,25 @@ function ResourcePreviewContent({
           <span>
             {t("dataCatalog.apiResource.total")}: {t("dataCatalog.apiResource.unknown")}
           </span>
+          {apiPagingEnabled ? (
+            <div className={styles.unknownPaginationStatus} role="status">
+              <span>{t("dataCatalog.apiResource.currentPage", { page })}</span>
+              {result.rows.length === 0 ? (
+                <span>{t("dataCatalog.apiResource.emptyPageContinuationUnknown")}</span>
+              ) : null}
+            </div>
+          ) : null}
           <Button
             disabled={loading || !apiPagingEnabled || page === 1}
             onClick={() => handlePaginationChange(page - 1, pageSize)}
           >
-            {t("common.previous")}
+            {t("dataCatalog.apiResource.previousPage")}
           </Button>
           <Button
             disabled={loading || !apiPagingEnabled}
             onClick={() => handlePaginationChange(page + 1, pageSize)}
           >
-            {t("common.next")}
+            {t("dataCatalog.apiResource.nextPage")}
           </Button>
           {pageSizeOptions ? (
             <Select
