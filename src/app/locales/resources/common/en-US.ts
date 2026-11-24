@@ -60,6 +60,7 @@ export const commonEnUS = {
     save: "Save",
     confirm: "Confirm",
     cancel: "Cancel",
+    close: "Close",
     ok: "OK",
     custom: "Custom",
     add: "Add",
