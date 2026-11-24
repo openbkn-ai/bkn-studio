@@ -90,6 +90,10 @@ export const apiResourceEnUS = {
   limit: "Limit (blank uses default)",
   total: "Total count",
   unknown: "Unknown",
+  currentPage: "Page {{page}}",
+  previousPage: "Previous page",
+  nextPage: "Next page",
+  emptyPageContinuationUnknown: "This page is empty. There may be more pages.",
   warnings: "The backend returned query warnings. Check the definition and invocation scope.",
   unavailable:
     "The API connector is unavailable, disabled or unlicensed for this edition. Server connector availability controls these operations.",

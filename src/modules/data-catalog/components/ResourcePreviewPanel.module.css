@@ -36,6 +36,12 @@
   font-size: 13px;
 }
 
+.unknownPaginationStatus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .previewControls {
   display: flex;
   align-items: center;

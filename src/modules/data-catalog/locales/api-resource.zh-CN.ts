@@ -85,6 +85,10 @@ export const apiResourceZhCN = {
   limit: "条数（留空使用缺省值）",
   total: "总条数",
   unknown: "未知",
+  currentPage: "第 {{page}} 页",
+  previousPage: "上一页",
+  nextPage: "下一页",
+  emptyPageContinuationUnknown: "本页无数据，无法判断是否还有下一页",
   warnings: "后端返回了查询警告，请检查资源定义和调用范围。",
   unavailable:
     "API 连接器不可用、未安装或当前版本未授权。服务端返回的连接器可用性决定是否允许操作。",
