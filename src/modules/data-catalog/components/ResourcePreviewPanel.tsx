@@ -133,6 +133,10 @@ function formatTextPreviewCell(value: unknown): PreviewCellDisplay {
   if (text.length <= MAX_TEXT_PREVIEW_LENGTH) {
     return { text, tooltip: text, fullText: text };
   }
+  if (typeof Intl.Segmenter !== "function") {
+    // Keep the full-value control without risking a partial grapheme on older browsers.
+    return { text: "…", tooltip: text, fullText: text };
+  }
   // Stop at a complete grapheme so the rendering budget cannot split emoji or combining marks.
   let end = 0;
   for (const part of new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)) {

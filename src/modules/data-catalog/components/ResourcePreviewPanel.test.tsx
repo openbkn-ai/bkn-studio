@@ -2262,6 +2262,47 @@ describe("ResourcePreviewPanel", () => {
     },
   );
 
+  it.each(["string", "text"])(
+    "previews %s values without Intl.Segmenter and preserves full-value access",
+    async (type) => {
+      const segmenterDescriptor = Object.getOwnPropertyDescriptor(Intl, "Segmenter")!;
+      Object.defineProperty(Intl, "Segmenter", { value: undefined });
+      try {
+        const short = "feat/bkn-safe/casdoor-sso-中文👩🏽‍💻";
+        const atLimit = "x".repeat(10_000);
+        const oversized = `${"x".repeat(9_999)}👩🏽‍💻e\u0301${"尾".repeat(20_000)}`;
+        writeTextToClipboardMock.mockResolvedValue(undefined);
+        previewCatalogResourceMock.mockResolvedValue({
+          rows: [{ short, atLimit, oversized }],
+          total: 1,
+        });
+        render(
+          <ResourcePreviewPanel
+            active
+            resource={{
+              ...resource,
+              schema: ["short", "atLimit", "oversized"].map((name) => ({ name, type })),
+            }}
+          />,
+        );
+        const preview = await screen.findByRole("button", { name: "…" });
+        expect(screen.getByRole("button", { name: short }).textContent).toBe(short);
+        expect(screen.getByRole("button", { name: atLimit }).textContent).toBe(atLimit);
+        expect(preview.textContent).toBe("…");
+        expect(screen.queryByText(oversized)).toBeNull();
+        fireEvent.click(preview);
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.querySelector("pre")?.textContent).toBe(oversized);
+        fireEvent.click(
+          within(dialog).getByRole("button", { name: "dataCatalog.preview.copyFullValue" }),
+        );
+        expect(writeTextToClipboardMock).toHaveBeenCalledWith(oversized);
+      } finally {
+        Object.defineProperty(Intl, "Segmenter", segmenterDescriptor);
+      }
+    },
+  );
+
   it("bounds oversized text without splitting graphemes and copies the original value", async () => {
     const prefix = "x".repeat(9_999);
     const content = `${prefix}👩🏽‍💻${"尾".repeat(20_000)}`;

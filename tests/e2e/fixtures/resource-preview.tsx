@@ -20,6 +20,7 @@ const params = new URLSearchParams(location.search);
 const extraColumns = params.has("many") ? 10 : 0;
 const whitespace = params.has("whitespace");
 const longHeaders = params.has("long-headers");
+const oversized = params.has("oversized");
 const nameField = longHeaders
   ? "reporting_customer_profile_recent_review_request_comment_count"
   : "name";
@@ -46,7 +47,8 @@ const resource: CatalogResource = {
       type: "text",
       ...(longHeaders
         ? {
-            displayName: "客户档案最近审核请求评论总数的完整显示名称",
+            // Keep the narrow-column overflow case even when CJK fonts are unavailable.
+            displayName: "客户档案最近审核评论总数 / Recent review request comment total",
             description: "Read-only source field description",
           }
         : {}),
@@ -64,8 +66,17 @@ const loadPreview = async () => ({
       [nameField]: whitespace ? "\n\t " : "feat/bkn-safe/casdoor-sso",
       [descriptionField]: whitespace ? "\u00a0" : "宽列中可以完整显示的中文文本 mixed 👩🏽‍💻",
     },
-    { [nameField]: "中文字段内容测试窄列溢出👩🏽‍💻", [descriptionField]: "e\u0301 中文 👨‍👩‍👧‍👦" },
-    { [nameField]: "x".repeat(8_000), [descriptionField]: "long content" },
+    {
+      // Ensure narrow-cell overflow does not depend on installed CJK or emoji fonts.
+      [nameField]: "中文字段内容测试窄列溢出👩🏽‍💻 / narrow preview value overflows",
+      [descriptionField]: "e\u0301 中文 👨‍👩‍👧‍👦",
+    },
+    {
+      [nameField]: oversized
+        ? `${"x".repeat(9_999)}👩🏽‍💻e\u0301${"尾".repeat(20_000)}`
+        : "x".repeat(8_000),
+      [descriptionField]: "long content",
+    },
   ],
   total: 3,
 });

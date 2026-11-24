@@ -59,18 +59,17 @@ test("text follows the actual column width and full values remain accessible", a
   const narrowBox = await geometry(branch);
   expect(narrowBox.contentWidth).toBeGreaterThan(narrowBox.width);
   expect(narrowBox.ellipsis).toBe("ellipsis");
-  const shortText = page.getByRole("button", { name: "中文字段内容测试窄列溢出👩🏽‍💻", exact: true });
+  const mixedValue = "中文字段内容测试窄列溢出👩🏽‍💻 / narrow preview value overflows";
+  const shortText = page.getByRole("button", { name: mixedValue, exact: true });
   expect((await geometry(shortText)).contentWidth).toBeGreaterThan(
     (await geometry(shortText)).width,
   );
   await page.screenshot({ path: testInfo.outputPath("narrow.png") });
   await shortText.click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.locator("pre")).toHaveText("中文字段内容测试窄列溢出👩🏽‍💻");
+  await expect(dialog.locator("pre")).toHaveText(mixedValue);
   await dialog.getByRole("button", { name: /复制完整内容|Copy full value/ }).click();
-  await expect
-    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
-    .toBe("中文字段内容测试窄列溢出👩🏽‍💻");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(mixedValue);
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -99,6 +98,36 @@ test("many columns scroll within the preview instead of widening the page", asyn
   expect(overflow.scrollWidth).toBeGreaterThan(overflow.width);
   expect(overflow.scrolled).toBeGreaterThan(0);
   expect(overflow.pageWidth).toBeLessThanOrEqual(720);
+});
+
+test("oversized text remains accessible when Intl.Segmenter is unavailable", async ({
+  page,
+  context,
+}) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    Object.defineProperty(Intl, "Segmenter", { value: undefined, configurable: true });
+  });
+  await page.goto("/studio/?oversized");
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await expect(
+    page.getByRole("button", { name: "feat/bkn-safe/casdoor-sso", exact: true }),
+  ).toBeVisible();
+  const preview = page.locator("tbody tr").nth(2).getByRole("button").first();
+  await expect(preview).toHaveText("…");
+  await preview.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  const original = `${"x".repeat(9_999)}👩🏽‍💻e\u0301${"尾".repeat(20_000)}`;
+  await expect(dialog).toBeVisible();
+  expect(await dialog.locator("pre").textContent()).toBe(original);
+  await dialog.getByRole("button", { name: /复制完整内容|Copy full value/ }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(original);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(preview).toBeFocused();
+  expect(pageErrors).toEqual([]);
 });
 
 test("whitespace values have field-specific names and copy unchanged", async ({
@@ -132,7 +161,7 @@ for (const width of [720, 1280]) {
       { name: "reporting_customer_profile_recent_review_request_comment_count" },
       {
         name: "reporting_customer_profile_recent_review_request_comment_total",
-        displayName: "客户档案最近审核请求评论总数的完整显示名称",
+        displayName: "客户档案最近审核评论总数 / Recent review request comment total",
         description: "Read-only source field description",
       },
     ]) {
