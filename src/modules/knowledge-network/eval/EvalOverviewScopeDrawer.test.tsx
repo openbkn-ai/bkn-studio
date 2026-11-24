@@ -17,6 +17,9 @@ import {
   saveEvalOverviewScope,
 } from "./m0-run.service";
 
+const feedback = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock("./useEvalFeedback", () => ({ useEvalFeedback: () => ({ message: feedback }) }));
+
 vi.mock("./m0-run.service", () => ({
   getEvalOverviewScope: vi.fn(),
   listEvalCaseResourcesPage: vi.fn(),
@@ -55,12 +58,13 @@ beforeEach(() => {
 
 it("persists excluded resource types as the assessment scope", async () => {
   const onSaved = vi.fn();
+  const onClose = vi.fn();
   render(
     <EvalOverviewScopeDrawer
       networkId="supply_ontology_hand"
       open
       canManage
-      onClose={vi.fn()}
+      onClose={onClose}
       onSaved={onSaved}
     />,
   );
@@ -76,5 +80,9 @@ it("persists excluded resource types as the assessment scope", async () => {
       expect.objectContaining({ revision: 2, excluded_kinds: ["objectType"] }),
     ),
   );
-  expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ revision: 3 }));
+  await waitFor(() =>
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ revision: 3 })),
+  );
+  expect(feedback.success).toHaveBeenCalledOnce();
+  expect(onClose).toHaveBeenCalledOnce();
 });
