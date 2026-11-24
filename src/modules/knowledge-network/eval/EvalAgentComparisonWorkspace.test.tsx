@@ -141,7 +141,9 @@ it("preserves selections across pages, compares same-name agents with different 
   fireEvent.click(screen.getByTitle(/Next Page|下一页/));
   await screen.findByText("model-b");
   fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.click(screen.getByRole("button", { name: "生成对比" }));
+  const compareButton = screen.getByRole("button", { name: "生成对比" });
+  await waitFor(() => expect(compareButton).toBeEnabled());
+  fireEvent.click(compareButton);
   await screen.findByText("整体指标", {}, { timeout: 5000 });
   expect(compareAgentRuns).toHaveBeenCalledWith(
     "kn",

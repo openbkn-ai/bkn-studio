@@ -52,7 +52,7 @@
     "graphology": "0.26.0",
     "graphology-layout-forceatlas2": "0.10.1",
     "graphology-types": "0.24.8",
-    "i18next": "^25.6.0",
+    "i18next": "^26.3.4",
     "json-bigint": "^1.0.0",
     "lossless-json": "4.3.3",
     "mermaid": "^12.2.0",

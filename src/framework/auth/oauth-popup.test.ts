@@ -14,7 +14,6 @@ beforeEach(async () => {
   window.sessionStorage.clear();
   await i18n.init({
     lng: "zh-CN",
-    showSupportNotice: false,
     resources: { "zh-CN": { translation: authZhCN }, "en-US": { translation: authEnUS } },
   });
 });
