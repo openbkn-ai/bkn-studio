@@ -7,22 +7,26 @@
 
 .contentSurface {
   composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  --task-panel-gap: 12px;
   display: grid;
-  gap: 12px;
+  row-gap: var(--task-panel-gap);
   min-height: auto;
 }
 
+section.contentSurface {
+  padding-block-start: var(--task-panel-gap);
+}
+
 .operationBar {
-  composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  display: flex;
   align-items: flex-start;
-  border-bottom: 0;
   flex-wrap: wrap;
-  padding-bottom: 0;
 }
 
 .toolbarActions {
+  composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   flex: 0 0 auto;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .toolbarFilters {
@@ -48,6 +52,10 @@
   white-space: normal;
   overflow-wrap: normal;
   word-break: normal;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th).singleLineHeader {
+  white-space: nowrap;
 }
 
 .tableSurface :global(.ant-table-wrapper),

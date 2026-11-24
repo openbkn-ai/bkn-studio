@@ -344,6 +344,15 @@ const LIMIT_KEYS = [
   "summarize_after_tokens",
 ] as const;
 export type LimitKey = (typeof LIMIT_KEYS)[number];
+
+/**
+ * Sanity upper bounds, matching bkn-agent's AgentLimits. max_output_tokens is in
+ * tokens; the real ceiling is the selected model's own limit, enforced when it runs.
+ */
+export const MAX_OUTPUT_TOKENS_UPPER_BOUND = 1_000_000;
+export const LIMIT_MAX: Partial<Record<LimitKey, number>> = {
+  max_output_tokens: MAX_OUTPUT_TOKENS_UPPER_BOUND,
+};
 export const AGENT_LIMIT_KEYS: readonly LimitKey[] = LIMIT_KEYS;
 
 /** What a layer below may use, mirroring the server's merge: tools intersect, limits take the minimum. */

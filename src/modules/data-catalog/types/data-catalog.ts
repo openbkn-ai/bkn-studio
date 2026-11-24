@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type BigNumber from "bignumber.js";
+
 export type ResourceCategory = "api" | "dataset" | "index" | "logical_view" | "table";
 
 export type ResourceDiscoverStatus =
@@ -189,7 +191,8 @@ export type ResourcePreviewResult = {
 };
 
 export type BuildMode = "batch" | "streaming";
-export type BuildTaskExecuteType = "full" | "incremental";
+export type BuildTaskLaunchExecuteType = "full" | "incremental";
+export type BuildTaskExecuteType = BuildTaskLaunchExecuteType | "keys";
 
 export type BuildTaskTriggerType = "manual" | "scheduled";
 
@@ -239,6 +242,8 @@ export type BuildTask = {
   /** Time at which the task entered a terminal state. */
   finishTime: number | null;
   id: string;
+  /** Complete primary keys returned with a key-scoped task detail. Large integers retain precision. */
+  keys?: Record<string, string | number | BigNumber>[];
   primaryKeyFields: string[];
   /** Most recent externally observable progress update. */
   lastProgressTime: number | null;
@@ -286,7 +291,7 @@ export type BuildTaskPageResult = {
 /** Creates a task. Index configuration belongs to the resource, so this only starts the build. */
 export type BuildTaskCreateInput = {
   /** Batch only; defaults to full. Do not send unsupported values for streaming. */
-  executeType?: BuildTaskExecuteType;
+  executeType?: BuildTaskLaunchExecuteType;
   mode: BuildMode;
   resourceId: string;
 };

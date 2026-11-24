@@ -338,10 +338,6 @@ export const dataCatalogEnUS = {
         invalidCursorMessage: "The indexed values cannot form a valid incremental cursor.",
         unknownMessage: "Vega could not recover the incremental cursor from the published index.",
         fullBuildSuggestion: "Make sure an incremental key is configured, then run a full build.",
-        queryFailedSuggestion:
-          "Check that the published index is available, then retry the incremental build.",
-        unknownSuggestion:
-          "Check that the published index is available, then retry the incremental build. If recovery still fails, configure an incremental key and run a full build.",
       },
       unknown: {
         title: "Build task failed",
@@ -924,13 +920,16 @@ export const dataCatalogEnUS = {
         "Sync all rows from the source and rebuild the index. Use it for first builds or full refreshes.",
       executeIncremental: "Incremental",
       executeIncrementalDescription:
-        "If the cursor is missing, Vega tries to recover it from the published index after the task is queued. Recovery supports signed and unsigned integer primary keys and integer, date, or date-time incremental fields. See the task details if recovery fails. Changes at or before the cursor and source deletions may be missing from the index.",
+        "Continue from the saved incremental cursor. If the cursor is missing or invalid, complete a full build with the current incremental keys. Changes at or before the cursor and source deletions may be missing from the index.",
+      executeKeys: "By primary key",
+      incrementalBaselineUnavailable:
+        "There is no usable incremental baseline. Complete a full build with the current incremental keys, then start an incremental build.",
       incrementalNeedsPublishedIndex:
         "Incremental builds require an available published index. Configure an incremental key and complete a full build first.",
       incrementalRequiresFullRebuild:
         "The published index is read-only. Run a full build before starting an incremental build.",
       fullBuildWithoutIncrementalKey:
-        "Without an incremental key, only full builds are available. Source changes during the build may be missing from the index.",
+        "To run incremental builds, configure an incremental key and complete a full build first. Source changes during the build may be missing from the index.",
       schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet. Run discovery to retrieve its schema.",
       fulltextTypeHint: "Text-type fields only",
@@ -1078,6 +1077,7 @@ export const dataCatalogEnUS = {
       detailSections: {
         status: "Task Status",
         task: "Task Information",
+        keys: "Primary key values",
         execution: "Execution Information",
         audit: "Audit Information",
       },
@@ -1110,6 +1110,7 @@ export const dataCatalogEnUS = {
       rerun: "Rerun",
       rerunConfirmTitle: "Rerun build task",
       rerunResume: "Resume from the checkpoint",
+      rerunKeys: "Read the source again and sync these primary keys",
       rerunReset: "Restart from the beginning",
       rebuildFullConfirmTitle: "Full reset this task?",
       rebuildFullConfirmContent:

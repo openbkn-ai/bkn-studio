@@ -227,7 +227,8 @@ export const evalPart = {
       },
     },
     definitionOnly: {
-      title: "Save a test definition; automatic execution is unavailable",
+      title: "Saved cases will be disabled. Automatic execution is currently unavailable.",
+      executionDetails: "View automatic execution requirements",
       steps: "Test steps and verification goal",
       stepsPlaceholder:
         "For example: omit a required parameter and verify an explicit error with no write operation.",
@@ -246,7 +247,7 @@ export const evalPart = {
       referencesRequired: "Provide at most 20 references, no more than 512 characters each.",
       executionReady: "Executable checks",
       recordable: "Definition authoring; automatic execution unavailable",
-      configure: "Configure a definition first",
+      configure: "Fill in case definition",
       configureExecution: "Configure automatic execution",
       runtimeMissing:
         "Runtime requirements are missing. Saving this definition does not execute a check.",
@@ -687,9 +688,13 @@ export const evalPart = {
       fields: "Compared fields (comma separated)",
       operator: "Filter operator",
       filterValue: "Filter value (JSON)",
-      rows: "Independent rows (JSON array)",
+      rows: "Independent samples",
       refs: "Independent evidence (optional, one per line)",
-      prepare: "Validate samples and configure check",
+      prepare: "Validate and generate check configuration",
+      sampleRequired:
+        "Enter independent samples as a JSON array to validate and generate check configuration.",
+      standardRequired:
+        "Enter a business standard version and evidence, then configure conditions to validate and generate check configuration.",
       sampleInvalid: "Sample validation failed. Check complete keys, fields and expected matches.",
     },
     executionUi: {
@@ -1056,7 +1061,7 @@ export const evalPart = {
         "Advanced: $ means the complete result; $.field selects an object field. Array indices are not supported.",
       unknownTypeHelp:
         "The result type is undeclared. Choose the actual type of the correct value.",
-      expectedTypeHelp: "Correct value type",
+      expectedTypeHelp: "Expected value type",
       numberPlaceholder: "Enter a number, e.g. 100, in the same unit as the output",
       stringPlaceholder: "Enter the exact correct text, e.g. Completed",
       jsonPlaceholder: 'Enter correct JSON, e.g. {"total":100}',
@@ -1165,7 +1170,7 @@ export const evalPart = {
       predicate: "How to evaluate",
       removeCriterion: "Remove criterion",
       remove: "Remove",
-      expectedValue: "Correct value",
+      expectedValue: "Expected value",
       valueType: "Expected value type",
       minimum: "Minimum",
       maximum: "Maximum",

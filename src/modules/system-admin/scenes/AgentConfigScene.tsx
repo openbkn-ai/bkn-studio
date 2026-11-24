@@ -65,6 +65,7 @@ import {
   type AgentToolSource,
   type ToolParameterSchema,
   type AgentVersion,
+  LIMIT_MAX,
   type LimitKey,
   type McpProfileChoice,
   type SharedAgent,
@@ -706,6 +707,12 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                       <InputNumber
                         style={{ width: "100%" }}
                         min={MIN[key]}
+                        max={LIMIT_MAX[key]}
+                        addonAfter={
+                          key === "max_output_tokens"
+                            ? t(`${L}.limitFields.max_output_tokens.unit`)
+                            : undefined
+                        }
                         precision={0}
                         value={limits[key] ?? null}
                         placeholder={t(

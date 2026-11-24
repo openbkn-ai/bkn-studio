@@ -8,6 +8,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
 const { getBuildTaskMock } = vi.hoisted(() => ({ getBuildTaskMock: vi.fn() }));
@@ -93,6 +94,51 @@ describe("BuildTaskDetailDrawer origin", () => {
     expect(executionRow?.nextElementSibling).toBe(nameRow);
     expect(nameRow?.nextElementSibling).toBe(idRow);
     expect(within(idRow!).getByText("schedule-1")).toBeInTheDocument();
+  });
+
+  it("shows the key-scoped execution type when an older detail omits the key values", async () => {
+    getBuildTaskMock.mockResolvedValue({ ...task, executeType: "keys", status: "pending" });
+    render(<BuildTaskDetailDrawer open resource={null} taskId="task-1" onClose={vi.fn()} />);
+
+    const row = (await screen.findByText("dataCatalog.build.executeType")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row!).getByText("dataCatalog.build.executeKeys")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "dataCatalog.task.detailSections.keys" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows one row per composite key in configured field order with exact integer values", async () => {
+    const keys = parsePrecisionPreservingJSON(
+      '[{"order_id":9223372036854775807,"tenant":"west"},{"order_id":0,"tenant":"east"}]',
+    ) as BuildTask["keys"];
+    getBuildTaskMock.mockResolvedValue({
+      ...task,
+      executeType: "keys",
+      primaryKeyFields: ["tenant", "order_id"],
+      keys,
+    });
+    render(<BuildTaskDetailDrawer open resource={null} taskId="task-1" onClose={vi.fn()} />);
+
+    const table = await screen.findByRole("table", {
+      name: "dataCatalog.task.detailSections.keys",
+    });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["tenant", "order_id"]);
+    const [, ...rows] = within(table).getAllByRole("row");
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole("cell")
+          .map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ["west", "9223372036854775807"],
+      ["east", "0"],
+    ]);
   });
 
   it.each(["manual", undefined] as const)(

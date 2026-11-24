@@ -527,6 +527,7 @@ export function EvalObjectCaseFields({
         !busy &&
         !error &&
         !selectedRow.ready_for_save &&
+        !(needsSamples && selectedRow.match === "applicable") &&
         checkType !== "logical_property" &&
         checkType !== "declaration" && (
           <Alert
@@ -633,7 +634,7 @@ export function EvalObjectCaseFields({
               </EvalFieldLabel>
               <Input.TextArea
                 aria-label={text("rows")}
-                rows={5}
+                rows={4}
                 value={sampleRows}
                 onChange={(e) => editSample(setSampleRows, e.target.value)}
               />
@@ -648,6 +649,9 @@ export function EvalObjectCaseFields({
               onChange={(e) => editSample(setSampleRefs, e.target.value)}
             />
           </label>
+          <Typography.Text type="secondary">
+            {text(needsProgram ? "standardRequired" : "sampleRequired")}
+          </Typography.Text>
           <Button
             loading={busy}
             disabled={

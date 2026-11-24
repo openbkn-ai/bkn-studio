@@ -82,12 +82,16 @@ describe("index build list filters", () => {
     ).toBe("mode=batch");
   });
 
-  it("persists a valid execution-type filter and ignores an invalid value", () => {
-    expect(readIndexBuildListFilters(new URLSearchParams("execute_type=incremental"))).toEqual({
-      executeType: "incremental",
+  it("preserves a key-scoped execution-type filter and ignores an invalid value", () => {
+    const keysFilters = readIndexBuildListFilters(new URLSearchParams("execute_type=keys"));
+    expect(keysFilters).toEqual({
+      executeType: "keys",
       mode: undefined,
       statuses: [],
     });
+    expect(applyIndexBuildListFilters(new URLSearchParams(), keysFilters).toString()).toBe(
+      "execute_type=keys",
+    );
     expect(readIndexBuildListFilters(new URLSearchParams("execute_type=streaming"))).toEqual({
       executeType: undefined,
       mode: undefined,

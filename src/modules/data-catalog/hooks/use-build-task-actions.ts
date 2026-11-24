@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { buildTaskStartErrorMessage } from "@/modules/data-catalog/lib/build-task-error";
 import {
   deleteBuildTask,
   pauseBuildTask,
@@ -18,10 +19,7 @@ import {
   retryBuildTask,
 } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
-import {
-  ACTIVE_BUILD_TASK_STATUSES,
-  isBuildStartRejected,
-} from "@/modules/data-catalog/utils/build-task-guards";
+import { ACTIVE_BUILD_TASK_STATUSES } from "@/modules/data-catalog/utils/build-task-guards";
 
 export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   const { message, modal } = useAppServices();
@@ -46,11 +44,10 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           }
           await onRefresh();
         } catch (error) {
-          const resuming = !ACTIVE_BUILD_TASK_STATUSES.has(task.status);
           void message.error(
-            resuming && isBuildStartRejected(error)
-              ? t("dataCatalog.task.startRejected")
-              : extractRequestErrorMessage(error),
+            ACTIVE_BUILD_TASK_STATUSES.has(task.status)
+              ? extractRequestErrorMessage(error)
+              : buildTaskStartErrorMessage(error),
           );
         }
       };
@@ -88,11 +85,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
           }
           await onRefresh();
         } catch (error) {
-          void message.error(
-            isBuildStartRejected(error)
-              ? t("dataCatalog.task.startRejected")
-              : extractRequestErrorMessage(error),
-          );
+          void message.error(buildTaskStartErrorMessage(error));
         }
       };
 
@@ -111,7 +104,11 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
                 createElement(Radio, { value: false }, t("dataCatalog.task.rerunResume")),
                 createElement(Radio, { value: true }, t("dataCatalog.task.rerunReset")),
               )
-            : t("dataCatalog.task.rerunResume"),
+            : t(
+                task.executeType === "keys"
+                  ? "dataCatalog.task.rerunKeys"
+                  : "dataCatalog.task.rerunResume",
+              ),
         okText: t("common.confirm"),
         cancelText: t("common.cancel"),
         onOk: run,

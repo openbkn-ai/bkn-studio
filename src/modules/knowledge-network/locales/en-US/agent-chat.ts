@@ -115,7 +115,11 @@ export const agentChatPart = {
         max_turns: { label: "Step cap", hint: "Most steps in one turn" },
         max_tool_calls: { label: "Tool call cap", hint: "Most tool calls in one turn" },
         timeout_s: { label: "Timeout (s)", hint: "Longest time one turn may run" },
-        max_output_tokens: { label: "Output cap", hint: "Most tokens one model call may output" },
+        max_output_tokens: {
+          label: "Output cap",
+          unit: "tokens",
+          hint: "Most tokens one model call may output, up to 1,000,000. The selected model's own output limit applies when it runs; a larger value makes the run fail",
+        },
         keep_tool_results: {
           label: "Full results kept",
           hint: "Only the most recent tool results of this question reach the model in full; earlier ones become placeholders, and earlier questions keep only placeholders",

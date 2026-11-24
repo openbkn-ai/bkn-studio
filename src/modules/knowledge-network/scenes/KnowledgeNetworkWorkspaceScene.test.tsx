@@ -610,6 +610,36 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     },
   );
 
+  // Draft and running version are community, so the entry stays open; the Enterprise badge marks the
+  // full history until an Enterprise licence is in force.
+  it.each([
+    ["community", false],
+    ["professional", true],
+    ["enterprise", false],
+  ] as const)(
+    "marks version management as Enterprise on %s (licensed: %s)",
+    (edition, licensed) => {
+      renderScene(entitlement({ edition, licensed }));
+      const item = screen.getByTitle("版本管理");
+
+      expect(item).toHaveTextContent("企业版");
+      fireEvent.click(item);
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/versions",
+      );
+    },
+  );
+
+  it.each(["enterprise", "industry"] as const)(
+    "drops the version management badge once %s is licensed",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+
+      expect(screen.getByTitle("版本管理")).not.toHaveTextContent("企业版");
+    },
+  );
+
   it("keeps the ability verification title while an extension entry is still shown", () => {
     mocks.hiddenNavigation = ["experience-agent", "experience-cypher", "develop", "evals"];
     mocks.extensionEntries = { items: [], upgrades: [{ capability: "graph_explorer" }] };

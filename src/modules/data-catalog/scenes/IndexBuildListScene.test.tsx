@@ -137,6 +137,26 @@ describe("IndexBuildListScene", () => {
     );
   });
 
+  it("displays and forwards a key-scoped task filter", async () => {
+    listBuildTaskPageMock.mockResolvedValue({
+      items: [{ ...runningTask, executeType: "keys", status: "pending" }],
+      total: 1,
+    });
+    render(
+      <MemoryRouter initialEntries={["/?execute_type=keys"]}>
+        <IndexBuildListScene />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("cell", { name: "dataCatalog.build.executeKeys" }),
+    ).toBeVisible();
+    expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ executeType: "keys" }),
+      expect.anything(),
+    );
+  });
+
   it("restores task origin filters from the URL and preserves a deleted schedule ID", async () => {
     listBuildTaskPageMock.mockResolvedValue({
       items: [

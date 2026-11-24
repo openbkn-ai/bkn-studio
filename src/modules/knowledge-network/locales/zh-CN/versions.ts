@@ -63,7 +63,7 @@ export const versionsPart = {
     conflict: "该内容已被他人修改。请重新加载查看最新内容，再重试。",
     capabilityNote:
       "函数与 Skill 按 ID 绑定，不随版本保存。切换之后它们执行的仍是当前的代码与内容。",
-    communityNote: "社区版只保留运行版本与上一版。废止、恢复与清理需要专业版。",
+    communityNote: "社区版与专业版只保留运行版本与上一版。废止、恢复与清理需要企业版。",
     metricSaveAndValidate: "保存并校验",
     metricValidated: "指标已保存并校验，随知识网络发布后生效。",
     status: {
@@ -94,7 +94,7 @@ export const versionsPart = {
       restore: "恢复",
       purge: "清理",
       disable: "关闭版本管理",
-      retention: "社区版保留规则自动清理",
+      retention: "保留规则自动清理",
     },
     notStarted:
       "当前内容就是运行中的 v1，修改立即生效。点击顶栏的“发布”后，之后的修改写入草稿，再次发布后生效。",
@@ -113,12 +113,12 @@ export const versionsPart = {
       diffAgainstRunning: "与运行版本（{{version}}）的差异",
       diffAgainstBase: "相对草稿上游（{{version}}）的修改",
       confirmOutdated: "我了解发布会把已回退的改动重新带回线上。",
-      communityPurge: "社区版只保留两个版本，发布会永久清理 {{version}}。",
+      communityPurge: "社区版与专业版只保留两个版本，发布会永久清理 {{version}}。",
       nothingToPublish: "草稿没有未发布的修改。",
       validationFailed: "草稿暂时不能发布，请先解决下列问题。",
       doneTitle: "已发布 {{version}}",
       doneBody: "{{version}} 现在是运行版本。",
-      purgedNotice: "{{version}} 已按社区版保留规则清理。",
+      purgedNotice: "{{version}} 已按保留规则清理。",
       warnings: "已发布，但有警告",
     },
     activate: {

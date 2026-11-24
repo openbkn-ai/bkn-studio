@@ -123,6 +123,40 @@
   word-break: break-word;
 }
 
+.keysTableRegion {
+  min-inline-size: 0;
+  overflow: auto;
+}
+
+.keysTable {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.keysTable caption {
+  caption-side: top;
+  text-align: start;
+}
+
+.keysTable th,
+.keysTable td {
+  min-inline-size: 7rem;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+  text-align: start;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.keysTable th {
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
 .semanticWarning {
   margin-top: 10px;
 }

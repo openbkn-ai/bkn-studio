@@ -30,7 +30,7 @@ export type KnVersioning = {
   mode?: "enabled" | "disabling";
   running_version: number;
   previous_version: number;
-  /** false in the Community edition, which keeps only the running and the previous version. */
+  /** false below the Enterprise edition, which keeps only the running and the previous version. */
   full_history: boolean;
   draft?: KnDraftState;
 };
