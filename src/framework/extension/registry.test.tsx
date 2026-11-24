@@ -28,6 +28,7 @@ import {
   freezeExtensions,
   registerExtension,
   resetExtensionsForTesting,
+  versionNotesText,
 } from "@/framework/extension/registry";
 
 afterEach(() => {
@@ -65,6 +66,23 @@ function registerDemo() {
 }
 
 describe("extension registry", () => {
+  it("shows version notes as written unless an extension words them", () => {
+    expect(versionNotesText("Accepted: broken_links\nFirst release")).toBe(
+      "Accepted: broken_links\nFirst release",
+    );
+    registerExtension({ capability: "other", id: "plain" });
+    expect(versionNotesText("First release")).toBe("First release");
+    registerExtension({
+      capability: "project",
+      id: "project",
+      versionNotes: (notes) =>
+        notes.replace("Accepted: broken_links", "Published with broken links"),
+    });
+    expect(versionNotesText("Accepted: broken_links\nFirst release")).toBe(
+      "Published with broken links\nFirst release",
+    );
+  });
+
   it("offers the knowledge-network resource panel only from the knowledge-base extension", () => {
     const Panel = () => <p>panel</p>;
     expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
