@@ -7,8 +7,7 @@
 
 import { DownOutlined } from "@ant-design/icons";
 import { AutoComplete, Button, Input, Typography } from "antd";
-import type { InputRef } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { listRootServices } from "./trace-analysis.service";
@@ -21,7 +20,7 @@ export function RootServicePicker({ value, onChange, query }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [entries, setEntries] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string>();
-  const input = useRef<InputRef>(null);
+  const autoComplete = useRef<ComponentRef<typeof AutoComplete>>(null);
   const request = useRef<AbortController | undefined>(undefined);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stop = useCallback(() => {
@@ -59,6 +58,7 @@ export function RootServicePicker({ value, onChange, query }: Props) {
   return (
     <div>
       <AutoComplete
+        ref={autoComplete}
         value={value}
         filterOption={false}
         defaultActiveFirstOption={false}
@@ -82,7 +82,6 @@ export function RootServicePicker({ value, onChange, query }: Props) {
         }}
       >
         <Input
-          ref={input}
           allowClear
           placeholder={t("bknTrace.traceWorkspace.filters.service")}
           suffix={
@@ -97,7 +96,7 @@ export function RootServicePicker({ value, onChange, query }: Props) {
               onClick={() => {
                 if (popupOpen) close();
                 else {
-                  input.current?.focus();
+                  autoComplete.current?.focus();
                   setExpanded(true);
                   void load(value ?? "");
                 }

@@ -382,15 +382,15 @@ export function CreateMcpDrawer({
             {(fields, { add, remove }) => (
               <>
                 <div className={styles.modalHint}>{t("executionFactory.mcpHeadersLabel")}</div>
-                {fields.map((field) => (
-                  <div className={styles.headerRow} key={field.key}>
-                    <Form.Item {...field} name={[field.name, "key"]} style={{ flex: 1 }}>
+                {fields.map(({ key, name, ...field }) => (
+                  <div className={styles.headerRow} key={key}>
+                    <Form.Item {...field} name={[name, "key"]} style={{ flex: 1 }}>
                       <Input placeholder={t("executionFactory.mcpHeaderNamePlaceholder")} />
                     </Form.Item>
-                    <Form.Item {...field} name={[field.name, "value"]} style={{ flex: 1 }}>
+                    <Form.Item {...field} name={[name, "value"]} style={{ flex: 1 }}>
                       <Input placeholder={t("executionFactory.mcpHeaderValuePlaceholder")} />
                     </Form.Item>
-                    <Button icon={<MinusCircleOutlined />} onClick={() => remove(field.name)} />
+                    <Button icon={<MinusCircleOutlined />} onClick={() => remove(name)} />
                   </div>
                 ))}
                 <Button icon={<PlusOutlined />} onClick={() => add()} type="dashed">

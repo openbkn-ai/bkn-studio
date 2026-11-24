@@ -191,21 +191,29 @@ describe("API Resource management", () => {
   });
 
   it("opens a preview deep link and keeps its tab in sync with the URL", async () => {
-    render(
-      <MemoryRouter
-        initialEntries={["/data-catalog/api-resource/resource?tab=preview&context=demo"]}
-      >
-        <SearchProbe />
-        <Routes>
-          <Route path="/data-catalog/api-resource/:resourceId" element={<ApiResourcePage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(await screen.findByLabelText("active tab")).toHaveTextContent("preview");
-    fireEvent.click(screen.getByRole("button", { name: "show detail" }));
-    expect(screen.getByLabelText("active tab")).toHaveTextContent("detail");
-    expect(screen.getByLabelText("search parameters")).toHaveTextContent("?context=demo");
-    expect(get).toHaveBeenCalledOnce();
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      render(
+        <MemoryRouter
+          initialEntries={["/data-catalog/api-resource/resource?tab=preview&context=demo"]}
+        >
+          <SearchProbe />
+          <Routes>
+            <Route path="/data-catalog/api-resource/:resourceId" element={<ApiResourcePage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(await screen.findByLabelText("active tab")).toHaveTextContent("preview");
+      fireEvent.click(screen.getByRole("button", { name: "show detail" }));
+      expect(screen.getByLabelText("active tab")).toHaveTextContent("detail");
+      expect(await screen.findByLabelText("search parameters")).toHaveTextContent("?context=demo");
+      expect(get).toHaveBeenCalledOnce();
+      expect(consoleError.mock.calls).not.toContainEqual(
+        expect.arrayContaining([expect.stringMatching(/useForm.*not connected/)]),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it.each([
@@ -268,6 +276,17 @@ describe("API Resource management", () => {
       expect(save).toHaveBeenCalledWith(expect.objectContaining({ name: "Renamed" }), resource),
     );
     expect(await screen.findByText(key("savedMetadata"))).toBeVisible();
+  });
+
+  it("focuses an invalid name instead of saving the resource", async () => {
+    render(<ApiResourceScene resourceId="resource" />);
+    await openEditor();
+    const name = screen.getByLabelText(key("name"));
+    fireEvent.change(name, { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(name).toHaveFocus());
+    expect(save).not.toHaveBeenCalled();
   });
 
   it("creates under the selected Catalog and waits for candidate validation before reporting success", async () => {
@@ -504,9 +523,12 @@ describe("API Resource management", () => {
     await screen.findByText(key("conflict"));
     expect(screen.getByLabelText(key("name"))).toHaveValue("Keep draft");
     expect(screen.getByRole("button", { name: "common.save" })).toBeDisabled();
+    get.mockResolvedValueOnce({ ...resource, name: "Reloaded Orders" });
     fireEvent.click(screen.getByRole("button", { name: "common.reload" }));
-    expect(await screen.findByRole("heading", { name: "Orders" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Reloaded Orders" })).toBeVisible();
     expect(screen.queryByText(key("conflict"))).not.toBeInTheDocument();
+    await openEditor();
+    expect(screen.getByLabelText(key("name"))).toHaveValue("Reloaded Orders");
   });
 
   it.each([false, true])(

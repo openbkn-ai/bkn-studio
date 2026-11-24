@@ -61,7 +61,7 @@ export function KnowledgeNetworkCard({
     canRequestPermission,
   ).map((key) => ({
     key,
-    danger: key === "delete",
+    ...(key === "delete" ? { danger: true } : {}),
     label:
       key === "view"
         ? t("common.detail")

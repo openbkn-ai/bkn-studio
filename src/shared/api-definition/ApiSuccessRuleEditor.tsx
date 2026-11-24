@@ -29,10 +29,12 @@ function SuccessStatusesEditor({
   const id = useId();
   const [touched, setTouched] = useState(false);
   const statuses = Array.isArray(value) ? value.map(String) : [];
+  // Select uses each tag's value as its key. Validate the original values separately.
+  const displayStatuses = [...new Set(statuses)];
   const valid =
     Array.isArray(value) &&
     value.length > 0 &&
-    new Set(statuses).size === statuses.length &&
+    displayStatuses.length === statuses.length &&
     value.every((status) => valueType(status) === "number" && /^[1-5]\d{2}$/.test(String(status)));
   const showError = touched && !valid && !disabled;
   useEditorValidity(valid || !!disabled);
@@ -55,7 +57,7 @@ function SuccessStatusesEditor({
         aria-describedby={`${id}-hint${showError ? ` ${id}-error` : ""}`}
         disabled={disabled}
         open={false}
-        value={statuses}
+        value={displayStatuses}
         placeholder={t("dataConnect.apiEditor.statusesPlaceholder")}
         limit={500}
         limitMessage={t("dataConnect.apiEditor.errors.status")}

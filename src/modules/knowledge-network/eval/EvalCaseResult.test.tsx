@@ -37,31 +37,34 @@ afterEach(async () => {
 });
 
 it("shows the frozen business standard and composite key instead of all rows", () => {
+  const consoleError = vi.spyOn(console, "error");
   const detail = fixture();
+  const result = {
+    function: "duplicate_count",
+    field: "",
+    fields: ["tenant_id", "customer_code"],
+    operator: "eq",
+    actual_exact: "1",
+    expected: 0,
+    passed: false,
+  };
   detail.observation!.query_summary = {
     scope: { mode: "sample", limit: 100 },
     checked_rows: 3,
     violations: 1,
     program_version: 1,
     standard: { version: "customer-policy-v1", evidence_refs: ["policy://customer/v1"] },
-    aggregate_results: [
-      {
-        function: "duplicate_count",
-        field: "",
-        fields: ["tenant_id", "customer_code"],
-        operator: "eq",
-        actual_exact: "1",
-        expected: 0,
-        passed: false,
-      },
-    ],
+    aggregate_results: [result, { ...result }],
   };
   render(<EvalCaseResult detail={detail} onEvidence={vi.fn()} />);
   expect(screen.getByText(/业务标准版本：customer-policy-v1/)).toHaveTextContent(
     "policy://customer/v1",
   );
-  expect(screen.getByText("联合键重复条数")).toBeTruthy();
-  expect(screen.getByText("tenant_id + customer_code")).toBeTruthy();
+  expect(screen.getAllByText("联合键重复条数")).toHaveLength(2);
+  expect(screen.getAllByText("tenant_id + customer_code")).toHaveLength(2);
+  expect(consoleError.mock.calls).not.toContainEqual(
+    expect.arrayContaining([expect.stringMatching(/rowKey|two children with the same key/)]),
+  );
 });
 
 it("pairs each frozen criterion with its own actual field and expected condition", async () => {
@@ -252,23 +255,35 @@ it("summarizes a sample without inventing a missing visible total", () => {
     "本次抽查「物料」的100条记录",
   );
 });
-it.each(["source", "evidence", "statistics"])(
+it.each(["source", "evidence", "statistics", "aggregate statistics"])(
   "does not invent a successful data summary when %s is unreliable",
   (missing) => {
+    const consoleError = vi.spyOn(console, "error");
     const detail = fixture();
     if (missing === "source") detail.observation!.source_verified = false;
     if (missing === "evidence") detail.observation!.evidence_status = "unavailable";
-    if (missing === "statistics") detail.observation!.query_summary!.violations = Number.NaN;
+    const invalidStatistics = missing === "statistics" || missing === "aggregate statistics";
+    if (invalidStatistics) detail.observation!.query_summary!.violations = Number.NaN;
+    if (missing === "aggregate statistics") detail.observation!.query_summary!.aggregate_checks = 1;
     render(<EvalCaseResult detail={detail} onEvidence={vi.fn()} />);
     const conclusion = screen.getByRole("region", { name: "本次用例结论" });
     expect(conclusion).not.toHaveTextContent("未发现违规");
     expect(conclusion).not.toHaveTextContent("抽查100条");
+    expect(conclusion).not.toHaveTextContent("全部满足配置条件");
     expect(conclusion).toHaveTextContent(
       missing === "source"
         ? "尚无可信的实际输出"
         : missing === "evidence"
           ? "缺少完整执行证据"
           : "检查统计不完整",
+    );
+    if (invalidStatistics) {
+      const checkInfo = screen.getByText("违规条数").closest("tr")!;
+      expect(within(checkInfo).getByText("—")).toBeVisible();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    }
+    expect(consoleError.mock.calls).not.toContainEqual(
+      expect.arrayContaining([expect.stringContaining("Received NaN")]),
     );
   },
 );

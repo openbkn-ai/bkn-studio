@@ -20,16 +20,28 @@ describe("explicit root service candidates", { timeout: 30_000 }, () => {
     vi.mocked(listRootServices).mockReset();
   });
   it("retains server substring candidates and reports more results", async () => {
-    vi.mocked(listRootServices).mockResolvedValue({ entries: ["CanonicalService"], hasMore: true });
-    render(<RootServicePicker value="SERVICE" query={{ tool: "sql" }} />);
-    expect(listRootServices).not.toHaveBeenCalled();
-    open();
-    expect(await screen.findByTitle("CanonicalService")).toBeInTheDocument();
-    expect(screen.getByText(key("more"))).toBeInTheDocument();
-    expect(listRootServices).toHaveBeenCalledWith(
-      { tool: "sql", q: "SERVICE" },
-      expect.any(AbortSignal),
-    );
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      vi.mocked(listRootServices).mockResolvedValue({
+        entries: ["CanonicalService"],
+        hasMore: true,
+      });
+      render(<RootServicePicker value="SERVICE" query={{ tool: "sql" }} />);
+      expect(listRootServices).not.toHaveBeenCalled();
+      open();
+      expect(screen.getByRole("combobox")).toHaveFocus();
+      expect(await screen.findByTitle("CanonicalService")).toBeInTheDocument();
+      expect(screen.getByText(key("more"))).toBeInTheDocument();
+      expect(listRootServices).toHaveBeenCalledWith(
+        { tool: "sql", q: "SERVICE" },
+        expect.any(AbortSignal),
+      );
+      expect(consoleError).not.toHaveBeenCalledWith(
+        expect.stringContaining("Accessing element.ref"),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
   it.each([
     ["", "empty"],

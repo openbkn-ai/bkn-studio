@@ -15,7 +15,7 @@ import {
   Switch,
   Typography,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
@@ -46,46 +46,41 @@ export function SSODirectorySyncModal({
     requiredPermissions: [authzPoints.roleCreate, authzPoints.roleEdit],
   });
   const label = (key: string) => t(`systemAdmin.sso.sync.${key}`);
-  const [form] = Form.useForm<DirectorySyncInput>();
-  const [view, setView] = useState<DirectorySyncView>();
+  const formId = useId();
+  const formRef = useRef<ComponentRef<typeof Form<DirectorySyncInput>>>(null);
+  const [loadedView, setView] = useState<DirectorySyncView>();
+  const view = provider && loadedView?.config.provider_id === provider.id ? loadedView : undefined;
   const [error, setError] = useState("");
   const [operationError, setOperationError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
+    setView(undefined);
     if (!provider) return;
     let active = true;
-    setView(undefined);
     setError("");
     setOperationError("");
-    form.resetFields();
-    const load = async (initial: boolean) => {
+    const load = async () => {
       try {
         const value = await getDirectorySync(provider.id);
         if (!active) return;
         setView(value);
         setError("");
-        if (initial)
-          form.setFieldsValue({
-            enabled: value.config.enabled,
-            role_sync_enabled: value.config.role_sync_enabled ?? false,
-            organization: value.config.organization,
-            interval_seconds: value.config.interval_seconds,
-          });
       } catch (e) {
         if (active) setError(extractRequestErrorMessage(e));
       }
     };
-    void load(true);
+    void load();
     const timer = window.setInterval(() => {
-      void load(false);
+      void load();
     }, 5000);
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [provider, form]);
+  }, [provider]);
   const save = async (input: DirectorySyncInput) => {
-    if (!provider) return;
+    const submittedForm = formRef.current;
+    if (!provider || !submittedForm) return;
     setOperationError("");
     setBusy(true);
     try {
@@ -94,7 +89,9 @@ export function SSODirectorySyncModal({
       // update the schedule without changing the saved role-sync setting.
       if (!canSyncRoles) delete payload.role_sync_enabled;
       setView(await saveDirectorySync(provider.id, payload));
-      form.setFieldValue("webhook_secret", undefined);
+      if (formRef.current?.nativeElement === submittedForm.nativeElement) {
+        submittedForm.setFieldValue("webhook_secret", undefined);
+      }
       void message.success(label("saved"));
     } catch (e) {
       setOperationError(extractRequestErrorMessage(e));
@@ -150,7 +147,7 @@ export function SSODirectorySyncModal({
           >
             {label("run")}
           </AppButton>
-          <AppButton type="primary" disabled={!view} loading={busy} onClick={() => form.submit()}>
+          <AppButton type="primary" disabled={!view} loading={busy} form={formId} htmlType="submit">
             {label("save")}
           </AppButton>
         </Space>
@@ -162,8 +159,15 @@ export function SSODirectorySyncModal({
         {operationError && <Alert type="error" message={operationError} />}
         {view && (
           <>
-            <Form
-              form={form}
+            <Form<DirectorySyncInput>
+              id={formId}
+              ref={formRef}
+              initialValues={{
+                enabled: view.config.enabled,
+                role_sync_enabled: view.config.role_sync_enabled ?? false,
+                organization: view.config.organization,
+                interval_seconds: view.config.interval_seconds,
+              }}
               layout="vertical"
               onFinish={(values: DirectorySyncInput) => {
                 void save(values);
@@ -197,7 +201,7 @@ export function SSODirectorySyncModal({
               <AppButton
                 onClick={() => {
                   const bytes = crypto.getRandomValues(new Uint8Array(32));
-                  form.setFieldValue(
+                  formRef.current?.setFieldValue(
                     "webhook_secret",
                     Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(""),
                   );

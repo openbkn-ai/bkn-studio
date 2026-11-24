@@ -111,6 +111,18 @@ describe("SSO directory synchronization", () => {
       }),
     );
   });
+  it("clears a replacement secret after saving it", async () => {
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    const secret = await screen.findByLabelText("systemAdmin.sso.sync.secret");
+    const replacement = "a".repeat(64);
+    fireEvent.change(secret, { target: { value: replacement } });
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() => expect(secret).toHaveValue(""));
+    expect(api.save).toHaveBeenCalledWith(
+      "casdoor",
+      expect.objectContaining({ webhook_secret: replacement }),
+    );
+  });
   it("does not queue a disabled configuration", async () => {
     api.get.mockResolvedValue({ ...view, config: { ...view.config, enabled: false } });
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
@@ -182,6 +194,8 @@ describe("SSO directory synchronization", () => {
     api.run.mockRejectedValueOnce(new Error("sync failed"));
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
     await screen.findByLabelText("systemAdmin.sso.sync.organization");
+    const interval = screen.getByRole("spinbutton", { name: "systemAdmin.sso.sync.interval" });
+    fireEvent.change(interval, { target: { value: "600" } });
     fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.run" }));
     await screen.findByText("sync failed");
     await act(async () => {
@@ -190,7 +204,31 @@ describe("SSO directory synchronization", () => {
     });
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(screen.getByText("sync failed")).toBeInTheDocument();
+    expect(interval).toHaveValue("600");
     timer.mockRestore();
+  });
+  it("initializes the form when polling recovers from an initial load failure", async () => {
+    vi.useFakeTimers();
+    try {
+      api.get.mockRejectedValueOnce(new Error("configuration unavailable"));
+      render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByText("configuration unavailable")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" })).toBeDisabled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(screen.queryByText("configuration unavailable")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("systemAdmin.sso.sync.organization")).toHaveValue("org");
+      expect(screen.getByRole("spinbutton", { name: "systemAdmin.sso.sync.interval" })).toHaveValue(
+        "300",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("uses a fallback for an unknown synchronization error", async () => {
     api.get.mockResolvedValue({

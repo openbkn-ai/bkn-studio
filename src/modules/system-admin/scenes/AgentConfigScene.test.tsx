@@ -101,10 +101,11 @@ const SAVE = /^保\s*存$/;
 
 /** Confirms the change dialog the page opens before every write. */
 async function confirmChange() {
+  const button = await screen.findByRole("button", {
+    name: i18n.t("systemAdmin.agentConfig.confirmChange"),
+  });
   await act(async () => {
-    fireEvent.click(
-      await screen.findByRole("button", { name: i18n.t("systemAdmin.agentConfig.confirmChange") }),
-    );
+    fireEvent.click(button);
     await Promise.resolve();
   });
 }
@@ -131,16 +132,16 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanup();
-  const addonWarnings = consoleError.mock.calls.filter((args) => {
+  const unexpectedWarnings = consoleError.mock.calls.filter((args) => {
     const message: unknown = args[0];
     return (
       typeof message === "string" &&
-      message.includes("[antd: InputNumber]") &&
-      /addonAfter|addonBefore/.test(message)
+      (message.includes("The current testing environment is not configured to support act") ||
+        (message.includes("[antd: InputNumber]") && /addonAfter|addonBefore/.test(message)))
     );
   });
   consoleError.mockRestore();
-  expect(addonWarnings).toEqual([]);
+  expect(unexpectedWarnings).toEqual([]);
 });
 
 function renderScene(agentId = "studio_smart_qa") {
