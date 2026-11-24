@@ -60,6 +60,7 @@ export const commonZhCN = {
     save: "保存",
     confirm: "确定",
     cancel: "取消",
+    close: "关闭",
     ok: "确定",
     custom: "自定义",
     add: "添加",

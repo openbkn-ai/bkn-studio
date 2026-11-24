@@ -19,6 +19,22 @@
   gap: 16px 24px;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+.field > :global(.ant-select) {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.label {
+  line-height: 1.5;
+}
+
 .loginToggle {
   display: flex;
   align-items: center;
