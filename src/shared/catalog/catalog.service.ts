@@ -126,17 +126,6 @@ function apiConfigRequestOptions(connectorType: string) {
     : {};
 }
 
-function transformResourceTestResponse(data: unknown): unknown {
-  if (typeof data !== "string" || data.length === 0) return data;
-  try {
-    return parsePrecisionPreservingJSON(data, { allowSpecialKeys: true });
-  } catch {
-    // Keep non-JSON errors on the normal HTTP error path without truncating
-    // resource numbers through a fallback JSON.parse.
-    return data;
-  }
-}
-
 const wait = async <T>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), delay);
@@ -574,7 +563,6 @@ export async function testCatalogConnectionConfig(
     {
       connector_config: input.connectorConfig,
       connector_type: input.connectorType,
-      ...(input.scope === undefined ? {} : { scope: input.scope }),
     },
     {
       skipErrorToast: true,
@@ -591,9 +579,6 @@ export async function testCatalogConnection(
   id: string,
   options?: CatalogConnectionTestOptions,
 ): Promise<CatalogConnectionTestResult> {
-  const scope = options?.scope ?? (options?.resourceId !== undefined ? "resource" : "transport");
-  if (scope === "resource" && !options?.resourceId?.trim())
-    throw new Error("Resource validation requires a saved Resource.");
   if (useMock) {
     return wait({
       message: "Connection test succeeded.",
@@ -601,31 +586,13 @@ export async function testCatalogConnection(
     });
   }
 
-  const body =
-    options?.scope !== undefined ||
-    options?.resourceId !== undefined ||
-    options?.paging !== undefined
-      ? {
-          ...(options.scope === undefined ? {} : { scope: options.scope }),
-          ...(options.resourceId === undefined ? {} : { resource_id: options.resourceId }),
-          ...(options.paging === undefined ? {} : { paging: options.paging }),
-        }
-      : undefined;
-
   const response = await http.post<CatalogConnectionTestResult>(
     `/vega-backend/v1/catalogs/${id}/test-connection`,
-    body,
+    undefined,
     {
       skipErrorToast: true,
       timeout: 60_000,
       ...(options?.signal ? { signal: options.signal } : {}),
-      ...(scope === "resource"
-        ? {
-            headers: { "Content-Type": "application/json" },
-            transformRequest: transformPrecisionSafeJSONRequest,
-            transformResponse: transformResourceTestResponse,
-          }
-        : {}),
     },
   );
 
