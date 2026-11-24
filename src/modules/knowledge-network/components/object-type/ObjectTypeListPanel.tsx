@@ -13,7 +13,7 @@ import {
   SearchOutlined,
   SortAscendingOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
+import { Dropdown, Empty, Input, Segmented, Select, Spin, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -83,11 +83,7 @@ import {
   useKnVersioned,
   useKnVersionView,
 } from "@/modules/knowledge-network/hooks/useKnVersionView";
-import {
-  deleteKnEventType,
-  eventTypeUpdateBody,
-  updateKnEventType,
-} from "@/modules/knowledge-network/services/event-type.service";
+import { deleteKnEventType } from "@/modules/knowledge-network/services/event-type.service";
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
@@ -130,7 +126,7 @@ export function ObjectTypeListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { message, modal } = useAppServices();
+  const { modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
   const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "all");
@@ -171,24 +167,19 @@ export function ObjectTypeListPanel({
   const [versionView] = useKnVersionView(networkId);
   const eventTypes = useKnEventTypes(networkId, refreshVersion);
   const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
-  // Event types are written past the version interceptor, so their writes are offered only where
+  // An event class is written like any definition, so its writes are offered only where
   // definitions are edited: a network without versions, or the draft of a versioned one.
   const eventsWritable = !versioned || versionView === "draft";
-  // An event class is edited and deleted through its event type, so edit and delete wait until
-  // the event types are read, and an event class offers them only where event types are written.
+  // An event class is edited and deleted through its own form, so edit and delete wait until the
+  // event classes are read, and an event class offers them only where definitions are written.
   const objectWritable = useCallback(
     (objectTypeId: string) =>
       !eventTypes.loading && (!eventTypes.byClassId.has(objectTypeId) || eventsWritable),
     [eventTypes.loading, eventTypes.byClassId, eventsWritable],
   );
-  const typesWithoutClass = useMemo(
-    () => eventTypes.types.filter((type) => !type.object_type_id),
-    [eventTypes.types],
-  );
   const [eventForm, setEventForm] = useState<{ eventType?: KnEventType; open: boolean }>({
     open: false,
   });
-  const [creatingMissingClasses, setCreatingMissingClasses] = useState(false);
   const deleteEventClass = useEventClassDelete();
   const explainEventClassRefusal = useEventClassDeleteRefusal();
 
@@ -511,7 +502,7 @@ export function ObjectTypeListPanel({
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        // An event class goes with its event type; the object type API would leave the type behind.
+        // An event class goes with its recognition action, which the object type API would refuse.
         const eventRecords = records.flatMap((record) => {
           const eventType = eventTypes.byClassId.get(record.id);
           return eventType ? [eventType] : [];
@@ -551,7 +542,7 @@ export function ObjectTypeListPanel({
     const eventType = eventTypes.byClassId.get(record.id);
     if (key === "edit") {
       if (eventType) {
-        // The platform writes an event class; what can change is its event type.
+        // An event class has its own form: its data source and properties are the platform's.
         setEventForm({ eventType, open: true });
         return;
       }
@@ -831,46 +822,6 @@ export function ObjectTypeListPanel({
     return `/knowledge-network/workspace/${networkId}/object-types?${graphReturnParams.toString()}`;
   };
 
-  /**
-   * Saves each event type that has no class as it is, which creates its class. The platform fills
-   * classes in by itself only where there are no versions: in a versioned network a class goes
-   * into the draft, so it waits for someone to save the type.
-   */
-  const createMissingClasses = async () => {
-    setCreatingMissingClasses(true);
-    let saved = 0;
-    let classless = 0;
-    try {
-      for (const eventType of typesWithoutClass) {
-        try {
-          const result = await updateKnEventType(
-            networkId,
-            eventType.code,
-            eventTypeUpdateBody(eventType),
-          );
-          saved += 1;
-          // An event module from before event classes saves the type and makes no class.
-          if (!result.object_type_id) {
-            classless += 1;
-          }
-        } catch {
-          // The request layer shows why; the other types are still tried.
-        }
-      }
-    } finally {
-      setCreatingMissingClasses(false);
-    }
-    if (saved > 0) {
-      if (classless > 0) {
-        void message.warning(t("knowledgeNetwork.eventClasses.savedWithoutClass"));
-      } else {
-        void message.success(t("knowledgeNetwork.eventClasses.createMissingDone"));
-      }
-      onDefinitionsChanged?.();
-      setRefreshVersion((current) => current + 1);
-    }
-  };
-
   const handleEventClassSaved = (saved: KnEventType) => {
     setEventForm({ open: false });
     onDefinitionsChanged?.();
@@ -1030,31 +981,6 @@ export function ObjectTypeListPanel({
             </div>
           </div>
         </div>
-
-        {canModify && typesWithoutClass.length > 0 ? (
-          <Alert
-            action={
-              // Saving the types writes the draft of a versioned network.
-              eventsWritable ? (
-                <AppButton
-                  loading={creatingMissingClasses}
-                  onClick={() => void createMissingClasses()}
-                  size="small"
-                >
-                  {t("knowledgeNetwork.eventClasses.createMissing")}
-                </AppButton>
-              ) : undefined
-            }
-            message={t("knowledgeNetwork.eventClasses.missingClasses", {
-              count: typesWithoutClass.length,
-              names: typesWithoutClass
-                .map((type) => type.name || type.code)
-                .join(t("knowledgeNetwork.eventClasses.listSeparator")),
-            })}
-            showIcon
-            type="info"
-          />
-        ) : null}
 
         {viewMode === "list" ? (
           <div className={styles.tableCard}>

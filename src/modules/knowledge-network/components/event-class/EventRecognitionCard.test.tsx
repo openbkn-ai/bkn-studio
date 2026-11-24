@@ -51,6 +51,8 @@ const overdue: KnEventType = {
   merge_hours: 0,
   name: "Overdue order",
   object_type_id: "order_overdue",
+  recognition_action_id: "order_overdue_recognition",
+  recognition_basis: "function",
   rule_tool: { box_id: "box-1", tool_id: "tool-1" },
   severity: "P2",
   source: "rule",
@@ -81,19 +83,25 @@ const checkNow = () => {
 };
 
 describe("EventRecognitionCard check now", () => {
-  it("reports how many objects the check found", async () => {
-    mocks.check.mockResolvedValue({
-      check: { event_type: "order.overdue", hits: 2, status: "ok" },
-    });
+  it("says the check started, since the platform runs it in the background", async () => {
+    mocks.check.mockResolvedValue({ execution_id: "ex-1" });
     checkNow();
 
-    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkDone:2`));
+    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkStarted`));
+    expect(mocks.check).toHaveBeenCalledWith("network-1", "order.overdue");
   });
 
-  it("does not report zero found when the check does not say how many", async () => {
-    mocks.check.mockResolvedValue({ check: { event_type: "order.overdue", status: "ok" } });
-    checkNow();
+  it("offers no check now for a class without a recognition action", () => {
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{ ...overdue, recognition_action_id: undefined, rule_tool: null }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+      />,
+    );
 
-    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkFinished`));
+    expect(screen.queryByText(`${PREFIX}.checkNow`)).toBeNull();
   });
 });

@@ -35,7 +35,6 @@ import {
 } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import {
   createKnEventType,
-  eventClassIdOf,
   listKnEventRuleTools,
   updateKnEventType,
 } from "@/modules/knowledge-network/services/event-type.service";
@@ -67,6 +66,7 @@ type EventClassFormDrawerProps = {
 
 type FormValues = {
   code: string;
+  handlingNote?: string;
   mergeHours?: number;
   name: string;
   ruleTool?: string;
@@ -78,7 +78,8 @@ type FormValues = {
 /** A parameter of the rule tool as the form edits it. */
 type ParameterDraft = { mode: "fixed" | "checkDate"; value?: unknown };
 
-const CODE_PATTERN = /^[a-z0-9][a-z0-9_.-]{0,63}$/;
+/** The code is the ID of the event class, an object type. */
+const CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const SEVERITIES = ["P1", "P2", "P3", "P4"];
 const TOOL_KEY_SEPARATOR = "\u0000";
 
@@ -148,6 +149,7 @@ export function EventClassFormDrawer({
     form.resetFields();
     form.setFieldsValue({
       code: eventType?.code ?? "",
+      handlingNote: eventType?.handling_note ?? "",
       mergeHours: eventType?.merge_hours ?? 0,
       name: eventType?.name ?? "",
       ruleTool: eventType?.rule_tool
@@ -310,11 +312,10 @@ export function EventClassFormDrawer({
     }
     const shared = {
       check_schedule: ruleTool ? { cron, timezone } : null,
+      handling_note: values.handlingNote?.trim() ?? "",
       merge_hours: isRule ? (eventType?.merge_hours ?? 0) : (values.mergeHours ?? 0),
       name: values.name.trim(),
-      rule: eventType?.rule ?? {},
       rule_tool: ruleTool,
-      rule_version: eventType?.rule_version,
       severity: values.severity ?? "",
       subject: values.subject ?? "",
     };
@@ -328,10 +329,7 @@ export function EventClassFormDrawer({
             source: values.source,
           });
       const trial = saved.trial;
-      if (!saved.object_type_id) {
-        // An event module from before event classes saves the type and makes no class.
-        void message.warning(t("knowledgeNetwork.eventClasses.savedWithoutClass"));
-      } else if (trial && typeof trial.hits === "number") {
+      if (trial && typeof trial.hits === "number") {
         void message.success(
           t(
             trial.limited
@@ -524,8 +522,16 @@ export function EventClassFormDrawer({
     </div>
   );
 
-  const codeValue = Form.useWatch("code", form) ?? "";
-  const legacyRuleWithoutTool = editing && eventType?.source === "rule" && !eventType.rule_tool;
+  // A rule class without a recognition action: nothing checks it until a rule tool is chosen.
+  const legacyRuleWithoutTool =
+    editing && eventType?.source === "rule" && !eventType.recognition_action_id;
+  // A recognition action that selects by a condition, Cypher or metric: this form leaves it as it is.
+  const otherBasis =
+    editing &&
+    Boolean(eventType?.recognition_action_id) &&
+    eventType?.recognition_basis !== "function";
+  // The backend refuses to move the subject of a class while its recognition action is bound to it.
+  const subjectLocked = editing && Boolean(eventType?.recognition_action_id);
 
   return (
     <Drawer
@@ -556,6 +562,13 @@ export function EventClassFormDrawer({
             type="warning"
           />
         ) : null}
+        {otherBasis ? (
+          <Alert
+            message={t("knowledgeNetwork.eventClasses.form.otherBasisHint")}
+            showIcon
+            type="info"
+          />
+        ) : null}
         {problem ? <Alert message={problem} showIcon type="error" /> : null}
       </Space>
       <Form<FormValues> colon={false} form={form} layout="vertical" className={styles.form}>
@@ -577,13 +590,7 @@ export function EventClassFormDrawer({
           />
         </Form.Item>
         <Form.Item
-          extra={
-            codeValue && CODE_PATTERN.test(codeValue)
-              ? t("knowledgeNetwork.eventClasses.form.codeClassId", {
-                  id: eventClassIdOf(codeValue),
-                })
-              : t("knowledgeNetwork.eventClasses.form.codeHint")
-          }
+          extra={t("knowledgeNetwork.eventClasses.form.codeHint")}
           label={t("knowledgeNetwork.eventClasses.form.code")}
           name="code"
           rules={[
@@ -608,21 +615,23 @@ export function EventClassFormDrawer({
         </Form.Item>
         <Form.Item
           extra={
-            source === "rule"
-              ? t("knowledgeNetwork.eventClasses.form.subjectRuleHint")
-              : t("knowledgeNetwork.eventClasses.form.subjectHint")
+            subjectLocked
+              ? t("knowledgeNetwork.eventClasses.form.subjectLockedHint")
+              : source === "rule"
+                ? t("knowledgeNetwork.eventClasses.form.subjectRuleHint")
+                : t("knowledgeNetwork.eventClasses.form.subjectHint")
           }
           label={t("knowledgeNetwork.eventClasses.form.subject")}
           name="subject"
           rules={[
             {
               message: t("knowledgeNetwork.eventClasses.form.subjectRequired"),
-              required: source === "rule",
+              required: true,
             },
           ]}
         >
           <Select
-            allowClear
+            disabled={subjectLocked}
             loading={subjectsLoading}
             optionFilterProp="label"
             options={subjects}
@@ -635,6 +644,13 @@ export function EventClassFormDrawer({
             allowClear
             options={SEVERITIES.map((value) => ({ label: value, value }))}
             placeholder={t("knowledgeNetwork.eventClasses.form.severityPlaceholder")}
+          />
+        </Form.Item>
+        <Form.Item label={t("knowledgeNetwork.eventClasses.form.handlingNote")} name="handlingNote">
+          <Input.TextArea
+            autoSize={{ maxRows: 6, minRows: 2 }}
+            maxLength={500}
+            placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
           />
         </Form.Item>
         {source === "report" ? (
@@ -657,13 +673,14 @@ export function EventClassFormDrawer({
               rules={[
                 {
                   message: t("knowledgeNetwork.eventClasses.form.ruleToolRequired"),
-                  // A type the applications checked keeps working without one until it is moved over.
-                  required: !legacyRuleWithoutTool,
+                  // A class without a recognition action, or one this form does not edit, is saved
+                  // without a rule tool.
+                  required: !legacyRuleWithoutTool && !otherBasis,
                 },
               ]}
             >
               <Select
-                allowClear={legacyRuleWithoutTool}
+                allowClear={legacyRuleWithoutTool || otherBasis}
                 loading={toolsLoading}
                 notFoundContent={
                   toolsLoading ? undefined : t("knowledgeNetwork.eventClasses.form.ruleToolEmpty")

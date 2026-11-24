@@ -32,7 +32,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   createKnEventType: mocks.create,
-  eventClassIdOf: (code: string) => code.replace(/\./g, "_"),
   listKnEventRuleTools: mocks.listRuleTools,
   updateKnEventType: mocks.update,
 }));
@@ -45,17 +44,15 @@ import { EventClassFormDrawer } from "./EventClassFormDrawer";
 
 const overdue: KnEventType = {
   check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
-  code: "order.overdue",
+  code: "order_overdue",
   merge_hours: 0,
   name: "Overdue order",
   object_type_id: "order_overdue",
-  rule: {},
   rule_tool: {
     box_id: "box-1",
     parameters: { days: 3, today: { check_time: "date" } },
     tool_id: "tool-1",
   },
-  rule_version: "",
   severity: "P2",
   source: "rule",
   subject: "order",
@@ -96,10 +93,10 @@ beforeEach(() => {
   ]);
   // The platform answers with the saved type, its event class included.
   mocks.create.mockImplementation((_networkId: string, body: { code: string }) =>
-    Promise.resolve({ ...body, object_type_id: body.code.replace(/\./g, "_") }),
+    Promise.resolve({ ...body, object_type_id: body.code }),
   );
   mocks.update.mockImplementation((_networkId: string, code: string, body: object) =>
-    Promise.resolve({ ...body, code, object_type_id: code.replace(/\./g, "_") }),
+    Promise.resolve({ ...body, code, object_type_id: code }),
   );
 });
 
@@ -108,12 +105,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const renderDrawer = (eventType?: KnEventType) => {
+const renderDrawer = (eventType?: KnEventType, initialSubject?: string) => {
   const onSaved = vi.fn();
   render(
     <EventClassFormDrawer
       eventClassIds={new Set(["order_overdue"])}
       eventType={eventType}
+      initialSubject={initialSubject}
       networkId="network-1"
       onClose={vi.fn()}
       onSaved={onSaved}
@@ -133,29 +131,26 @@ describe("EventClassFormDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(mocks.update).toHaveBeenCalledWith("network-1", "order.overdue", {
+    expect(mocks.update).toHaveBeenCalledWith("network-1", "order_overdue", {
       check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
+      handling_note: "",
       merge_hours: 0,
       name: "Overdue order",
-      rule: {},
       rule_tool: {
         box_id: "box-1",
         parameters: { days: 3, today: { check_time: "date" } },
         tool_id: "tool-1",
       },
-      rule_version: "",
       severity: "P2",
       subject: "order",
     });
   });
 
-  it("saves a type the applications checked without a tool, so the platform still leaves it alone", async () => {
+  it("saves a class that has no recognition action without a rule tool", async () => {
     const legacy: KnEventType = {
       ...overdue,
       check_schedule: null,
-      rule: { kind: "threshold" },
       rule_tool: null,
-      rule_version: "v1",
     };
     const onSaved = renderDrawer(legacy);
     expect(
@@ -167,78 +162,103 @@ describe("EventClassFormDrawer", () => {
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(mocks.update).toHaveBeenCalledWith(
       "network-1",
-      "order.overdue",
+      "order_overdue",
       expect.objectContaining({
         check_schedule: null,
-        rule: { kind: "threshold" },
         rule_tool: null,
-        rule_version: "v1",
       }),
     );
   });
 
   it("creates a reported event class with no rule tool and no schedule", async () => {
-    const onSaved = renderDrawer();
+    const onSaved = renderDrawer(undefined, "order");
 
     fireEvent.change(
       screen.getByPlaceholderText("knowledgeNetwork.eventClasses.form.namePlaceholder"),
       { target: { value: " Quality complaint " } },
     );
     fireEvent.change(screen.getByPlaceholderText("order_overdue"), {
-      target: { value: "quality.complaint" },
+      target: { value: "quality_complaint" },
     });
     fireEvent.click(screen.getByLabelText("knowledgeNetwork.eventClasses.source.report"));
     expect(await screen.findByText("knowledgeNetwork.eventClasses.form.mergeHours")).toBeVisible();
-    expect(screen.getByText("knowledgeNetwork.eventClasses.form.codeClassId")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(mocks.create).toHaveBeenCalledWith("network-1", {
       check_schedule: null,
-      code: "quality.complaint",
+      code: "quality_complaint",
+      handling_note: "",
       merge_hours: 0,
       name: "Quality complaint",
-      rule: {},
       rule_tool: null,
-      rule_version: undefined,
       severity: "",
       source: "report",
-      subject: "",
+      subject: "order",
     });
     expect(mocks.success).toHaveBeenCalledWith("common.success");
     expect(mocks.warning).not.toHaveBeenCalled();
   });
 
-  it("does not claim a class was made when the platform saved the type without one", async () => {
-    // An event module from before event classes answers without object_type_id.
-    mocks.create.mockImplementation((_networkId: string, body: object) => Promise.resolve(body));
-    const onSaved = renderDrawer();
-
-    fireEvent.change(
-      screen.getByPlaceholderText("knowledgeNetwork.eventClasses.form.namePlaceholder"),
-      { target: { value: "Quality complaint" } },
+  it("tells how many objects the trial of the recognition action found", async () => {
+    mocks.update.mockImplementation((_networkId: string, code: string, body: object) =>
+      Promise.resolve({ ...body, code, object_type_id: code, trial: { hits: 5, limited: true } }),
     );
-    fireEvent.change(screen.getByPlaceholderText("order_overdue"), {
-      target: { value: "quality.complaint" },
-    });
-    fireEvent.click(screen.getByLabelText("knowledgeNetwork.eventClasses.source.report"));
+    const onSaved = renderDrawer(overdue);
+    expect(await screen.findByText("knowledgeNetwork.eventClasses.form.parameters")).toBeVisible();
+
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(mocks.warning).toHaveBeenCalledWith("knowledgeNetwork.eventClasses.savedWithoutClass");
-    expect(mocks.success).not.toHaveBeenCalled();
+    expect(mocks.success).toHaveBeenCalledWith(
+      "knowledgeNetwork.eventClasses.form.savedWithLimitedTrial",
+    );
+  });
+
+  it("locks the subject of a class while its recognition action is bound to it", async () => {
+    renderDrawer({
+      ...overdue,
+      recognition_action_id: "order_overdue_recognition",
+      recognition_basis: "function",
+    });
+
+    expect(
+      await screen.findByText("knowledgeNetwork.eventClasses.form.subjectLockedHint"),
+    ).toBeVisible();
+  });
+
+  it("leaves a recognition action that selects another way alone, and says so", async () => {
+    const onSaved = renderDrawer({
+      ...overdue,
+      check_schedule: null,
+      recognition_action_id: "order_overdue_recognition",
+      recognition_basis: "cypher",
+      rule_tool: null,
+    });
+    expect(
+      await screen.findByText("knowledgeNetwork.eventClasses.form.otherBasisHint"),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({ rule_tool: null }),
+    );
   });
 
   it("does not create a rule event class without a rule tool", async () => {
-    renderDrawer();
+    renderDrawer(undefined, "order");
 
     fireEvent.change(
       screen.getByPlaceholderText("knowledgeNetwork.eventClasses.form.namePlaceholder"),
       { target: { value: "Low stock" } },
     );
     fireEvent.change(screen.getByPlaceholderText("order_overdue"), {
-      target: { value: "stock.low" },
+      target: { value: "stock_low" },
     });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 

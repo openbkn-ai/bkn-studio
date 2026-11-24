@@ -46,6 +46,14 @@ export function useEventClassDeleteRefusal() {
         });
         return;
       }
+      if (code === "BknBackend.KnEvent.RecognizedByAction") {
+        void modal.error({
+          centered: true,
+          content: t(`${PREFIX}.recognizedByAction`),
+          title: t(`${PREFIX}.refusedTitle`, { name: eventType.name }),
+        });
+        return;
+      }
       if (code === "BknBackend.KnEvent.EventClassInUse") {
         const names = usedBy(error);
         void modal.error({
@@ -74,8 +82,7 @@ export function useEventClassDeleteRefusal() {
 }
 
 /**
- * Deletes an event class through its event type, which also removes the class, its relation and
- * its dataset. Asks first; resolves true once it is gone.
+ * Deletes an event class together with its recognition action. Asks first; resolves true once it is gone.
  */
 export function useEventClassDelete() {
   const { t } = useTranslation();

@@ -13,12 +13,6 @@ export const eventClassesPart = {
     tagDeclaredHint:
       "Event class: a property declares the event time. Its data comes from the bound table and the platform only reads it.",
     create: "New event class",
-    missingClasses_one: "{{count}} event type has no event class yet: {{names}}.",
-    missingClasses_other: "{{count}} event types have no event class yet: {{names}}.",
-    createMissing: "Create event classes",
-    createMissingDone: "Event classes created.",
-    savedWithoutClass:
-      "The event type was saved, but the platform did not create an event class: this platform version does not support event classes yet. Upgrade the platform.",
     listSeparator: ", ",
     source: {
       rule: "Rule hit",
@@ -34,17 +28,18 @@ export const eventClassesPart = {
       versionedHint:
         "This knowledge network has versions. The event type and its rule checks take effect when saved; the event class goes into the draft and can be queried as objects once a version is published.",
       legacyRuleHint:
-        "This event type has no rule tool, so the platform does not check it. Choose a rule tool and a schedule to have the platform check it.",
+        "This event class has no recognition action, so the platform does not check it. Choose a rule tool and a schedule to have the platform check it.",
+      otherBasisHint:
+        "The recognition action of this class selects by a condition, a Cypher query or a metric. This form leaves it as it is; choosing a rule tool here replaces it.",
       name: "Name",
       namePlaceholder: "For example: overdue order",
       nameRequired: "Enter a name",
       code: "Code",
       codeHint:
-        "Starts with a lowercase letter or digit and has only lowercase letters, digits, _, . and -. It cannot change after saving.",
-      codeClassId: "The event class gets the ID {{id}}. It cannot change after saving.",
+        "The ID of the event class. Starts with a lowercase letter or digit and has only lowercase letters, digits, _ and -. It cannot change after saving.",
       codeRequired: "Enter a code",
       codeInvalid:
-        "A code starts with a lowercase letter or digit, has only lowercase letters, digits, _, . and -, and is at most 64 characters long",
+        "A code starts with a lowercase letter or digit, has only lowercase letters, digits, _ and -, and is at most 64 characters long",
       source: "Source",
       sourceHint:
         "Rule hit: the platform calls the rule tool on schedule, one event for each object it finds. Reported: people report the events. It cannot change after saving.",
@@ -53,6 +48,10 @@ export const eventClassesPart = {
         "The object type the events are about. The platform relates the event class to it.",
       subjectRuleHint:
         "The key column of the rule tool is the primary key of this object type. The platform relates the event class to it.",
+      subjectLockedHint:
+        "The recognition action is bound to this object type. Delete the action before changing it.",
+      handlingNote: "Handling note",
+      handlingNotePlaceholder: "What to do about an event of this class",
       subjectPlaceholder: "Choose an object type",
       subjectRequired: "Choose the object type the events are about",
       severity: "Default severity",
@@ -120,13 +119,19 @@ export const eventClassesPart = {
       edit: "Edit",
       checkNow: "Check now",
       managedNote:
-        "This is an event class, kept by the platform's event module: its properties, data source and relation to the object type it is about come from the event type and cannot be changed here.",
+        "This is an event class: the platform keeps its properties, data source and relation to the object type it is about, and they cannot be changed here. Its recognition action type finds the events on schedule.",
       noRuleTool:
-        "There is no rule tool yet, so the platform does not check this event type. Edit it and choose a rule tool to have it checked on schedule.",
-      failures_one:
-        "The last {{count}} check could not decide. If the account the checks run as lost its permission, someone with the permission needs to save the rule again.",
-      failures_other:
-        "The last {{count}} checks could not decide. If the account the checks run as lost its permission, someone with the permission needs to save the rule again.",
+        "There is no recognition action yet, so the platform does not check this event class. Edit it and choose a rule tool to have it checked on schedule.",
+      noAction: "This event class has no recognition action to check.",
+      noSchedule: "The recognition action has no platform schedule yet. Save it again and retry.",
+      checkStarted: "The check has started. Its result shows under Last check once it finishes.",
+      basis: "Selects by",
+      bases: {
+        condition: "Condition",
+        cypher: "Cypher query",
+        function: "Cypher function",
+        metric: "Metric anomaly",
+      },
       code: "Code",
       source: "Source",
       subject: "About",
@@ -147,10 +152,6 @@ export const eventClassesPart = {
       lastCheckUnknown: "Could not decide: {{message}}",
       neverChecked: "Not checked yet",
       noMessage: "No reason given",
-      checkDone_one: "Check done. Found {{count}} object.",
-      checkDone_other: "Check done. Found {{count}} objects.",
-      checkFinished: "Check done.",
-      checkUnknown: "This check could not decide: {{message}}",
     },
     subject: {
       section: "Events",
@@ -166,11 +167,13 @@ export const eventClassesPart = {
     delete: {
       title: "Delete event class",
       confirm:
-        'Deleting "{{name}}" also deletes its event type, event class, relation to the object type it is about, and dataset. An event type that has events cannot be deleted.',
+        'Deleting "{{name}}" also deletes its recognition action. An event class that has events cannot be deleted.',
       confirmVersioned:
-        'Deleting "{{name}}" also deletes its event type. The event class and its relation are removed from the draft and go once a version is published. An event type that has events cannot be deleted.',
+        'Deleting "{{name}}" also deletes its recognition action. Both are removed from the draft and go once a version is published. An event class that has events cannot be deleted.',
       refusedTitle: '"{{name}}" cannot be deleted',
-      hasEvents: "This event type already has events, so it cannot be deleted.",
+      hasEvents: "This event class already has events, so it cannot be deleted.",
+      recognizedByAction:
+        "The event class still has a recognition action. Delete the action first, then the class.",
       inUse: "These definitions use the event class. Remove these references first:",
     },
   },

@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   objectWritable: undefined as ((objectTypeId: string) => boolean) | undefined,
   setSearchParams: vi.fn(),
   success: vi.fn(),
-  updateEventType: vi.fn(),
   versioned: false,
   versionView: "running",
   warning: vi.fn(),
@@ -73,9 +72,7 @@ vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   deleteKnEventType: mocks.deleteEventType,
-  eventTypeUpdateBody: (eventType: KnEventType) => ({ name: eventType.name }),
   listKnEventTypes: mocks.listEventTypes,
-  updateKnEventType: mocks.updateEventType,
 }));
 
 vi.mock("@/modules/knowledge-network/hooks/useKnVersionView", () => ({
@@ -156,9 +153,8 @@ const overdue = {
 };
 
 const overdueType: KnEventType = {
-  check_failures: 0,
   check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
-  code: "order.overdue",
+  code: "order_overdue",
   merge_hours: 0,
   name: "Overdue order",
   object_type_id: "order_overdue",
@@ -370,7 +366,7 @@ describe("ObjectTypeListPanel event classes", () => {
     expect(screen.getByText("knowledgeNetwork.eventClasses.create")).toBeInTheDocument();
   });
 
-  it("deletes an event class through its event type, not the object type API", async () => {
+  it("deletes an event class through its own delete, which takes its recognition action along", async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     const onDefinitionsChanged = vi.fn();
     renderPanel({ onDefinitionsChanged, onDelete });
@@ -381,7 +377,7 @@ describe("ObjectTypeListPanel event classes", () => {
     const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
     await confirmation.onOk();
 
-    expect(mocks.deleteEventType).toHaveBeenCalledWith("network-1", "order.overdue");
+    expect(mocks.deleteEventType).toHaveBeenCalledWith("network-1", "order_overdue");
     expect(onDelete).not.toHaveBeenCalled();
     expect(onDefinitionsChanged).toHaveBeenCalledOnce();
   });
@@ -402,42 +398,6 @@ describe("ObjectTypeListPanel event classes", () => {
     );
   });
 
-  it("creates the missing classes by saving their types as they are", async () => {
-    const classless = { ...overdueType, object_type_id: "" };
-    mocks.listEventTypes.mockResolvedValue([classless]);
-    mocks.updateEventType.mockResolvedValue(overdueType);
-    const onDefinitionsChanged = vi.fn();
-    renderPanel({ onDefinitionsChanged });
-
-    fireEvent.click(await screen.findByText("knowledgeNetwork.eventClasses.createMissing"));
-
-    await vi.waitFor(() =>
-      expect(mocks.success).toHaveBeenCalledWith("knowledgeNetwork.eventClasses.createMissingDone"),
-    );
-    expect(mocks.updateEventType).toHaveBeenCalledWith("network-1", "order.overdue", {
-      name: "Overdue order",
-    });
-    expect(mocks.warning).not.toHaveBeenCalled();
-    expect(onDefinitionsChanged).toHaveBeenCalledOnce();
-  });
-
-  it("does not claim the classes were made when the platform saved the types without them", async () => {
-    const classless = { ...overdueType, object_type_id: "" };
-    mocks.listEventTypes.mockResolvedValue([classless]);
-    // An event module from before event classes answers without object_type_id.
-    const withoutClassField: Partial<KnEventType> = { ...classless };
-    delete withoutClassField.object_type_id;
-    mocks.updateEventType.mockResolvedValue(withoutClassField);
-    renderPanel();
-
-    fireEvent.click(await screen.findByText("knowledgeNetwork.eventClasses.createMissing"));
-
-    await vi.waitFor(() =>
-      expect(mocks.warning).toHaveBeenCalledWith("knowledgeNetwork.eventClasses.savedWithoutClass"),
-    );
-    expect(mocks.success).not.toHaveBeenCalled();
-  });
-
   it("hides event class actions when the event module cannot be reached", async () => {
     mocks.listEventTypes.mockRejectedValue(new Error("not found"));
     renderPanel();
@@ -449,21 +409,11 @@ describe("ObjectTypeListPanel event classes", () => {
   });
 
   it("offers no event class writes on the running version of a versioned network", async () => {
-    // Event types are written past the version interceptor, so nothing else would stop them.
+    // The running version is not edited, so its event classes are not written either.
     mocks.versioned = true;
-    mocks.listEventTypes.mockResolvedValue([
-      overdueType,
-      { ...overdueType, code: "order.late", object_type_id: "" },
-    ]);
     renderPanel();
 
     await screen.findByTestId("event-class-tag");
-    expect(
-      screen.getByText("knowledgeNetwork.eventClasses.missingClasses", { exact: false }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("knowledgeNetwork.eventClasses.createMissing"),
-    ).not.toBeInTheDocument();
     expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
     expect(mocks.objectWritable?.("order_overdue")).toBe(false);
     expect(mocks.objectWritable?.("order")).toBe(true);

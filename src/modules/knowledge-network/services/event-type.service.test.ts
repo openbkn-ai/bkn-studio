@@ -9,11 +9,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
 const putMock = vi.hoisted(() => vi.fn());
+const postMock = vi.hoisted(() => vi.fn());
 const deleteMock = vi.hoisted(() => vi.fn());
+const deleteObjectTypeMock = vi.hoisted(() => vi.fn());
+const deleteActionTypeMock = vi.hoisted(() => vi.fn());
 const listToolboxesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { delete: deleteMock, get: getMock, put: putMock },
+  http: { delete: deleteMock, get: getMock, post: postMock, put: putMock },
+}));
+
+vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
+  deleteKnowledgeNetworkObjectType: deleteObjectTypeMock,
+}));
+
+vi.mock("@/modules/knowledge-network/services/action-type.service", () => ({
+  deleteKnowledgeNetworkActionType: deleteActionTypeMock,
 }));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
@@ -29,13 +40,18 @@ vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
 });
 
 import {
+  checkKnEventType,
+  createKnEventType,
   deleteKnEventType,
-  eventClassIdOf,
-  eventTypeUpdateBody,
+  getKnEventType,
   listKnEventRuleTools,
+  listKnEventTypes,
+  parameterFromBackend,
+  parameterToBackend,
   updateKnEventType,
 } from "@/modules/knowledge-network/services/event-type.service";
-import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
+
+const KN = "/bkn-backend/v1/knowledge-networks/kn-1";
 
 const cypher = (knId: string, shape: string, inputs: unknown[] = []) => ({
   function_content: {
@@ -47,86 +63,503 @@ const cypher = (knId: string, shape: string, inputs: unknown[] = []) => ({
   },
 });
 
+const eventClass = (overrides: Record<string, unknown> = {}) => ({
+  event: {
+    handling_note: "Call",
+    merge_hours: 0,
+    severity: "P2",
+    source: "rule",
+    subject: "order",
+  },
+  id: "order_overdue",
+  kinds: ["event"],
+  name: "Overdue order",
+  ...overrides,
+});
+
+const recognition = (overrides: Record<string, unknown> = {}) => ({
+  action_type: "add",
+  execution_subject: { id: "u-1", name: "Ann", type: "user" },
+  id: "order_overdue_recognition",
+  name: "Overdue order recognition",
+  object_type_id: "order",
+  operation_config: {
+    event_class: "order_overdue",
+    targets: {
+      function: {
+        box_id: "b-1",
+        parameters: {
+          days: { value: 3, value_from: "const" },
+          today: { value_from: "check_date" },
+        },
+        tool_id: "t-1",
+      },
+    },
+    type: "event",
+  },
+  rule_version: "v1",
+  schedule: { expression: "0 8 * * *", timezone: "Asia/Shanghai", type: "CRON" },
+  ...overrides,
+});
+
+/** Answers the reads of an event class and its recognition action and schedule. */
+function serve(options: { action?: unknown; schedule?: unknown } = {}) {
+  getMock.mockImplementation((url: string) => {
+    if (url === `${KN}/object-types/order_overdue`) {
+      return Promise.resolve({ data: { entries: [eventClass()] } });
+    }
+    if (url === `${KN}/object-types`) {
+      return Promise.resolve({ data: { entries: [eventClass()], total_count: 1 } });
+    }
+    if (url === `${KN}/action-types`) {
+      return Promise.resolve({
+        data: { entries: options.action ? [options.action] : [], total_count: 1 },
+      });
+    }
+    if (url === `${KN}/action-schedules`) {
+      return Promise.resolve({
+        data: { entries: options.schedule ? [options.schedule] : [], total_count: 1 },
+      });
+    }
+    return Promise.reject(new Error(`unexpected GET ${url}`));
+  });
+}
+
+const schedule = {
+  action_type_id: "order_overdue_recognition",
+  id: "sch-1",
+  next_run_time: 1_700_000_000_000,
+  source: "action_type",
+};
+
 describe("event-type.service", () => {
   beforeEach(() => {
     getMock.mockReset();
     putMock.mockReset();
+    postMock.mockReset();
     deleteMock.mockReset();
+    deleteObjectTypeMock.mockReset();
+    deleteActionTypeMock.mockReset();
     listToolboxesMock.mockReset();
   });
 
-  it("names the event class after the code, dots made underscores", () => {
-    expect(eventClassIdOf("stock.low")).toBe("stock_low");
-    expect(eventClassIdOf("order-overdue")).toBe("order-overdue");
+  it("converts rule tool arguments to action target parameters and back", () => {
+    expect(parameterToBackend({ check_time: "date" })).toEqual({ value_from: "check_date" });
+    expect(parameterToBackend(3)).toEqual({ value: 3, value_from: "const" });
+    expect(parameterToBackend("open")).toEqual({ value: "open", value_from: "const" });
+    expect(parameterToBackend({ value: "-P3D", value_from: "check_date" })).toEqual({
+      value: "-P3D",
+      value_from: "check_date",
+    });
+    expect(parameterFromBackend({ value_from: "check_date" })).toEqual({ check_time: "date" });
+    expect(parameterFromBackend({ value: 3, value_from: "const" })).toBe(3);
+    expect(parameterFromBackend({ value: "x" })).toBe("x");
+    // A check day moved by a duration has no form of its own, so it is kept as the backend has it.
+    expect(parameterFromBackend({ value: "-P3D", value_from: "check_date" })).toEqual({
+      value: "-P3D",
+      value_from: "check_date",
+    });
   });
 
-  it("replaces an event type with everything it has, so a save keeps its checks", async () => {
-    const stored: KnEventType = {
-      check_failures: 2,
+  it("composes an event class from its object type, recognition action and schedule", async () => {
+    serve({ action: recognition(), schedule });
+
+    const [type] = await listKnEventTypes("kn-1");
+
+    expect(getMock).toHaveBeenCalledWith(
+      `${KN}/object-types`,
+      expect.objectContaining({ params: expect.objectContaining({ kinds: "event" }) }),
+    );
+    expect(getMock).toHaveBeenCalledWith(
+      `${KN}/action-types`,
+      expect.objectContaining({ params: expect.objectContaining({ operation_kind: "event" }) }),
+    );
+    expect(type).toMatchObject({
       check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
-      check_subject: { id: "u-1", name: "Ann" },
-      code: "order.overdue",
-      merge_hours: 0,
+      check_subject: { id: "u-1", name: "Ann", type: "user" },
+      code: "order_overdue",
+      handling_note: "Call",
       name: "Overdue order",
-      next_check_at: 1,
-      object_type_id: "",
-      rule: { legacy: true },
-      rule_tool: { box_id: "b-1", parameters: { today: { check_time: "date" } }, tool_id: "t-1" },
+      next_check_at: 1_700_000_000_000,
+      object_type_id: "order_overdue",
+      recognition_action_id: "order_overdue_recognition",
+      recognition_basis: "function",
+      rule_tool: {
+        box_id: "b-1",
+        parameters: { days: 3, today: { check_time: "date" } },
+        tool_id: "t-1",
+      },
       rule_version: "v1",
       severity: "P2",
       source: "rule",
       subject: "order",
-    };
-    putMock.mockResolvedValue({ data: { ...stored, object_type_id: "order_overdue" } });
-
-    await updateKnEventType("kn-1", stored.code, eventTypeUpdateBody(stored));
-
-    expect(putMock).toHaveBeenCalledWith(
-      "/bkn-backend/v1/knowledge-networks/kn-1/event-types/order.overdue",
-      {
-        check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
-        merge_hours: 0,
-        name: "Overdue order",
-        rule: { legacy: true },
-        rule_tool: {
-          box_id: "b-1",
-          parameters: { today: { check_time: "date" } },
-          tool_id: "t-1",
-        },
-        rule_version: "v1",
-        severity: "P2",
-        subject: "order",
-      },
-    );
+    });
   });
 
-  it("leaves out an empty rule tool and schedule, which an older event module refuses", async () => {
-    putMock.mockResolvedValue({ data: {} });
-    const reported: KnEventType = {
-      code: "quality.complaint",
+  it("reads a class that has no recognition action, and ignores object types of other kinds", async () => {
+    getMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: {
+          entries:
+            url === `${KN}/object-types` ? [eventClass(), { id: "plain", name: "Plain" }] : [],
+          total_count: 2,
+        },
+      }),
+    );
+
+    const types = await listKnEventTypes("kn-1");
+
+    expect(types.map((type) => type.code)).toEqual(["order_overdue"]);
+    expect(types[0]).toMatchObject({ check_schedule: null, rule_tool: null });
+    expect(types[0]?.recognition_action_id).toBeUndefined();
+  });
+
+  it("names a basis other than a function and leaves the rule tool empty", async () => {
+    serve({
+      action: recognition({
+        operation_config: {
+          event_class: "order_overdue",
+          targets: { cypher: { query: "MATCH (o:order) RETURN o" } },
+          type: "event",
+        },
+      }),
+    });
+
+    const type = await getKnEventType("kn-1", "order_overdue");
+
+    expect(type).toMatchObject({ recognition_basis: "cypher", rule_tool: null });
+  });
+
+  it("creates the object type first, then the recognition action, and surfaces the trial", async () => {
+    const order: string[] = [];
+    postMock.mockImplementation((url: string) => {
+      order.push(url);
+      return Promise.resolve({
+        data: url.endsWith("/action-types")
+          ? [
+              {
+                id: "order_overdue_recognition",
+                trial: { hit_count: 4, hits: [], limited: true, subject: "order" },
+              },
+            ]
+          : [{ id: "order_overdue" }],
+      });
+    });
+    serve({ action: recognition(), schedule });
+
+    const saved = await createKnEventType("kn-1", {
+      check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
+      code: "order_overdue",
+      name: "Overdue order",
+      rule_tool: {
+        box_id: "b-1",
+        parameters: { days: 3, today: { check_time: "date" } },
+        tool_id: "t-1",
+      },
+      severity: "P2",
+      source: "rule",
+      subject: "order",
+    });
+
+    expect(order).toEqual([`${KN}/object-types`, `${KN}/action-types`]);
+    expect(postMock.mock.calls[0]?.[1]).toEqual({
+      entries: [
+        {
+          event: { severity: "P2", source: "rule", subject: "order" },
+          id: "order_overdue",
+          kinds: ["event"],
+          name: "Overdue order",
+        },
+      ],
+    });
+    expect(postMock.mock.calls[1]?.[1]).toEqual({
+      entries: [
+        expect.objectContaining({
+          action_type: "add",
+          id: "order_overdue_recognition",
+          object_type_id: "order",
+          operation_config: {
+            event_class: "order_overdue",
+            targets: {
+              function: {
+                box_id: "b-1",
+                parameters: {
+                  days: { value: 3, value_from: "const" },
+                  today: { value_from: "check_date" },
+                },
+                tool_id: "t-1",
+              },
+            },
+            type: "event",
+          },
+          schedule: { expression: "0 8 * * *", timezone: "Asia/Shanghai", type: "CRON" },
+        }),
+      ],
+    });
+    expect(saved.trial).toEqual({ hits: 4, limited: true });
+    expect(saved.recognition_action_id).toBe("order_overdue_recognition");
+  });
+
+  it("creates a reported class without an action", async () => {
+    postMock.mockResolvedValue({ data: [{ id: "complaint" }] });
+    getMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: {
+          entries: url.endsWith("/complaint")
+            ? [
+                eventClass({
+                  event: { merge_hours: 24, source: "report", subject: "order" },
+                  id: "complaint",
+                }),
+              ]
+            : [],
+        },
+      }),
+    );
+
+    await createKnEventType("kn-1", {
+      code: "complaint",
       merge_hours: 24,
       name: "Complaint",
       source: "report",
       subject: "order",
-    };
+    });
 
-    await updateKnEventType("kn-1", reported.code, eventTypeUpdateBody(reported));
-
-    const body = putMock.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(body).not.toHaveProperty("rule_tool");
-    expect(body).not.toHaveProperty("check_schedule");
-    expect(body).toMatchObject({ merge_hours: 24, name: "Complaint", subject: "order" });
+    expect(postMock).toHaveBeenCalledTimes(1);
+    expect((postMock.mock.calls[0]?.[1] as { entries: unknown[] }).entries[0]).toMatchObject({
+      event: { merge_hours: 24, source: "report", subject: "order" },
+    });
   });
 
-  it("leaves the refusal of a delete to the caller to explain", async () => {
-    deleteMock.mockResolvedValue({});
+  it("takes the class back when its recognition action is refused", async () => {
+    postMock.mockImplementation((url: string) =>
+      url.endsWith("/action-types")
+        ? Promise.reject(new Error("trial failed"))
+        : Promise.resolve({ data: [{ id: "order_overdue" }] }),
+    );
 
-    await deleteKnEventType("kn-1", "order.overdue");
+    await expect(
+      createKnEventType("kn-1", {
+        check_schedule: { cron: "0 8 * * *" },
+        code: "order_overdue",
+        name: "Overdue order",
+        rule_tool: { box_id: "b-1", tool_id: "t-1" },
+        source: "rule",
+        subject: "order",
+      }),
+    ).rejects.toThrow("trial failed");
 
-    expect(deleteMock).toHaveBeenCalledWith(
-      "/bkn-backend/v1/knowledge-networks/kn-1/event-types/order.overdue",
+    expect(deleteObjectTypeMock).toHaveBeenCalledWith("kn-1", "order_overdue");
+  });
+
+  it("replaces the class and the recognition action, and reads the trial of a 200", async () => {
+    serve({ action: recognition(), schedule });
+    putMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: url.includes("/action-types/")
+          ? { trial: { hit_count: 2, hits: [], limited: false, subject: "order" } }
+          : "",
+      }),
+    );
+
+    const saved = await updateKnEventType("kn-1", "order_overdue", {
+      check_schedule: { cron: "*/30 * * * *", timezone: "UTC" },
+      name: "Overdue",
+      rule_tool: { box_id: "b-1", parameters: { today: { check_time: "date" } }, tool_id: "t-1" },
+      severity: "",
+      subject: "order",
+    });
+
+    expect(putMock).toHaveBeenNthCalledWith(
+      1,
+      `${KN}/object-types/order_overdue`,
+      {
+        event: {
+          handling_note: "",
+          merge_hours: 0,
+          severity: "",
+          source: "rule",
+          subject: "order",
+        },
+        kinds: ["event"],
+        name: "Overdue",
+      },
       { skipErrorToast: true },
     );
+    expect(putMock.mock.calls[1]?.[0]).toBe(`${KN}/action-types/order_overdue_recognition`);
+    expect(putMock.mock.calls[1]?.[1]).toMatchObject({
+      id: "order_overdue_recognition",
+      operation_config: {
+        event_class: "order_overdue",
+        targets: {
+          function: { box_id: "b-1", parameters: { today: { value_from: "check_date" } } },
+        },
+        type: "event",
+      },
+      schedule: { expression: "*/30 * * * *", timezone: "UTC", type: "CRON" },
+    });
+    expect(saved.trial).toEqual({ hits: 2, limited: false });
+  });
+
+  it("sends back what the form does not edit when it replaces the class", async () => {
+    serve({ action: recognition(), schedule });
+    const served = getMock.getMockImplementation();
+    getMock.mockImplementation((url: string, ...rest: unknown[]) =>
+      url === `${KN}/object-types/order_overdue`
+        ? Promise.resolve({
+            data: {
+              entries: [
+                eventClass({ color: "#f00", comment: "Kept", icon: "bell", tags: ["ops"] }),
+              ],
+            },
+          })
+        : served?.(url, ...rest),
+    );
+    putMock.mockResolvedValue({ data: "" });
+
+    await updateKnEventType("kn-1", "order_overdue", {
+      name: "Overdue",
+      rule_tool: null,
+      subject: "order",
+    });
+
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+      color: "#f00",
+      comment: "Kept",
+      icon: "bell",
+      name: "Overdue",
+      tags: ["ops"],
+    });
+  });
+
+  it("creates the recognition action when a class that had none is given a rule tool", async () => {
+    serve();
+    putMock.mockResolvedValue({ data: "" });
+    postMock.mockResolvedValue({ data: [{ id: "order_overdue_recognition" }] });
+
+    await updateKnEventType("kn-1", "order_overdue", {
+      check_schedule: { cron: "0 8 * * *" },
+      name: "Overdue order",
+      rule_tool: { box_id: "b-1", tool_id: "t-1" },
+      subject: "order",
+    });
+
+    expect(postMock).toHaveBeenCalledWith(
+      `${KN}/action-types`,
+      { entries: [expect.objectContaining({ id: "order_overdue_recognition" })] },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("keeps a recognition action that selects by something other than a function", async () => {
+    serve({
+      action: recognition({
+        operation_config: {
+          event_class: "order_overdue",
+          targets: { cypher: { query: "MATCH (o:order) RETURN o" } },
+          type: "event",
+        },
+      }),
+    });
+    putMock.mockResolvedValue({ data: "" });
+
+    await updateKnEventType("kn-1", "order_overdue", {
+      name: "Overdue order",
+      rule_tool: null,
+      subject: "order",
+    });
+
+    expect(putMock).toHaveBeenCalledTimes(1);
+    expect(deleteActionTypeMock).not.toHaveBeenCalled();
+  });
+
+  const refusedWith = (code: string) =>
+    Object.assign(new Error(code), { response: { data: { error_code: code }, status: 409 } });
+
+  it("deletes the recognition action when it is what keeps the class", async () => {
+    serve({ action: recognition() });
+    const order: string[] = [];
+    deleteActionTypeMock.mockImplementation(async () => {
+      order.push("action");
+    });
+    deleteObjectTypeMock
+      .mockImplementationOnce(async () => {
+        order.push("class refused");
+        throw refusedWith("BknBackend.KnEvent.RecognizedByAction");
+      })
+      .mockImplementationOnce(async () => {
+        order.push("class");
+      });
+
+    await deleteKnEventType("kn-1", "order_overdue");
+
+    expect(order).toEqual(["class refused", "action", "class"]);
+    expect(deleteActionTypeMock).toHaveBeenCalledWith("kn-1", "order_overdue_recognition");
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves the recognition action of a class that has events", async () => {
+    serve({ action: recognition() });
+    const refusal = refusedWith("BknBackend.KnEvent.EventTypeInUse");
+    deleteObjectTypeMock.mockRejectedValue(refusal);
+
+    await expect(deleteKnEventType("kn-1", "order_overdue")).rejects.toBe(refusal);
+
+    expect(deleteObjectTypeMock).toHaveBeenCalledTimes(1);
+    expect(deleteActionTypeMock).not.toHaveBeenCalled();
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  it("restores the recognition action when the class is refused after it went", async () => {
+    serve({ action: recognition() });
+    const refusal = refusedWith("BknBackend.KnEvent.EventTypeInUse");
+    deleteObjectTypeMock
+      .mockRejectedValueOnce(refusedWith("BknBackend.KnEvent.RecognizedByAction"))
+      .mockRejectedValueOnce(refusal);
+    deleteActionTypeMock.mockResolvedValue(undefined);
+    postMock.mockResolvedValue({ data: [{ id: "order_overdue_recognition" }] });
+
+    await expect(deleteKnEventType("kn-1", "order_overdue")).rejects.toBe(refusal);
+
+    expect(postMock).toHaveBeenCalledWith(
+      `${KN}/action-types`,
+      { entries: [expect.objectContaining({ id: "order_overdue_recognition" })] },
+      { skipErrorToast: true },
+    );
+  });
+
+  it("deletes a class without a recognition action directly", async () => {
+    serve();
+    deleteObjectTypeMock.mockResolvedValue(undefined);
+
+    await deleteKnEventType("kn-1", "order_overdue");
+
+    expect(deleteActionTypeMock).not.toHaveBeenCalled();
+    expect(deleteObjectTypeMock).toHaveBeenCalledWith("kn-1", "order_overdue");
+  });
+
+  it("checks now by running the platform schedule of the recognition action", async () => {
+    serve({ action: recognition(), schedule });
+    postMock.mockResolvedValue({ data: { execution_id: "ex-1" } });
+
+    const result = await checkKnEventType("kn-1", "order_overdue");
+
+    expect(getMock).toHaveBeenCalledWith(
+      `${KN}/action-schedules`,
+      expect.objectContaining({
+        params: expect.objectContaining({ action_type_id: "order_overdue_recognition" }),
+      }),
+    );
+    expect(postMock).toHaveBeenCalledWith(`${KN}/action-schedules/sch-1/run`);
+    expect(result).toEqual({ execution_id: "ex-1" });
+  });
+
+  it("does not run anything for a class that has no recognition action", async () => {
+    serve();
+
+    await expect(checkKnEventType("kn-1", "order_overdue")).rejects.toThrow();
+
+    expect(postMock).not.toHaveBeenCalled();
   });
 
   it("offers only this network's Cypher functions that return a table as rule tools", async () => {
