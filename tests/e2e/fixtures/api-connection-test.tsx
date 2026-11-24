@@ -26,24 +26,25 @@ await i18n.changeLanguage(runtimeConfig.locale);
 
 function Fixture() {
   const [lastTest, setLastTest] = useState("");
+  const [testOpen, setTestOpen] = useState(true);
   return (
     <>
       <output aria-label="Last test">{lastTest}</output>
-      <ApiCatalogConnectionTestModal
-        saved
-        catalogId="layout-catalog"
-        catalogEnabled
-        draftLogin
-        savedLogin
-        defaultScope="draft"
-        canTestDraft
-        canTestSaved
-        loading={false}
-        result={null}
-        revision={0}
-        onRun={(scope, kind) => setLastTest(`${scope}:${kind}`)}
-        onClose={() => undefined}
-      />
+      {testOpen ? (
+        <ApiCatalogConnectionTestModal
+          saved
+          draftLogin
+          savedLogin={false}
+          defaultScope="draft"
+          canTestDraft
+          canTestSaved
+          loading={false}
+          result={null}
+          revision={0}
+          onRun={(scope) => setLastTest(scope)}
+          onClose={() => setTestOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

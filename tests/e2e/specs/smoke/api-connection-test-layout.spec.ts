@@ -11,23 +11,23 @@ const translations = [
   {
     language: "zh-CN",
     scope: "待测配置",
-    target: "验证范围",
+    removedTarget: "验证范围",
     configurations: ["当前配置（未保存）", "Catalog 已保存配置"],
-    kinds: ["TCP / TLS 服务入口连通性", "本地表单校验", "显式登录验证", "所选 Resource 业务验证"],
+    configurationHints: [/执行一次登录并校验响应和成功条件/, /仅检查 TCP\/TLS 连通性/],
+    resourceHint: /业务响应与字段映射/,
     run: "开始测试",
     close: "关闭",
   },
   {
     language: "en-US",
     scope: "Configuration to test",
-    target: "Validation scope",
+    removedTarget: "Validation scope",
     configurations: ["Current configuration (unsaved)", "Saved Catalog configuration"],
-    kinds: [
-      "TCP / TLS reachability",
-      "Local form validation",
-      "Explicit login validation",
-      "Selected Resource business validation",
+    configurationHints: [
+      /runs one login and validates its response/,
+      /checks TCP\/TLS reachability only/,
     ],
+    resourceHint: /Validate business responses and field mappings/,
     run: "Run test",
     close: "Close",
   },
@@ -48,25 +48,9 @@ async function fieldGeometry(control: Locator) {
   });
 }
 
-async function expectAlignedFields(scope: Locator, target: Locator, width: number) {
-  const left = await fieldGeometry(scope);
-  const right = await fieldGeometry(target);
-  expect(left.y).toBeGreaterThanOrEqual(left.labelBottom);
-  expect(right.y).toBeGreaterThanOrEqual(right.labelBottom);
-  expect(Math.abs(left.height - right.height)).toBeLessThanOrEqual(1);
-  expect(Math.abs(left.width - right.width)).toBeLessThanOrEqual(1);
-  if (width > 640) {
-    expect(Math.abs(left.y - right.y)).toBeLessThanOrEqual(1);
-    expect(right.x).toBeGreaterThan(left.x + left.width);
-  } else {
-    expect(Math.abs(left.x - right.x)).toBeLessThanOrEqual(1);
-    expect(right.y).toBeGreaterThan(left.y + left.height);
-  }
-}
-
 for (const copy of translations) {
   for (const width of [1280, 640, 360]) {
-    test(`${copy.language} keeps configuration and validation controls aligned at ${width}px`, async ({
+    test(`${copy.language} keeps the unified connection test usable at ${width}px`, async ({
       page,
     }, testInfo) => {
       const pageErrors: string[] = [];
@@ -77,7 +61,7 @@ for (const copy of translations) {
           body: 'import "/studio/tests/e2e/fixtures/api-connection-test.tsx";',
         }),
       );
-      // Resource selection may request metadata; never reach a real backend in this layout test.
+      // Keep this production-component fixture isolated from real backend requests.
       await page.route("**/api/**", (route) =>
         route.fulfill({ json: { entries: [], total_count: 0 } }),
       );
@@ -85,37 +69,37 @@ for (const copy of translations) {
       await page.goto(`/studio/?language=${copy.language}`);
       const dialog = page.getByRole("dialog");
       const scope = dialog.getByRole("combobox", { name: copy.scope, exact: true });
-      const target = dialog.getByRole("combobox", { name: copy.target, exact: true });
       await expect(scope).toBeVisible();
-      await expectAlignedFields(scope, target, width);
+      await expect(dialog.getByText(copy.resourceHint)).toBeVisible();
 
       for (const [index, configuration] of copy.configurations.entries()) {
-        await dialog.locator(".ant-select").nth(0).click();
+        await dialog.locator(".ant-select").click();
         await page
           .locator(".ant-select-dropdown:visible")
           .getByText(configuration, { exact: true })
           .click();
-        for (const [kindIndex, kind] of copy.kinds.entries()) {
-          if (index === 0 && kindIndex === 3) continue;
-          await dialog.locator(".ant-select").nth(1).click();
-          await page
-            .locator(".ant-select-dropdown:visible")
-            .getByText(kind, { exact: true })
-            .click();
-          await expectAlignedFields(scope, target, width);
-          expect(
-            await dialog.evaluate((element) => element.scrollWidth - element.clientWidth),
-          ).toBeLessThanOrEqual(1);
-          expect(
-            await page.evaluate(() => document.documentElement.scrollWidth),
-          ).toBeLessThanOrEqual(width);
-          if (kindIndex < 3) {
-            await dialog.getByRole("button", { name: copy.run, exact: true }).click();
-            await expect(page.getByLabel("Last test")).toHaveText(
-              `${index === 0 ? "draft" : "saved"}:${["transport", "local", "login"][kindIndex]}`,
-            );
-          }
-        }
+        await expect(dialog.getByRole("combobox")).toHaveCount(1);
+        await expect(
+          dialog.getByRole("combobox", { name: copy.removedTarget, exact: true }),
+        ).toHaveCount(0);
+        await expect(dialog.getByText(copy.configurationHints[index])).toBeVisible();
+        await expect(dialog.getByText(copy.configurationHints[1 - index])).toHaveCount(0);
+        const field = await fieldGeometry(scope);
+        const dialogBox = await dialog.boundingBox();
+        expect(dialogBox).not.toBeNull();
+        expect(field.y).toBeGreaterThanOrEqual(field.labelBottom);
+        expect(field.width).toBeGreaterThan(0);
+        expect(field.height).toBeGreaterThan(0);
+        expect(field.x).toBeGreaterThanOrEqual(dialogBox!.x);
+        expect(field.x + field.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width);
+        expect(
+          await dialog.evaluate((element) => element.scrollWidth - element.clientWidth),
+        ).toBeLessThanOrEqual(1);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+          width,
+        );
+        await dialog.getByRole("button", { name: copy.run, exact: true }).click();
+        await expect(page.getByLabel("Last test")).toHaveText(index === 0 ? "draft" : "saved");
       }
       await expect(
         dialog.locator(".ant-modal-footer").getByRole("button", { name: copy.close, exact: true }),
@@ -123,6 +107,11 @@ for (const copy of translations) {
       await expect(dialog.locator(".ant-modal-footer button").first()).toHaveText(copy.close);
       await expect(dialog.getByText("common.close", { exact: true })).toHaveCount(0);
       await page.screenshot({ path: testInfo.outputPath(`${copy.language}-${width}.png`) });
+      await dialog
+        .locator(".ant-modal-footer")
+        .getByRole("button", { name: copy.close, exact: true })
+        .click();
+      await expect(dialog).toHaveCount(0);
       expect(pageErrors).toEqual([]);
     });
   }
