@@ -551,6 +551,7 @@ function ResourcePreviewContent({
 
   const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
+  const isEmptyPage = result?.rows.length === 0;
   const fetched = offset + rows.length;
   const totalUnreliable =
     !appliedFilter.children.length &&
@@ -922,9 +923,7 @@ function ResourcePreviewContent({
           {apiPagingEnabled ? (
             <div className={styles.unknownPaginationStatus} role="status">
               <span>{t("dataCatalog.apiResource.currentPage", { page })}</span>
-              {result.rows.length === 0 ? (
-                <span>{t("dataCatalog.apiResource.emptyPageContinuationUnknown")}</span>
-              ) : null}
+              {isEmptyPage ? <span>{t("dataCatalog.apiResource.endOfResults")}</span> : null}
             </div>
           ) : null}
           <Button
@@ -934,7 +933,7 @@ function ResourcePreviewContent({
             {t("dataCatalog.apiResource.previousPage")}
           </Button>
           <Button
-            disabled={loading || !apiPagingEnabled}
+            disabled={loading || !apiPagingEnabled || isEmptyPage}
             onClick={() => handlePaginationChange(page + 1, pageSize)}
           >
             {t("dataCatalog.apiResource.nextPage")}
