@@ -93,7 +93,7 @@ export const apiResourceEnUS = {
   currentPage: "Page {{page}}",
   previousPage: "Previous page",
   nextPage: "Next page",
-  emptyPageContinuationUnknown: "This page is empty. There may be more pages.",
+  endOfResults: "End of results",
   warnings: "The backend returned query warnings. Check the definition and invocation scope.",
   unavailable:
     "The API connector is unavailable, disabled or unlicensed for this edition. Server connector availability controls these operations.",
