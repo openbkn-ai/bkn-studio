@@ -5,14 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { Result } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { extensionKnowledgeNetworkResourcePanel } from "@/framework/extension/registry";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
 import { CapabilityListPanel } from "@/modules/knowledge-network/components/capability/CapabilityListPanel";
 import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupListPanel";
+import { EventClassListPanel } from "@/modules/knowledge-network/components/event-class/EventClassListPanel";
 import { ObjectMetricListPanel } from "@/modules/knowledge-network/components/object-metric/ObjectMetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
 import { RelationTypeListPanel } from "@/modules/knowledge-network/components/relation-type/RelationTypeListPanel";
@@ -76,6 +81,14 @@ export function WorkspaceResourceSection({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const showDeleteError = useDefinitionDeleteRefusal();
+  const { snapshot } = useEntitlementContext();
+  // As the workspace sidebar decides whether to offer the entry.
+  const eventClassesLicensed = capabilitySatisfied(
+    CAPABILITIES.KN_EVENTS,
+    snapshot,
+    "professional",
+    false,
+  );
 
   switch (section) {
     case "concept-groups":
@@ -108,7 +121,6 @@ export function WorkspaceResourceSection({
           canDelete={canDelete}
           networkId={networkId}
           networkName={networkName}
-          onDefinitionsChanged={() => void data.reloadDetail()}
           onDelete={async (records) => {
             const failed = await deleteEach(records, (record) =>
               deleteKnowledgeNetworkObjectType(networkId, record.id),
@@ -158,6 +170,18 @@ export function WorkspaceResourceSection({
             void message.success(t("common.success"));
           }}
         />
+      );
+    case "event-classes":
+      return eventClassesLicensed ? (
+        <EventClassListPanel
+          canDelete={canDelete}
+          canModify={canModify}
+          key={networkId}
+          networkId={networkId}
+          onDefinitionsChanged={() => void data.reloadDetail()}
+        />
+      ) : (
+        <Result status="info" title={t("knowledgeNetwork.eventClasses.unavailable")} />
       );
     case "metrics":
       return (

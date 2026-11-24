@@ -13,6 +13,11 @@ export const eventClassesPart = {
     tagDeclaredHint:
       "Event class: a property declares the event time. Its data comes from the bound table and the platform only reads it.",
     create: "New event class",
+    nav: "Event classes",
+    description:
+      "Review and maintain the event classes of the active knowledge network: where their events come from, what they are about, and the rules that recognize them.",
+    unavailable: "This deployment does not support event classes.",
+    openDefinition: "View in dynamic model",
     listSeparator: ", ",
     source: {
       rule: "Rule hit",
@@ -28,9 +33,60 @@ export const eventClassesPart = {
       versionedHint:
         "This knowledge network has versions. The event class and its recognition action go into the draft and take effect once a version is published; the platform checks on schedule from then on.",
       legacyRuleHint:
-        "This event class has no recognition action, so the platform does not check it. Choose a rule tool and a schedule to have the platform check it.",
-      otherBasisHint:
-        "The recognition action of this class selects by a condition, a Cypher query or a metric. This form leaves it as it is; choosing a rule tool here replaces it.",
+        "This event class has no recognition action, so the platform does not check it. Set a schedule and a recognition rule to have the platform check it.",
+      metricBasisHint:
+        "This event class is recognized by a metric anomaly, which cannot be edited here. It is kept while no rule is set; setting a recognition rule here replaces it.",
+      sectionBasics: "Basics",
+      sectionRule: "Recognition rule",
+      sectionHandling: "Handling",
+      when: "When",
+      then: "Then",
+      basisTabs: {
+        condition: "Condition",
+        cypher: "Cypher",
+        function: "Use a function (advanced)",
+      },
+      ruleRequired: "Set a recognition rule",
+      conditionHint:
+        "Each object of the subject that meets the condition records one event. A value can be the check time or the check date, moved by an ISO 8601 duration.",
+      conditionSubjectFirst:
+        "Choose the object type the events are about before setting a condition",
+      conditionIncomplete: "Choose a property and an operator for every condition",
+      valueFromCheckTime: "Check time",
+      valueFromCheckDate: "Check date",
+      offset: "Offset",
+      offsetHint:
+        "An ISO 8601 duration: -PT48H is 48 hours earlier, -P1D the day before. Leave it empty for no offset.",
+      offsetTimePlaceholder: "Offset, such as -PT48H",
+      offsetDatePlaceholder: "Offset, such as -P1D",
+      offsetInvalid:
+        "An offset is an ISO 8601 duration such as -PT48H or -P1D; a check date moves by whole days only",
+      cypherQuery: "Cypher query",
+      cypherQueryPlaceholder:
+        "MATCH (o:purchase_order) WHERE o.due_time < $check_time RETURN o.id AS key, o.name AS name",
+      cypherHint:
+        "Each result row is one object found: the key column is the primary key of the subject, and a name column is optional. The platform gives $check_time and $check_date, the check time and the check date.",
+      cypherQueryTooLong: "A Cypher query is at most 16 KB",
+      cypherParameterName: "Parameter name",
+      cypherParameterAdd: "Add parameter",
+      cypherParameterNameInvalid:
+        'The parameter name "{{name}}" starts with a letter or _, has only letters, digits and _, is at most 64 characters long, and is not check_time or check_date',
+      cypherParameterDuplicate: 'The parameter name "{{name}}" is used twice',
+      cypherParameterTooMany: "A rule takes at most {{max}} parameters",
+      parameterValue: "Value",
+      trial: "Try",
+      trialHint:
+        "Runs the rule once now, as you, to see which objects it finds. No event is recorded.",
+      trialResult_one: "{{count}} object found",
+      trialResult_other: "{{count}} objects found",
+      trialShown_one: "Only the first {{count}} is listed",
+      trialShown_other: "Only the first {{count}} are listed",
+      trialLimited: "The result was cut short; a check covers only the objects it kept.",
+      trialRowFilter: "A row filter hides some objects from you; the trial does not include them.",
+      trialStale: "The rule changed since this trial.",
+      trialKey: "Key",
+      trialName: "Name",
+      trialFailed: "The trial failed: {{message}}",
       name: "Name",
       namePlaceholder: "For example: overdue order",
       nameRequired: "Enter a name",
@@ -42,12 +98,12 @@ export const eventClassesPart = {
         "A code starts with a lowercase letter or digit, has only lowercase letters, digits, _ and -, and is at most 64 characters long",
       source: "Source",
       sourceHint:
-        "Rule hit: the platform calls the rule tool on schedule, one event for each object it finds. Reported: people report the events. It cannot change after saving.",
+        "Rule hit: the platform checks the recognition rule on schedule and records one event for each object it finds. Reported: people report the events. It cannot change after saving.",
       subject: "About",
       subjectHint:
         "The object type the events are about. The platform relates the event class to it.",
       subjectRuleHint:
-        "The key column of the rule tool is the primary key of this object type. The platform relates the event class to it.",
+        "The recognition rule selects objects of this object type. The platform relates the event class to it.",
       subjectLockedHint:
         "The recognition action is bound to this object type. Delete the action before changing it.",
       handlingNote: "Handling note",
@@ -121,7 +177,7 @@ export const eventClassesPart = {
       managedNote:
         "This is an event class: the platform keeps its properties, data source and relation to the object type it is about, and they cannot be changed here. Its recognition action type finds the events on schedule.",
       noRuleTool:
-        "There is no recognition action yet, so the platform does not check this event class. Edit it and choose a rule tool to have it checked on schedule.",
+        "There is no recognition action yet, so the platform does not check this event class. Edit it and set a recognition rule to have it checked on schedule.",
       noAction: "This event class has no recognition action to check.",
       noSchedule: "The recognition action has no platform schedule yet. Save it again and retry.",
       checkStarted: "The check has started. Its result shows under Last check once it finishes.",
@@ -152,6 +208,12 @@ export const eventClassesPart = {
       lastCheckUnknown: "Could not decide: {{message}}",
       neverChecked: "Not checked yet",
       noMessage: "No reason given",
+    },
+    list: {
+      searchPlaceholder: "Search by name or code",
+      empty: "No event classes yet",
+      name: "Name",
+      lastCheckFailed: "Unknown",
     },
     subject: {
       section: "Events",

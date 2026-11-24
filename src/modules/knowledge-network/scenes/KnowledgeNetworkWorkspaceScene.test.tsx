@@ -521,23 +521,50 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
   });
 });
 
+describe("KnowledgeNetworkWorkspaceScene event class navigation", () => {
+  it("offers event classes under the dynamic model, after action types, with a Professional licence", () => {
+    renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }));
+
+    const entry = screen.getByRole("button", { name: "knowledgeNetwork.eventClasses.nav" });
+    expect(screen.getByRole("button", { name: /行动类/ }).nextElementSibling).toBe(entry);
+
+    fireEvent.click(entry);
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/event-classes",
+    );
+  });
+
+  it.each([
+    { name: "the community edition", overrides: {} },
+    { name: "an expired Professional licence", overrides: { edition: "professional" as const } },
+  ])("does not offer event classes in $name", ({ overrides }) => {
+    renderScene(entitlement(overrides));
+
+    expect(screen.getByRole("button", { name: /行动类/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "knowledgeNetwork.eventClasses.nav" })).toBeNull();
+  });
+});
+
 describe("KnowledgeNetworkWorkspaceScene resource list padding", () => {
   // Each list panel pads itself; a padded section around it would double the gutter.
-  it.each(["concept-groups", "object-types", "relation-types", "action-types"] as const)(
-    "lays the %s list flush against the workspace",
-    async (section) => {
-      render(
-        <EntitlementContext.Provider
-          value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
-        >
-          <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
-        </EntitlementContext.Provider>,
-      );
+  it.each([
+    "concept-groups",
+    "object-types",
+    "relation-types",
+    "action-types",
+    "event-classes",
+  ] as const)("lays the %s list flush against the workspace", async (section) => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+      </EntitlementContext.Provider>,
+    );
 
-      const content = await screen.findByTestId("resource-content");
-      expect(content.parentElement?.className).toMatch(/workspaceSectionFlush/);
-    },
-  );
+    const content = await screen.findByTestId("resource-content");
+    expect(content.parentElement?.className).toMatch(/workspaceSectionFlush/);
+  });
 });
 
 describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {

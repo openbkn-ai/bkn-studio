@@ -135,6 +135,14 @@ export function KnowledgeNetworkWorkspaceScene({
     "professional",
     capabilityReportedByEndpoint(CAPABILITIES.EVAL),
   );
+  // The event module answers by the licence tier and reports nothing to the capability endpoint:
+  // without a Professional licence the entry is not offered at all.
+  const eventClassesLicensed = capabilitySatisfied(
+    CAPABILITIES.KN_EVENTS,
+    snapshot,
+    "professional",
+    false,
+  );
   const evalCapabilityState: CapabilityState = !snapshot
     ? "unknown"
     : evalLicensed
@@ -279,6 +287,15 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <KnowledgeResourceIcon kind="action" />,
         count: detail?.statistics.actionTypesTotal ?? 0,
       },
+      ...(eventClassesLicensed
+        ? [
+            {
+              key: "event-classes" as const,
+              label: t("knowledgeNetwork.eventClasses.nav"),
+              icon: <KnowledgeResourceIcon kind="eventClass" />,
+            },
+          ]
+        : []),
       {
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
@@ -333,6 +350,7 @@ export function KnowledgeNetworkWorkspaceScene({
     actionControlLicensed,
     detail,
     evalCapabilityState,
+    eventClassesLicensed,
     hiddenNavigation,
     kbMode,
     objectMetricsCapability,
@@ -358,6 +376,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const dynamicNavItems = navigationItems.filter(
     (item) =>
       item.key === "action-types" ||
+      item.key === "event-classes" ||
       item.key === "metrics" ||
       item.key === "functions" ||
       item.key === "apis" ||
@@ -734,7 +753,8 @@ export function KnowledgeNetworkWorkspaceScene({
                 section === "concept-groups" ||
                 section === "object-types" ||
                 section === "relation-types" ||
-                section === "action-types"
+                section === "action-types" ||
+                section === "event-classes"
                   ? `${styles.workspaceSectionPage} ${styles.workspaceSectionFlush}`
                   : styles.workspaceSectionPage
               }

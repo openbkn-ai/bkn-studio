@@ -252,7 +252,8 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
     operation?: string;
     sub_conditions?: BackendActionType["condition"][];
     value?: string | string[];
-    value_from?: "const" | "property" | "input";
+    /** `check_time` and `check_date` only in a record-event action's condition. */
+    value_from?: "const" | "property" | "input" | "check_time" | "check_date";
   };
   id: string;
   name: string;

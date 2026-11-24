@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
@@ -14,7 +14,6 @@ import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-netwo
 const mocks = vi.hoisted(() => ({
   canAuthorize: true,
   confirm: vi.fn(),
-  deleteEventType: vi.fn(),
   getObjectType: vi.fn(),
   listEventTypes: vi.fn(),
   listObjectTypes: vi.fn(),
@@ -71,7 +70,6 @@ vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
 }));
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
-  deleteKnEventType: mocks.deleteEventType,
   listKnEventTypes: mocks.listEventTypes,
 }));
 
@@ -158,6 +156,7 @@ const overdueType: KnEventType = {
   merge_hours: 0,
   name: "Overdue order",
   object_type_id: "order_overdue",
+  rule: { basis: "function", tool: { box_id: "box-1", tool_id: "tool-1" } },
   rule_tool: { box_id: "box-1", tool_id: "tool-1" },
   severity: "P2",
   source: "rule",
@@ -189,7 +188,6 @@ beforeEach(() => {
   mocks.listObjectTypes.mockResolvedValue({ entries: [order], totalCount: 1 });
   mocks.getObjectType.mockResolvedValue(customer);
   mocks.listEventTypes.mockResolvedValue([]);
-  mocks.deleteEventType.mockResolvedValue(undefined);
   mocks.objectWritable = undefined;
   mocks.versioned = false;
   mocks.versionView = "running";
@@ -342,10 +340,7 @@ describe("ObjectTypeListPanel event classes", () => {
   });
 
   const renderPanel = (
-    props: {
-      onDefinitionsChanged?: () => void;
-      onDelete?: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void>;
-    } = {},
+    props: { onDelete?: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void> } = {},
   ) =>
     render(
       <ObjectTypeListPanel
@@ -353,59 +348,61 @@ describe("ObjectTypeListPanel event classes", () => {
         canModify
         networkId="network-1"
         networkName="Sales"
-        onDefinitionsChanged={props.onDefinitionsChanged}
         onDelete={props.onDelete ?? vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
-  it("tags only the event class", async () => {
+  const toEventClasses = (action: string) => [
+    "/knowledge-network/workspace/network-1/event-classes",
+    { state: { eventClassIntent: { action, code: "order_overdue" } } },
+  ];
+
+  it("tags only the event class, and creates event classes only under the dynamic model", async () => {
     renderPanel();
 
     expect(await screen.findByTestId("event-class-tag")).toBeInTheDocument();
     expect(screen.getAllByTestId("event-class-tag")).toHaveLength(1);
-    expect(screen.getByText("knowledgeNetwork.eventClasses.create")).toBeInTheDocument();
+    expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
+    expect(screen.getByText("common.create")).toBeInTheDocument();
   });
 
-  it("deletes an event class through its own delete, which takes its recognition action along", async () => {
+  it("sends the delete of an event class to its definition under the dynamic model", async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const onDefinitionsChanged = vi.fn();
-    renderPanel({ onDefinitionsChanged, onDelete });
+    renderPanel({ onDelete });
 
     await screen.findByTestId("event-class-tag");
     expect(screen.getByTestId("object-resource-graph").dataset.objectTypeId).toBe("order_overdue");
     fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
-    const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
-    await confirmation.onOk();
 
-    expect(mocks.deleteEventType).toHaveBeenCalledWith("network-1", "order_overdue");
+    expect(mocks.navigate).toHaveBeenCalledWith(...toEventClasses("delete"));
+    expect(mocks.confirm).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
-    expect(onDefinitionsChanged).toHaveBeenCalledOnce();
   });
 
-  it("says why an event class with events cannot be deleted", async () => {
-    mocks.deleteEventType.mockRejectedValue({
-      response: { data: { error_code: "BknBackend.KnEvent.EventTypeInUse" } },
-    });
+  it("links an event class in the list to its definition, and leaves it out of a batch delete", async () => {
+    searchParams.set("view", "list");
     renderPanel();
 
-    await screen.findByTestId("event-class-tag");
-    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
-    const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
-    await confirmation.onOk();
+    const link = await screen.findByRole("button", {
+      name: "knowledgeNetwork.eventClasses.openDefinition",
+    });
+    fireEvent.click(link);
 
-    expect(mocks.modalError).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "knowledgeNetwork.eventClasses.delete.hasEvents" }),
-    );
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith(...toEventClasses("view"));
+    const eventRow = screen.getByText("Overdue order").closest("tr");
+    const objectRow = screen.getByText("Order").closest("tr");
+    expect(within(eventRow as HTMLElement).getByRole("checkbox")).toBeDisabled();
+    expect(within(objectRow as HTMLElement).getByRole("checkbox")).toBeEnabled();
   });
 
-  it("hides event class actions when the event module cannot be reached", async () => {
+  it("hides event class tags when the event module cannot be reached", async () => {
     mocks.listEventTypes.mockRejectedValue(new Error("not found"));
     renderPanel();
 
     expect(await screen.findByTestId("object-resource-graph")).toBeInTheDocument();
     await vi.waitFor(() => expect(mocks.listEventTypes).toHaveBeenCalled());
     expect(screen.queryByTestId("event-class-tag")).not.toBeInTheDocument();
-    expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
   });
 
   it("offers no event class writes on the running version of a versioned network", async () => {
@@ -414,13 +411,12 @@ describe("ObjectTypeListPanel event classes", () => {
     renderPanel();
 
     await screen.findByTestId("event-class-tag");
-    expect(screen.queryByText("knowledgeNetwork.eventClasses.create")).not.toBeInTheDocument();
     expect(mocks.objectWritable?.("order_overdue")).toBe(false);
     expect(mocks.objectWritable?.("order")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
     expect(mocks.confirm).not.toHaveBeenCalled();
-    expect(mocks.deleteEventType).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
   it("offers event class writes on the draft of a versioned network", async () => {
@@ -429,7 +425,6 @@ describe("ObjectTypeListPanel event classes", () => {
     renderPanel();
 
     await screen.findByTestId("event-class-tag");
-    expect(screen.getByText("knowledgeNetwork.eventClasses.create")).toBeInTheDocument();
     expect(mocks.objectWritable?.("order_overdue")).toBe(true);
   });
 
@@ -451,5 +446,7 @@ describe("ObjectTypeListPanel event classes", () => {
     answer([overdueType]);
     await screen.findByTestId("event-class-tag");
     expect(mocks.objectWritable?.("order_overdue")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "delete-object" }));
+    expect(mocks.navigate).toHaveBeenCalledWith(...toEventClasses("delete"));
   });
 });

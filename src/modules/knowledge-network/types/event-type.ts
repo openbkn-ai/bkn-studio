@@ -13,6 +13,8 @@
  * of the object type.
  */
 
+import type { ActionTypeCondition } from "@/modules/knowledge-network/types/action-type";
+
 export type KnEventSource = "rule" | "report";
 
 /**
@@ -52,6 +54,33 @@ export type KnEventRuleTrial = {
 /** What the recognition action selects objects by. */
 export type KnEventRecognitionBasis = "condition" | "cypher" | "function" | "metric";
 
+/** Where a check takes a value of a rule from: a constant, or the time or the day of the check. */
+export type KnEventValueFrom = "const" | "check_time" | "check_date";
+
+/**
+ * A parameter of a Cypher rule. With `check_time` or `check_date` the value is an optional
+ * ISO 8601 duration that moves the check's time or day, such as `-PT48H` or `-P1D`.
+ */
+export type KnEventRuleParameter = {
+  value?: unknown;
+  value_from: KnEventValueFrom;
+};
+
+export type KnEventCypherRule = {
+  /** By name, as `$name` in the query; `$check_time` and `$check_date` are given by the platform. */
+  parameters?: Record<string, KnEventRuleParameter>;
+  query: string;
+};
+
+/**
+ * What a recognition action selects its objects by, in the shape the form edits: a condition on
+ * the subject's properties, a Cypher query, or a rule tool (a Cypher function of the network).
+ */
+export type KnEventRule =
+  | { basis: "condition"; condition: ActionTypeCondition }
+  | { basis: "cypher"; cypher: KnEventCypherRule }
+  | { basis: "function"; tool: KnEventRuleTool };
+
 export type KnEventType = {
   check_schedule?: KnEventCheckSchedule | null;
   /** The account the scheduled checks run as (the action type's `execution_subject`). */
@@ -70,12 +99,14 @@ export type KnEventType = {
   object_type_id?: string;
   /** The recognition action type of a rule class; absent for a class without one. */
   recognition_action_id?: string;
-  /**
-   * What the recognition action selects by. Only `function` is edited by the form, as `rule_tool`;
-   * a class with another basis keeps its action when the form saves without a rule tool.
-   */
+  /** What the recognition action selects by. */
   recognition_basis?: KnEventRecognitionBasis;
-  /** The recognition action's function target, in the shape the form edits. */
+  /**
+   * The recognition action's rule, in the shape the form edits. Null without an action, and for a
+   * basis the form does not edit (a metric).
+   */
+  rule?: KnEventRule | null;
+  /** The recognition action's function target, when it selects by a rule tool. */
   rule_tool?: KnEventRuleTool | null;
   /** Names what the recognition action finds; kept by the platform. */
   rule_version?: string;
@@ -97,7 +128,8 @@ export type KnEventTypeInput = {
   handling_note?: string;
   merge_hours?: number;
   name: string;
-  rule_tool?: KnEventRuleTool | null;
+  /** The rule of a rule class's recognition action. */
+  rule?: KnEventRule | null;
   severity?: string;
   source: KnEventSource;
   subject: string;
@@ -105,10 +137,38 @@ export type KnEventTypeInput = {
 
 /**
  * What a replace sends. Every changeable field is sent: one left out takes its zero value. A
- * `rule_tool` of null removes a function recognition action; a recognition action with another
- * basis is kept.
+ * `rule` replaces the recognition action, whatever it selected by; a `rule` of null leaves the
+ * action as it is.
  */
 export type KnEventTypeUpdate = Omit<KnEventTypeInput, "code" | "source">;
+
+/** One object a trial found. */
+export type KnEventTrialHit = {
+  key: string;
+  name: string;
+};
+
+/** What a recognition rule would find if it checked now, before it is saved. */
+export type KnEventRuleTrialResult = {
+  /** All objects found, also those not listed in `hits`. */
+  hit_count: number;
+  /** The first 200 hits. */
+  hits: KnEventTrialHit[];
+  /** The selection was cut short; a check would cover only the objects it kept. */
+  limited: boolean;
+  /** A row filter hid objects from the caller. Absent when the rule cannot tell (a function). */
+  row_filter_applied?: boolean;
+};
+
+/** The unsaved recognition rule a trial runs. */
+export type KnEventRuleTrialInput = {
+  check_schedule: KnEventCheckSchedule;
+  /** The event class; may be empty while a new class has no code yet. */
+  code: string;
+  name: string;
+  rule: KnEventRule;
+  subject: string;
+};
 
 export type KnEventRuleCheck = {
   checked_by?: string;

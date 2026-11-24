@@ -70,3 +70,32 @@
 .timezone {
   width: 240px;
 }
+
+.sectionTitle {
+  margin: 8px 0 12px !important;
+}
+
+.cypher {
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.cypherParameter {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cypherParameterName {
+  width: 160px;
+}
+
+.cypherParameterValue {
+  flex: 1;
+  min-width: 160px;
+}
+
+.trialStale {
+  opacity: 0.6;
+}

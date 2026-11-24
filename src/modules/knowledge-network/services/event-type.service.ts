@@ -22,19 +22,29 @@ import {
 } from "@/modules/knowledge-network/services/shared/runtime";
 import { deleteKnowledgeNetworkActionType } from "@/modules/knowledge-network/services/action-type.service";
 import { deleteKnowledgeNetworkObjectType } from "@/modules/knowledge-network/services/object-type.service";
+import type { ActionTypeCondition } from "@/modules/knowledge-network/types/action-type";
 import type {
   KnEventCheckSchedule,
   KnEventCheckSubject,
   KnEventRecognitionBasis,
+  KnEventRule,
   KnEventRuleCheck,
   KnEventRuleCheckResult,
+  KnEventRuleParameter,
   KnEventRuleTool,
   KnEventRuleToolOption,
   KnEventRuleTrial,
+  KnEventRuleTrialInput,
+  KnEventRuleTrialResult,
   KnEventType,
   KnEventTypeInput,
   KnEventTypeUpdate,
 } from "@/modules/knowledge-network/types/event-type";
+import {
+  mapActionTypeConditionFromBackend,
+  toBackendActionCondition,
+  type BackendActionCondition,
+} from "@/modules/knowledge-network/utils/action-type-condition";
 
 // The backend's text for a taken ID names only the ID; a create is also refused when the network
 // has an object type with the same name.
@@ -94,7 +104,7 @@ type BackendRecognitionAction = {
   action_type?: string;
   color?: string;
   comment?: string;
-  condition?: unknown;
+  condition?: BackendActionCondition;
   execution_subject?: BackendAccount;
   icon?: string;
   id: string;
@@ -116,6 +126,16 @@ type BackendTrial = {
   row_filter_applied?: boolean;
 };
 
+type BackendTrialResponse = {
+  event?: {
+    hit_count?: number;
+    hits?: Array<{ key?: string; name?: string }>;
+    limited?: boolean;
+    row_filter_applied?: boolean;
+    subject?: string;
+  };
+};
+
 type BackendActionSchedule = {
   action_type_id?: string;
   id: string;
@@ -126,6 +146,7 @@ type BackendActionSchedule = {
 type BackendPage<T> = { entries?: T[]; total_count?: number };
 
 const BASE = "/bkn-backend/v1/knowledge-networks";
+const QUERY_BASE = "/ontology-query/v1/knowledge-networks";
 const PAGE_SIZE = 100;
 const MAX_PAGES = 50;
 const DEFAULT_TIMEZONE = "Asia/Shanghai";
@@ -237,6 +258,81 @@ function basisOf(action: BackendRecognitionAction): KnEventRecognitionBasis {
   return "condition";
 }
 
+function cypherParameterFromBackend(parameter: BackendTargetParameter): KnEventRuleParameter {
+  return {
+    ...(parameter.value === undefined ? {} : { value: parameter.value }),
+    value_from: parameter.value_from ?? "const",
+  };
+}
+
+function cypherParameterToBackend(parameter: KnEventRuleParameter): BackendTargetParameter {
+  // A check time or day without a duration is the check's own.
+  const empty =
+    parameter.value === undefined || (typeof parameter.value === "string" && !parameter.value);
+  return {
+    ...(empty && parameter.value_from !== "const" ? {} : { value: parameter.value }),
+    value_from: parameter.value_from,
+  };
+}
+
+function mapValues<T, U>(record: Record<string, T> | undefined, map: (value: T) => U) {
+  const entries = Object.entries(record ?? {});
+  return entries.length
+    ? Object.fromEntries(entries.map(([name, value]) => [name, map(value)]))
+    : undefined;
+}
+
+/** A recognition action's rule in the form's shape; null for a basis the form does not edit. */
+export function ruleFromBackend(action: BackendRecognitionAction): KnEventRule | null {
+  const targets = action.operation_config?.targets;
+  if (targets?.function) return { basis: "function", tool: ruleToolFromBackend(targets.function) };
+  if (targets?.cypher) {
+    const parameters = mapValues(targets.cypher.parameters, cypherParameterFromBackend);
+    return {
+      basis: "cypher",
+      cypher: { query: targets.cypher.query ?? "", ...(parameters ? { parameters } : {}) },
+    };
+  }
+  if (targets?.metric) return null;
+  const condition = mapActionTypeConditionFromBackend(action.condition);
+  return condition ? { basis: "condition", condition } : null;
+}
+
+/** A condition whose every row is on the subject, as the backend requires of a recognition action. */
+function onSubject(condition: ActionTypeCondition, subject: string): ActionTypeCondition {
+  return {
+    ...condition,
+    objectTypeId: subject,
+    ...(condition.subConditions
+      ? { subConditions: condition.subConditions.map((item) => onSubject(item, subject)) }
+      : {}),
+  };
+}
+
+/**
+ * A rule in the backend's shape. A recognition action selects by its condition or by exactly one
+ * target, never both: the condition is sent only without targets.
+ */
+export function ruleToBackend(
+  rule: KnEventRule,
+  subject: string,
+): { condition?: BackendActionCondition; targets?: BackendEventTargets } {
+  switch (rule.basis) {
+    case "condition":
+      return { condition: toBackendActionCondition(onSubject(rule.condition, subject)) };
+    case "cypher": {
+      const parameters = mapValues(rule.cypher.parameters, cypherParameterToBackend);
+      return {
+        targets: {
+          cypher: { query: rule.cypher.query, ...(parameters ? { parameters } : {}) },
+        },
+      };
+    }
+    case "function":
+      return { targets: { function: ruleToolToBackend(rule.tool) } };
+  }
+}
+
 /**
  * A fixed rate in the cron the form edits, when one says the same thing: a step that divides an
  * hour or a day evenly. Any other rate has no cron of the same meaning and shows as none.
@@ -296,6 +392,7 @@ export function eventTypeFromBackend(
 ): KnEventType {
   const event = record.event ?? {};
   const fn = action?.operation_config?.targets?.function;
+  const rule = action ? ruleFromBackend(action) : null;
   return {
     check_schedule: action ? scheduleFromBackend(action) : null,
     check_subject: accountFromBackend(action?.execution_subject),
@@ -310,6 +407,7 @@ export function eventTypeFromBackend(
     object_type_id: record.id,
     recognition_action_id: action?.id,
     recognition_basis: action ? basisOf(action) : undefined,
+    rule,
     rule_tool: fn ? ruleToolFromBackend(fn) : null,
     rule_version: action?.rule_version,
     severity: event.severity,
@@ -359,14 +457,22 @@ function mockList(networkId: string) {
   return list;
 }
 
-function mockRecognition(input: KnEventTypeInput | KnEventTypeUpdate, code: string) {
-  const hasTool = Boolean(input.rule_tool);
+/** What the platform keeps of a recognition action saved with a rule, in the mock. */
+function mockRecognition(rule: KnEventRule, code: string) {
   return {
-    check_subject: hasTool ? { id: "mock", name: "mock" } : null,
-    next_check_at: hasTool ? Date.now() + 3_600_000 : 0,
-    recognition_action_id: hasTool ? recognitionActionIdOf(code) : undefined,
-    recognition_basis: hasTool ? ("function" as const) : undefined,
+    check_subject: { id: "mock", name: "mock" },
+    next_check_at: Date.now() + 3_600_000,
+    recognition_action_id: recognitionActionIdOf(code),
+    recognition_basis: rule.basis,
+    rule,
+    rule_tool: rule.basis === "function" ? rule.tool : null,
+    trial: { hits: 3, limited: false },
   };
+}
+
+function mockTrial(): KnEventRuleTrialResult {
+  const hits = [1, 2, 3].map((index) => ({ key: `mock-${index}`, name: `Mock ${index}` }));
+  return { hit_count: hits.length, hits, limited: false, row_filter_applied: false };
 }
 
 // -- Reads ----------------------------------------------------------------------------------
@@ -454,24 +560,29 @@ function eventClassBody(
   };
 }
 
-function recognitionBody(
+/**
+ * The definition of a recognition action: it selects by the rule, on the subject, on the schedule.
+ * The rule replaces what the stored action selected by; what the form does not edit is kept.
+ */
+function recognitionDefinition(
   existing: BackendRecognitionAction | undefined,
   classId: string,
   fields: Pick<KnEventTypeInput, "check_schedule" | "name" | "subject">,
-  tool: KnEventRuleTool,
+  rule: KnEventRule,
 ) {
+  const { condition, targets } = ruleToBackend(rule, fields.subject);
   return {
     action_type: "add",
-    branch: "main",
     ...(existing?.color ? { color: existing.color } : {}),
     ...(existing?.comment ? { comment: existing.comment } : {}),
+    ...(condition ? { condition } : {}),
     ...(existing?.icon ? { icon: existing.icon } : {}),
     id: existing?.id ?? recognitionActionIdOf(classId),
     name: existing?.name ?? `${fields.name} recognition`,
     object_type_id: fields.subject,
     operation_config: {
       event_class: classId,
-      targets: { function: ruleToolToBackend(tool) },
+      ...(targets ? { targets } : {}),
       type: "event",
     },
     schedule: {
@@ -481,6 +592,15 @@ function recognitionBody(
     },
     ...(existing?.tags ? { tags: existing.tags } : {}),
   };
+}
+
+function recognitionBody(
+  existing: BackendRecognitionAction | undefined,
+  classId: string,
+  fields: Pick<KnEventTypeInput, "check_schedule" | "name" | "subject">,
+  rule: KnEventRule,
+) {
+  return { ...recognitionDefinition(existing, classId, fields, rule), branch: "main" };
 }
 
 async function createRecognitionAction(
@@ -501,13 +621,14 @@ export async function createKnEventType(
 ): Promise<KnEventType> {
   if (useMock) {
     const list = mockList(networkId);
+    const { rule, ...fields } = input;
     const created: KnEventType = {
-      ...input,
-      ...mockRecognition(input, input.code),
+      ...fields,
+      ...(fields.source === "rule" && rule
+        ? mockRecognition(rule, input.code)
+        : { rule: null, rule_tool: null }),
       kn_id: networkId,
       object_type_id: input.code,
-      rule_tool: input.rule_tool ?? null,
-      trial: input.rule_tool ? { hits: 3, limited: false } : undefined,
     };
     list.push(created);
     return wait({ ...created });
@@ -518,11 +639,11 @@ export async function createKnEventType(
     { skipErrorToast: true },
   );
   let trial: KnEventRuleTrial | undefined;
-  if (input.source === "rule" && input.rule_tool) {
+  if (input.source === "rule" && input.rule) {
     try {
       trial = await createRecognitionAction(
         networkId,
-        recognitionBody(undefined, input.code, input, input.rule_tool),
+        recognitionBody(undefined, input.code, input, input.rule),
       );
     } catch (error) {
       // A class without its rule would never find an event: take it back, so a save is whole.
@@ -550,18 +671,13 @@ export async function updateKnEventType(
       throw new Error(i18n.t("common.notFound"));
     }
     const current = list[index];
-    // As on the platform, a rule tool of null keeps an action that is not a function one.
-    const keepsOtherBasis =
-      !update.rule_tool &&
-      Boolean(current?.recognition_basis) &&
-      current?.recognition_basis !== "function";
+    const { rule, ...fields } = update;
+    // As on the platform: a rule replaces the recognition action, and no rule leaves it alone.
     const updated: KnEventType = {
       ...current,
-      ...update,
-      ...(keepsOtherBasis ? {} : mockRecognition(update, code)),
+      ...fields,
+      ...(current?.source === "rule" && rule ? mockRecognition(rule, code) : { trial: undefined }),
       object_type_id: code,
-      rule_tool: keepsOtherBasis ? (current?.rule_tool ?? null) : (update.rule_tool ?? null),
-      trial: update.rule_tool ? { hits: 3, limited: false } : undefined,
     };
     list[index] = updated;
     return wait({ ...updated });
@@ -587,26 +703,20 @@ export async function updateKnEventType(
   );
 
   let trial: KnEventRuleTrial | undefined;
-  if (source === "rule") {
+  // A rule replaces the recognition action, whatever it selected by; no rule leaves it as it is.
+  if (source === "rule" && update.rule) {
     const [action] = await listRecognitionActions(networkId, code);
-    if (update.rule_tool) {
-      const body = recognitionBody(action, code, update, update.rule_tool);
-      if (action) {
-        const result = await http.put<{ trial?: BackendTrial } | "" | undefined>(
-          actionTypePath(networkId, action.id),
-          body,
-          { skipErrorToast: true },
-        );
-        const data = result.data;
-        trial = trialFromBackend(
-          typeof data === "object" && data !== null ? data.trial : undefined,
-        );
-      } else {
-        trial = await createRecognitionAction(networkId, body);
-      }
-    } else if (action && basisOf(action) === "function") {
-      // The rule was cleared: without a tool the platform has nothing to check.
-      await deleteKnowledgeNetworkActionType(networkId, action.id);
+    const body = recognitionBody(action, code, update, update.rule);
+    if (action) {
+      const result = await http.put<{ trial?: BackendTrial } | "" | undefined>(
+        actionTypePath(networkId, action.id),
+        body,
+        { skipErrorToast: true },
+      );
+      const data = result.data;
+      trial = trialFromBackend(typeof data === "object" && data !== null ? data.trial : undefined);
+    } else {
+      trial = await createRecognitionAction(networkId, body);
     }
   }
   const saved = await getKnEventType(networkId, code);
@@ -670,6 +780,37 @@ async function restoreRecognitionAction(networkId: string, action: BackendRecogn
   } catch (error) {
     logServiceFallback("deleteKnEventType.restore", error, `actionTypeId=${action.id}`);
   }
+}
+
+/**
+ * Tries an unsaved recognition rule: what it would find if it checked now, as the caller, without
+ * recording anything. A versioned network's rule reads the draft, where it is written.
+ */
+export async function trialKnEventRule(
+  networkId: string,
+  input: KnEventRuleTrialInput,
+  options: { versioned: boolean },
+): Promise<KnEventRuleTrialResult> {
+  if (useMock) {
+    return wait(mockTrial());
+  }
+  const response = await http.post<BackendTrialResponse>(
+    `${QUERY_BASE}/${encodeURIComponent(networkId)}/action-trial`,
+    recognitionDefinition(undefined, input.code, input, input.rule),
+    { params: { branch: options.versioned ? "draft" : "main" }, skipErrorToast: true },
+  );
+  const event = response.data?.event ?? {};
+  return {
+    hit_count: event.hit_count ?? event.hits?.length ?? 0,
+    hits: (event.hits ?? []).map((hit) => ({
+      key: hit.key ?? "",
+      name: hit.name || hit.key || "",
+    })),
+    limited: event.limited === true,
+    ...(event.row_filter_applied === undefined
+      ? {}
+      : { row_filter_applied: event.row_filter_applied }),
+  };
 }
 
 /**

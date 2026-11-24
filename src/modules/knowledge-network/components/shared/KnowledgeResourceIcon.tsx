@@ -6,6 +6,7 @@
  */
 
 import {
+  AlertOutlined,
   ApiOutlined,
   ApartmentOutlined,
   AppstoreOutlined,
@@ -34,6 +35,8 @@ export function KnowledgeResourceIcon({ kind }: { kind?: string }) {
       return <ApiOutlined aria-hidden />;
     case "action":
       return <ThunderboltOutlined aria-hidden />;
+    case "eventClass":
+      return <AlertOutlined aria-hidden />;
     case "metric":
       return <LineChartOutlined aria-hidden />;
     case "function":

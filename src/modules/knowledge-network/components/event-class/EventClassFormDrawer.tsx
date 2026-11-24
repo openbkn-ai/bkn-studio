@@ -15,37 +15,63 @@ import {
   Select,
   Space,
   Switch,
-  TimePicker,
+  Tabs,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
+import { EventCypherRuleEditor } from "@/modules/knowledge-network/components/event-class/EventCypherRuleEditor";
+import {
+  buildCypherRule,
+  cypherDraftFromRule,
+  type CypherRuleDraft,
+} from "@/modules/knowledge-network/components/event-class/event-cypher-rule";
+import {
+  EventRuleTrial,
+  type EventRuleTrialState,
+} from "@/modules/knowledge-network/components/event-class/EventRuleTrial";
+import { EventScheduleEditor } from "@/modules/knowledge-network/components/event-class/EventScheduleEditor";
 import {
   DEFAULT_EVENT_SCHEDULE,
   DEFAULT_EVENT_TIMEZONE,
-  MIN_CHECK_MINUTES,
   cronFromSchedule,
   scheduleFromCron,
-  timezoneOptions,
   type EventScheduleDraft,
 } from "@/modules/knowledge-network/components/event-class/event-schedule";
+import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import {
   createKnEventType,
   listKnEventRuleTools,
+  trialKnEventRule,
   updateKnEventType,
 } from "@/modules/knowledge-network/services/event-type.service";
-import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/object-type.service";
+import {
+  getKnowledgeNetworkObjectTypeDetail,
+  listKnowledgeNetworkObjectTypes,
+} from "@/modules/knowledge-network/services/object-type.service";
 import type {
+  ActionTypeCondition,
+  ActionTypeConditionValueFrom,
+} from "@/modules/knowledge-network/types/action-type";
+import type {
+  KnEventRule,
   KnEventRuleTool,
   KnEventRuleToolOption,
   KnEventRuleToolParameter,
   KnEventSource,
   KnEventType,
 } from "@/modules/knowledge-network/types/event-type";
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  isLogicalOperation,
+  promoteLegacyActionCondition,
+  validateActionCondition,
+} from "@/modules/knowledge-network/utils/action-type-condition";
 
 import styles from "./EventClassFormDrawer.module.css";
 
@@ -75,6 +101,9 @@ type FormValues = {
   subject?: string;
 };
 
+/** What the form edits a rule as. */
+type RuleBasis = KnEventRule["basis"];
+
 /** A parameter of the rule tool as the form edits it. */
 type ParameterDraft = { mode: "fixed" | "checkDate"; value?: unknown };
 
@@ -82,6 +111,14 @@ type ParameterDraft = { mode: "fixed" | "checkDate"; value?: unknown };
 const CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const SEVERITIES = ["P1", "P2", "P3", "P4"];
 const TOOL_KEY_SEPARATOR = "\u0000";
+const BASES: readonly RuleBasis[] = ["condition", "cypher", "function"];
+/** What a recognition action's condition compares with: it has no runtime input. */
+const CONDITION_VALUE_SOURCES: readonly ActionTypeConditionValueFrom[] = [
+  "const",
+  "property",
+  "check_time",
+  "check_date",
+];
 
 function toolKey(boxId: string, toolId: string) {
   return `${boxId}${TOOL_KEY_SEPARATOR}${toolId}`;
@@ -117,6 +154,21 @@ function isEmptyValue(value: unknown) {
   return value === undefined || value === null || (typeof value === "string" && !value.trim());
 }
 
+/** The rule a saved type has, also when only its rule tool is known. */
+function savedRuleOf(eventType: KnEventType | undefined): KnEventRule | null {
+  if (eventType?.rule) return eventType.rule;
+  return eventType?.rule_tool ? { basis: "function", tool: eventType.rule_tool } : null;
+}
+
+/** A comparison row with only some of its parts chosen. */
+function hasIncompleteRow(condition: ActionTypeCondition | null | undefined): boolean {
+  if (!condition) return false;
+  if (isLogicalOperation(condition.operation)) {
+    return (condition.subConditions ?? []).some(hasIncompleteRow);
+  }
+  return Boolean(condition.field) !== Boolean(condition.operation);
+}
+
 export function EventClassFormDrawer({
   eventClassIds,
   eventType,
@@ -133,33 +185,50 @@ export function EventClassFormDrawer({
   const editing = Boolean(eventType);
   const source = Form.useWatch("source", form) ?? eventType?.source ?? "rule";
   const ruleToolKey = Form.useWatch("ruleTool", form);
-  const [subjects, setSubjects] = useState<Array<{ label: string; value: string }>>([]);
+  const watchedSubject = Form.useWatch("subject", form);
+  const watchedCode = Form.useWatch("code", form);
+  const watchedName = Form.useWatch("name", form);
+  const [subjects, setSubjects] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [tools, setTools] = useState<KnEventRuleToolOption[]>([]);
   const [toolsLoading, setToolsLoading] = useState(false);
+  const [basis, setBasis] = useState<RuleBasis>("condition");
+  const [condition, setCondition] = useState<ActionTypeCondition | null>(null);
+  const [cypher, setCypher] = useState<CypherRuleDraft>(() => cypherDraftFromRule(undefined));
   const [parameters, setParameters] = useState<Record<string, ParameterDraft>>({});
   const [schedule, setSchedule] = useState<EventScheduleDraft>(DEFAULT_EVENT_SCHEDULE);
   const [timezone, setTimezone] = useState(DEFAULT_EVENT_TIMEZONE);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const zones = useMemo(() => timezoneOptions(), []);
+  const [trial, setTrial] = useState<Omit<EventRuleTrialState, "stale">>({ running: false });
+  const [trialSignature, setTrialSignature] = useState<string>();
+  const trialRequest = useRef(0);
 
   useEffect(() => {
     if (!open) return;
+    const savedRule = savedRuleOf(eventType);
     form.resetFields();
     form.setFieldsValue({
       code: eventType?.code ?? "",
       handlingNote: eventType?.handling_note ?? "",
       mergeHours: eventType?.merge_hours ?? 0,
       name: eventType?.name ?? "",
-      ruleTool: eventType?.rule_tool
-        ? toolKey(eventType.rule_tool.box_id, eventType.rule_tool.tool_id)
-        : undefined,
+      ruleTool:
+        savedRule?.basis === "function"
+          ? toolKey(savedRule.tool.box_id, savedRule.tool.tool_id)
+          : undefined,
       severity: eventType?.severity || undefined,
       source: eventType?.source ?? "rule",
       subject: eventType?.subject || initialSubject || undefined,
     });
-    setParameters(parameterDrafts(eventType?.rule_tool?.parameters));
+    // An existing class opens on what its rule selects by; a new one on a condition.
+    setBasis(savedRule?.basis ?? "condition");
+    setCondition(savedRule?.basis === "condition" ? savedRule.condition : null);
+    setCypher(cypherDraftFromRule(savedRule?.basis === "cypher" ? savedRule.cypher : undefined));
+    setParameters(
+      parameterDrafts(savedRule?.basis === "function" ? savedRule.tool.parameters : {}),
+    );
     setSchedule(
       eventType?.check_schedule
         ? scheduleFromCron(eventType.check_schedule.cron)
@@ -167,6 +236,9 @@ export function EventClassFormDrawer({
     );
     setTimezone(eventType?.check_schedule?.timezone || DEFAULT_EVENT_TIMEZONE);
     setProblem(null);
+    trialRequest.current += 1;
+    setTrial({ running: false });
+    setTrialSignature(undefined);
   }, [eventType, form, initialSubject, open]);
 
   useEffect(() => {
@@ -175,12 +247,7 @@ export function EventClassFormDrawer({
     setSubjectsLoading(true);
     void listKnowledgeNetworkObjectTypes(networkId, { skipErrorToast: true })
       .then((items) => {
-        if (cancelled) return;
-        setSubjects(
-          items
-            .filter((item) => !eventClassIds.has(item.id))
-            .map((item) => ({ label: item.name || item.id, value: item.id })),
-        );
+        if (!cancelled) setSubjects(items.filter((item) => !eventClassIds.has(item.id)));
       })
       .catch(() => {
         if (!cancelled) setSubjects([]);
@@ -194,7 +261,7 @@ export function EventClassFormDrawer({
   }, [eventClassIds, networkId, open]);
 
   useEffect(() => {
-    if (!open || !networkId || source !== "rule") return;
+    if (!open || !networkId || source !== "rule" || basis !== "function") return;
     let cancelled = false;
     setToolsLoading(true);
     void listKnEventRuleTools(networkId)
@@ -210,13 +277,51 @@ export function EventClassFormDrawer({
     return () => {
       cancelled = true;
     };
-  }, [networkId, open, source]);
+  }, [basis, networkId, open, source]);
+
+  // A condition compares the subject's properties.
+  useEffect(() => {
+    if (!open || !networkId || source !== "rule" || !watchedSubject) {
+      setPropertyOptions([]);
+      return;
+    }
+    let cancelled = false;
+    void getKnowledgeNetworkObjectTypeDetail(networkId, watchedSubject)
+      .then((detail) => {
+        if (cancelled) return;
+        setPropertyOptions(
+          detail?.dataProperties.map((item) => ({
+            comment: item.comment,
+            displayName: item.displayName || item.name,
+            label: item.displayName || item.name,
+            name: item.name,
+            type: item.type,
+            value: item.name,
+          })) ?? [],
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setPropertyOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, open, source, watchedSubject]);
+
+  // A condition on another object type's properties means nothing for a new subject.
+  useEffect(() => {
+    if (condition?.objectTypeId && watchedSubject && condition.objectTypeId !== watchedSubject) {
+      setCondition(null);
+    }
+  }, [condition?.objectTypeId, watchedSubject]);
 
   const selectedTool = useMemo(
     () => tools.find((tool) => toolKey(tool.boxId, tool.toolId) === ruleToolKey),
     [ruleToolKey, tools],
   );
 
+  const savedRule = savedRuleOf(eventType);
+  const savedTool = savedRule?.basis === "function" ? savedRule.tool : undefined;
   const toolOptions = useMemo(() => {
     const groups = new Map<
       string,
@@ -227,29 +332,41 @@ export function EventClassFormDrawer({
       group.options.push({ label: tool.toolName, value: toolKey(tool.boxId, tool.toolId) });
       groups.set(tool.boxId, group);
     });
-    const saved = eventType?.rule_tool;
     // A saved tool that is no longer offered (disabled, box withdrawn) stays readable.
     if (
-      saved &&
-      !tools.some((tool) => tool.boxId === saved.box_id && tool.toolId === saved.tool_id)
+      savedTool &&
+      !tools.some((tool) => tool.boxId === savedTool.box_id && tool.toolId === savedTool.tool_id)
     ) {
-      groups.set(`saved:${saved.box_id}`, {
+      groups.set(`saved:${savedTool.box_id}`, {
         label: t("knowledgeNetwork.eventClasses.form.ruleToolUnavailableGroup"),
         options: [
           {
-            label: `${saved.box_id} / ${saved.tool_id}`,
-            value: toolKey(saved.box_id, saved.tool_id),
+            label: `${savedTool.box_id} / ${savedTool.tool_id}`,
+            value: toolKey(savedTool.box_id, savedTool.tool_id),
           },
         ],
       });
     }
     return [...groups.values()];
-  }, [eventType?.rule_tool, t, tools]);
+  }, [savedTool, t, tools]);
 
   const updateParameter = (name: string, next: ParameterDraft) =>
     setParameters((current) => ({ ...current, [name]: next }));
 
-  /** The arguments to send, or a problem to show. */
+  // A rule class without a recognition action: nothing checks it until a rule is set.
+  const legacyRuleWithoutAction =
+    editing && eventType?.source === "rule" && !eventType.recognition_action_id;
+  // A recognition action that selects by a metric: the form does not edit it, and keeps it
+  // unless a rule is set here.
+  const metricBasis =
+    editing &&
+    Boolean(eventType?.recognition_action_id) &&
+    eventType?.recognition_basis === "metric";
+  const ruleRequired = !legacyRuleWithoutAction && !metricBasis;
+  // The backend refuses to move the subject of a class while its recognition action is bound to it.
+  const subjectLocked = editing && Boolean(eventType?.recognition_action_id);
+
+  /** The rule tool and its arguments to send, or a problem to show. */
   const buildRuleTool = (): { ruleTool: KnEventRuleTool | null } | { problem: string } => {
     if (!ruleToolKey) return { ruleTool: null };
     const [boxId, toolId] = ruleToolKey.split(TOOL_KEY_SEPARATOR);
@@ -275,12 +392,108 @@ export function EventClassFormDrawer({
     return { ruleTool: { box_id: boxId, parameters: args, tool_id: toolId } };
   };
 
+  /** The rule on the chosen tab, none when that tab is empty, or a problem to show. */
+  const buildRule = (): { rule: KnEventRule | null } | { problem: string } => {
+    if (basis === "condition") {
+      if (hasIncompleteRow(condition)) {
+        return { problem: t("knowledgeNetwork.eventClasses.form.conditionIncomplete") };
+      }
+      const normalized = promoteLegacyActionCondition(condition);
+      if (!normalized || !(normalized.field || normalized.subConditions?.length)) {
+        return { rule: null };
+      }
+      const invalid = validateActionCondition(normalized, propertyOptions, []);
+      if (invalid) return { problem: t(invalid) };
+      return { rule: { basis: "condition", condition: normalized } };
+    }
+    if (basis === "cypher") {
+      const built = buildCypherRule(cypher, t);
+      if ("problem" in built) return built;
+      return { rule: built.cypher ? { basis: "cypher", cypher: built.cypher } : null };
+    }
+    const built = buildRuleTool();
+    if ("problem" in built) return built;
+    return { rule: built.ruleTool ? { basis: "function", tool: built.ruleTool } : null };
+  };
+
   const buildSchedule = (): { cron: string } | { problem: string } => {
     const cron = cronFromSchedule(schedule);
     if (cron.split(/\s+/).length !== 5) {
       return { problem: t("knowledgeNetwork.eventClasses.form.cronInvalid") };
     }
     return { cron };
+  };
+
+  // What the trial result depends on: the rule, its subject and the time zone of check_time.
+  const ruleSignature = JSON.stringify({
+    basis,
+    condition: basis === "condition" ? condition : undefined,
+    cypher:
+      basis === "cypher"
+        ? {
+            parameters: cypher.parameters.map(({ name, value, value_from }) => ({
+              name,
+              value,
+              value_from,
+            })),
+            query: cypher.query,
+          }
+        : undefined,
+    parameters: basis === "function" ? parameters : undefined,
+    ruleToolKey: basis === "function" ? ruleToolKey : undefined,
+    subject: watchedSubject,
+    timezone,
+  });
+
+  const runTrial = async () => {
+    const subject = form.getFieldValue("subject") as string | undefined;
+    if (!subject) {
+      setTrial({ error: t("knowledgeNetwork.eventClasses.form.subjectRequired"), running: false });
+      return;
+    }
+    const built = buildRule();
+    if ("problem" in built) {
+      setTrial({ error: built.problem, running: false });
+      return;
+    }
+    if (!built.rule) {
+      setTrial({ error: t("knowledgeNetwork.eventClasses.form.ruleRequired"), running: false });
+      return;
+    }
+    const checked = buildSchedule();
+    if ("problem" in checked) {
+      setTrial({ error: checked.problem, running: false });
+      return;
+    }
+    const request = ++trialRequest.current;
+    const signature = ruleSignature;
+    setTrial((current) => ({ result: current.result, running: true }));
+    try {
+      const result = await trialKnEventRule(
+        networkId,
+        {
+          check_schedule: { cron: checked.cron, timezone },
+          code: (watchedCode ?? "").trim() || eventType?.code || "",
+          name: (watchedName ?? "").trim() || eventType?.name || "",
+          rule: built.rule,
+          subject,
+        },
+        { versioned },
+      );
+      if (request !== trialRequest.current) return;
+      setTrial({ result, running: false });
+      setTrialSignature(signature);
+    } catch (error) {
+      if (request !== trialRequest.current) return;
+      // A rule the platform cannot run is told in the details of its refusal.
+      const details = extractRequestErrorDetails(error);
+      setTrial({
+        error: t("knowledgeNetwork.eventClasses.form.trialFailed", {
+          message: details.details || details.description,
+        }),
+        running: false,
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -292,16 +505,20 @@ export function EventClassFormDrawer({
       return;
     }
     const isRule = values.source === "rule";
-    let ruleTool: KnEventRuleTool | null = null;
+    let rule: KnEventRule | null = null;
     let cron = "";
     if (isRule) {
-      const built = buildRuleTool();
+      const built = buildRule();
       if ("problem" in built) {
         setProblem(built.problem);
         return;
       }
-      ruleTool = built.ruleTool;
-      if (ruleTool) {
+      rule = built.rule;
+      if (!rule && ruleRequired) {
+        setProblem(t("knowledgeNetwork.eventClasses.form.ruleRequired"));
+        return;
+      }
+      if (rule) {
         const checked = buildSchedule();
         if ("problem" in checked) {
           setProblem(checked.problem);
@@ -311,11 +528,11 @@ export function EventClassFormDrawer({
       }
     }
     const shared = {
-      check_schedule: ruleTool ? { cron, timezone } : null,
+      check_schedule: rule ? { cron, timezone } : null,
       handling_note: values.handlingNote?.trim() ?? "",
       merge_hours: isRule ? (eventType?.merge_hours ?? 0) : (values.mergeHours ?? 0),
       name: values.name.trim(),
-      rule_tool: ruleTool,
+      rule,
       severity: values.severity ?? "",
       subject: values.subject ?? "",
     };
@@ -328,14 +545,14 @@ export function EventClassFormDrawer({
             code: values.code.trim(),
             source: values.source,
           });
-      const trial = saved.trial;
-      if (trial && typeof trial.hits === "number") {
+      const savedTrial = saved.trial;
+      if (savedTrial && typeof savedTrial.hits === "number") {
         void message.success(
           t(
-            trial.limited
+            savedTrial.limited
               ? "knowledgeNetwork.eventClasses.form.savedWithLimitedTrial"
               : "knowledgeNetwork.eventClasses.form.savedWithTrial",
-            { count: trial.hits },
+            { count: savedTrial.hits },
           ),
         );
       } else {
@@ -416,102 +633,67 @@ export function EventClassFormDrawer({
     );
   };
 
-  const scheduleTime = (time: string) => dayjs(`2000-01-01T${time}`);
-  const scheduleEditor = (
-    <Space direction="vertical" size={8} className={styles.block}>
-      <Space wrap>
-        <Select
-          aria-label={t("knowledgeNetwork.eventClasses.form.scheduleKind")}
-          className={styles.scheduleKind}
-          onChange={(kind: EventScheduleDraft["kind"]) => {
-            const cron = cronFromSchedule(schedule);
-            setSchedule(
-              kind === "minutes"
-                ? { kind, every: 15 }
-                : kind === "hours"
-                  ? { kind, every: 1 }
-                  : kind === "daily"
-                    ? { kind, time: "08:00" }
-                    : kind === "weekly"
-                      ? { kind, time: "08:00", weekday: 1 }
-                      : { kind, cron },
-            );
-          }}
-          options={(["minutes", "hours", "daily", "weekly", "cron"] as const).map((kind) => ({
-            label: t(`knowledgeNetwork.eventClasses.schedule.kinds.${kind}`),
-            value: kind,
-          }))}
-          value={schedule.kind}
-        />
-        {schedule.kind === "minutes" ? (
-          <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
-            aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.minutes")}
-            max={59}
-            min={MIN_CHECK_MINUTES}
-            onChange={(value) =>
-              setSchedule({ kind: "minutes", every: Math.max(MIN_CHECK_MINUTES, value ?? 15) })
-            }
-            precision={0}
-            value={schedule.every}
+  const subjectRecord = subjects.filter((item) => item.id === watchedSubject);
+
+  const renderRuleEditor = () => {
+    if (basis === "condition") {
+      return watchedSubject ? (
+        <Space direction="vertical" size={8} className={styles.block}>
+          <ActionTypeConditionEditor
+            boundObjectTypeId={watchedSubject}
+            hideObjectTypeSelect
+            objectTypes={subjectRecord}
+            onChange={(next) => setCondition(next ?? null)}
+            propertyOptions={propertyOptions}
+            value={condition}
+            valueSources={CONDITION_VALUE_SOURCES}
           />
-        ) : null}
-        {schedule.kind === "hours" ? (
-          <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
-            aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.hours")}
-            max={23}
-            min={1}
-            onChange={(value) => setSchedule({ kind: "hours", every: Math.max(1, value ?? 1) })}
-            precision={0}
-            value={schedule.every}
-          />
-        ) : null}
-        {schedule.kind === "weekly" ? (
+          <Typography.Text className={styles.parameterHint} type="secondary">
+            {t("knowledgeNetwork.eventClasses.form.conditionHint")}
+          </Typography.Text>
+        </Space>
+      ) : (
+        <Typography.Text type="secondary">
+          {t("knowledgeNetwork.eventClasses.form.conditionSubjectFirst")}
+        </Typography.Text>
+      );
+    }
+    if (basis === "cypher") {
+      return <EventCypherRuleEditor onChange={setCypher} value={cypher} />;
+    }
+    return (
+      <>
+        <Form.Item
+          extra={t("knowledgeNetwork.eventClasses.form.ruleToolHint")}
+          label={t("knowledgeNetwork.eventClasses.form.ruleTool")}
+          name="ruleTool"
+          rules={[
+            {
+              message: t("knowledgeNetwork.eventClasses.form.ruleToolRequired"),
+              required: ruleRequired,
+            },
+          ]}
+        >
           <Select
-            aria-label={t("knowledgeNetwork.eventClasses.schedule.weekday")}
-            className={styles.weekday}
-            onChange={(weekday: number) => setSchedule({ ...schedule, weekday })}
-            options={[1, 2, 3, 4, 5, 6, 0].map((day) => ({
-              label: t(`knowledgeNetwork.eventClasses.schedule.weekdays.${day}`),
-              value: day,
-            }))}
-            value={schedule.weekday}
+            allowClear={!ruleRequired}
+            loading={toolsLoading}
+            notFoundContent={
+              toolsLoading ? undefined : t("knowledgeNetwork.eventClasses.form.ruleToolEmpty")
+            }
+            optionFilterProp="label"
+            options={toolOptions}
+            placeholder={t("knowledgeNetwork.eventClasses.form.ruleToolPlaceholder")}
+            showSearch
           />
+        </Form.Item>
+        {ruleToolKey && selectedTool && selectedTool.parameters.length > 0 ? (
+          <Form.Item label={t("knowledgeNetwork.eventClasses.form.parameters")}>
+            <div className={styles.parameters}>{selectedTool.parameters.map(renderParameter)}</div>
+          </Form.Item>
         ) : null}
-        {schedule.kind === "daily" || schedule.kind === "weekly" ? (
-          <TimePicker
-            allowClear={false}
-            aria-label={t("knowledgeNetwork.eventClasses.schedule.time")}
-            format="HH:mm"
-            minuteStep={5}
-            onChange={(value) => {
-              if (!value) return;
-              setSchedule({ ...schedule, time: value.format("HH:mm") });
-            }}
-            value={scheduleTime(schedule.time)}
-          />
-        ) : null}
-        {schedule.kind === "cron" ? (
-          <Input
-            aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.cron")}
-            className={styles.cron}
-            onChange={(event) => setSchedule({ kind: "cron", cron: event.target.value })}
-            placeholder="0 8 * * *"
-            value={schedule.cron}
-          />
-        ) : null}
-      </Space>
-      <Select
-        aria-label={t("knowledgeNetwork.eventClasses.schedule.timezone")}
-        className={styles.timezone}
-        onChange={(value: string) => setTimezone(value)}
-        options={zones.map((zone) => ({ label: zone, value: zone }))}
-        showSearch
-        value={timezone}
-      />
-    </Space>
-  );
+      </>
+    );
+  };
 
   const footer = (
     <div className={styles.footer}>
@@ -522,16 +704,11 @@ export function EventClassFormDrawer({
     </div>
   );
 
-  // A rule class without a recognition action: nothing checks it until a rule tool is chosen.
-  const legacyRuleWithoutTool =
-    editing && eventType?.source === "rule" && !eventType.recognition_action_id;
-  // A recognition action that selects by a condition, Cypher or metric: this form leaves it as it is.
-  const otherBasis =
-    editing &&
-    Boolean(eventType?.recognition_action_id) &&
-    eventType?.recognition_basis !== "function";
-  // The backend refuses to move the subject of a class while its recognition action is bound to it.
-  const subjectLocked = editing && Boolean(eventType?.recognition_action_id);
+  const sectionTitle = (key: string) => (
+    <Typography.Title className={styles.sectionTitle} level={5}>
+      {t(`knowledgeNetwork.eventClasses.form.${key}`)}
+    </Typography.Title>
+  );
 
   return (
     <Drawer
@@ -545,7 +722,7 @@ export function EventClassFormDrawer({
           ? t("knowledgeNetwork.eventClasses.form.editTitle")
           : t("knowledgeNetwork.eventClasses.form.createTitle")
       }
-      width={600}
+      width={680}
     >
       <Space direction="vertical" size={12} className={styles.block}>
         {versioned ? (
@@ -555,16 +732,16 @@ export function EventClassFormDrawer({
             type="info"
           />
         ) : null}
-        {legacyRuleWithoutTool ? (
+        {legacyRuleWithoutAction ? (
           <Alert
             message={t("knowledgeNetwork.eventClasses.form.legacyRuleHint")}
             showIcon
             type="warning"
           />
         ) : null}
-        {otherBasis ? (
+        {metricBasis ? (
           <Alert
-            message={t("knowledgeNetwork.eventClasses.form.otherBasisHint")}
+            message={t("knowledgeNetwork.eventClasses.form.metricBasisHint")}
             showIcon
             type="info"
           />
@@ -572,6 +749,7 @@ export function EventClassFormDrawer({
         {problem ? <Alert message={problem} showIcon type="error" /> : null}
       </Space>
       <Form<FormValues> colon={false} form={form} layout="vertical" className={styles.form}>
+        {sectionTitle("sectionBasics")}
         <Form.Item
           label={t("knowledgeNetwork.eventClasses.form.name")}
           name="name"
@@ -634,7 +812,7 @@ export function EventClassFormDrawer({
             disabled={subjectLocked}
             loading={subjectsLoading}
             optionFilterProp="label"
-            options={subjects}
+            options={subjects.map((item) => ({ label: item.name || item.id, value: item.id }))}
             placeholder={t("knowledgeNetwork.eventClasses.form.subjectPlaceholder")}
             showSearch
           />
@@ -644,13 +822,6 @@ export function EventClassFormDrawer({
             allowClear
             options={SEVERITIES.map((value) => ({ label: value, value }))}
             placeholder={t("knowledgeNetwork.eventClasses.form.severityPlaceholder")}
-          />
-        </Form.Item>
-        <Form.Item label={t("knowledgeNetwork.eventClasses.form.handlingNote")} name="handlingNote">
-          <Input.TextArea
-            autoSize={{ maxRows: 6, minRows: 2 }}
-            maxLength={500}
-            placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
           />
         </Form.Item>
         {source === "report" ? (
@@ -666,48 +837,50 @@ export function EventClassFormDrawer({
           </Form.Item>
         ) : (
           <>
+            {sectionTitle("sectionRule")}
             <Form.Item
-              extra={t("knowledgeNetwork.eventClasses.form.ruleToolHint")}
-              label={t("knowledgeNetwork.eventClasses.form.ruleTool")}
-              name="ruleTool"
-              rules={[
-                {
-                  message: t("knowledgeNetwork.eventClasses.form.ruleToolRequired"),
-                  // A class without a recognition action, or one this form does not edit, is saved
-                  // without a rule tool.
-                  required: !legacyRuleWithoutTool && !otherBasis,
-                },
-              ]}
+              extra={t("knowledgeNetwork.eventClasses.form.scheduleHint")}
+              label={t("knowledgeNetwork.eventClasses.form.schedule")}
             >
-              <Select
-                allowClear={legacyRuleWithoutTool || otherBasis}
-                loading={toolsLoading}
-                notFoundContent={
-                  toolsLoading ? undefined : t("knowledgeNetwork.eventClasses.form.ruleToolEmpty")
-                }
-                optionFilterProp="label"
-                options={toolOptions}
-                placeholder={t("knowledgeNetwork.eventClasses.form.ruleToolPlaceholder")}
-                showSearch
+              <EventScheduleEditor
+                onChange={setSchedule}
+                onTimezoneChange={setTimezone}
+                schedule={schedule}
+                timezone={timezone}
               />
             </Form.Item>
-            {ruleToolKey && selectedTool && selectedTool.parameters.length > 0 ? (
-              <Form.Item label={t("knowledgeNetwork.eventClasses.form.parameters")}>
-                <div className={styles.parameters}>
-                  {selectedTool.parameters.map(renderParameter)}
-                </div>
-              </Form.Item>
-            ) : null}
-            {ruleToolKey ? (
-              <Form.Item
-                extra={t("knowledgeNetwork.eventClasses.form.scheduleHint")}
-                label={t("knowledgeNetwork.eventClasses.form.schedule")}
-              >
-                {scheduleEditor}
-              </Form.Item>
-            ) : null}
+            <Form.Item label={t("knowledgeNetwork.eventClasses.form.when")}>
+              <Tabs
+                activeKey={basis}
+                items={BASES.map((key) => ({
+                  key,
+                  label: t(`knowledgeNetwork.eventClasses.form.basisTabs.${key}`),
+                }))}
+                onChange={(key) => setBasis(key as RuleBasis)}
+                size="small"
+              />
+              {renderRuleEditor()}
+            </Form.Item>
+            <Form.Item>
+              <EventRuleTrial
+                onTry={() => void runTrial()}
+                state={{
+                  ...trial,
+                  stale: Boolean(trial.result) && trialSignature !== ruleSignature,
+                }}
+              />
+            </Form.Item>
           </>
         )}
+        {sectionTitle("sectionHandling")}
+        <Form.Item label={t("knowledgeNetwork.eventClasses.form.then")} name="handlingNote">
+          <Input.TextArea
+            autoSize={{ maxRows: 6, minRows: 2 }}
+            maxLength={500}
+            placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
+            showCount
+          />
+        </Form.Item>
       </Form>
     </Drawer>
   );

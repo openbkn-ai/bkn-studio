@@ -235,6 +235,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("action-types"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/event-classes",
+    {
+      descriptionKey: "knowledgeNetwork.eventClasses.description",
+      titleKey: "knowledgeNetwork.eventClasses.nav",
+    },
+    workspaceSectionPage("event-classes"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/functions",
     {
       descriptionKey: "knowledgeNetwork.capabilityFunctionsDescription",

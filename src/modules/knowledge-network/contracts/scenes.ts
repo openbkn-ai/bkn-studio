@@ -22,6 +22,7 @@ export type KnowledgeNetworkWorkspaceSection =
   | "object-types"
   | "relation-types"
   | "action-types"
+  | "event-classes"
   | "metrics"
   | "functions"
   | "apis"

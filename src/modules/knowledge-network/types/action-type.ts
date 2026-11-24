@@ -43,9 +43,16 @@ export type ActionTypeCondition = {
   operation?: ActionTypeConditionOperation;
   subConditions?: ActionTypeCondition[];
   value?: string | string[];
-  /** For references, value is a property name or an action runtime parameter name. */
-  valueFrom?: "const" | "property" | "input";
+  /**
+   * For references, value is a property name or an action runtime parameter name. A record-event
+   * action also compares with the time or the day of its check (`check_time`, `check_date`); value
+   * is then an optional ISO 8601 duration that moves it, such as `-PT48H`.
+   */
+  valueFrom?: ActionTypeConditionValueFrom;
 };
+
+export type ActionTypeConditionValueFrom =
+  "const" | "property" | "input" | "check_time" | "check_date";
 
 export type ActionTypeAffect = {
   comment?: string;
