@@ -6,6 +6,8 @@
  */
 
 export const actiontypePart = {
+  actionTypeExecutionResultsStale:
+    "Status refresh failed. The last results are shown. Refresh manually to try again.",
   actionTypeIndexSyncUnreportedHint:
     "This execution contains no synchronization information. Its synchronization outcome cannot be determined.",
   actionTypeIndexSyncUnreportedDescription:

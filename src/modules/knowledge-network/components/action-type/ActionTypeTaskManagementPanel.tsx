@@ -275,7 +275,8 @@ export function ActionTypeTaskManagementPanel({
       try {
         const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(networkId, record.id);
         if (requestId === detailRequestRef.current) {
-          if (detail && detail.actionTypeId !== actionTypeId) throw new Error(t("common.notFound"));
+          if (detail?.actionTypeId && detail.actionTypeId !== actionTypeId)
+            throw new Error(t("common.notFound"));
           setCurrentLog(detail);
         }
       } catch (error) {
@@ -314,8 +315,8 @@ export function ActionTypeTaskManagementPanel({
 
     let stale = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const load = async () => {
-      setResultsLoading(true);
+    const load = async (background = false) => {
+      if (!background) setResultsLoading(true);
       setResultsFailed(false);
       try {
         const page = await listKnowledgeNetworkActionTypeExecutionResults(networkId, currentLogId, {
@@ -348,16 +349,18 @@ export function ActionTypeTaskManagementPanel({
             ["pending", "submitted", "retrying"].includes(row.indexSync?.status ?? ""),
           )
         )
-          timer = setTimeout(() => void load(), 5000);
+          timer = setTimeout(() => void load(true), 5000);
       } catch (error) {
         if (!stale) {
-          setResultRows([]);
-          setResultTotal(0);
           setResultsFailed(true);
-          void message.error(extractRequestErrorMessage(error));
+          if (!background) {
+            setResultRows([]);
+            setResultTotal(0);
+            void message.error(extractRequestErrorMessage(error));
+          }
         }
       } finally {
-        if (!stale) setResultsLoading(false);
+        if (!stale && !background) setResultsLoading(false);
       }
     };
     void load();
@@ -697,6 +700,11 @@ export function ActionTypeTaskManagementPanel({
                 />
               </Space>
             </div>
+            {resultsFailed && shownResultRows.length > 0 ? (
+              <Typography.Text type="secondary">
+                {t("knowledgeNetwork.actionTypeExecutionResultsStale")}
+              </Typography.Text>
+            ) : null}
             {browsableResults ? (
               <div className={styles.resultHint}>
                 {t("knowledgeNetwork.actionTypeExecutionResultWindowHint", browsableResults)}

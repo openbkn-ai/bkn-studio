@@ -701,4 +701,58 @@ describe("ActionTypeTaskManagementPanel data synchronization", () => {
     await screen.findByText("index service unavailable");
     expect(mocks.detail).toHaveBeenCalledWith("network-1", "exec-1");
   });
+  it("keeps last results without a loading overlay or toast when a background poll fails", async () => {
+    await openDetail();
+    await screen.findByText("index service unavailable");
+    vi.useFakeTimers();
+    mocks.results.mockResolvedValue({
+      entries: [{ ...failedSync, indexSync: { status: "submitted" } }],
+      totalCount: 1,
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.actionTypeExecutionRefreshResults" }),
+      );
+      await Promise.resolve();
+    });
+    const pending = deferred<{ entries: ActionTypeExecutionLogResultItem[]; totalCount: number }>();
+    mocks.results.mockReturnValue(pending.promise);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(resultTable().querySelector(".ant-spin-spinning")).toBeNull();
+    await act(async () => {
+      pending.reject(new Error("temporary failure"));
+      await pending.promise.catch(() => undefined);
+    });
+    expect(screen.getByText("Huawei")).toBeVisible();
+    expect(screen.getByText("knowledgeNetwork.actionTypeIndexSyncSubmitted")).toBeVisible();
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionResultsStale")).toBeVisible();
+    expect(mocks.services.message.error).not.toHaveBeenCalled();
+    const count = mocks.results.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+    expect(mocks.results).toHaveBeenCalledTimes(count);
+  });
+
+  it("keeps legacy details readable when the optional action type id is absent", async () => {
+    mocks.detail.mockResolvedValue({ ...detail, actionTypeId: "", executorId: "initiator" });
+    await openDetail();
+    expect(await screen.findByText("index service unavailable")).toBeVisible();
+    expect(mocks.services.message.error).not.toHaveBeenCalled();
+  });
+
+  it("rejects a deep link to an execution of a different known action type", async () => {
+    mocks.detail.mockResolvedValue({ ...detail, actionTypeId: "other-action" });
+    render(
+      <ActionTypeTaskManagementPanel
+        actionTypeId="action-1"
+        networkId="network-1"
+        initialExecutionId="exec-1"
+      />,
+    );
+    await waitFor(() => expect(mocks.services.message.error).toHaveBeenCalled());
+    expect(mocks.results).not.toHaveBeenCalled();
+  });
 });

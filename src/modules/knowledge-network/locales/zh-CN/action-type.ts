@@ -6,6 +6,7 @@
  */
 
 export const actiontypePart = {
+  actionTypeExecutionResultsStale: "状态刷新失败，当前显示上次结果。请手动刷新。",
   actionTypeIndexSyncUnreportedHint: "此执行记录未包含数据同步信息，不能据此判断同步成功或失败。",
   actionTypeIndexSyncUnreportedDescription: "此执行记录未包含数据同步信息。",
 
