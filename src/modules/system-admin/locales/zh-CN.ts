@@ -18,6 +18,14 @@ export const systemAdminZhCN = {
         saved: "同步配置已保存。启用后将执行首次全量同步。",
         queued: "同步请求已排队，请刷新状态查看结果。",
         enabled: "同步用户和部门",
+        feishuUserIDEnabled: "获取飞书 user_id",
+        feishuUserIDHint:
+          "在用户登录、Token 换发及目录同步时获取飞书 user_id，用于飞书审批等业务。独立于同步用户和部门开关，需身份服务支持扩展接口；查询失败不阻断登录或目录同步。",
+        identityQueryURL: "身份查询接口地址",
+        identityQueryURLHint:
+          "填写完整接口地址，自动传入 Casdoor 用户 ID 作为 subject，并复用身份源的应用 ID 和密钥。请确认该地址可信且应用具有查询权限。",
+        identityQueryURLInvalid:
+          "请输入完整 HTTPS 接口地址；身份源允许 HTTP 时也可使用 HTTP。地址不能包含凭据、查询参数或片段。",
         roleSyncEnabled: "同步角色",
         roleSyncHint:
           "仅导入角色名称和描述，不同步用户、角色成员或权限。同步时会覆盖已导入角色的名称和描述。关闭后保留已导入角色；源端删除的角色也会保留。同名本地角色不会自动合并。开启或关闭需要角色创建和编辑权限。",

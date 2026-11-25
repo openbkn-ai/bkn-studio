@@ -106,10 +106,81 @@ describe("SSO directory synchronization", () => {
         organization: "org",
         enabled: true,
         role_sync_enabled: false,
+        feishu_user_id_enabled: false,
         interval_seconds: 300,
         webhook_secret: undefined,
       }),
     );
+  });
+  it("shows the identity URL only when Feishu enrichment is enabled and requires it", async () => {
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    const toggle = await screen.findByLabelText("systemAdmin.sso.sync.feishuUserIDEnabled");
+    expect(toggle).not.toBeChecked();
+    expect(
+      screen.queryByLabelText("systemAdmin.sso.sync.identityQueryURL"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    const url = await screen.findByLabelText("systemAdmin.sso.sync.identityQueryURL");
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(url.closest(".ant-form-item")).toHaveClass("ant-form-item-has-error"),
+    );
+    expect(api.save).not.toHaveBeenCalled();
+    fireEvent.change(url, { target: { value: "https://identity.example/api/get-identity-user" } });
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        "casdoor",
+        expect.objectContaining({
+          feishu_user_id_enabled: true,
+          identity_query_url: "https://identity.example/api/get-identity-user",
+        }),
+      ),
+    );
+  });
+  it("can save login-only identity enrichment without directory organization or webhook", async () => {
+    api.get.mockResolvedValue({
+      ...view,
+      has_webhook_secret: false,
+      config: {
+        ...view.config,
+        enabled: false,
+        organization: "",
+        feishu_user_id_enabled: true,
+        identity_query_url: "https://identity.example/api/get-identity-user",
+      },
+    });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.identityQueryURL");
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        "casdoor",
+        expect.objectContaining({
+          enabled: false,
+          role_sync_enabled: false,
+          feishu_user_id_enabled: true,
+          identity_query_url: "https://identity.example/api/get-identity-user",
+        }),
+      ),
+    );
+  });
+  it("rejects an insecure identity URL unless the provider allows HTTP", async () => {
+    api.get.mockResolvedValue({
+      ...view,
+      config: {
+        ...view.config,
+        feishu_user_id_enabled: true,
+        identity_query_url: "http://identity.example/api/get-identity-user",
+      },
+    });
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    await screen.findByLabelText("systemAdmin.sso.sync.identityQueryURL");
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    expect(
+      await screen.findByText("systemAdmin.sso.sync.identityQueryURLInvalid"),
+    ).toBeInTheDocument();
+    expect(api.save).not.toHaveBeenCalled();
   });
   it("clears a replacement secret after saving it", async () => {
     render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);

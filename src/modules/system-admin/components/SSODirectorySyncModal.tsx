@@ -165,6 +165,8 @@ export function SSODirectorySyncModal({
               initialValues={{
                 enabled: view.config.enabled,
                 role_sync_enabled: view.config.role_sync_enabled ?? false,
+                feishu_user_id_enabled: view.config.feishu_user_id_enabled ?? false,
+                identity_query_url: view.config.identity_query_url ?? "",
                 organization: view.config.organization,
                 interval_seconds: view.config.interval_seconds,
               }}
@@ -176,8 +178,11 @@ export function SSODirectorySyncModal({
               <Form.Item
                 name="organization"
                 label={label("organization")}
+                dependencies={["enabled", "role_sync_enabled"]}
                 rules={[
-                  { required: true },
+                  ({ getFieldValue }) => ({
+                    required: !!getFieldValue("enabled") || !!getFieldValue("role_sync_enabled"),
+                  }),
                   { pattern: /^[a-zA-Z0-9_.-]{1,100}$/, message: label("organizationFormat") },
                 ]}
               >
@@ -194,7 +199,15 @@ export function SSODirectorySyncModal({
                 name="webhook_secret"
                 label={label("secret")}
                 extra={label(view.has_webhook_secret ? "secretKept" : "secretHint")}
-                rules={[{ required: !view.has_webhook_secret }, { min: 32, max: 256 }]}
+                dependencies={["enabled", "role_sync_enabled"]}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    required:
+                      !view.has_webhook_secret &&
+                      (!!getFieldValue("enabled") || !!getFieldValue("role_sync_enabled")),
+                  }),
+                  { min: 32, max: 256 },
+                ]}
               >
                 <Input.Password autoComplete="new-password" />
               </Form.Item>
@@ -222,6 +235,59 @@ export function SSODirectorySyncModal({
                 </Form.Item>
               </div>
               <Typography.Paragraph type="secondary">{label("roleSyncHint")}</Typography.Paragraph>
+              <Form.Item
+                name="feishu_user_id_enabled"
+                label={label("feishuUserIDEnabled")}
+                valuePropName="checked"
+                extra={label("feishuUserIDHint")}
+              >
+                <Switch />
+              </Form.Item>
+              <Form.Item<DirectorySyncInput>
+                noStyle
+                shouldUpdate={(before, after) =>
+                  before.feishu_user_id_enabled !== after.feishu_user_id_enabled
+                }
+              >
+                {({ getFieldValue }) =>
+                  getFieldValue("feishu_user_id_enabled") ? (
+                    <Form.Item
+                      name="identity_query_url"
+                      label={label("identityQueryURL")}
+                      extra={label("identityQueryURLHint")}
+                      rules={[
+                        { required: true, whitespace: true },
+                        { max: 1024 },
+                        {
+                          validator: (_, value: string) => {
+                            if (!value) return Promise.resolve();
+                            try {
+                              const url = new URL(value);
+                              if (
+                                (url.protocol === "https:" ||
+                                  (provider?.allow_insecure_http && url.protocol === "http:")) &&
+                                !url.username &&
+                                !url.password &&
+                                !url.search &&
+                                !url.hash
+                              )
+                                return Promise.resolve();
+                            } catch {
+                              /* Report the same localized validation error. */
+                            }
+                            return Promise.reject(new Error(label("identityQueryURLInvalid")));
+                          },
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="https://sso.example.com/api/get-identity-user"
+                        autoComplete="off"
+                      />
+                    </Form.Item>
+                  ) : null
+                }
+              </Form.Item>
             </Form>
             <Typography.Paragraph copyable={{ text: origin + view.webhook_path }}>
               {label("webhook")}: {origin + view.webhook_path}
