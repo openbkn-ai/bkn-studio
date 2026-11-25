@@ -253,6 +253,7 @@ export function SSODirectorySyncModal({
                   getFieldValue("feishu_user_id_enabled") ? (
                     <Form.Item
                       name="identity_query_url"
+                      normalize={(value?: string) => value?.trim()}
                       label={label("identityQueryURL")}
                       extra={label("identityQueryURLHint")}
                       rules={[

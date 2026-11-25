@@ -138,6 +138,25 @@ describe("SSO directory synchronization", () => {
       ),
     );
   });
+  it("trims a pasted identity endpoint before submitting it", async () => {
+    render(<SSODirectorySyncModal provider={provider} onClose={() => undefined} />);
+    fireEvent.click(await screen.findByLabelText("systemAdmin.sso.sync.feishuUserIDEnabled"));
+    const url = await screen.findByLabelText("systemAdmin.sso.sync.identityQueryURL");
+    fireEvent.change(url, {
+      target: { value: "  https://identity.example/api/get-identity-user  " },
+    });
+    expect(url).toHaveValue("https://identity.example/api/get-identity-user");
+    fireEvent.click(screen.getByRole("button", { name: "systemAdmin.sso.sync.save" }));
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        "casdoor",
+        expect.objectContaining({
+          feishu_user_id_enabled: true,
+          identity_query_url: "https://identity.example/api/get-identity-user",
+        }),
+      ),
+    );
+  });
   it("can save login-only identity enrichment without directory organization or webhook", async () => {
     api.get.mockResolvedValue({
       ...view,
