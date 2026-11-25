@@ -26,7 +26,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { useBknProjectKbMode } from "@/framework/entitlement/bkn-project-kb-mode";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
@@ -142,7 +141,6 @@ export function KnowledgeNetworkWorkspaceScene({
       : "not-licensed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
   const fineGrainedCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
-  const kbMode = useBknProjectKbMode();
   const [versionView, setVersionView] = useKnVersionView(activeNetworkId);
   // Bumped when a publish, switch or reset changed what every page of the workspace reads.
   const [reloadTick, setReloadTick] = useState(0);
@@ -312,18 +310,6 @@ export function KnowledgeNetworkWorkspaceScene({
         icon: <KnowledgeResourceIcon kind="skill" />,
         count: detail?.statistics.skillsTotal ?? 0,
       },
-      // Professional edition. Not in the community image at all; without the license the section
-      // opens under the edition mask. No count: the network's statistics do not report one.
-      ...(kbMode === "hidden"
-        ? []
-        : [
-            {
-              key: "knowledge-bases" as const,
-              label: t("knowledgeNetwork.workspaceKnowledgeBases"),
-              icon: <KnowledgeResourceIcon kind="knowledgeBase" />,
-              paidEdition: "professional" as const,
-            },
-          ]),
     ];
 
     // Entries for services this deployment does not run (RuntimeConfig.hiddenNavigation).
@@ -334,7 +320,6 @@ export function KnowledgeNetworkWorkspaceScene({
     detail,
     evalCapabilityState,
     hiddenNavigation,
-    kbMode,
     objectMetricsCapability,
     permissionMatrixLicensed,
     snapshot,
@@ -362,8 +347,7 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "functions" ||
       item.key === "apis" ||
       item.key === "mcp" ||
-      item.key === "skills" ||
-      item.key === "knowledge-bases",
+      item.key === "skills",
   );
   const governanceNavItems = (["permissions", "action-control"] as const).flatMap((key) =>
     navigationItems.filter((item) => item.key === key),

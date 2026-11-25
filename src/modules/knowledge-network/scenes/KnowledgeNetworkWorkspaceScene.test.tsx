@@ -469,36 +469,22 @@ describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
     expect(screen.queryByRole("button", { name: /知识库/ })).toBeNull();
   });
 
-  it("marks the entry as professional without the license, and opens the masked section", () => {
-    renderScene(entitlement({ extensions: [CAPABILITIES.KNOWLEDGE_BASE] }));
-
-    const entry = screen.getByRole("button", { name: /知识库/ });
-    expect(within(entry).getByText("专业版")).toBeTruthy();
-
-    fireEvent.click(entry);
-
-    expect(mocks.navigate).toHaveBeenCalledWith(
-      "/knowledge-network/workspace/network-1/knowledge-bases",
-    );
-  });
-
-  it("opens the section when the knowledge base is licensed", () => {
-    renderScene(
-      entitlement({
-        capabilities: [CAPABILITIES.KNOWLEDGE_BASE],
-        edition: "professional",
-        extensions: [CAPABILITIES.KNOWLEDGE_BASE],
-        licensed: true,
-        state: "valid",
-      }),
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /知识库/ }));
-
-    expect(mocks.navigate).toHaveBeenCalledWith(
-      "/knowledge-network/workspace/network-1/knowledge-bases",
-    );
-  });
+  it.each([false, true])(
+    "has no knowledge-base management entry when installed (licensed=%s)",
+    (licensed) => {
+      renderScene(
+        entitlement({
+          capabilities: licensed ? [CAPABILITIES.KNOWLEDGE_BASE] : [],
+          edition: "professional",
+          extensions: [CAPABILITIES.KNOWLEDGE_BASE],
+          licensed,
+          state: "valid",
+        }),
+      );
+      expect(screen.queryByRole("button", { name: /知识库/ })).toBeNull();
+      expect(screen.getByRole("button", { name: /knowledgeNetwork.workspaceSkills/ })).toBeTruthy();
+    },
+  );
 });
 
 describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {

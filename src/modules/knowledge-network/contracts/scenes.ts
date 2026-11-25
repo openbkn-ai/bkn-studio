@@ -27,7 +27,6 @@ export type KnowledgeNetworkWorkspaceSection =
   | "apis"
   | "mcp"
   | "skills"
-  | "knowledge-bases"
   | "versions"
   | "permissions"
   | "action-control"

@@ -42,6 +42,7 @@ import {
   type KnowledgeNetworkChildRecordLoader,
 } from "@/modules/knowledge-network/routes/KnowledgeNetworkChildModifyRouteGate";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
+import { LegacyKnowledgeBasesRedirect } from "@/modules/knowledge-network/routes/LegacyKnowledgeBasesRedirect";
 import { LegacyMcpExperienceRedirect } from "@/modules/knowledge-network/routes/LegacyMcpExperienceRedirect";
 import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/route-factory";
 import {
@@ -269,10 +270,10 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/knowledge-bases",
     {
-      descriptionKey: "knowledgeNetwork.knowledgeBasesDescription",
-      titleKey: "knowledgeNetwork.workspaceKnowledgeBases",
+      descriptionKey: "knowledgeNetwork.overviewDescription",
+      titleKey: "knowledgeNetwork.workspaceOverview",
     },
-    workspaceSectionPage("knowledge-bases"),
+    <LegacyKnowledgeBasesRedirect />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics",

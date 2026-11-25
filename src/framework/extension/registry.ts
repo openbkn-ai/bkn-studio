@@ -64,8 +64,6 @@ export type StudioExtension = {
   instanceHandOvers?: InstanceHandOver[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
-  /** The knowledge-bases section of the knowledge-network workspace. */
-  knowledgeNetworkResourcePanel?: ComponentType<KnowledgeNetworkResourcePanelProps>;
   /**
    * How a version's notes read on the versions page, when the extension that published the
    * version wrote part of them for itself (such as what was accepted to publish it). Returns
@@ -97,18 +95,6 @@ export type ActionExecutionGateProps = {
   onClose: () => void;
   onAuthorized: (credentials: ActionGovernanceExecutionCredentials) => void;
 };
-
-export type KnowledgeNetworkResourcePanelProps = {
-  networkId: string;
-  canModify: boolean;
-};
-
-/** The knowledge-network resource panel of the installed knowledge-base extension, if any. */
-export const extensionKnowledgeNetworkResourcePanel = () =>
-  installed.find(
-    (extension) =>
-      extension.capability === "knowledge_base" && extension.knowledgeNetworkResourcePanel,
-  )?.knowledgeNetworkResourcePanel;
 
 /**
  * A button that opens one of the extension's pages for the network on screen, in a new tab.
