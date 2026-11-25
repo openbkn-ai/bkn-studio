@@ -40,6 +40,7 @@ export const eventClassesPart = {
       sectionRule: "Recognition rule",
       sectionHandling: "Handling",
       when: "When",
+      whenHint: "Each object the rule hits gets an event.",
       then: "Then",
       basisTabs: {
         condition: "Condition",

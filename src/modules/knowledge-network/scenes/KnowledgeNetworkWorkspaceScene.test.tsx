@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   hiddenNavigation: [] as string[],
   navigate: vi.fn(),
   pathname: "/knowledge-network/workspace/network-1/overview",
+  detail: null as unknown,
 }));
 
 vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
@@ -127,7 +128,7 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection",
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/useWorkspaceData", () => ({
   useWorkspaceData: () => ({
-    detail: null,
+    detail: mocks.detail,
     detailError: null,
     detailLoading: false,
     loadRecentObjects: vi.fn(),
@@ -532,6 +533,18 @@ describe("KnowledgeNetworkWorkspaceScene event class navigation", () => {
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/event-classes",
     );
+  });
+
+  it("counts the event classes the network's statistics report", () => {
+    mocks.detail = { id: "network-1", statistics: { eventClassesTotal: 3 } };
+    try {
+      renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }));
+
+      const entry = screen.getByRole("button", { name: /knowledgeNetwork\.eventClasses\.nav/ });
+      expect(within(entry).getByText("3")).toBeTruthy();
+    } finally {
+      mocks.detail = null;
+    }
   });
 
   it.each([

@@ -82,6 +82,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
       functionsTotal: item.statistics?.functions_total ?? 0,
       mcpToolsTotal: item.statistics?.mcp_tools_total ?? 0,
       apisTotal: item.statistics?.apis_total ?? 0,
+      eventClassesTotal: item.statistics?.event_classes_total,
     },
   };
 }

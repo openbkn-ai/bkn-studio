@@ -36,6 +36,7 @@ export const eventClassesPart = {
       sectionRule: "识别规则",
       sectionHandling: "处置",
       when: "当",
+      whenHint: "命中规则的每个对象记一条事件",
       then: "则",
       basisTabs: {
         condition: "条件",

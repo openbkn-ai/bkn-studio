@@ -18,7 +18,7 @@ import {
   Tabs,
   Typography,
 } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -167,6 +167,27 @@ function hasIncompleteRow(condition: ActionTypeCondition | null | undefined): bo
     return (condition.subConditions ?? []).some(hasIncompleteRow);
   }
   return Boolean(condition.field) !== Boolean(condition.operation);
+}
+
+/** One clause of the rule, 当 or 则: its keyword stands out and the clause's fields hang under it. */
+function RuleClause({
+  children,
+  hint,
+  keyword,
+}: {
+  children: ReactNode;
+  hint?: string;
+  keyword: string;
+}) {
+  return (
+    <section aria-label={keyword} className={styles.clause}>
+      <div className={styles.clauseHead}>
+        <span className={styles.clauseKeyword}>{keyword}</span>
+        {hint ? <Typography.Text type="secondary">{hint}</Typography.Text> : null}
+      </div>
+      <div className={styles.clauseBody}>{children}</div>
+    </section>
+  );
 }
 
 export function EventClassFormDrawer({
@@ -846,7 +867,10 @@ export function EventClassFormDrawer({
                 timezone={timezone}
               />
             </Form.Item>
-            <Form.Item label={t("knowledgeNetwork.eventClasses.form.when")}>
+            <RuleClause
+              hint={t("knowledgeNetwork.eventClasses.form.whenHint")}
+              keyword={t("knowledgeNetwork.eventClasses.form.when")}
+            >
               <Tabs
                 activeKey={basis}
                 items={BASES.map((key) => ({
@@ -857,27 +881,30 @@ export function EventClassFormDrawer({
                 size="small"
               />
               {renderRuleEditor()}
-            </Form.Item>
-            <Form.Item>
-              <EventRuleTrial
-                onTry={() => void runTrial()}
-                state={{
-                  ...trial,
-                  stale: Boolean(trial.result) && trialSignature !== ruleSignature,
-                }}
-              />
-            </Form.Item>
+              <div className={styles.clauseTrial}>
+                <EventRuleTrial
+                  onTry={() => void runTrial()}
+                  state={{
+                    ...trial,
+                    stale: Boolean(trial.result) && trialSignature !== ruleSignature,
+                  }}
+                />
+              </div>
+            </RuleClause>
           </>
         )}
         {sectionTitle("sectionHandling")}
-        <Form.Item label={t("knowledgeNetwork.eventClasses.form.then")} name="handlingNote">
-          <Input.TextArea
-            autoSize={{ maxRows: 6, minRows: 2 }}
-            maxLength={500}
-            placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
-            showCount
-          />
-        </Form.Item>
+        <RuleClause keyword={t("knowledgeNetwork.eventClasses.form.then")}>
+          <Form.Item className={styles.clauseField} name="handlingNote">
+            <Input.TextArea
+              aria-label={t("knowledgeNetwork.eventClasses.form.then")}
+              autoSize={{ maxRows: 6, minRows: 2 }}
+              maxLength={500}
+              placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
+              showCount
+            />
+          </Form.Item>
+        </RuleClause>
       </Form>
     </Drawer>
   );

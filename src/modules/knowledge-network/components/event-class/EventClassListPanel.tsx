@@ -15,6 +15,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EventClassFormDrawer } from "@/modules/knowledge-network/components/event-class/EventClassFormDrawer";
 import { readEventClassIntent } from "@/modules/knowledge-network/components/event-class/event-class-navigation";
+import { knowledgeNetworkReturnState } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import { useEventClassDelete } from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
 import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
@@ -156,14 +157,29 @@ export function EventClassListPanel({
   const isRule = (item: KnEventType) => item.source === "rule";
   const recognized = (item: KnEventType) => isRule(item) && Boolean(item.recognition_action_id);
 
+  /** The class's own detail page; its data tab lists the events, one per object a check hit. */
+  const openDetail = (item: KnEventType, tab?: "data") =>
+    void navigate(
+      `/knowledge-network/workspace/${encodeURIComponent(networkId)}/object-types/${encodeURIComponent(item.code)}/detail${tab ? `?tab=${tab}` : ""}`,
+      { state: knowledgeNetworkReturnState(`${location.pathname}${location.search}`) },
+    );
+
   const lastCheck = (item: KnEventType) => {
     if (!isRule(item) || !checks) return placeholder;
     const check = checks.get(item.code);
     if (!check) return t(`${PREFIX}.recognition.neverChecked`);
     const when = check.time ? `${formatTimestamp(check.time)} · ` : "";
-    return check.status === "ok"
-      ? `${when}${t(`${PREFIX}.recognition.lastCheckOk`, { count: check.hits ?? 0 })}`
-      : `${when}${t(`${PREFIX}.list.lastCheckFailed`)}`;
+    if (check.status !== "ok") return `${when}${t(`${PREFIX}.list.lastCheckFailed`)}`;
+    const hits = check.hits ?? 0;
+    if (!hits) return `${when}${t(`${PREFIX}.recognition.lastCheckOk`, { count: 0 })}`;
+    return (
+      <span>
+        {when}
+        <Typography.Link onClick={() => openDetail(item, "data")}>
+          {t(`${PREFIX}.recognition.lastCheckOk`, { count: hits })}
+        </Typography.Link>
+      </span>
+    );
   };
 
   const columns: NonNullable<TableProps<KnEventType>["columns"]> = [
@@ -173,7 +189,9 @@ export function EventClassListPanel({
       width: 240,
       render: (_value, item) => (
         <Space direction="vertical" size={0}>
-          <Typography.Text strong>{item.name}</Typography.Text>
+          <Typography.Link onClick={() => openDetail(item)} strong>
+            {item.name}
+          </Typography.Link>
           <Typography.Text code type="secondary">
             {item.code}
           </Typography.Text>

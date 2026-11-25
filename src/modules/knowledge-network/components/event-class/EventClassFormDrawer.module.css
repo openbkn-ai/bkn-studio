@@ -99,3 +99,42 @@
 .trialStale {
   opacity: 0.6;
 }
+
+.clause {
+  margin-bottom: 24px;
+}
+
+.clauseHead {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.clauseKeyword {
+  align-items: center;
+  background: var(--color-primary-600);
+  border-radius: 6px;
+  color: var(--color-text-inverse);
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 600;
+  height: 28px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 8px;
+}
+
+.clauseBody {
+  border-left: 2px solid var(--color-primary-border);
+  margin-left: 13px;
+  padding-left: 18px;
+}
+
+.clauseTrial {
+  margin-top: 16px;
+}
+
+.clauseField {
+  margin-bottom: 0 !important;
+}

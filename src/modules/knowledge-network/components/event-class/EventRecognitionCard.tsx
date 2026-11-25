@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Tooltip } from "antd";
+import { Alert, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +31,8 @@ type EventRecognitionCardProps = {
   networkId: string;
   onEdit: () => void;
   onOpenSubject?: (objectTypeId: string) => void;
+  /** Shows the class's events, one per object a check hit. */
+  onShowEvents?: () => void;
   subjectName?: string;
 };
 
@@ -61,6 +63,7 @@ export function EventRecognitionCard({
   networkId,
   onEdit,
   onOpenSubject,
+  onShowEvents,
   subjectName,
 }: EventRecognitionCardProps) {
   const { t } = useTranslation();
@@ -243,11 +246,19 @@ export function EventRecognitionCard({
               lastCheck ? (
                 <span>
                   {lastCheck.time ? `${formatTimestamp(lastCheck.time)} · ` : ""}
-                  {lastCheck.status === "ok"
-                    ? t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })
-                    : t(`${PREFIX}.lastCheckUnknown`, {
-                        message: lastCheck.message || t(`${PREFIX}.noMessage`),
-                      })}
+                  {lastCheck.status === "ok" ? (
+                    onShowEvents && (lastCheck.hits ?? 0) > 0 ? (
+                      <Typography.Link onClick={onShowEvents}>
+                        {t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })}
+                      </Typography.Link>
+                    ) : (
+                      t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })
+                    )
+                  ) : (
+                    t(`${PREFIX}.lastCheckUnknown`, {
+                      message: lastCheck.message || t(`${PREFIX}.noMessage`),
+                    })
+                  )}
                 </span>
               ) : (
                 t(`${PREFIX}.neverChecked`)

@@ -293,6 +293,7 @@ export function KnowledgeNetworkWorkspaceScene({
               key: "event-classes" as const,
               label: t("knowledgeNetwork.eventClasses.nav"),
               icon: <KnowledgeResourceIcon kind="eventClass" />,
+              count: detail?.statistics.eventClassesTotal,
             },
           ]
         : []),

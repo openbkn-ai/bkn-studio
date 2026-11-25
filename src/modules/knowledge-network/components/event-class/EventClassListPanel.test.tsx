@@ -165,6 +165,23 @@ describe("EventClassListPanel", () => {
     );
   });
 
+  it("opens a class's detail from its name, and its events from the hits of the last check", async () => {
+    renderPanel();
+
+    const row = await rowOf("Overdue order");
+    fireEvent.click(within(row).getByText("Overdue order"));
+    expect(mocks.navigate).toHaveBeenLastCalledWith(
+      "/knowledge-network/workspace/network-1/object-types/order_overdue/detail",
+      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") } },
+    );
+
+    fireEvent.click(within(row).getByText(new RegExp(`${PREFIX}.recognition.lastCheckOk`)));
+    expect(mocks.navigate).toHaveBeenLastCalledWith(
+      "/knowledge-network/workspace/network-1/object-types/order_overdue/detail?tab=data",
+      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") } },
+    );
+  });
+
   it("checks a rule class now and reads the last checks again", async () => {
     renderPanel();
 

@@ -27,6 +27,8 @@ export type KnowledgeNetworkStatistics = {
   apisTotal: number;
   /** Tools of MCP Servers bound to this network. */
   mcpToolsTotal: number;
+  /** Object types that are event classes; absent when the backend does not report it. */
+  eventClassesTotal?: number;
   metricsTotal: number;
   objectTypesTotal: number;
   relationTypesTotal: number;

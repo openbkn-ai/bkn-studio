@@ -1391,6 +1391,7 @@ export function ObjectTypeDetailScene() {
               { state: { knowledgeNetworkReturnTo: detailPath } },
             );
           }}
+          onShowEvents={() => openTab("data")}
           subjectName={subjectName}
         />
       ) : null}
