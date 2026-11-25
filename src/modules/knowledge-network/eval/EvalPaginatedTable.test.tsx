@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@/app/locales/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 

@@ -153,35 +153,54 @@ describe("CreateMcpDrawer", () => {
   // Role queries walk the accessibility tree of the whole drawer plus the modal and are slow on
   // CI runners, so this test clicks by text.
   it("fills the form from a pasted mcpServers config", async () => {
-    renderDrawer();
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      renderDrawer();
 
-    fireEvent.click(await screen.findByText("executionFactory.mcpJsonImport.button"));
-    fireEvent.change(await screen.findByLabelText("mcpServers JSON"), {
-      target: {
-        value: JSON.stringify({
-          mcpServers: {
-            "Bazi-MCP": {
-              type: "sse",
-              url: "https://bazi.test/sse",
-              headers: { "X-Tenant": "t1" },
+      fireEvent.click(await screen.findByText("executionFactory.mcpJsonImport.button"));
+      fireEvent.change(await screen.findByLabelText("mcpServers JSON"), {
+        target: {
+          value: JSON.stringify({
+            mcpServers: {
+              "Bazi-MCP": {
+                type: "sse",
+                url: "https://bazi.test/sse",
+                headers: { "X-Tenant": "t1", "X-Client": "client1" },
+              },
             },
-          },
-        }),
-      },
-    });
-    fireEvent.click(screen.getByText("executionFactory.mcpJsonImport.parse"));
-    fireEvent.click(screen.getByText("executionFactory.mcpJsonImport.fillForm"));
+          }),
+        },
+      });
+      fireEvent.click(screen.getByText("executionFactory.mcpJsonImport.parse"));
+      fireEvent.click(screen.getByText("executionFactory.mcpJsonImport.fillForm"));
 
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText<HTMLInputElement>("https://example.com/mcp").value).toBe(
-        "https://bazi.test/sse",
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText<HTMLInputElement>("https://example.com/mcp").value).toBe(
+          "https://bazi.test/sse",
+        );
+      });
+      expect(screen.getByLabelText<HTMLInputElement>("MCP name").value).toBe("Bazi_MCP");
+      expect(screen.getByTitle("SSE")).toBeTruthy();
+      const headerNames = screen.getAllByPlaceholderText<HTMLInputElement>(
+        "executionFactory.mcpHeaderNamePlaceholder",
       );
-    });
-    expect(screen.getByLabelText<HTMLInputElement>("MCP name").value).toBe("Bazi_MCP");
-    expect(screen.getByTitle("SSE")).toBeTruthy();
-    expect(screen.getByDisplayValue<HTMLInputElement>("X-Tenant").value).toBe("X-Tenant");
-    expect(screen.getByDisplayValue("t1")).toBeTruthy();
-    expect(registerMcp).not.toHaveBeenCalled();
+      const headerValues = screen.getAllByPlaceholderText<HTMLInputElement>(
+        "executionFactory.mcpHeaderValuePlaceholder",
+      );
+      expect(headerNames.map((input) => input.value)).toEqual(["X-Tenant", "X-Client"]);
+      expect(headerValues.map((input) => input.value)).toEqual(["t1", "client1"]);
+      expect(registerMcp).not.toHaveBeenCalled();
+      expect(consoleError.mock.calls).not.toContainEqual(
+        expect.arrayContaining([expect.stringContaining('A props object containing a "key" prop')]),
+      );
+      expect(consoleError.mock.calls).not.toContainEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Encountered two children with the same key"),
+        ]),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   }, 30_000);
 
   it("blocks names the backend rejects before sending the request", async () => {

@@ -518,112 +518,25 @@ describe("data-connect.service · test connection", () => {
     expect(testCatalogConnectionMock).toHaveBeenCalledWith("api", options);
   });
 
-  it.each([undefined, "transport", "resource"])(
-    "does not report draft login success when the response echoes %s",
-    async (scope) => {
-      testCatalogConnectionConfigMock.mockResolvedValue({
-        success: true,
-        ...(scope ? { scope } : {}),
-      });
-      const { testDataConnectConfig } =
+  it.each([true, false])(
+    "accepts a configured connection result without a scope echo (login: %s)",
+    async (login) => {
+      const result = { success: true, message: "Connection test succeeded." };
+      testCatalogConnectionMock.mockResolvedValue(result);
+      testCatalogConnectionConfigMock.mockResolvedValue(result);
+      const { testDataConnectRecord, testDataConnectConfig } =
         await import("@/modules/data-connect/services/data-connect.service");
-      await expect(
-        testDataConnectConfig({ connectorType: "http", connectorConfig: {}, scope: "login" }),
-      ).rejects.toThrow(i18n.t("dataConnect.apiCatalog.testUnsupported"));
+      const input = {
+        connectorType: "http",
+        connectorConfig: {
+          base_url: "https://api.example.com/",
+          ...(login ? { login_request: { request: { method: "GET", path: "login" } } } : {}),
+        },
+      };
+      await expect(testDataConnectRecord("api")).resolves.toEqual(result);
+      await expect(testDataConnectConfig(input)).resolves.toEqual(result);
+      expect(testCatalogConnectionMock).toHaveBeenCalledWith("api");
+      expect(testCatalogConnectionConfigMock).toHaveBeenCalledWith(input);
     },
   );
-
-  it.each([
-    { requested: "login" as const, response: undefined },
-    { requested: "login" as const, response: "transport" },
-    { requested: "login" as const, response: "resource" },
-    { requested: "resource" as const, response: undefined },
-    { requested: "resource" as const, response: "transport" },
-    { requested: "resource" as const, response: "login" },
-  ])(
-    "rejects saved $requested success when the server echoes $response",
-    async ({ requested, response }) => {
-      testCatalogConnectionMock.mockResolvedValue({
-        success: true,
-        ...(response ? { scope: response } : {}),
-      });
-      const { testDataConnectRecord } =
-        await import("@/modules/data-connect/services/data-connect.service");
-      await expect(
-        testDataConnectRecord("api", {
-          scope: requested,
-          ...(requested === "resource" ? { resourceId: "orders" } : {}),
-        }),
-      ).rejects.toThrow(i18n.t("dataConnect.apiCatalog.testUnsupported"));
-    },
-  );
-
-  it("returns an explicitly verified draft login result and retains cancellation", async () => {
-    const result = { success: true, scope: "login", message: "Login verified." };
-    testCatalogConnectionConfigMock.mockResolvedValue(result);
-    const { testDataConnectConfig } =
-      await import("@/modules/data-connect/services/data-connect.service");
-    const input = { connectorType: "http", connectorConfig: {}, scope: "login" as const };
-    const options = { signal: new AbortController().signal };
-    await expect(testDataConnectConfig(input, options)).resolves.toEqual(result);
-    expect(testCatalogConnectionConfigMock).toHaveBeenCalledWith(input, options);
-  });
-
-  it("returns an explicitly verified saved login result without calling the draft endpoint", async () => {
-    const result = { success: true, scope: "login" };
-    testCatalogConnectionMock.mockResolvedValue(result);
-    const { testDataConnectRecord } =
-      await import("@/modules/data-connect/services/data-connect.service");
-    await expect(testDataConnectRecord("api", { scope: "login" })).resolves.toEqual(result);
-    expect(testCatalogConnectionConfigMock).not.toHaveBeenCalled();
-  });
-
-  it("returns an empty Resource result with zero and false paging members intact", async () => {
-    const result = {
-      success: true,
-      scope: "resource",
-      entries: [],
-      paging: { offset: 0, total: 0, has_more: false },
-    };
-    testCatalogConnectionMock.mockResolvedValue(result);
-    const { testDataConnectRecord } =
-      await import("@/modules/data-connect/services/data-connect.service");
-    await expect(
-      testDataConnectRecord("api", {
-        scope: "resource",
-        resourceId: "orders",
-        paging: { offset: 0, limit: 1 },
-      }),
-    ).resolves.toEqual(result);
-  });
-
-  it.each([undefined, null, {}])(
-    "does not report Resource validation success for malformed entries %j",
-    async (entries) => {
-      testCatalogConnectionMock.mockResolvedValue({ success: true, scope: "resource", entries });
-      const { testDataConnectRecord } =
-        await import("@/modules/data-connect/services/data-connect.service");
-      await expect(
-        testDataConnectRecord("api", { scope: "resource", resourceId: "orders" }),
-      ).rejects.toThrow(i18n.t("dataConnect.apiCatalog.testUnsupported"));
-    },
-  );
-
-  it("requires a Resource identifier before requesting saved business validation", async () => {
-    const { testDataConnectRecord } =
-      await import("@/modules/data-connect/services/data-connect.service");
-    await expect(testDataConnectRecord("api", { scope: "resource" })).rejects.toThrow(
-      i18n.t("dataConnect.apiCatalog.resourceRequired"),
-    );
-    expect(testCatalogConnectionMock).not.toHaveBeenCalled();
-  });
-
-  it("retains legacy transport success without a scope echo and returns its result", async () => {
-    const result = { success: true, message: "Service reachable." };
-    testCatalogConnectionMock.mockResolvedValue(result);
-    const { testDataConnectRecord } =
-      await import("@/modules/data-connect/services/data-connect.service");
-    await expect(testDataConnectRecord("api")).resolves.toEqual(result);
-    expect(testCatalogConnectionMock).toHaveBeenCalledWith("api");
-  });
 });

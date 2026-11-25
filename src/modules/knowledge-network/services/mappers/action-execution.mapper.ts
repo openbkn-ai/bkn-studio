@@ -15,6 +15,7 @@ import type {
   ActionTypeExecutionResultPage,
   ActionTypeExecutionResultQuery,
   ActionTypeExecutionStatus,
+  ActionIndexSyncStatus,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 
@@ -22,6 +23,7 @@ export type BackendActionExecutionResult = {
   _display?: string;
   duration_ms?: number;
   error_message?: string;
+  index_sync?: { status: ActionIndexSyncStatus; error?: string };
   status?: ActionTypeExecutionLogResultStatus;
 };
 
@@ -31,6 +33,7 @@ export type BackendActionExecutionLog = {
   duration_ms?: number;
   end_time?: number;
   executor?: { id?: string; name?: string };
+  executor_id?: string;
   failed_count?: number;
   id: string;
   results?: BackendActionExecutionResult[];
@@ -74,6 +77,7 @@ function mapExecutionLogResults(
     displayName: item._display,
     durationMs: item.duration_ms,
     errorMessage: item.error_message,
+    indexSync: item.index_sync,
     status: item.status ?? "success",
   }));
 }
@@ -94,6 +98,7 @@ export function mapActionTypeExecutionLogDetail(
     ...mapExecutionLog(item),
     endTime: item.end_time ? formatTimestamp(item.end_time) : undefined,
     executorName: item.executor?.name ?? item.executor?.id,
+    executorId: item.executor?.id ?? item.executor_id,
     results: mapExecutionLogResults(item.results),
     resultsTotal: item.results_total,
   };

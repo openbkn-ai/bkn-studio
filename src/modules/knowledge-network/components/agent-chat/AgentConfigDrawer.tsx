@@ -108,7 +108,7 @@ function LimitFields({
                 style={{ width: "100%" }}
                 min={MIN[key]}
                 max={cap == null ? LIMIT_MAX[key] : Math.min(cap, LIMIT_MAX[key] ?? cap)}
-                addonAfter={
+                suffix={
                   key === "max_output_tokens"
                     ? t(`${P}.limitFields.max_output_tokens.unit`)
                     : undefined

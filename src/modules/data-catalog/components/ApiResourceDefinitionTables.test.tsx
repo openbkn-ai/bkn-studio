@@ -144,6 +144,172 @@ describe("API resource definition tables", () => {
     );
   });
 
+  it("omits empty object properties and stale items without changing the saved response schema", () => {
+    const schema = Object.freeze({
+      type: "object",
+      properties: Object.freeze({}),
+      items: Object.freeze({ type: "object", properties: Object.freeze({}) }),
+    });
+    const response = {
+      statuses: { "200": { schema }, "204": { schema: true } },
+    };
+    const { rerender } = render(<ApiResourceDefinitionTables name="response" value={response} />);
+    const expectObjectSchema = () => {
+      const panel = screen.getByRole("tabpanel", { name: "200" });
+      const summary = within(panel).getByText(editor("fieldTable.rootType"), { exact: false });
+      expect(summary).toHaveTextContent("object");
+      expect(
+        within(panel).queryByText(editor("fieldTable.configuration"), { exact: false }),
+      ).toBeNull();
+    };
+
+    expectObjectSchema();
+    fireEvent.click(screen.getByRole("tab", { name: "204" }));
+    fireEvent.click(screen.getByRole("tab", { name: "200" }));
+    rerender(<ApiResourceDefinitionTables name="response" value={structuredClone(response)} />);
+    expectObjectSchema();
+    expect(schema).toEqual({
+      type: "object",
+      properties: {},
+      items: { type: "object", properties: {} },
+    });
+  });
+
+  it.each([
+    { type: "object", objectFields: true, arrayItems: false },
+    { type: "array", objectFields: false, arrayItems: true },
+    { type: "string", objectFields: false, arrayItems: false },
+    { type: ["object", "null"], objectFields: true, arrayItems: false },
+    { type: ["array", "null"], objectFields: false, arrayItems: true },
+    { type: ["object", "array"], objectFields: true, arrayItems: true },
+    { type: undefined, objectFields: true, arrayItems: true },
+  ])(
+    "shows applicable fields, items and constraints for type $type",
+    ({ type, objectFields, arrayItems }) => {
+      const schema = {
+        ...(type === undefined ? {} : { type }),
+        properties: { name: { type: "string", minLength: 2 } },
+        required: ["name", "otherRequiredName"],
+        items: {
+          type: "object",
+          properties: { id: { type: "integer", minimum: 0 } },
+          additionalProperties: false,
+        },
+        "x-note": "preserved extension",
+      };
+      render(
+        <ApiResourceDefinitionTables name="response" value={{ statuses: { "200": { schema } } }} />,
+      );
+      const panel = within(screen.getByRole("tabpanel", { name: "200" }));
+      const field = panel.queryByRole("rowheader", { name: "name" });
+      const item = panel.queryByRole("rowheader", { name: "[].id" });
+      const configuration = panel.getByText(editor("fieldTable.configuration"), { exact: false });
+      fireEvent.click(configuration);
+      const details = within(configuration.closest("details")!);
+      const required = details.queryByText("otherRequiredName");
+      const itemConfiguration = details.queryByText(editor("fieldTable.itemConfiguration"));
+
+      if (objectFields) {
+        expect(field?.parentElement).toHaveTextContent(editor("fieldTable.keywords.minLength"));
+        expect(required).toBeVisible();
+      } else {
+        expect(field).toBeNull();
+        expect(required).toBeNull();
+      }
+      if (arrayItems) {
+        expect(item?.parentElement).toHaveTextContent(editor("fieldTable.keywords.minimum"));
+        expect(itemConfiguration).toBeVisible();
+        expect(details.getByText("additionalProperties")).toBeVisible();
+      } else {
+        expect(item).toBeNull();
+        expect(itemConfiguration).toBeNull();
+      }
+      expect(details.getByText("preserved extension")).toBeVisible();
+    },
+  );
+
+  it("keeps a typed array item visible without an empty configuration section", () => {
+    render(
+      <ApiResourceDefinitionTables
+        name="response"
+        value={{
+          statuses: {
+            "200": { schema: { type: "array", items: { type: "object", properties: {} } } },
+          },
+        }}
+      />,
+    );
+    const panel = within(screen.getByRole("tabpanel", { name: "200" }));
+    expect(panel.getByText(editor("fieldTable.rootType"), { exact: false })).toHaveTextContent(
+      "array〈object〉",
+    );
+    expect(panel.queryByText(editor("fieldTable.configuration"), { exact: false })).toBeNull();
+  });
+
+  const objectWithStaleItems = Object.freeze({
+    type: "object",
+    properties: Object.freeze({}),
+    items: Object.freeze({ type: "string", const: "stale-item-value" }),
+    minProperties: 1,
+    default: { type: "object", items: "literal-item-value" },
+    "x-example": { type: "object", items: "extension-item-value" },
+  });
+
+  it.each([
+    {
+      name: "nested items",
+      schema: { type: "array", items: { type: "array", items: objectWithStaleItems } },
+    },
+    {
+      name: "legacy tuple items",
+      schema: { type: "array", items: [objectWithStaleItems] },
+    },
+    {
+      name: "nested prefixItems",
+      schema: { type: "array", items: { type: "array", prefixItems: [objectWithStaleItems] } },
+    },
+    {
+      name: "nested additionalProperties",
+      schema: {
+        type: "array",
+        items: { type: "object", additionalProperties: objectWithStaleItems },
+      },
+    },
+    {
+      name: "nested dependentSchemas",
+      schema: {
+        type: "array",
+        items: { type: "object", dependentSchemas: { id: objectWithStaleItems } },
+      },
+    },
+    {
+      name: "root prefixItems",
+      schema: { type: "array", prefixItems: [objectWithStaleItems] },
+    },
+    {
+      name: "root additionalProperties",
+      schema: { type: "object", additionalProperties: objectWithStaleItems },
+    },
+    {
+      name: "root dependentSchemas",
+      schema: { type: "object", dependentSchemas: { id: objectWithStaleItems } },
+    },
+  ])("filters object structure in $name while keeping constraints and literals", ({ schema }) => {
+    render(
+      <ApiResourceDefinitionTables name="response" value={{ statuses: { "200": { schema } } }} />,
+    );
+    const panel = within(screen.getByRole("tabpanel", { name: "200" }));
+    const summary = panel.getByText(editor("fieldTable.root"), { selector: "summary code" });
+    fireEvent.click(summary);
+    const configuration = within(summary.closest("details")!);
+
+    expect(configuration.getByText("minProperties")).toBeVisible();
+    expect(configuration.getByText("literal-item-value")).toBeVisible();
+    expect(configuration.getByText("extension-item-value")).toBeVisible();
+    expect(configuration.queryByText("properties")).toBeNull();
+    expect(configuration.queryByText("stale-item-value")).toBeNull();
+  });
+
   it("supports a default-only response and keeps empty statuses explicit without empty tabs", () => {
     const { rerender } = render(
       <ApiResourceDefinitionTables

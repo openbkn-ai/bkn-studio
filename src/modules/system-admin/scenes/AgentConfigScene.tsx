@@ -708,7 +708,7 @@ export function AgentConfigScene({ agentId }: { agentId: string }) {
                         style={{ width: "100%" }}
                         min={MIN[key]}
                         max={LIMIT_MAX[key]}
-                        addonAfter={
+                        suffix={
                           key === "max_output_tokens"
                             ? t(`${L}.limitFields.max_output_tokens.unit`)
                             : undefined

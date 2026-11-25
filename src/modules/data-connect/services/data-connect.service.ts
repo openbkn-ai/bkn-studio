@@ -29,7 +29,6 @@ import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestOptions,
   CatalogConnectionTestResult,
-  CatalogConnectionTestScope,
   CatalogHealthCheckScheduleInput,
   CatalogMutationOptions,
 } from "@/shared/catalog";
@@ -420,13 +419,10 @@ export async function testDataConnectRecord(
   id: string,
   options?: CatalogConnectionTestOptions,
 ): Promise<CatalogConnectionTestResult> {
-  const scope = options?.scope ?? (options?.resourceId !== undefined ? "resource" : "transport");
-  if (scope === "resource" && !options?.resourceId?.trim())
-    throw new Error(i18n.t("dataConnect.apiCatalog.resourceRequired"));
   const result = options
     ? await testCatalogConnection(id, options)
     : await testCatalogConnection(id);
-  assertConnectionTestSucceeded(result, scope);
+  assertConnectionTestSucceeded(result);
   return result;
 }
 
@@ -437,7 +433,7 @@ export async function testDataConnectConfig(
   const result = options
     ? await testCatalogConnectionConfig(input, options)
     : await testCatalogConnectionConfig(input);
-  assertConnectionTestSucceeded(result, input.scope ?? "transport");
+  assertConnectionTestSucceeded(result);
   return result;
 }
 
@@ -483,14 +479,7 @@ export async function updateDataConnectHealthCheckSchedule(
   return updateCatalogHealthCheckSchedule(id, input, expectedUpdateTime);
 }
 
-function assertConnectionTestSucceeded(
-  result: CatalogConnectionTestResult,
-  scope: CatalogConnectionTestScope,
-) {
-  if ((scope !== "transport" || result.scope !== undefined) && result.scope !== scope)
-    throw new Error(i18n.t("dataConnect.apiCatalog.testUnsupported"));
-  if (scope === "resource" && result.success && !Array.isArray(result.entries))
-    throw new Error(i18n.t("dataConnect.apiCatalog.testUnsupported"));
+function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {
   if (result.success) {
     return;
   }

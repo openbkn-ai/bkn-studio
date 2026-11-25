@@ -66,7 +66,7 @@ export function EventScheduleEditor({
         />
         {schedule.kind === "minutes" ? (
           <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
+            suffix={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.minutes")}
             max={59}
             min={MIN_CHECK_MINUTES}
@@ -79,7 +79,7 @@ export function EventScheduleEditor({
         ) : null}
         {schedule.kind === "hours" ? (
           <InputNumber
-            addonAfter={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
+            suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.hours")}
             max={23}
             min={1}

@@ -219,11 +219,9 @@ export function ResourcePermissionRequestAction({
     [form],
   );
   const toggleOperation = (operationKey: string) => {
-    setSelectedOperations((current) => {
-      const next = togglePermissionRequestOperation(current, operationKey, selectableOperations);
-      form.setFieldValue("operations", next);
-      return next;
-    });
+    setOperations(
+      togglePermissionRequestOperation(selectedOperations, operationKey, selectableOperations),
+    );
   };
   const setRequestOpen = useCallback(
     (nextOpen: boolean) => {

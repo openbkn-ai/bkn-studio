@@ -830,10 +830,7 @@ export function EventClassFormDrawer({
             label={t("knowledgeNetwork.eventClasses.form.mergeHours")}
             name="mergeHours"
           >
-            <InputNumber
-              addonAfter={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
-              min={0}
-            />
+            <InputNumber suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")} min={0} />
           </Form.Item>
         ) : (
           <>

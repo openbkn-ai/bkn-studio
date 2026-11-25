@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { mockApiResourceFixtures } from "../services/api-resource-mock-data";
 import { parsePrecisionPreservingJSON } from "@/framework/request/precision-safe-json";
 import { findMockCatalog } from "@/shared/catalog/catalog-mock";
@@ -86,8 +86,10 @@ function show(
 }
 
 describe("API Resource table-style workspace", () => {
+  let consoleError: MockInstance<typeof console.error>;
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleError = vi.spyOn(console, "error");
     vi.stubEnv("VITE_USE_MOCK", "false");
     window.matchMedia = vi.fn().mockImplementation((media: string) => ({
       matches: false,
@@ -112,7 +114,19 @@ describe("API Resource table-style workspace", () => {
       paging: { next_cursor: null, expires_at_sec: null },
     });
   });
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    const focusWarnings = consoleError.mock.calls.filter((args) => {
+      const message: unknown = args[0];
+      return (
+        typeof message === "string" &&
+        message.includes("[antd: Input]") &&
+        message.includes("dynamic add or remove prefix / suffix")
+      );
+    });
+    consoleError.mockRestore();
+    expect(focusWarnings).toEqual([]);
+  });
 
   it("uses the shared basic/field panels, exposes exactly detail and preview, and keeps editing explicit", () => {
     const edit = vi.fn();
@@ -469,7 +483,7 @@ describe("API Resource table-style workspace", () => {
     expect(screen.queryByRole("button", { name: "common.retry" })).not.toBeInTheDocument();
   });
 
-  it("requests the next offset with an unknown total and can go back from an empty page", async () => {
+  it("stops at an empty page with an unknown total and can go back", async () => {
     get.mockResolvedValue(pagedWithoutTotal);
     const paging = { next_cursor: null, expires_at_sec: null };
     const first = {
@@ -498,23 +512,42 @@ describe("API Resource table-style workspace", () => {
       expect.any(AbortSignal),
     );
     expect(screen.getByText(/dataCatalog.apiResource.unknown/)).toBeVisible();
+    expect(next).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("dataCatalog.apiResource.currentPage 2");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "dataCatalog.apiResource.emptyPageContinuationUnknown",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }));
+    expect(screen.getByRole("status")).toHaveTextContent("dataCatalog.apiResource.endOfResults");
+    const previous = screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" });
+    expect(previous).toBeEnabled();
+    fireEvent.click(next);
+    fireEvent.click(previous);
     expect(await screen.findByText("first-page-demo")).toBeVisible();
     expect(screen.getByText("dataCatalog.apiResource.currentPage 1")).toBeVisible();
-    expect(screen.queryByText("dataCatalog.apiResource.emptyPageContinuationUnknown")).toBeNull();
+    expect(screen.queryByText("dataCatalog.apiResource.endOfResults")).not.toBeInTheDocument();
+    expect(next).toBeEnabled();
     expect(query).toHaveBeenNthCalledWith(
       3,
       pagedWithoutTotal.id,
       { paging: { mode: "single", offset: 0, limit: 2 } },
       expect.any(AbortSignal),
     );
+    expect(query).toHaveBeenCalledTimes(3);
   });
 
-  it("can continue from an empty first page and resets the position when the page size changes", async () => {
+  it("stops on an empty first page with an unknown total", async () => {
+    get.mockResolvedValue(pagedWithoutTotal);
+    query.mockResolvedValue({ entries: [] });
+    show(pagedWithoutTotal);
+    fireEvent.click(screen.getByRole("tab", { name: key("tabPreview") }));
+
+    expect(await screen.findByText("dataCatalog.apiResource.endOfResults")).toBeVisible();
+    expect(screen.getByText("dataCatalog.apiResource.currentPage 1")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" })).toBeDisabled();
+    expect(query).toHaveBeenCalledOnce();
+  });
+
+  it("clears the end state and reloads page one when the page size changes", async () => {
     const pageBased = {
       ...pagedWithoutTotal,
       api_definition: {
@@ -524,28 +557,25 @@ describe("API Resource table-style workspace", () => {
     };
     get.mockResolvedValue(pageBased);
     query
+      .mockResolvedValueOnce({ entries: [{ id: "first-page-row" }] })
       .mockResolvedValueOnce({ entries: [] })
-      .mockResolvedValueOnce({ entries: [{ id: "second-page-row" }] })
       .mockResolvedValueOnce({ entries: [{ id: "resized-first-page-row" }] });
     show(pageBased);
     fireEvent.click(screen.getByRole("tab", { name: key("tabPreview") }));
 
-    expect(await screen.findByText("dataCatalog.apiResource.currentPage 1")).toBeVisible();
-    expect(screen.getByText("dataCatalog.apiResource.emptyPageContinuationUnknown")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }),
-    ).toBeDisabled();
+    await screen.findByText("first-page-row");
     const next = screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" });
-    expect(next).toBeEnabled();
     fireEvent.click(next);
-    expect(await screen.findByText("second-page-row")).toBeVisible();
+    expect(await screen.findByText("dataCatalog.apiResource.endOfResults")).toBeVisible();
     expect(screen.getByText("dataCatalog.apiResource.currentPage 2")).toBeVisible();
-    expect(screen.queryByText("dataCatalog.apiResource.emptyPageContinuationUnknown")).toBeNull();
+    expect(next).toBeDisabled();
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "dataCatalog.apiResource.pageSize" }));
     fireEvent.click(await screen.findByText("10", { selector: ".ant-select-item-option-content" }));
     expect(await screen.findByText("resized-first-page-row")).toBeVisible();
     expect(screen.getByText("dataCatalog.apiResource.currentPage 1")).toBeVisible();
+    expect(screen.queryByText("dataCatalog.apiResource.endOfResults")).not.toBeInTheDocument();
+    expect(next).toBeEnabled();
     expect(
       screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }),
     ).toBeDisabled();
@@ -577,7 +607,7 @@ describe("API Resource table-style workspace", () => {
     expect(screen.getByText("first-page-demo")).toBeVisible();
     expect(screen.getByText(/dataCatalog.apiResource.unknown/)).toBeVisible();
     expect(screen.getByText("dataCatalog.apiResource.currentPage 1")).toBeVisible();
-    expect(screen.queryByText("dataCatalog.apiResource.emptyPageContinuationUnknown")).toBeNull();
+    expect(screen.queryByText("dataCatalog.apiResource.endOfResults")).not.toBeInTheDocument();
     const preview = within(screen.getByRole("tabpanel", { name: key("tabPreview") }));
     expect(preview.queryByText(/^common\.total /)).not.toBeInTheDocument();
     expect(
@@ -647,6 +677,7 @@ describe("API Resource table-style workspace", () => {
 
     expect(await preview.findByText(`common.total ${total}`)).toBeVisible();
     expect(preview.queryByText(/dataCatalog.apiResource.unknown/)).not.toBeInTheDocument();
+    expect(preview.queryByText("dataCatalog.apiResource.endOfResults")).not.toBeInTheDocument();
     expect(preview.queryByText("old-row")).not.toBeInTheDocument();
     expect(preview.queryByTitle("2")).not.toBeInTheDocument();
     expect(query).toHaveBeenNthCalledWith(

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
+
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -108,7 +110,7 @@ describe("WorkspaceExtensionNavItems", () => {
     renderItems();
 
     const entry = screen.getByTestId("workspace-nav-upgrade-graph_explorer");
-    expect(entry.textContent).toContain("knowledgeNetwork.workspaceGraphExplorer");
+    expect(entry.textContent).toContain(i18n.t("knowledgeNetwork.workspaceGraphExplorer"));
     fireEvent.click(entry);
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
@@ -136,8 +138,12 @@ describe("WorkspaceExtensionNavItems", () => {
     fireEvent.click(screen.getByTestId("workspace-nav-upgrade-graph_explorer"));
 
     const dialog = await screen.findByRole("dialog");
-    expect(dialog.textContent).toContain("common.entitlement.imageMissingTitle");
-    expect(dialog.textContent).not.toContain("common.entitlement.upgradeTo");
+    expect(dialog).toHaveAccessibleName(
+      i18n.t("common.entitlement.imageMissingTitle", {
+        edition: i18n.t("common.entitlement.editions.enterprise"),
+      }),
+    );
+    expect(within(dialog).queryByRole("link", { name: /^升级到/ })).toBeNull();
   });
 
   it("leaves out the entries the deployment hides, by entry key and by capability", () => {
@@ -208,7 +214,7 @@ describe("WorkspaceExtensionNavItems", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "knowledgeNetwork.graphExplorer.openAction" }),
+      screen.getByRole("button", { name: i18n.t("knowledgeNetwork.graphExplorer.openAction") }),
     );
 
     expect(open).not.toHaveBeenCalled();
@@ -350,6 +356,6 @@ describe("WorkspaceExtensionNavItems", () => {
     const item = screen.getByTestId("workspace-nav-graph-explorer");
     expect(screen.getByTestId("graph-explorer-icon")).toBeTruthy();
     expect(item.textContent).toBe("");
-    expect(item.getAttribute("title")).toBe("knowledgeNetwork.graphExplorer.openAction");
+    expect(item.getAttribute("title")).toBe(i18n.t("knowledgeNetwork.graphExplorer.openAction"));
   });
 });

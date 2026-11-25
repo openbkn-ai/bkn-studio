@@ -21,6 +21,7 @@ const translate = vi.hoisted(
 
 const mocks = vi.hoisted(() => ({
   getDetail: vi.fn(),
+  taskPanel: vi.fn(),
   locationState: {
     current: null as { knowledgeNetworkReturnTo?: string } | null,
   },
@@ -72,7 +73,10 @@ vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecuteMod
 }));
 
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel", () => ({
-  ActionTypeTaskManagementPanel: () => null,
+  ActionTypeTaskManagementPanel: (props: unknown) => {
+    mocks.taskPanel(props);
+    return null;
+  },
 }));
 
 vi.mock(
@@ -242,4 +246,19 @@ describe("ActionTypeExecutionScene review regressions", () => {
       { state: { knowledgeNetworkReturnTo: graphReturnTo } },
     );
   });
+});
+
+it("passes the execution deep link to the common execution record panel", async () => {
+  mocks.search.current = "tab=tasks&execution_id=exec-from-mcp";
+  mocks.getDetail.mockResolvedValue(createDetail({ type: "manual" }));
+  render(<ActionTypeExecutionScene />);
+  await waitFor(() =>
+    expect(mocks.taskPanel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialExecutionId: "exec-from-mcp",
+        networkId: "network-1",
+        actionTypeId: "action-1",
+      }),
+    ),
+  );
 });

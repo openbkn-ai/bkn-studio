@@ -682,7 +682,12 @@ export function EvalRelationCaseFields({
       {base && base.match !== "applicable" && (
         <Alert type="warning" message={base.match_reason || text("incomplete")} />
       )}
-      {busy && <Spin size="small" tip={text("preparing")} />}
+      {busy && (
+        <Space role="progressbar" aria-label={text("preparing")}>
+          <Spin aria-hidden="true" size="small" />
+          <span>{text("preparing")}</span>
+        </Space>
+      )}
       {error && (
         <Alert
           type="error"

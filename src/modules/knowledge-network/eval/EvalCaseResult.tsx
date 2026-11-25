@@ -36,6 +36,10 @@ import styles from "./EvalMultiRunPanel.module.css";
 
 const comparisonColumnWidths = [18, 23, 30, 29];
 
+function validCount(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
 type Assertion = M0CaseDetail["assertions"][number];
 const knownReasons: Record<string, string> = {
   "target execution did not complete": "executionIncomplete",
@@ -134,6 +138,12 @@ export function EvalCaseResult({
   const executionName = !resourceCheck ? detail.target_snapshot?.capability?.name : undefined;
   const obs = detail.observation;
   const query = obs?.query_summary;
+  const checkedRows = validCount(query?.checked_rows);
+  const violations = validCount(query?.violations);
+  const totalCount = validCount(query?.total_count);
+  const aggregateChecks = validCount(query?.aggregate_checks);
+  // Frozen aggregate results follow the saved criterion order and have no row IDs.
+  const aggregateRows = query?.aggregate_results?.map((row, index) => ({ ...row, key: index }));
   const resourceInvocation = detail.target_snapshot?.runner === "resource_query";
   const availabilityOnly =
     resourceInvocation &&
@@ -151,7 +161,7 @@ export function EvalCaseResult({
   const verified = obs?.source_verified !== false;
   const emptyData =
     obs?.failure_class === "NO_DATA" ||
-    (query?.checked_rows === 0 && obs?.failure_class !== "MASK_NOT_APPLICABLE");
+    (checkedRows === 0 && obs?.failure_class !== "MASK_NOT_APPLICABLE");
   const successful = detail.quality_outcome === "pass";
   const terminal = ["completed", "failed", "cancelled"].includes(detail.execution_status);
   const failureClass =
@@ -232,7 +242,9 @@ export function EvalCaseResult({
     !verified || emptyData || !actualOutput
       ? text("noTrustedOutput")
       : query
-        ? t("knowledgeNetwork.eval.resultUi.violationCount", { count: query.violations })
+        ? violations === undefined
+          ? "—"
+          : t("knowledgeNetwork.eval.resultUi.violationCount", { count: violations })
         : typeof actualOutput.answer === "string"
           ? actualOutput.answer
           : typeof actualOutput.leadtime_days === "number"
@@ -365,12 +377,7 @@ export function EvalCaseResult({
     if (!verified) resultSummary = text("outputUnverified");
     else if (query) {
       if (obs?.evidence_status !== "complete") resultSummary = text("evidenceMissing");
-      else if (
-        !Number.isSafeInteger(query.checked_rows) ||
-        query.checked_rows < 1 ||
-        !Number.isSafeInteger(query.violations) ||
-        query.violations < 0
-      )
+      else if (checkedRows === undefined || violations === undefined)
         resultSummary = summaryText("statisticsUnavailable");
       else {
         const name =
@@ -379,14 +386,13 @@ export function EvalCaseResult({
             ? detail.target_snapshot?.capability?.name
             : undefined);
         const target = name ? summaryText("target", { name }) : "";
-        const validTotal =
-          Number.isSafeInteger(query.total_count) && query.total_count! >= query.checked_rows;
+        const validTotal = totalCount !== undefined && totalCount >= checkedRows;
         const scope =
           query.scope.mode === "sample" ? (validTotal ? "sampleFrom" : "sample") : "all";
         resultSummary = summaryText(scope, {
           target,
-          count: query.checked_rows,
-          total: query.total_count,
+          count: checkedRows,
+          total: totalCount,
         });
         const rule = keyRule
           ? text(keyRule)
@@ -406,11 +412,10 @@ export function EvalCaseResult({
             fields,
           });
         resultSummary +=
-          query.violations === 0
+          violations === 0
             ? summaryText("noViolations")
-            : summaryText("violations", { count: query.violations });
-        if (!successful && query.violations === 0)
-          resultSummary += summaryText("otherCriteriaFailed");
+            : summaryText("violations", { count: violations });
+        if (!successful && violations === 0) resultSummary += summaryText("otherCriteriaFailed");
       }
     } else if (obs?.evidence_status === "complete" && assertions.length) {
       resultSummary = summaryText("assertions", {
@@ -432,14 +437,22 @@ export function EvalCaseResult({
     }
   }
 
-  if (query?.aggregate_checks && terminal && !failureClass) {
-    resultSummary = resultUiText("aggregateSummary", {
-      rows: query.checked_rows,
-      checks: query.aggregate_checks,
-      outcome: query.violations
-        ? resultUiText("aggregateFailures", { count: query.violations })
-        : resultUiText("aggregatePass"),
-    });
+  if (
+    query?.aggregate_checks != null &&
+    query.aggregate_checks !== 0 &&
+    terminal &&
+    !failureClass
+  ) {
+    resultSummary =
+      checkedRows === undefined || violations === undefined || aggregateChecks === undefined
+        ? summaryText("statisticsUnavailable")
+        : resultUiText("aggregateSummary", {
+            rows: checkedRows,
+            checks: aggregateChecks,
+            outcome: violations
+              ? resultUiText("aggregateFailures", { count: violations })
+              : resultUiText("aggregatePass"),
+          });
   }
   return (
     <EvalCaseDetailTabs
@@ -533,22 +546,24 @@ export function EvalCaseResult({
               <Space wrap style={{ margin: "12px 0" }}>
                 {query.read_rows !== undefined && (
                   <Typography.Text>
-                    {resultUiText("readRows", { count: query.read_rows })}
+                    {resultUiText("readRows", { count: validCount(query.read_rows) ?? "—" })}
                   </Typography.Text>
                 )}
                 <Typography.Text>
-                  {resultUiText("checkedRows", { count: query.checked_rows })}
+                  {resultUiText("checkedRows", { count: checkedRows ?? "—" })}
                 </Typography.Text>
                 {query.reference_rows !== undefined && (
                   <Typography.Text>
-                    {resultUiText("referenceRows", { count: query.reference_rows })}
+                    {resultUiText("referenceRows", {
+                      count: validCount(query.reference_rows) ?? "—",
+                    })}
                   </Typography.Text>
                 )}
               </Space>
-              {!!query.aggregate_results?.length && (
+              {!!aggregateRows?.length && (
                 <Table
-                  rowKey={(_, index) => String(index)}
-                  dataSource={query.aggregate_results}
+                  rowKey="key"
+                  dataSource={aggregateRows}
                   pagination={false}
                   columns={[
                     {
@@ -652,7 +667,8 @@ export function EvalCaseResult({
           )}
           {detail.quality_outcome === "fail" &&
             query &&
-            query.violations > 0 &&
+            violations !== undefined &&
+            violations > 0 &&
             !query.violation_examples?.length && (
               <Alert
                 className={styles.violationNotice}
@@ -747,15 +763,15 @@ export function EvalCaseResult({
                     {text(query.scope.mode === "sample" ? "sampleScope" : "allScope")}
                   </Descriptions.Item>
                   <Descriptions.Item label={text("checked")}>
-                    {query.checked_rows}
+                    {checkedRows ?? "—"}
                   </Descriptions.Item>
                   {query.total_count != null && (
                     <Descriptions.Item label={text("visibleTotal")}>
-                      {query.total_count}
+                      {totalCount ?? "—"}
                     </Descriptions.Item>
                   )}
                   <Descriptions.Item label={text("violations")}>
-                    {verified && !emptyData ? query.violations : "—"}
+                    {verified && !emptyData ? (violations ?? "—") : "—"}
                   </Descriptions.Item>
                 </>
               )}

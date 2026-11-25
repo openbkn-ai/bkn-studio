@@ -50,6 +50,7 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
   const stringInput =
     ["string", "text"].includes(type ?? "") || (type === "large_integer" && queryPath !== "source");
   const acceptsEmptyString = stringInput && !filterRequiresNonEmptyString(rule.operation);
+  // Keep the suffix wrapper mounted so changing field hints preserves the input and its focus.
   const input = (value: string | undefined, label: string, update: (value: string) => void) =>
     type === "boolean" ? (
       <Select
@@ -89,7 +90,9 @@ export function FilterRuleValueEditor({ rule, field, fields, queryPath, onChange
                 {'""'}
               </button>
             </Tooltip>
-          ) : undefined
+          ) : (
+            <span />
+          )
         }
       />
     );

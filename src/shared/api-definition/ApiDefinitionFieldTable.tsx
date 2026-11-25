@@ -8,7 +8,15 @@
 import { DownOutlined, RightOutlined } from "@ant-design/icons";
 import { Fragment, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { isDefinitionObject, objectValue, valueType } from "./model";
+import {
+  isDefinitionObject,
+  objectValue,
+  schemaArrayKeywords,
+  schemaMapKeywords,
+  schemaSingleKeywords,
+  valueType,
+  type DefinitionObject,
+} from "./model";
 import styles from "./ApiDefinitionFieldTable.module.css";
 
 type Mode = "body" | "schema";
@@ -46,6 +54,54 @@ const compactKeywords = new Set([
 const structuralKeys = new Set(["type", "properties", "required", "description", "items"]);
 const compositionKeywords = new Set(["oneOf", "anyOf", "allOf"]);
 
+function schemaAllowsType(node: DefinitionObject, type: "object" | "array"): boolean {
+  return (
+    node.type === undefined ||
+    node.type === type ||
+    (Array.isArray(node.type) && node.type.includes(type))
+  );
+}
+
+function visibleSchemaEntries(node: DefinitionObject) {
+  return Object.entries(node).filter(([key, value]) => {
+    if (key === "items") return schemaAllowsType(node, "array");
+    if (key === "properties") {
+      return (
+        schemaAllowsType(node, "object") &&
+        (!isDefinitionObject(value) || Object.keys(value).length > 0)
+      );
+    }
+    if (key === "required") {
+      return schemaAllowsType(node, "object") && (!Array.isArray(value) || value.length > 0);
+    }
+    return true;
+  });
+}
+
+function schemaValueForDisplay(value: unknown): unknown {
+  if (!isDefinitionObject(value)) return value;
+
+  return Object.fromEntries(
+    visibleSchemaEntries(value).map(([key, entry]) => [
+      key,
+      schemaKeywordValueForDisplay(key, entry),
+    ]),
+  );
+}
+
+function schemaKeywordValueForDisplay(key: string, value: unknown): unknown {
+  // Historical definitions can use items arrays for tuples.
+  if (Array.isArray(value) && (key === "items" || schemaArrayKeywords.has(key))) {
+    return value.map(schemaValueForDisplay);
+  }
+  if (schemaMapKeywords.has(key) && isDefinitionObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([name, schema]) => [name, schemaValueForDisplay(schema)]),
+    );
+  }
+  return schemaSingleKeywords.has(key) ? schemaValueForDisplay(value) : value;
+}
+
 function fieldType(value: unknown, literal = false): string {
   if (literal) return value === undefined ? "—" : valueType(value);
   if (typeof value === "boolean") return value ? "any" : "never";
@@ -80,8 +136,9 @@ function buildField(
   literal = false,
 ): Field {
   const node = literal ? {} : objectValue(value);
-  const properties = (schema: Record<string, unknown>, parent: string, keys: (string | number)[]) =>
-    Object.entries(objectValue(schema.properties)).map(([field, definition]) =>
+  const properties = (schema: DefinitionObject, parent: string, keys: (string | number)[]) => {
+    if (mode === "schema" && !schemaAllowsType(schema, "object")) return [];
+    return Object.entries(objectValue(schema.properties)).map(([field, definition]) =>
       buildField(
         field,
         definition,
@@ -91,13 +148,18 @@ function buildField(
         Array.isArray(schema.required) && schema.required.includes(field),
       ),
     );
+  };
   const children = properties(node, path, parts);
-  if (mode === "schema" && Object.hasOwn(node, "items")) {
+  if (mode === "schema" && schemaAllowsType(node, "array") && Object.hasOwn(node, "items")) {
     const item = objectValue(node.items);
     const itemPath = `${path}[]`;
-    if (Object.keys(objectValue(item.properties)).length) {
-      children.push(...properties(item, itemPath, [...parts, "items"]));
-    } else if (isDefinitionObject(item.items) || Array.isArray(item.items)) {
+    const itemFields = properties(item, itemPath, [...parts, "items"]);
+    if (itemFields.length) {
+      children.push(...itemFields);
+    } else if (
+      schemaAllowsType(item, "array") &&
+      (isDefinitionObject(item.items) || Array.isArray(item.items))
+    ) {
       children.push(buildField("[]", node.items, mode, [...parts, "items"], itemPath));
     } else if (Array.isArray(node.items)) {
       children.push(
@@ -140,20 +202,24 @@ function compactConstraint(value: unknown): boolean {
   );
 }
 
+function hasOtherRequiredFields(node: DefinitionObject, required: unknown): boolean {
+  const properties = objectValue(node.properties);
+  return (
+    !Array.isArray(required) ||
+    required.some((name: unknown) => typeof name !== "string" || !Object.hasOwn(properties, name))
+  );
+}
+
 /** Keep uncommon keywords available while the main table reads as business fields. */
 function extraConfiguration(field: Field, mode: Mode): Record<string, unknown> {
   if (field.literal) return {};
   const node = objectValue(field.value);
-  const entries = Object.entries(node).filter(([key, value]) => {
+  const nodeEntries = mode === "schema" ? visibleSchemaEntries(node) : Object.entries(node);
+  const entries = nodeEntries.filter(([key, value]) => {
     if (key === "items") return mode === "body" || !isDefinitionObject(value);
     if (key === "properties") return !isDefinitionObject(value) || Object.keys(value).length === 0;
     if (key === "required") {
-      const properties = objectValue(node.properties);
-      return (
-        !Array.isArray(value) ||
-        value.length === 0 ||
-        value.some((name: unknown) => typeof name !== "string" || !Object.hasOwn(properties, name))
-      );
+      return (Array.isArray(value) && !value.length) || hasOtherRequiredFields(node, value);
     }
     if (structuralKeys.has(key)) return false;
     if (mode === "body" && key === "serialize") return false;
@@ -164,24 +230,14 @@ function extraConfiguration(field: Field, mode: Mode): Record<string, unknown> {
     }
     return mode === "body" || !compactKeywords.has(key) || !compactConstraint(value);
   });
-  if (mode === "schema" && isDefinitionObject(node.items)) {
+  if (mode === "schema" && schemaAllowsType(node, "array") && isDefinitionObject(node.items)) {
     const item = node.items;
-    const declaresArray =
-      node.type === "array" || (Array.isArray(node.type) && node.type.includes("array"));
-    const itemProperties = objectValue(item.properties);
     // Keep item constraints and annotations alongside the flattened array fields.
     const itemDetails = Object.fromEntries(
-      Object.entries(item).filter(([key, value]) => {
-        if (key === "type") return !declaresArray;
-        if (key === "properties") return !isDefinitionObject(value) || !Object.keys(value).length;
-        if (key === "required")
-          return (
-            !Array.isArray(value) ||
-            !value.length ||
-            value.some(
-              (name: unknown) => typeof name !== "string" || !Object.hasOwn(itemProperties, name),
-            )
-          );
+      visibleSchemaEntries(item).filter(([key, value]) => {
+        if (key === "type") return node.type === undefined;
+        if (key === "properties") return !isDefinitionObject(value);
+        if (key === "required") return hasOtherRequiredFields(item, value);
         return true;
       }),
     );
@@ -204,8 +260,10 @@ export function ApiDefinitionFieldTable({
   const { t } = useTranslation();
   const root = buildField(undefined, value, mode, [], "");
   const schema = objectValue(value);
-  const hasProperties = Object.keys(objectValue(schema.properties)).length > 0;
-  const showChildren = hasProperties || (mode === "schema" && root.children.length > 0);
+  const showChildren =
+    mode === "schema"
+      ? root.children.length > 0
+      : Object.keys(objectValue(schema.properties)).length > 0;
   const compositionRoot =
     mode === "schema" &&
     !showChildren &&
@@ -521,7 +579,7 @@ function Configuration({
                   ))}
                 </div>
               ) : (
-                renderValue(value)
+                renderValue(mode === "schema" ? schemaKeywordValueForDisplay(key, value) : value)
               )}
             </dd>
           </div>
