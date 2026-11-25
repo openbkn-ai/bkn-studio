@@ -85,6 +85,40 @@ function show(
   );
 }
 
+async function fillOrderPreviewFilter(panel: HTMLElement, customerOperator: "==" | "!=" = "==") {
+  const preview = within(panel);
+  for (const [field, value] of [
+    ["订单编号", "SO-2026-002"],
+    ["客户", "示例客户 B"],
+  ]) {
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.filter.addRule" }));
+    fireEvent.mouseDown(
+      preview.getAllByRole("combobox", { name: "dataCatalog.filter.field" }).at(-1)!,
+    );
+    fireEvent.click(
+      await screen.findByText(field, {
+        selector:
+          ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content span",
+      }),
+    );
+    fireEvent.change(
+      preview.getAllByRole("textbox", { name: "dataCatalog.filter.value" }).at(-1)!,
+      { target: { value } },
+    );
+  }
+  if (customerOperator !== "==") {
+    fireEvent.mouseDown(
+      preview.getAllByRole("combobox", { name: "dataCatalog.filter.operator" }).at(-1)!,
+    );
+    fireEvent.click(
+      await screen.findByText(customerOperator, {
+        selector:
+          ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+      }),
+    );
+  }
+}
+
 describe("API Resource table-style workspace", () => {
   let consoleError: MockInstance<typeof console.error>;
   beforeEach(() => {
@@ -289,10 +323,11 @@ describe("API Resource table-style workspace", () => {
     expect(within(panel).getByRole("button", { name: "dataCatalog.preview.filter" })).toBeVisible();
   });
 
-  it("applies a single AND group to the preview from page one, then clears it", async () => {
+  it("applies a bound AND filter from page one and clears it on request", async () => {
     show();
     fireEvent.click(screen.getByRole("tab", { name: key("tabPreview") }));
-    const preview = within(await screen.findByRole("tabpanel", { name: key("tabPreview") }));
+    const panel = await screen.findByRole("tabpanel", { name: key("tabPreview") });
+    const preview = within(panel);
     await preview.findByText("SO-2026-001");
     fireEvent.click(preview.getByTitle("2"));
     await waitFor(() => expect(preview.getByTitle("2")).toHaveClass("ant-pagination-item-active"));
@@ -302,34 +337,17 @@ describe("API Resource table-style workspace", () => {
     expect(preview.queryByRole("button", { name: "dataCatalog.filter.addGroup" })).toBeNull();
     expect(preview.queryByText("dataCatalog.apiResource.advancedQuery")).toBeNull();
 
-    for (const [field, value] of [
-      ["订单编号", "SO-2026-002"],
-      ["客户", "示例客户 B"],
-    ]) {
-      fireEvent.click(preview.getByRole("button", { name: "dataCatalog.filter.addRule" }));
-      fireEvent.mouseDown(
-        preview.getAllByRole("combobox", { name: "dataCatalog.filter.field" }).at(-1)!,
-      );
-      fireEvent.click(
-        await screen.findByText(field, {
-          selector:
-            ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content span",
-        }),
-      );
-      fireEvent.change(
-        preview.getAllByRole("textbox", { name: "dataCatalog.filter.value" }).at(-1)!,
-        {
-          target: { value },
-        },
-      );
-    }
+    await fillOrderPreviewFilter(panel);
     expect(query).toHaveBeenCalledTimes(2);
-    query
-      .mockRejectedValueOnce(new Error("Filter request failed"))
-      .mockResolvedValueOnce({ entries: [{ order_number: "SO-2026-002" }], total_count: 1 });
+    query.mockResolvedValueOnce({
+      entries: [{ order_number: "SO-2026-002", customer: "示例客户 B" }],
+      total_count: 1,
+    });
     fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
-    expect(await preview.findByText("Filter request failed")).toBeVisible();
-    expect(preview.queryByText("SO-2026-001")).toBeNull();
+    expect(await preview.findByText("SO-2026-002")).toBeVisible();
+    expect(preview.queryByText("SO-2026-001")).not.toBeInTheDocument();
+    expect(preview.queryByRole("alert")).not.toBeInTheDocument();
+    expect(query).toHaveBeenCalledTimes(3);
     expect(query).toHaveBeenNthCalledWith(
       3,
       resource.id,
@@ -346,17 +364,85 @@ describe("API Resource table-style workspace", () => {
       },
       expect.any(AbortSignal),
     );
-    fireEvent.click(preview.getByRole("button", { name: "common.retry" }));
-    expect(await preview.findByText("SO-2026-002")).toBeVisible();
-    expect(query.mock.calls[3]?.[1]).toEqual(query.mock.calls[2]?.[1]);
     fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
     expect(await preview.findByText("SO-2026-001")).toBeVisible();
     expect(query).toHaveBeenNthCalledWith(
-      5,
+      4,
       resource.id,
       { paging: { mode: "single", offset: 0, limit: 2 }, need_total: true },
       expect.any(AbortSignal),
     );
+    expect(ordinaryPreview).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      scenario: "an incomplete filter binding",
+      operator: "==" as const,
+      reason: "HTTP API request does not consume the complete filter condition",
+    },
+    {
+      scenario: "an unsupported filter",
+      operator: "!=" as const,
+      reason: "direct API binding only supports equality and AND",
+    },
+    {
+      scenario: "a login request failure",
+      operator: "==" as const,
+      reason: "HTTP API login request construction failed",
+    },
+  ])("shows the reason for $scenario and preserves the filter on retry", async (testCase) => {
+    const { operator, reason } = testCase;
+    show();
+    fireEvent.click(screen.getByRole("tab", { name: key("tabPreview") }));
+    const panel = await screen.findByRole("tabpanel", { name: key("tabPreview") });
+    const preview = within(panel);
+    await preview.findByText("SO-2026-001");
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.filter" }));
+    await fillOrderPreviewFilter(panel, operator);
+
+    const failure = {
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          error_code: "VegaBackend.Query.InvalidParameter",
+          description: "Invalid query parameters.",
+          error_details: reason,
+          metadata: { stage: "request", upstream_status: 0 },
+        },
+      },
+    };
+    query.mockRejectedValueOnce(failure).mockRejectedValueOnce(failure);
+
+    fireEvent.click(preview.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+    const alert = await preview.findByRole("alert");
+    expect(within(alert).getByText("Invalid query parameters.")).toBeVisible();
+    expect(within(alert).getByText(reason)).toBeVisible();
+    expect(within(alert).getByText("dataCatalog.preview.apiFilterRequestHint")).toBeVisible();
+    expect(preview.queryByText("SO-2026-001")).not.toBeInTheDocument();
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      resource.id,
+      {
+        filter_condition: {
+          operation: "and",
+          sub_conditions: [
+            { field: "order_number", operation: "==", value_from: "const", value: "SO-2026-002" },
+            { field: "customer", operation: operator, value_from: "const", value: "示例客户 B" },
+          ],
+        },
+        paging: { mode: "single", offset: 0, limit: 2 },
+        need_total: true,
+      },
+      expect.any(AbortSignal),
+    );
+    fireEvent.click(within(alert).getByRole("button", { name: "common.retry" }));
+    expect(await preview.findByText(reason)).toBeVisible();
+    expect(preview.queryByText("SO-2026-001")).not.toBeInTheDocument();
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls[2]?.[1]).toEqual(query.mock.calls[1]?.[1]);
     expect(ordinaryPreview).not.toHaveBeenCalled();
   });
 
