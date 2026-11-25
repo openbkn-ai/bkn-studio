@@ -50,7 +50,7 @@ type RelationTypeMappingEditorProps = {
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   /** Reads properties and fields from elsewhere than the network, as a project's draft does. */
   readers?: RelationTypeMappingReaders;
-  /** The relation properties the relation stores, which Studio does not edit yet. */
+  /** The saved relation properties, displayed until this form edits them. */
   relationProperties?: StoredRelationProperty[];
   /** What the relation means, placed between its ends and its mapping rules. */
   semantics?: ReactNode;
@@ -76,7 +76,8 @@ export function RelationTypeMappingEditor({
   value,
   onChange,
 }: RelationTypeMappingEditorProps) {
-  const guarded = confirmRelationPropertyChange && relationProperties.length > 0;
+  const effectiveProperties = value.mappingRules.relationProperties ?? relationProperties;
+  const guarded = confirmRelationPropertyChange && effectiveProperties.length > 0;
 
   const handleMappingModeChange = (mode: "direct" | "resource") => {
     if (mode === value.mappingMode) {
@@ -89,7 +90,7 @@ export function RelationTypeMappingEditor({
         guarded &&
         mode === "direct" &&
         !(await confirmRelationPropertyChange({
-          count: relationProperties.length,
+          count: effectiveProperties.length,
           kind: "toDirect",
         }))
       ) {
@@ -117,14 +118,13 @@ export function RelationTypeMappingEditor({
             : listObjectTypeResourceFields(networkId, resource.id)
         ).catch(() => undefined);
         const missing = fields
-          ? relationProperties.filter(
+          ? effectiveProperties.filter(
               (property) =>
-                property.mappedField &&
-                !fields.some((field) => field.name === property.mappedField),
+                !fields.some((field) => field.name === (property.mappedField ?? property.name)),
             )
           : [];
         return confirmRelationPropertyChange({
-          count: relationProperties.length,
+          count: effectiveProperties.length,
           kind: "resource",
           missing,
           resourceName: resource.name || resource.id,

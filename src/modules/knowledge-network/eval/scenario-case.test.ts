@@ -65,7 +65,7 @@ it("does not leak stale resource bindings and preserves zero and false as expect
     "kn",
   );
   expect(definition.expected_spec).toEqual({ criteria: { value_0: 0, value_1: false } });
-  expect(definition.diagnostic_spec).toEqual({ case_type: "scenario", form_version: 2, note: "" });
+  expect(definition.diagnostic_spec).toEqual({ case_type: "scenario", form_version: 1, note: "" });
   expect(definition.execution_spec.target).toBeUndefined();
   expect(definition.expected_source.evidence_refs).toEqual([]);
 });

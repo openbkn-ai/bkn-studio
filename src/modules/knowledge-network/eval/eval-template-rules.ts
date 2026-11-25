@@ -16,3 +16,8 @@ export const resourceKindGroups: { key: "conceptGroup" | "modelGroup"; kinds: Ev
     { key: "conceptGroup", kinds: ["objectType", "relationType"] },
     { key: "modelGroup", kinds: ["action", "metric", "function", "api", "mcp", "skill"] },
   ];
+
+/** Temporarily deferred from rule selection; stored definitions remain compatible. */
+export function isVisibleTemplateRule(rule: EvalTemplateRule): boolean {
+  return rule.id !== "relation-property-values";
+}

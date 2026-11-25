@@ -74,7 +74,7 @@ vi.mock("./EvalResourceCaseFields", async () => {
               category: "fact",
               risk_level: "medium",
               execution_spec: { runner: "direct_capability" },
-              diagnostic_spec: { form_version: 2 },
+              diagnostic_spec: { form_version: 1 },
               input_spec: { arguments: { count: 0 } },
               assertions: [],
               expected_spec: { criteria: {} },

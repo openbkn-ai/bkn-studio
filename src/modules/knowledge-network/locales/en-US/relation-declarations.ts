@@ -82,7 +82,7 @@ export const relationDeclarationsPart = {
     relationProperties_one: "{{count}} relation property",
     relationProperties_other: "{{count}} relation properties",
     relationPropertiesHint:
-      "Relation properties cannot be edited in Studio yet. Saving the relation type keeps them.",
+      "Edit bridge properties and their constraints in relation configuration.",
     requiredBoth: "Both ends",
     requiredEndOption: {
       source: "{{name}} (source)",

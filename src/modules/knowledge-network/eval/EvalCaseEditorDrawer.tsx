@@ -589,7 +589,16 @@ const fromForm = (
           ]
         : imported
           ? (draft?.definition.assertions ?? [])
-          : [{ id: "business-answer", type: "manual_review", required: true, severity: "error" }],
+          : [
+              {
+                id: "business-answer",
+                type: "manual_review",
+                source: "normalized_output",
+                path: "$",
+                required: true,
+                severity: "error",
+              },
+            ],
     expected_spec:
       compiled?.expected_spec ??
       (executionMode === "direct" || resourceExecution || imported
@@ -617,7 +626,7 @@ const fromForm = (
     diagnostic_spec: {
       ...draft?.definition.diagnostic_spec,
       case_type: values.caseType,
-      ...(values.criteria ? { form_version: 2 } : {}),
+      form_version: 1,
       ...(scopeType === "business_scenario" && !imported
         ? { resource_id: undefined, resource_kind: undefined, target_id: undefined }
         : {}),

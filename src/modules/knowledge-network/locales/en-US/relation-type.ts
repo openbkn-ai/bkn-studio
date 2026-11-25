@@ -6,6 +6,36 @@
  */
 
 export const relationtypePart = {
+  relationProperties: {
+    clearRange: "Clear range constraint",
+    rangeIncompatible:
+      "The selected type does not support this range. Clear the range constraint before saving.",
+    title: "Relation properties",
+    hint: "Endpoint mappings connect objects. Relation properties hold values and constraints belonging to each association.",
+    add: "Add relation property",
+    edit: "Edit relation property",
+    view: "View relation property",
+    remove: "Delete relation property",
+    removeConfirm: "Delete this relation property and its constraints?",
+    name: "Property name",
+    displayName: "Display name",
+    type: "Data type",
+    mappedField: "Bridge field",
+    required: "Required",
+    range: "Value range",
+    constraints: "Saved constraints",
+    empty: "No relation properties declared",
+    nameRequired: "Enter a property name",
+    typeRequired: "Select a data type",
+    fieldRequired: "Select a bridge field",
+    duplicateName: "Relation property names must be unique",
+    invalidRange: "Enter bounds matching the data type, with minimum no greater than maximum",
+    fieldsUnavailable: "Unable to read bridge fields. Check resource permissions and retry.",
+    chooseResource: "Select a bridge resource first",
+    unbounded: "Unbounded",
+    requiredYes: "Yes",
+    requiredNo: "No",
+  },
   relationTypeAddPropertyMapping: "Add join field",
   relationTypeBasicInfo: "Basic information",
   relationTypeBatchDeleteDescription:

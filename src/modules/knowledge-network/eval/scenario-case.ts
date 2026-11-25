@@ -65,7 +65,7 @@ export function buildScenarioCase(
     },
     diagnostic_spec: {
       case_type: "scenario",
-      form_version: 2,
+      form_version: 1,
       note: values.diagnosticNote?.trim() ?? "",
     },
   };

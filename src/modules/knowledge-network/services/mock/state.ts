@@ -36,6 +36,7 @@ import type {
   ObjectTypeLogicProperty,
   ObjectTypeSmallModel,
   RelationTypeResourceRowMapping,
+  RelationTypeResourceMappingStore,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
@@ -770,14 +771,7 @@ export const mockRelationTypeMappings: Record<
 
 export const mockRelationTypeResourceMappings: Record<
   string,
-  Record<
-    string,
-    {
-      backingDataSourceId: string;
-      backingDataSourceName?: string;
-      resourceMappings: RelationTypeResourceRowMapping[];
-    }
-  >
+  Record<string, RelationTypeResourceMappingStore>
 > = {
   "kn-domain-supply": {
     "rt-supply-service": {
@@ -804,16 +798,15 @@ export function cloneRelationTypeResourceMappings(
 export function persistMockRelationTypeResourceMappings(
   networkId: string,
   relationTypeId: string,
-  store: {
-    backingDataSourceId: string;
-    backingDataSourceName?: string;
-    resourceMappings: RelationTypeResourceRowMapping[];
-  },
+  store: RelationTypeResourceMappingStore,
 ) {
   if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
   mockRelationTypeResourceMappings[networkId] = {
     ...(mockRelationTypeResourceMappings[networkId] ?? {}),
     [relationTypeId]: {
+      ...(store.relationProperties !== undefined
+        ? { relationProperties: structuredClone(store.relationProperties) }
+        : {}),
       backingDataSourceId: store.backingDataSourceId,
       backingDataSourceName: store.backingDataSourceName,
       resourceMappings: cloneRelationTypeResourceMappings(store.resourceMappings),
