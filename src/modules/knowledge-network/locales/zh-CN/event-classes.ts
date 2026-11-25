@@ -33,14 +33,19 @@ export const eventClassesPart = {
       metricBasisHint:
         "这个事件类按指标异常识别，这里不能编辑。不设置识别规则时保留它；在这里设置识别规则会替换它。",
       sectionBasics: "基本信息",
-      sectionRule: "识别规则",
-      sectionHandling: "处置",
       when: "当",
       whenHint: "命中规则的每个对象记一条事件",
+      cypherReadOnly:
+        "这条规则是直接写的 Cypher 查询，这里只读显示，保存时原样保留。要修改，请在数据查询里把它发布成函数，再改用「使用函数」。",
+      newFunction: "新建函数",
+      newFunctionHint: "在新标签页打开数据查询：写好 Cypher 并发布成函数后，回到这里刷新即可选择。",
+      editFunction: "编辑函数",
+      reloadFunctions: "刷新函数列表",
+      saveFailed: "保存失败：{{message}}",
       then: "则",
       basisTabs: {
         condition: "条件",
-        cypher: "Cypher",
+        cypher: "Cypher（只读）",
         function: "使用函数（高级）",
       },
       ruleRequired: "请设置识别规则",
@@ -55,18 +60,6 @@ export const eventClassesPart = {
       offsetTimePlaceholder: "偏移，如 -PT48H",
       offsetDatePlaceholder: "偏移，如 -P1D",
       offsetInvalid: "偏移须是 ISO 8601 时长，如 -PT48H 或 -P1D；检查当天日期只能按整天偏移",
-      cypherQuery: "Cypher 查询",
-      cypherQueryPlaceholder:
-        "MATCH (o:purchase_order) WHERE o.due_time < $check_time RETURN o.id AS key, o.name AS name",
-      cypherHint:
-        "结果的每一行是一个命中的对象：key 列为关于的对象类的主键，可带 name 列。$check_time、$check_date 由平台给出检查时间和检查当天日期。",
-      cypherQueryTooLong: "Cypher 查询不能超过 16 KB",
-      cypherParameterName: "参数名",
-      cypherParameterAdd: "添加参数",
-      cypherParameterNameInvalid:
-        "参数名“{{name}}”须以字母或 _ 开头，只含字母、数字和 _，最长 64 个字符，且不能是 check_time 或 check_date",
-      cypherParameterDuplicate: "参数名“{{name}}”重复",
-      cypherParameterTooMany: "参数最多 {{max}} 个",
       parameterValue: "值",
       trial: "试运行",
       trialHint: "按当前时刻以你的身份运行一次规则，只看会命中哪些对象，不记事件。",
@@ -102,12 +95,12 @@ export const eventClassesPart = {
       severityPlaceholder: "不设置",
       mergeHours: "合并窗口",
       mergeHoursHint: "同一对象在窗口内再次登记时记为重复，指向第一条事件；0 表示不合并。",
-      ruleTool: "规则工具",
+      ruleTool: "函数",
       ruleToolHint:
         "本网络的 Cypher 函数，结果形状为表：每行一个当前命中的对象，key 列为对象主键，可带 name 列；所在工具箱须已发布。",
-      ruleToolPlaceholder: "选择规则工具",
-      ruleToolRequired: "请选择规则工具",
-      ruleToolEmpty: "本网络还没有可用作规则的 Cypher 函数",
+      ruleToolPlaceholder: "选择本网络的 Cypher 函数",
+      ruleToolRequired: "请选择函数",
+      ruleToolEmpty: "本网络还没有可用作规则的 Cypher 函数，先新建一个",
       ruleToolUnavailableGroup: "已保存（当前不可用）",
       parameters: "参数",
       parameterMode: "取值方式",
@@ -165,7 +158,8 @@ export const eventClassesPart = {
         "这是事件类：属性、数据来源和到关于对象类的关系由平台维护，不能在这里修改；识别行动类按时找出事件。",
       noRuleTool: "还没有识别行动类，平台不会检查这个事件类。编辑并设置识别规则后由平台按时检查。",
       noAction: "这个事件类没有可检查的识别行动类。",
-      noSchedule: "识别行动类还没有平台调度。请重新保存后再试。",
+      noSchedule:
+        "识别行动类还没有平台调度：有版本的网络要发布版本后才会建立；没有版本的网络请重新保存后再试。",
       checkStarted: "检查已开始，结束后结果显示在“最近一次检查”。",
       basis: "选取方式",
       bases: {

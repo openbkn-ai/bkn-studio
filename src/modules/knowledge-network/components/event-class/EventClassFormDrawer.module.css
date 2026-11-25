@@ -15,10 +15,6 @@
   width: 100%;
 }
 
-.form {
-  margin-top: 12px;
-}
-
 .parameters {
   display: flex;
   flex-direction: column;
@@ -71,44 +67,34 @@
   width: 240px;
 }
 
-.sectionTitle {
-  margin: 8px 0 12px !important;
-}
-
-.cypher {
-  font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
-}
-
-.cypherParameter {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cypherParameterName {
-  width: 160px;
-}
-
-.cypherParameterValue {
-  flex: 1;
-  min-width: 160px;
-}
-
 .trialStale {
   opacity: 0.6;
 }
 
-.clause {
-  margin-bottom: 24px;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.clauseHead {
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px 20px 4px;
+}
+
+.cardHead {
   align-items: center;
   display: flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .clauseKeyword {
@@ -125,16 +111,39 @@
   padding: 0 8px;
 }
 
-.clauseBody {
-  border-left: 2px solid var(--color-primary-border);
-  margin-left: 13px;
-  padding-left: 18px;
+.hintIcon {
+  color: var(--color-text-tertiary);
+  cursor: help;
 }
 
-.clauseTrial {
-  margin-top: 16px;
+.trial {
+  margin: 16px 0 12px;
 }
 
-.clauseField {
-  margin-bottom: 0 !important;
+.lastField {
+  margin-bottom: 16px !important;
+}
+
+.functionRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.functionSelect {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.cypherQuery {
+  background: var(--color-fill-secondary);
+  border-radius: 6px;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  margin: 0;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

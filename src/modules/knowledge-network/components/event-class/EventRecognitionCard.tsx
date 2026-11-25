@@ -15,6 +15,7 @@ import { getTool } from "@/modules/execution-factory/services/tool.service";
 import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import {
   checkKnEventType,
+  describeKnEventError,
   listKnEventRuleChecks,
 } from "@/modules/knowledge-network/services/event-type.service";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
@@ -119,8 +120,8 @@ export function EventRecognitionCard({
       await checkKnEventType(networkId, eventType.code);
       void message.success(t(`${PREFIX}.checkStarted`));
       setCheckTick((current) => current + 1);
-    } catch {
-      // The request layer has shown why.
+    } catch (error) {
+      void message.error(describeKnEventError(error));
     } finally {
       setChecking(false);
     }

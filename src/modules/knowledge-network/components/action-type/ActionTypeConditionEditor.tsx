@@ -200,6 +200,7 @@ function ConditionRow({
       <div className={styles.fieldSelect}>
         <Select
           allowClear
+          className={styles.fill}
           disabled={!objectTypeId}
           onChange={(nextField) => {
             const property = findConditionProperty(propertyOptions, nextField ?? undefined);
@@ -528,18 +529,21 @@ export function ActionTypeConditionEditor({
     });
   };
 
+  // The editor lays its rows out by its own width, so a narrow host such as a drawer wraps them.
   return (
-    <ConditionRowsEditor
-      executionParameters={executionParameters}
-      boundObjectTypeId={boundObjectTypeId}
-      groupOperation={groupOperation}
-      hideObjectTypeSelect={hideObjectTypeSelect}
-      objectTypes={objectTypes}
-      onChange={updateRows}
-      propertyOptions={propertyOptions}
-      rows={rows}
-      showGroupHeader={rows.length > 1}
-      valueSources={valueSources}
-    />
+    <div className={styles.editorRoot}>
+      <ConditionRowsEditor
+        executionParameters={executionParameters}
+        boundObjectTypeId={boundObjectTypeId}
+        groupOperation={groupOperation}
+        hideObjectTypeSelect={hideObjectTypeSelect}
+        objectTypes={objectTypes}
+        onChange={updateRows}
+        propertyOptions={propertyOptions}
+        rows={rows}
+        showGroupHeader={rows.length > 1}
+        valueSources={valueSources}
+      />
+    </div>
   );
 }

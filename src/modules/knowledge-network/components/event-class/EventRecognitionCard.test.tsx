@@ -12,6 +12,7 @@ import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
+  error: vi.fn(),
   getTool: vi.fn(),
   listChecks: vi.fn(),
   success: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: mocks.success, warning: mocks.warning },
+    message: { error: mocks.error, success: mocks.success, warning: mocks.warning },
   }),
 }));
 
@@ -38,6 +39,7 @@ vi.mock("@/modules/execution-factory/services/tool.service", () => ({
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   checkKnEventType: mocks.check,
+  describeKnEventError: (error: unknown) => (error instanceof Error ? error.message : ""),
   listKnEventRuleChecks: mocks.listChecks,
 }));
 
@@ -89,6 +91,17 @@ describe("EventRecognitionCard check now", () => {
 
     await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkStarted`));
     expect(mocks.check).toHaveBeenCalledWith("network-1", "order.overdue");
+  });
+
+  it("says why a check now could not start", async () => {
+    mocks.check.mockRejectedValue(new Error("the class has no schedule yet"));
+
+    checkNow();
+
+    await vi.waitFor(() =>
+      expect(mocks.error).toHaveBeenCalledWith("the class has no schedule yet"),
+    );
+    expect(mocks.success).not.toHaveBeenCalled();
   });
 
   it("offers no check now for a class without a recognition action", () => {

@@ -14,16 +14,19 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
-const mocks = vi.hoisted(() => ({
-  evalAccess: vi.fn(),
-  evalAccessStatus: "allowed",
-  evalReportedByEndpoint: false,
-  extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
-  hiddenNavigation: [] as string[],
-  navigate: vi.fn(),
-  pathname: "/knowledge-network/workspace/network-1/overview",
-  detail: null as unknown,
-}));
+const mocks = vi.hoisted(() => {
+  const noDetail: unknown = null;
+  return {
+    evalAccess: vi.fn(),
+    evalAccessStatus: "allowed",
+    evalReportedByEndpoint: false,
+    extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
+    hiddenNavigation: [] as string[],
+    navigate: vi.fn(),
+    pathname: "/knowledge-network/workspace/network-1/overview",
+    detail: noDetail,
+  };
+});
 
 vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/subscription/capability-catalog")>();

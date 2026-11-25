@@ -25,6 +25,7 @@ import {
 } from "@/modules/knowledge-network/hooks/useKnVersionView";
 import {
   checkKnEventType,
+  describeKnEventError,
   listKnEventRuleChecks,
 } from "@/modules/knowledge-network/services/event-type.service";
 import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/object-type.service";
@@ -124,8 +125,8 @@ export function EventClassListPanel({
       await checkKnEventType(networkId, eventType.code);
       void message.success(t(`${PREFIX}.recognition.checkStarted`));
       setCheckTick((current) => current + 1);
-    } catch {
-      // The request layer has shown why.
+    } catch (error) {
+      void message.error(describeKnEventError(error));
     } finally {
       setChecking(undefined);
     }

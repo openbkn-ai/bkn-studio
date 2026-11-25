@@ -6,16 +6,25 @@
  */
 
 import {
+  EditOutlined,
+  PlusOutlined,
+  QuestionCircleOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import {
   Alert,
+  Col,
   Drawer,
   Form,
   Input,
   InputNumber,
   Radio,
+  Row,
   Select,
   Space,
   Switch,
   Tabs,
+  Tooltip,
   Typography,
 } from "antd";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -25,12 +34,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
-import { EventCypherRuleEditor } from "@/modules/knowledge-network/components/event-class/EventCypherRuleEditor";
-import {
-  buildCypherRule,
-  cypherDraftFromRule,
-  type CypherRuleDraft,
-} from "@/modules/knowledge-network/components/event-class/event-cypher-rule";
 import {
   EventRuleTrial,
   type EventRuleTrialState,
@@ -46,6 +49,7 @@ import {
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import {
   createKnEventType,
+  describeKnEventError,
   listKnEventRuleTools,
   trialKnEventRule,
   updateKnEventType,
@@ -111,7 +115,11 @@ type ParameterDraft = { mode: "fixed" | "checkDate"; value?: unknown };
 const CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const SEVERITIES = ["P1", "P2", "P3", "P4"];
 const TOOL_KEY_SEPARATOR = "\u0000";
-const BASES: readonly RuleBasis[] = ["condition", "cypher", "function"];
+/**
+ * What a rule is written as. A Cypher query is written as a function of the network, which can be
+ * tried and reused there; a rule saved as a plain query is still shown, read-only.
+ */
+const BASES: readonly RuleBasis[] = ["condition", "function"];
 /** What a recognition action's condition compares with: it has no runtime input. */
 const CONDITION_VALUE_SOURCES: readonly ActionTypeConditionValueFrom[] = [
   "const",
@@ -169,23 +177,38 @@ function hasIncompleteRow(condition: ActionTypeCondition | null | undefined): bo
   return Boolean(condition.field) !== Boolean(condition.operation);
 }
 
-/** One clause of the rule, 当 or 则: its keyword stands out and the clause's fields hang under it. */
-function RuleClause({
+/** A page of the studio, opened beside this one so the drawer keeps what is typed in it. */
+function openInNewTab(path: string) {
+  window.open(
+    `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+/**
+ * One card of the form. The rule's clauses, 当 and 则, lead with their keyword as a badge; the
+ * basics with a plain title.
+ */
+function FormCard({
   children,
   hint,
   keyword,
+  title,
 }: {
   children: ReactNode;
   hint?: string;
-  keyword: string;
+  keyword?: string;
+  title?: string;
 }) {
   return (
-    <section aria-label={keyword} className={styles.clause}>
-      <div className={styles.clauseHead}>
-        <span className={styles.clauseKeyword}>{keyword}</span>
+    <section aria-label={keyword ?? title} className={styles.card}>
+      <div className={styles.cardHead}>
+        {keyword ? <span className={styles.clauseKeyword}>{keyword}</span> : null}
+        {title ? <span className={styles.cardTitle}>{title}</span> : null}
         {hint ? <Typography.Text type="secondary">{hint}</Typography.Text> : null}
       </div>
-      <div className={styles.clauseBody}>{children}</div>
+      {children}
     </section>
   );
 }
@@ -216,7 +239,7 @@ export function EventClassFormDrawer({
   const [toolsLoading, setToolsLoading] = useState(false);
   const [basis, setBasis] = useState<RuleBasis>("condition");
   const [condition, setCondition] = useState<ActionTypeCondition | null>(null);
-  const [cypher, setCypher] = useState<CypherRuleDraft>(() => cypherDraftFromRule(undefined));
+  const [toolsTick, setToolsTick] = useState(0);
   const [parameters, setParameters] = useState<Record<string, ParameterDraft>>({});
   const [schedule, setSchedule] = useState<EventScheduleDraft>(DEFAULT_EVENT_SCHEDULE);
   const [timezone, setTimezone] = useState(DEFAULT_EVENT_TIMEZONE);
@@ -225,6 +248,7 @@ export function EventClassFormDrawer({
   const [trial, setTrial] = useState<Omit<EventRuleTrialState, "stale">>({ running: false });
   const [trialSignature, setTrialSignature] = useState<string>();
   const trialRequest = useRef(0);
+  const problemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -246,7 +270,6 @@ export function EventClassFormDrawer({
     // An existing class opens on what its rule selects by; a new one on a condition.
     setBasis(savedRule?.basis ?? "condition");
     setCondition(savedRule?.basis === "condition" ? savedRule.condition : null);
-    setCypher(cypherDraftFromRule(savedRule?.basis === "cypher" ? savedRule.cypher : undefined));
     setParameters(
       parameterDrafts(savedRule?.basis === "function" ? savedRule.tool.parameters : {}),
     );
@@ -298,7 +321,7 @@ export function EventClassFormDrawer({
     return () => {
       cancelled = true;
     };
-  }, [basis, networkId, open, source]);
+  }, [basis, networkId, open, source, toolsTick]);
 
   // A condition compares the subject's properties.
   useEffect(() => {
@@ -336,6 +359,11 @@ export function EventClassFormDrawer({
     }
   }, [condition?.objectTypeId, watchedSubject]);
 
+  // The problem shows under the form, where the save was pressed; bring it into view.
+  useEffect(() => {
+    if (problem) problemRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [problem]);
+
   const selectedTool = useMemo(
     () => tools.find((tool) => toolKey(tool.boxId, tool.toolId) === ruleToolKey),
     [ruleToolKey, tools],
@@ -343,6 +371,9 @@ export function EventClassFormDrawer({
 
   const savedRule = savedRuleOf(eventType);
   const savedTool = savedRule?.basis === "function" ? savedRule.tool : undefined;
+  // A rule saved as a plain Cypher query is kept as it is unless another basis replaces it.
+  const savedCypher = savedRule?.basis === "cypher" ? savedRule.cypher : undefined;
+  const bases: readonly RuleBasis[] = savedCypher ? [...BASES, "cypher"] : BASES;
   const toolOptions = useMemo(() => {
     const groups = new Map<
       string,
@@ -428,9 +459,7 @@ export function EventClassFormDrawer({
       return { rule: { basis: "condition", condition: normalized } };
     }
     if (basis === "cypher") {
-      const built = buildCypherRule(cypher, t);
-      if ("problem" in built) return built;
-      return { rule: built.cypher ? { basis: "cypher", cypher: built.cypher } : null };
+      return { rule: savedCypher ? { basis: "cypher", cypher: savedCypher } : null };
     }
     const built = buildRuleTool();
     if ("problem" in built) return built;
@@ -449,17 +478,7 @@ export function EventClassFormDrawer({
   const ruleSignature = JSON.stringify({
     basis,
     condition: basis === "condition" ? condition : undefined,
-    cypher:
-      basis === "cypher"
-        ? {
-            parameters: cypher.parameters.map(({ name, value, value_from }) => ({
-              name,
-              value,
-              value_from,
-            })),
-            query: cypher.query,
-          }
-        : undefined,
+    cypher: basis === "cypher" ? savedCypher : undefined,
     parameters: basis === "function" ? parameters : undefined,
     ruleToolKey: basis === "function" ? ruleToolKey : undefined,
     subject: watchedSubject,
@@ -580,8 +599,13 @@ export function EventClassFormDrawer({
         void message.success(t("common.success"));
       }
       onSaved(saved);
-    } catch {
-      // The request layer has shown the refusal; the drawer stays open to fix it.
+    } catch (error) {
+      // The drawer stays open to fix what the platform refused.
+      setProblem(
+        t("knowledgeNetwork.eventClasses.form.saveFailed", {
+          message: describeKnEventError(error),
+        }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -655,64 +679,116 @@ export function EventClassFormDrawer({
   };
 
   const subjectRecord = subjects.filter((item) => item.id === watchedSubject);
+  const F = "knowledgeNetwork.eventClasses.form";
 
-  const renderRuleEditor = () => {
-    if (basis === "condition") {
-      return watchedSubject ? (
-        <Space direction="vertical" size={8} className={styles.block}>
-          <ActionTypeConditionEditor
-            boundObjectTypeId={watchedSubject}
-            hideObjectTypeSelect
-            objectTypes={subjectRecord}
-            onChange={(next) => setCondition(next ?? null)}
-            propertyOptions={propertyOptions}
-            value={condition}
-            valueSources={CONDITION_VALUE_SOURCES}
-          />
-          <Typography.Text className={styles.parameterHint} type="secondary">
-            {t("knowledgeNetwork.eventClasses.form.conditionHint")}
+  const basisHint =
+    basis === "condition"
+      ? t(`${F}.conditionHint`)
+      : basis === "function"
+        ? t(`${F}.ruleToolHint`)
+        : undefined;
+
+  const renderCypherReadOnly = () =>
+    savedCypher ? (
+      <Space direction="vertical" size={8} className={styles.block}>
+        <Alert message={t(`${F}.cypherReadOnly`)} showIcon type="info" />
+        <pre className={styles.cypherQuery}>{savedCypher.query}</pre>
+        {Object.entries(savedCypher.parameters ?? {}).map(([name, parameter]) => (
+          <Typography.Text key={name} type="secondary">
+            <Typography.Text code>${name}</Typography.Text>{" "}
+            {parameter.value_from === "check_time"
+              ? t(`${F}.valueFromCheckTime`)
+              : parameter.value_from === "check_date"
+                ? t(`${F}.valueFromCheckDate`)
+                : t(`${F}.parameterFixed`)}
+            {parameter.value !== undefined && parameter.value !== null && parameter.value !== ""
+              ? ` ${String(parameter.value as string | number | boolean)}`
+              : ""}
           </Typography.Text>
-        </Space>
-      ) : (
-        <Typography.Text type="secondary">
-          {t("knowledgeNetwork.eventClasses.form.conditionSubjectFirst")}
-        </Typography.Text>
-      );
-    }
-    if (basis === "cypher") {
-      return <EventCypherRuleEditor onChange={setCypher} value={cypher} />;
-    }
+        ))}
+      </Space>
+    ) : null;
+
+  const renderFunctionEditor = () => {
+    const [boxId, toolId] = ruleToolKey ? ruleToolKey.split(TOOL_KEY_SEPARATOR) : [];
     return (
       <>
-        <Form.Item
-          extra={t("knowledgeNetwork.eventClasses.form.ruleToolHint")}
-          label={t("knowledgeNetwork.eventClasses.form.ruleTool")}
-          name="ruleTool"
-          rules={[
-            {
-              message: t("knowledgeNetwork.eventClasses.form.ruleToolRequired"),
-              required: ruleRequired,
-            },
-          ]}
-        >
-          <Select
-            allowClear={!ruleRequired}
-            loading={toolsLoading}
-            notFoundContent={
-              toolsLoading ? undefined : t("knowledgeNetwork.eventClasses.form.ruleToolEmpty")
-            }
-            optionFilterProp="label"
-            options={toolOptions}
-            placeholder={t("knowledgeNetwork.eventClasses.form.ruleToolPlaceholder")}
-            showSearch
-          />
+        <Form.Item label={t(`${F}.ruleTool`)} required={ruleRequired}>
+          <div className={styles.functionRow}>
+            <Form.Item
+              noStyle
+              name="ruleTool"
+              rules={[{ message: t(`${F}.ruleToolRequired`), required: ruleRequired }]}
+            >
+              <Select
+                allowClear={!ruleRequired}
+                aria-label={t(`${F}.ruleTool`)}
+                className={styles.functionSelect}
+                loading={toolsLoading}
+                notFoundContent={toolsLoading ? undefined : t(`${F}.ruleToolEmpty`)}
+                optionFilterProp="label"
+                options={toolOptions}
+                placeholder={t(`${F}.ruleToolPlaceholder`)}
+                showSearch
+              />
+            </Form.Item>
+            <Tooltip title={t(`${F}.reloadFunctions`)}>
+              <AppButton
+                aria-label={t(`${F}.reloadFunctions`)}
+                icon={<ReloadOutlined />}
+                onClick={() => setToolsTick((current) => current + 1)}
+              />
+            </Tooltip>
+            {boxId && toolId ? (
+              <AppButton
+                icon={<EditOutlined />}
+                onClick={() =>
+                  openInNewTab(
+                    `/execution-factory/toolboxes/${encodeURIComponent(boxId)}/tools/${encodeURIComponent(toolId)}/edit`,
+                  )
+                }
+              >
+                {t(`${F}.editFunction`)}
+              </AppButton>
+            ) : null}
+            <Tooltip title={t(`${F}.newFunctionHint`)}>
+              <AppButton
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  openInNewTab(
+                    `/knowledge-network/workspace/${encodeURIComponent(networkId)}/experience/cypher`,
+                  )
+                }
+              >
+                {t(`${F}.newFunction`)}
+              </AppButton>
+            </Tooltip>
+          </div>
         </Form.Item>
         {ruleToolKey && selectedTool && selectedTool.parameters.length > 0 ? (
-          <Form.Item label={t("knowledgeNetwork.eventClasses.form.parameters")}>
+          <Form.Item label={t(`${F}.parameters`)}>
             <div className={styles.parameters}>{selectedTool.parameters.map(renderParameter)}</div>
           </Form.Item>
         ) : null}
       </>
+    );
+  };
+
+  const renderRuleEditor = () => {
+    if (basis === "cypher") return renderCypherReadOnly();
+    if (basis === "function") return renderFunctionEditor();
+    return watchedSubject ? (
+      <ActionTypeConditionEditor
+        boundObjectTypeId={watchedSubject}
+        hideObjectTypeSelect
+        objectTypes={subjectRecord}
+        onChange={(next) => setCondition(next ?? null)}
+        propertyOptions={propertyOptions}
+        value={condition}
+        valueSources={CONDITION_VALUE_SOURCES}
+      />
+    ) : (
+      <Typography.Text type="secondary">{t(`${F}.conditionSubjectFirst`)}</Typography.Text>
     );
   };
 
@@ -725,12 +801,6 @@ export function EventClassFormDrawer({
     </div>
   );
 
-  const sectionTitle = (key: string) => (
-    <Typography.Title className={styles.sectionTitle} level={5}>
-      {t(`knowledgeNetwork.eventClasses.form.${key}`)}
-    </Typography.Title>
-  );
-
   return (
     <Drawer
       destroyOnHidden
@@ -738,128 +808,108 @@ export function EventClassFormDrawer({
       maskClosable={false}
       onClose={onClose}
       open={open}
-      title={
-        editing
-          ? t("knowledgeNetwork.eventClasses.form.editTitle")
-          : t("knowledgeNetwork.eventClasses.form.createTitle")
-      }
-      width={680}
+      title={editing ? t(`${F}.editTitle`) : t(`${F}.createTitle`)}
+      width={800}
     >
-      <Space direction="vertical" size={12} className={styles.block}>
-        {versioned ? (
-          <Alert
-            message={t("knowledgeNetwork.eventClasses.form.versionedHint")}
-            showIcon
-            type="info"
-          />
-        ) : null}
-        {legacyRuleWithoutAction ? (
-          <Alert
-            message={t("knowledgeNetwork.eventClasses.form.legacyRuleHint")}
-            showIcon
-            type="warning"
-          />
-        ) : null}
-        {metricBasis ? (
-          <Alert
-            message={t("knowledgeNetwork.eventClasses.form.metricBasisHint")}
-            showIcon
-            type="info"
-          />
-        ) : null}
-        {problem ? <Alert message={problem} showIcon type="error" /> : null}
-      </Space>
       <Form<FormValues> colon={false} form={form} layout="vertical" className={styles.form}>
-        {sectionTitle("sectionBasics")}
-        <Form.Item
-          label={t("knowledgeNetwork.eventClasses.form.name")}
-          name="name"
-          rules={[
-            {
-              message: t("knowledgeNetwork.eventClasses.form.nameRequired"),
-              required: true,
-              whitespace: true,
-            },
-            { max: 128 },
-          ]}
-        >
-          <Input
-            maxLength={128}
-            placeholder={t("knowledgeNetwork.eventClasses.form.namePlaceholder")}
-          />
-        </Form.Item>
-        <Form.Item
-          extra={t("knowledgeNetwork.eventClasses.form.codeHint")}
-          label={t("knowledgeNetwork.eventClasses.form.code")}
-          name="code"
-          rules={[
-            { message: t("knowledgeNetwork.eventClasses.form.codeRequired"), required: true },
-            { message: t("knowledgeNetwork.eventClasses.form.codeInvalid"), pattern: CODE_PATTERN },
-          ]}
-        >
-          <Input disabled={editing} maxLength={64} placeholder="order_overdue" />
-        </Form.Item>
-        <Form.Item
-          extra={t("knowledgeNetwork.eventClasses.form.sourceHint")}
-          label={t("knowledgeNetwork.eventClasses.form.source")}
-          name="source"
-        >
-          <Radio.Group
-            disabled={editing}
-            options={[
-              { label: t("knowledgeNetwork.eventClasses.source.rule"), value: "rule" },
-              { label: t("knowledgeNetwork.eventClasses.source.report"), value: "report" },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item
-          extra={
-            subjectLocked
-              ? t("knowledgeNetwork.eventClasses.form.subjectLockedHint")
-              : source === "rule"
-                ? t("knowledgeNetwork.eventClasses.form.subjectRuleHint")
-                : t("knowledgeNetwork.eventClasses.form.subjectHint")
-          }
-          label={t("knowledgeNetwork.eventClasses.form.subject")}
-          name="subject"
-          rules={[
-            {
-              message: t("knowledgeNetwork.eventClasses.form.subjectRequired"),
-              required: true,
-            },
-          ]}
-        >
-          <Select
-            disabled={subjectLocked}
-            loading={subjectsLoading}
-            optionFilterProp="label"
-            options={subjects.map((item) => ({ label: item.name || item.id, value: item.id }))}
-            placeholder={t("knowledgeNetwork.eventClasses.form.subjectPlaceholder")}
-            showSearch
-          />
-        </Form.Item>
-        <Form.Item label={t("knowledgeNetwork.eventClasses.form.severity")} name="severity">
-          <Select
-            allowClear
-            options={SEVERITIES.map((value) => ({ label: value, value }))}
-            placeholder={t("knowledgeNetwork.eventClasses.form.severityPlaceholder")}
-          />
-        </Form.Item>
-        {source === "report" ? (
-          <Form.Item
-            extra={t("knowledgeNetwork.eventClasses.form.mergeHoursHint")}
-            label={t("knowledgeNetwork.eventClasses.form.mergeHours")}
-            name="mergeHours"
-          >
-            <InputNumber suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")} min={0} />
-          </Form.Item>
-        ) : (
-          <>
-            {sectionTitle("sectionRule")}
-            <Form.Item
-              extra={t("knowledgeNetwork.eventClasses.form.scheduleHint")}
-              label={t("knowledgeNetwork.eventClasses.form.schedule")}
-            >
+        {versioned ? <Alert message={t(`${F}.versionedHint`)} showIcon type="info" /> : null}
+        {legacyRuleWithoutAction ? (
+          <Alert message={t(`${F}.legacyRuleHint`)} showIcon type="warning" />
+        ) : null}
+        {metricBasis ? <Alert message={t(`${F}.metricBasisHint`)} showIcon type="info" /> : null}
+        <FormCard title={t(`${F}.sectionBasics`)}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label={t(`${F}.name`)}
+                name="name"
+                rules={[
+                  { message: t(`${F}.nameRequired`), required: true, whitespace: true },
+                  { max: 128 },
+                ]}
+              >
+                <Input maxLength={128} placeholder={t(`${F}.namePlaceholder`)} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label={t(`${F}.code`)}
+                name="code"
+                rules={[
+                  { message: t(`${F}.codeRequired`), required: true },
+                  { message: t(`${F}.codeInvalid`), pattern: CODE_PATTERN },
+                ]}
+                tooltip={t(`${F}.codeHint`)}
+              >
+                <Input disabled={editing} maxLength={64} placeholder="order_overdue" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label={t(`${F}.source`)} name="source" tooltip={t(`${F}.sourceHint`)}>
+                <Radio.Group
+                  disabled={editing}
+                  options={[
+                    { label: t("knowledgeNetwork.eventClasses.source.rule"), value: "rule" },
+                    { label: t("knowledgeNetwork.eventClasses.source.report"), value: "report" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label={t(`${F}.severity`)} name="severity">
+                <Select
+                  allowClear
+                  options={SEVERITIES.map((value) => ({ label: value, value }))}
+                  placeholder={t(`${F}.severityPlaceholder`)}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={source === "report" ? 12 : 24}>
+              <Form.Item
+                label={t(`${F}.subject`)}
+                name="subject"
+                rules={[{ message: t(`${F}.subjectRequired`), required: true }]}
+                tooltip={
+                  subjectLocked
+                    ? t(`${F}.subjectLockedHint`)
+                    : source === "rule"
+                      ? t(`${F}.subjectRuleHint`)
+                      : t(`${F}.subjectHint`)
+                }
+              >
+                <Select
+                  disabled={subjectLocked}
+                  loading={subjectsLoading}
+                  optionFilterProp="label"
+                  options={subjects.map((item) => ({
+                    label: item.name || item.id,
+                    value: item.id,
+                  }))}
+                  placeholder={t(`${F}.subjectPlaceholder`)}
+                  showSearch
+                />
+              </Form.Item>
+            </Col>
+            {source === "report" ? (
+              <Col span={12}>
+                <Form.Item
+                  label={t(`${F}.mergeHours`)}
+                  name="mergeHours"
+                  tooltip={t(`${F}.mergeHoursHint`)}
+                >
+                  <InputNumber
+                    className={styles.block}
+                    min={0}
+                    suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
+                  />
+                </Form.Item>
+              </Col>
+            ) : null}
+          </Row>
+        </FormCard>
+        {source === "rule" ? (
+          <FormCard hint={t(`${F}.whenHint`)} keyword={t(`${F}.when`)}>
+            <Form.Item label={t(`${F}.schedule`)} tooltip={t(`${F}.scheduleHint`)}>
               <EventScheduleEditor
                 onChange={setSchedule}
                 onTimezoneChange={setTimezone}
@@ -867,44 +917,47 @@ export function EventClassFormDrawer({
                 timezone={timezone}
               />
             </Form.Item>
-            <RuleClause
-              hint={t("knowledgeNetwork.eventClasses.form.whenHint")}
-              keyword={t("knowledgeNetwork.eventClasses.form.when")}
-            >
-              <Tabs
-                activeKey={basis}
-                items={BASES.map((key) => ({
-                  key,
-                  label: t(`knowledgeNetwork.eventClasses.form.basisTabs.${key}`),
-                }))}
-                onChange={(key) => setBasis(key as RuleBasis)}
-                size="small"
+            <Tabs
+              activeKey={basis}
+              items={bases.map((key) => ({ key, label: t(`${F}.basisTabs.${key}`) }))}
+              onChange={(key) => setBasis(key as RuleBasis)}
+              size="small"
+              tabBarExtraContent={
+                basisHint ? (
+                  <Tooltip title={basisHint}>
+                    <QuestionCircleOutlined aria-label={basisHint} className={styles.hintIcon} />
+                  </Tooltip>
+                ) : null
+              }
+            />
+            {renderRuleEditor()}
+            <div className={styles.trial}>
+              <EventRuleTrial
+                onTry={() => void runTrial()}
+                state={{
+                  ...trial,
+                  stale: Boolean(trial.result) && trialSignature !== ruleSignature,
+                }}
               />
-              {renderRuleEditor()}
-              <div className={styles.clauseTrial}>
-                <EventRuleTrial
-                  onTry={() => void runTrial()}
-                  state={{
-                    ...trial,
-                    stale: Boolean(trial.result) && trialSignature !== ruleSignature,
-                  }}
-                />
-              </div>
-            </RuleClause>
-          </>
-        )}
-        {sectionTitle("sectionHandling")}
-        <RuleClause keyword={t("knowledgeNetwork.eventClasses.form.then")}>
-          <Form.Item className={styles.clauseField} name="handlingNote">
+            </div>
+          </FormCard>
+        ) : null}
+        <FormCard keyword={t(`${F}.then`)}>
+          <Form.Item className={styles.lastField} name="handlingNote">
             <Input.TextArea
-              aria-label={t("knowledgeNetwork.eventClasses.form.then")}
-              autoSize={{ maxRows: 6, minRows: 2 }}
+              aria-label={t(`${F}.then`)}
+              autoSize={{ maxRows: 6, minRows: 3 }}
               maxLength={500}
-              placeholder={t("knowledgeNetwork.eventClasses.form.handlingNotePlaceholder")}
+              placeholder={t(`${F}.handlingNotePlaceholder`)}
               showCount
             />
           </Form.Item>
-        </RuleClause>
+        </FormCard>
+        {problem ? (
+          <div ref={problemRef}>
+            <Alert message={problem} showIcon type="error" />
+          </div>
+        ) : null}
       </Form>
     </Drawer>
   );

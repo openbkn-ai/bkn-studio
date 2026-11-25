@@ -10,23 +10,27 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
-const mocks = vi.hoisted(() => ({
-  check: vi.fn(),
-  confirm: vi.fn(),
-  deleteEventType: vi.fn(),
-  listChecks: vi.fn(),
-  listEventTypes: vi.fn(),
-  listObjectTypes: vi.fn(),
-  location: {
-    pathname: "/knowledge-network/workspace/network-1/event-classes",
-    search: "",
-    state: null as unknown,
-  },
-  navigate: vi.fn(),
-  success: vi.fn(),
-  versioned: false,
-  versionView: "running",
-}));
+const mocks = vi.hoisted(() => {
+  const noState: unknown = null;
+  return {
+    check: vi.fn(),
+    confirm: vi.fn(),
+    deleteEventType: vi.fn(),
+    error: vi.fn(),
+    listChecks: vi.fn(),
+    listEventTypes: vi.fn(),
+    listObjectTypes: vi.fn(),
+    location: {
+      pathname: "/knowledge-network/workspace/network-1/event-classes",
+      search: "",
+      state: noState,
+    },
+    navigate: vi.fn(),
+    success: vi.fn(),
+    versioned: false,
+    versionView: "running",
+  };
+});
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -41,7 +45,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: mocks.success, warning: vi.fn() },
+    message: { error: mocks.error, success: mocks.success, warning: vi.fn() },
     modal: { confirm: mocks.confirm, error: vi.fn() },
   }),
 }));
@@ -54,6 +58,7 @@ vi.mock("@/modules/knowledge-network/hooks/useKnVersionView", () => ({
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   checkKnEventType: mocks.check,
   deleteKnEventType: mocks.deleteEventType,
+  describeKnEventError: (error: unknown) => (error instanceof Error ? error.message : ""),
   listKnEventRuleChecks: mocks.listChecks,
   listKnEventTypes: mocks.listEventTypes,
 }));
@@ -172,13 +177,13 @@ describe("EventClassListPanel", () => {
     fireEvent.click(within(row).getByText("Overdue order"));
     expect(mocks.navigate).toHaveBeenLastCalledWith(
       "/knowledge-network/workspace/network-1/object-types/order_overdue/detail",
-      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") } },
+      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") as unknown } },
     );
 
     fireEvent.click(within(row).getByText(new RegExp(`${PREFIX}.recognition.lastCheckOk`)));
     expect(mocks.navigate).toHaveBeenLastCalledWith(
       "/knowledge-network/workspace/network-1/object-types/order_overdue/detail?tab=data",
-      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") } },
+      { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") as unknown } },
     );
   });
 
@@ -194,6 +199,22 @@ describe("EventClassListPanel", () => {
     await vi.waitFor(() => expect(mocks.check).toHaveBeenCalledWith("network-1", "order_overdue"));
     expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.recognition.checkStarted`);
     await vi.waitFor(() => expect(mocks.listChecks).toHaveBeenCalledTimes(2));
+  });
+
+  it("says why a check now could not start", async () => {
+    mocks.check.mockRejectedValue(new Error("the class has no schedule yet"));
+    renderPanel();
+
+    fireEvent.click(
+      within(await rowOf("Overdue order")).getByRole("button", {
+        name: `${PREFIX}.recognition.checkNow`,
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(mocks.error).toHaveBeenCalledWith("the class has no schedule yet"),
+    );
+    expect(mocks.success).not.toHaveBeenCalled();
   });
 
   it("creates and edits classes in its form", async () => {

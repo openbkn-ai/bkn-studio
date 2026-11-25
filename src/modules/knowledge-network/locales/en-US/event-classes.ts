@@ -37,14 +37,20 @@ export const eventClassesPart = {
       metricBasisHint:
         "This event class is recognized by a metric anomaly, which cannot be edited here. It is kept while no rule is set; setting a recognition rule here replaces it.",
       sectionBasics: "Basics",
-      sectionRule: "Recognition rule",
-      sectionHandling: "Handling",
       when: "When",
       whenHint: "Each object the rule hits gets an event.",
+      cypherReadOnly:
+        "This rule is a Cypher query written directly. It is shown read-only here and kept as it is when you save. To change it, publish it as a function from the data query page and use the function instead.",
+      newFunction: "New function",
+      newFunctionHint:
+        "Opens the data query page in a new tab: write the Cypher there and publish it as a function, then reload the list here to choose it.",
+      editFunction: "Edit function",
+      reloadFunctions: "Reload functions",
+      saveFailed: "Could not save: {{message}}",
       then: "Then",
       basisTabs: {
         condition: "Condition",
-        cypher: "Cypher",
+        cypher: "Cypher (read-only)",
         function: "Use a function (advanced)",
       },
       ruleRequired: "Set a recognition rule",
@@ -62,18 +68,6 @@ export const eventClassesPart = {
       offsetDatePlaceholder: "Offset, such as -P1D",
       offsetInvalid:
         "An offset is an ISO 8601 duration such as -PT48H or -P1D; a check date moves by whole days only",
-      cypherQuery: "Cypher query",
-      cypherQueryPlaceholder:
-        "MATCH (o:purchase_order) WHERE o.due_time < $check_time RETURN o.id AS key, o.name AS name",
-      cypherHint:
-        "Each result row is one object found: the key column is the primary key of the subject, and a name column is optional. The platform gives $check_time and $check_date, the check time and the check date.",
-      cypherQueryTooLong: "A Cypher query is at most 16 KB",
-      cypherParameterName: "Parameter name",
-      cypherParameterAdd: "Add parameter",
-      cypherParameterNameInvalid:
-        'The parameter name "{{name}}" starts with a letter or _, has only letters, digits and _, is at most 64 characters long, and is not check_time or check_date',
-      cypherParameterDuplicate: 'The parameter name "{{name}}" is used twice',
-      cypherParameterTooMany: "A rule takes at most {{max}} parameters",
       parameterValue: "Value",
       trial: "Try",
       trialHint:
@@ -116,12 +110,12 @@ export const eventClassesPart = {
       mergeHours: "Merge window",
       mergeHoursHint:
         "A report about the same object within the window is a duplicate of the first event. 0 turns merging off.",
-      ruleTool: "Rule tool",
+      ruleTool: "Function",
       ruleToolHint:
         "A Cypher function of this network that returns a table: one row for each object the rule finds now, with the object's primary key in a key column and an optional name column. Its tool box must be published.",
-      ruleToolPlaceholder: "Choose a rule tool",
-      ruleToolRequired: "Choose a rule tool",
-      ruleToolEmpty: "This network has no Cypher function to use as a rule yet",
+      ruleToolPlaceholder: "Choose a Cypher function of this network",
+      ruleToolRequired: "Choose a function",
+      ruleToolEmpty: "This network has no Cypher function to use as a rule yet. Create one first.",
       ruleToolUnavailableGroup: "Saved (not available now)",
       parameters: "Parameters",
       parameterMode: "Value",
@@ -180,7 +174,8 @@ export const eventClassesPart = {
       noRuleTool:
         "There is no recognition action yet, so the platform does not check this event class. Edit it and set a recognition rule to have it checked on schedule.",
       noAction: "This event class has no recognition action to check.",
-      noSchedule: "The recognition action has no platform schedule yet. Save it again and retry.",
+      noSchedule:
+        "The recognition action has no platform schedule yet. On a network with versions it gets one when a version is published; otherwise save it again and retry.",
       checkStarted: "The check has started. Its result shows under Last check once it finishes.",
       basis: "Selects by",
       bases: {

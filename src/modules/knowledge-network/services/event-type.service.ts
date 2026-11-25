@@ -6,7 +6,11 @@
  */
 
 import i18n from "@/app/locales/i18n";
-import { readErrorCode, registerErrorCodeMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  readErrorCode,
+  registerErrorCodeMessage,
+} from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
@@ -834,8 +838,23 @@ export async function checkKnEventType(
   }
   const response = await http.post<KnEventRuleCheckResult>(
     `${actionSchedulesPath(networkId)}/${encodeURIComponent(schedule.id)}/run`,
+    undefined,
+    { skipErrorToast: true },
   );
   return response.data;
+}
+
+/**
+ * Why an event class could not be saved or checked, for the page to show: the backend's
+ * description with its details, or the text of an error the service raised itself. The requests
+ * behind these do not toast, so this is the only place the user learns it.
+ */
+export function describeKnEventError(error: unknown): string {
+  const details = extractRequestErrorDetails(error);
+  const description = details.description || (error instanceof Error ? error.message : "");
+  return details.details && details.details !== description
+    ? `${description} ${details.details}`
+    : description;
 }
 
 /** The last recorded check of each rule type; needs `query_data` on the network. */

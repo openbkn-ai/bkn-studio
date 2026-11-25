@@ -44,6 +44,8 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   createKnEventType: mocks.create,
+  describeKnEventError: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
   listKnEventRuleTools: mocks.listRuleTools,
   trialKnEventRule: mocks.trial,
   updateKnEventType: mocks.update,
@@ -228,22 +230,21 @@ const fillNewClass = (name: string, code: string) => {
 };
 
 describe("EventClassFormDrawer", () => {
-  it("opens a new class on the condition tab, with the schedule before the rule", async () => {
+  it("opens a new class on the condition tab, with 当 before 则 and the schedule in 当", async () => {
     renderDrawer(undefined, "order");
 
     expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent(
       `${PREFIX}.basisTabs.condition`,
     );
-    const labels = screen
-      .getAllByText(new RegExp(`^${PREFIX}\\.(schedule|when|then|sectionRule|sectionHandling)$`))
-      .map((node) => node.textContent);
-    expect(labels).toEqual([
-      `${PREFIX}.sectionRule`,
-      `${PREFIX}.schedule`,
-      `${PREFIX}.when`,
-      `${PREFIX}.sectionHandling`,
-      `${PREFIX}.then`,
+    // A Cypher query is written as a function of the network, not here.
+    expect(screen.getAllByRole("tab").map((node) => node.textContent)).toEqual([
+      `${PREFIX}.basisTabs.condition`,
+      `${PREFIX}.basisTabs.function`,
     ]);
+    const labels = screen
+      .getAllByText(new RegExp(`^${PREFIX}\\.(schedule|when|then)$`))
+      .map((node) => node.textContent);
+    expect(labels).toEqual([`${PREFIX}.when`, `${PREFIX}.schedule`, `${PREFIX}.then`]);
   });
 
   it("keeps the rule tool, its arguments and the schedule when an edit changes nothing else", async () => {
@@ -298,14 +299,15 @@ describe("EventClassFormDrawer", () => {
     expect(mocks.update).not.toHaveBeenCalled();
   });
 
-  it("opens a Cypher class on its query and saves it back as it was", async () => {
+  it("shows a rule saved as a Cypher query read-only and saves it back as it was", async () => {
     const onSaved = renderDrawer(withRule(cypherRule));
 
     expect(tab("cypher")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(`${PREFIX}.cypherReadOnly`)).toBeVisible();
     expect(
-      screen.getByDisplayValue("MATCH (o:order) WHERE o.status = $status RETURN o.id AS key"),
+      screen.getByText("MATCH (o:order) WHERE o.status = $status RETURN o.id AS key"),
     ).toBeVisible();
-    expect(screen.getByDisplayValue("status")).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: /cypher/i })).toBeNull();
 
     save();
 
@@ -317,57 +319,13 @@ describe("EventClassFormDrawer", () => {
     );
   });
 
-  it("creates a class that selects by a Cypher query and its parameters", async () => {
-    const onSaved = renderDrawer(undefined, "order");
-    fillNewClass("Open order", "order_open");
-    fireEvent.click(tab("cypher"));
-    fireEvent.change(screen.getByLabelText(`${PREFIX}.cypherQuery`), {
-      target: { value: " MATCH (o:order) WHERE o.status = $status RETURN o.id AS key " },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /cypherParameterAdd/ }));
-    fireEvent.change(screen.getByLabelText(`${PREFIX}.cypherParameterName`), {
-      target: { value: "status" },
-    });
-    fireEvent.change(screen.getByLabelText(`${PREFIX}.parameterValue`), {
-      target: { value: "open" },
-    });
-
-    save();
-
-    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(mocks.create).toHaveBeenCalledWith(
-      "network-1",
-      expect.objectContaining({
-        check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
-        code: "order_open",
-        rule: {
-          basis: "cypher",
-          cypher: {
-            parameters: { status: { value: "open", value_from: "const" } },
-            query: "MATCH (o:order) WHERE o.status = $status RETURN o.id AS key",
-          },
-        },
-        source: "rule",
-      }),
-    );
-  });
-
-  it("does not let a Cypher parameter take a name the platform gives", async () => {
-    renderDrawer(withRule(cypherRule));
-    fireEvent.change(screen.getByDisplayValue("status"), { target: { value: "check_time" } });
-
-    save();
-
-    expect(await screen.findByText(`${PREFIX}.cypherParameterNameInvalid`)).toBeVisible();
-    expect(mocks.update).not.toHaveBeenCalled();
-  });
-
-  it("replaces the rule of any basis with the one on the chosen tab", async () => {
-    const onSaved = renderDrawer(withRule(conditionRule));
-    fireEvent.click(tab("cypher"));
-    fireEvent.change(screen.getByLabelText(`${PREFIX}.cypherQuery`), {
-      target: { value: "MATCH (o:order) RETURN o.id AS key" },
-    });
+  it("replaces a Cypher query with the function chosen on the function tab", async () => {
+    const onSaved = renderDrawer(withRule(cypherRule));
+    fireEvent.click(tab("function"));
+    await vi.waitFor(() => expect(mocks.listRuleTools).toHaveBeenCalledWith("network-1"));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.ruleTool` }));
+    fireEvent.click(await screen.findByText("Overdue orders"));
+    fireEvent.change(await screen.findByLabelText("today"), { target: { value: "2026-11-25" } });
 
     save();
 
@@ -376,13 +334,56 @@ describe("EventClassFormDrawer", () => {
       "network-1",
       "order_overdue",
       expect.objectContaining({
-        rule: { basis: "cypher", cypher: { query: "MATCH (o:order) RETURN o.id AS key" } },
+        rule: {
+          basis: "function",
+          tool: { box_id: "box-1", parameters: { today: "2026-11-25" }, tool_id: "tool-1" },
+        },
       }),
     );
   });
 
+  it("opens the function pages beside the drawer, and reads the functions again", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      renderDrawer(overdue);
+      await vi.waitFor(() => expect(mocks.listRuleTools).toHaveBeenCalledTimes(1));
+
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`${PREFIX}\\.newFunction$`) }));
+      expect(open).toHaveBeenLastCalledWith(
+        expect.stringMatching(/knowledge-network\/workspace\/network-1\/experience\/cypher$/),
+        "_blank",
+        "noopener,noreferrer",
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: new RegExp(`${PREFIX}\\.editFunction$`) }),
+      );
+      expect(open).toHaveBeenLastCalledWith(
+        expect.stringMatching(/execution-factory\/toolboxes\/box-1\/tools\/tool-1\/edit$/),
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: `${PREFIX}.reloadFunctions` }));
+      await vi.waitFor(() => expect(mocks.listRuleTools).toHaveBeenCalledTimes(2));
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("says why the platform refused a save, and keeps the drawer open", async () => {
+    mocks.update.mockRejectedValue(new Error("the code is taken"));
+    const onSaved = renderDrawer(overdue);
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+
+    save();
+
+    expect(await screen.findByText(`${PREFIX}.saveFailed`)).toBeVisible();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it("tries the unsaved rule, lists its hits, and marks them stale once the rule changes", async () => {
-    renderDrawer(withRule(cypherRule));
+    renderDrawer(withRule(conditionRule));
+    await screen.findByDisplayValue("open");
 
     fireEvent.click(screen.getByRole("button", { name: `${PREFIX}.trial` }));
 
@@ -393,7 +394,7 @@ describe("EventClassFormDrawer", () => {
         check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
         code: "order_overdue",
         name: "Overdue order",
-        rule: cypherRule,
+        rule: conditionRule,
         subject: "order",
       },
       { versioned: false },
@@ -404,9 +405,7 @@ describe("EventClassFormDrawer", () => {
     expect(within(result).queryByText(`${PREFIX}.trialStale`)).toBeNull();
     expect(mocks.update).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText(`${PREFIX}.cypherQuery`), {
-      target: { value: "MATCH (o:order) RETURN o.id AS key" },
-    });
+    fireEvent.change(screen.getByDisplayValue("open"), { target: { value: "closed" } });
 
     expect(
       within(screen.getByTestId("event-rule-trial")).getByText(`${PREFIX}.trialStale`),
@@ -510,7 +509,10 @@ describe("EventClassFormDrawer", () => {
   it("locks the subject of a class while its recognition action is bound to it", async () => {
     renderDrawer(overdue);
 
-    expect(await screen.findByText(`${PREFIX}.subjectLockedHint`)).toBeVisible();
+    await vi.waitFor(() => expect(mocks.listObjectTypes).toHaveBeenCalled());
+    // Why it is locked is in the label's tip.
+    const field = screen.getByText(`${PREFIX}.subject`).closest(".ant-form-item");
+    expect(within(field as HTMLElement).getByRole("combobox")).toBeDisabled();
   });
 
   it("does not create a rule event class without a rule", async () => {

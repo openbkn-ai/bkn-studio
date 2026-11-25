@@ -231,11 +231,13 @@ describe("event-type.service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       `${KN}/object-types`,
-      expect.objectContaining({ params: expect.objectContaining({ kinds: "event" }) }),
+      expect.objectContaining({ params: expect.objectContaining({ kinds: "event" }) as unknown }),
     );
     expect(getMock).toHaveBeenCalledWith(
       `${KN}/action-types`,
-      expect.objectContaining({ params: expect.objectContaining({ operation_kind: "event" }) }),
+      expect.objectContaining({
+        params: expect.objectContaining({ operation_kind: "event" }) as unknown,
+      }),
     );
     expect(type).toMatchObject({
       check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
@@ -598,7 +600,7 @@ describe("event-type.service", () => {
               ],
             },
           })
-        : served?.(url, ...rest),
+        : (served?.(url, ...rest) as unknown),
     );
     putMock.mockResolvedValue({ data: "" });
 
@@ -742,16 +744,18 @@ describe("event-type.service", () => {
   it("deletes the recognition action when it is what keeps the class", async () => {
     serve({ action: recognition() });
     const order: string[] = [];
-    deleteActionTypeMock.mockImplementation(async () => {
+    deleteActionTypeMock.mockImplementation(() => {
       order.push("action");
+      return Promise.resolve();
     });
     deleteObjectTypeMock
-      .mockImplementationOnce(async () => {
+      .mockImplementationOnce(() => {
         order.push("class refused");
-        throw refusedWith("BknBackend.KnEvent.RecognizedByAction");
+        return Promise.reject(refusedWith("BknBackend.KnEvent.RecognizedByAction"));
       })
-      .mockImplementationOnce(async () => {
+      .mockImplementationOnce(() => {
         order.push("class");
+        return Promise.resolve();
       });
 
     await deleteKnEventType("kn-1", "order_overdue");
@@ -810,10 +814,13 @@ describe("event-type.service", () => {
     expect(getMock).toHaveBeenCalledWith(
       `${KN}/action-schedules`,
       expect.objectContaining({
-        params: expect.objectContaining({ action_type_id: "order_overdue_recognition" }),
+        params: expect.objectContaining({ action_type_id: "order_overdue_recognition" }) as unknown,
       }),
     );
-    expect(postMock).toHaveBeenCalledWith(`${KN}/action-schedules/sch-1/run`);
+    // The page says why a check could not start, so the request does not toast as well.
+    expect(postMock).toHaveBeenCalledWith(`${KN}/action-schedules/sch-1/run`, undefined, {
+      skipErrorToast: true,
+    });
     expect(result).toEqual({ execution_id: "ex-1" });
   });
 
