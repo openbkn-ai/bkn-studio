@@ -136,7 +136,7 @@ it("shows the complete public scenario task without presenting a fixed execution
     constraints: "只读不扣库存",
     output_requirements: "返回是否可发货和剩余量",
   };
-  detail.definition.diagnostic_spec = { case_type: "scenario", form_version: 2 };
+  detail.definition.diagnostic_spec = { case_type: "scenario", form_version: 1 };
   vi.mocked(getEvalCaseDefinition).mockResolvedValue(detail);
   render(<EvalSuiteCaseDetailDrawer networkId="kn" caseId="case-1" onClose={vi.fn()} />);
   expect(await screen.findByText("订单能否发货")).toBeTruthy();

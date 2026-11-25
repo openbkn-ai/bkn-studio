@@ -1136,7 +1136,7 @@ it("edits resource query cases without converting them to an unbound Function", 
       ],
       expected_spec: {},
       expected_source: { kind: "declared_contract", evidence_refs: [] },
-      diagnostic_spec: { form_version: 2 },
+      diagnostic_spec: { form_version: 1 },
     },
   };
   vi.mocked(getEvalCaseDraft).mockResolvedValue(resource);
@@ -1294,7 +1294,7 @@ it("keeps custom business criteria when the user cancels a purpose switch", asyn
       ],
       expected_spec: { criteria: { count: 2 } },
       expected_source: { kind: "independent_sample", evidence_refs: ["sample://two"] },
-      diagnostic_spec: { form_version: 2 },
+      diagnostic_spec: { form_version: 1 },
     },
   });
   render(
@@ -1534,7 +1534,7 @@ it("waits for the current resource contract before enabling trial execution", as
       ],
       expected_spec: {},
       expected_source: { kind: "declared_contract", evidence_refs: [] },
-      diagnostic_spec: { form_version: 2 },
+      diagnostic_spec: { form_version: 1 },
       execution_spec: {
         runner: "resource_query",
         target_kind: "resource",
@@ -1804,7 +1804,7 @@ it("edits a disabled definition even when its runtime input contract cannot be r
       expected_spec: { error: "缺少编号" },
       expected_source: { kind: "business_expert", evidence_refs: ["接口合同第3节"] },
       diagnostic_spec: {
-        form_version: 2,
+        form_version: 1,
         definition_only: true,
         resource_case_form: true,
         template_rule_id: "function-input",

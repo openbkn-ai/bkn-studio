@@ -461,7 +461,7 @@ it("saves a complete definition-only sample without claiming applicability or ex
     execution_spec: { runner: "unbound" },
     ...compiled,
     expected_source: { kind: "business_expert", evidence_refs: ["接口合同第3节"] },
-    diagnostic_spec: { definition_only: true, form_version: 2, rule_snapshot: rule },
+    diagnostic_spec: { definition_only: true, form_version: 1, rule_snapshot: rule },
   };
   await openSelectedPreview([
     {
@@ -510,7 +510,7 @@ vi.mock("./EvalResourceCaseFields", () => ({
           ],
           expected_spec: { value: 0 },
           expected_source: { kind: "business_expert", evidence_refs: ["独立确认：输入0返回0"] },
-          diagnostic_spec: { form_version: 2 },
+          diagnostic_spec: { form_version: 1 },
         })
       }
     >

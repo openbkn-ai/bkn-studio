@@ -234,13 +234,7 @@ export function RelationTypeDetailScene() {
                   ? t("knowledgeNetwork.relationTypeDirectMapping")
                   : t("knowledgeNetwork.relationTypeResourceMapping")}
               </span>
-              {detail.relationProperties?.length ? (
-                <span title={t("knowledgeNetwork.relationDeclarations.relationPropertiesHint")}>
-                  {t("knowledgeNetwork.relationDeclarations.relationProperties", {
-                    count: detail.relationProperties.length,
-                  })}
-                </span>
-              ) : null}
+
               <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
               <span>{detail.updateTime}</span>
             </div>
