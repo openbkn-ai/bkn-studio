@@ -806,6 +806,8 @@ export const dataCatalogEnUS = {
       filter: "Filter rows",
       applyFilter: "Apply filter",
       clearFilter: "Clear filter",
+      apiFilterRequestHint:
+        'If the error says the request did not use all filter conditions, check the path, query parameters, headers, or body in "Business request" for missing bindings.',
       filterUnavailableForSource:
         "The selected query source does not support the applied filter. Adjust the conditions and apply again.",
       binaryContent: "Binary content ({{count}} bytes)",

@@ -36,9 +36,9 @@ import type {
   ObjectTypeLogicProperty,
   ObjectTypeSmallModel,
   RelationTypeResourceRowMapping,
+  RelationTypeResourceMappingStore,
   RelationTypePropertyMapping,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import type { BackendKnowledgeBase } from "@/modules/knowledge-network/services/knowledge-base.service";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import { CAPABILITY_STATUS_MISSING } from "@/modules/knowledge-network/types/capability";
 import { countMockObjectMetrics } from "@/modules/knowledge-network/services/mock/object-metrics";
@@ -771,14 +771,7 @@ export const mockRelationTypeMappings: Record<
 
 export const mockRelationTypeResourceMappings: Record<
   string,
-  Record<
-    string,
-    {
-      backingDataSourceId: string;
-      backingDataSourceName?: string;
-      resourceMappings: RelationTypeResourceRowMapping[];
-    }
-  >
+  Record<string, RelationTypeResourceMappingStore>
 > = {
   "kn-domain-supply": {
     "rt-supply-service": {
@@ -805,16 +798,15 @@ export function cloneRelationTypeResourceMappings(
 export function persistMockRelationTypeResourceMappings(
   networkId: string,
   relationTypeId: string,
-  store: {
-    backingDataSourceId: string;
-    backingDataSourceName?: string;
-    resourceMappings: RelationTypeResourceRowMapping[];
-  },
+  store: RelationTypeResourceMappingStore,
 ) {
   if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
   mockRelationTypeResourceMappings[networkId] = {
     ...(mockRelationTypeResourceMappings[networkId] ?? {}),
     [relationTypeId]: {
+      ...(store.relationProperties !== undefined
+        ? { relationProperties: structuredClone(store.relationProperties) }
+        : {}),
       backingDataSourceId: store.backingDataSourceId,
       backingDataSourceName: store.backingDataSourceName,
       resourceMappings: cloneRelationTypeResourceMappings(store.resourceMappings),
@@ -1203,11 +1195,8 @@ export const mockCapabilityBindings: Record<string, CapabilityBindingRecord[]> =
   ],
 };
 
-/**
- * Knowledge bases as kb-api lists them to the caller, with the operations they hold. One can be
- * seen but not queried, so the picker has something to leave out.
- */
-export const mockKnowledgeBases: BackendKnowledgeBase[] = [
+/** Knowledge-base names used to backfill simulated network dependencies. */
+export const mockKnowledgeBases = [
   {
     description: "Signed supplier contracts and their amendments.",
     document_count: 128,

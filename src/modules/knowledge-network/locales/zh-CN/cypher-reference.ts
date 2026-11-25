@@ -103,6 +103,7 @@ export const cypherReferenceZhCN: CypherReferenceTexts = [
       "对象类绑定的是数据集或索引（不是 SQL 数据源），或一条查询跨多个数据源时，服务端逐个对象类读取数据，再在内存里关联，只支持基础写法。",
       "可以用：MATCH、多跳、OPTIONAL MATCH；WHERE；返回属性和聚合，ORDER BY、SKIP、LIMIT；WITH 聚合后过滤、按上一段的值过滤；返回节点、关系和虚拟边，和 SQL 数据源上一样画图；UNION / UNION ALL，每段各自读取。",
       "会被拒：CASE、coalesce、标量函数；对分组再统计、比较两个列表、把节点传给下一个 MATCH；collect；OPTIONAL MATCH 里经关联表连接两端的关系（知识库构建的网络里常见，写在 MATCH 里可以），拒绝时会点名这个关系类。",
+      "数据源只能返回、不能过滤的属性（如知识库里的 JSON 字段，对象类详情里 filterable 为 false）可以返回，但写在 WHERE 或内联属性里会被拒，并点名这个属性；要比对它的值，先返回再比对。",
       "要读的数据太多或超时会被拒（ReadBudgetExceeded），加条件或 LIMIT 缩小范围。只有关系类能按键关联：只靠 a.code = b.code 这类相等条件连起来的两个节点会先全部读出再两两组合，容易超限，执行计划也不会提醒。",
     ],
     notes: ["数据集上可用：过滤、分组和排序"],

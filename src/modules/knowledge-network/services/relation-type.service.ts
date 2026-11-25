@@ -96,7 +96,11 @@ function persistMockRelationTypeMappingBundle(
   input: KnowledgeNetworkRelationTypeMutationPayload,
 ) {
   if (input.mappingMode === "resource" && input.mappingRules) {
+    const properties =
+      input.mappingRules.relationProperties ??
+      mockRelationTypeResourceMappings[networkId]?.[relationTypeId]?.relationProperties;
     persistMockRelationTypeResourceMappings(networkId, relationTypeId, {
+      ...(properties !== undefined ? { relationProperties: properties } : {}),
       backingDataSourceId: input.mappingRules.backingDataSourceId,
       backingDataSourceName: input.mappingRules.backingDataSourceName,
       resourceMappings: input.mappingRules.resourceMappings.filter(
@@ -273,6 +277,9 @@ export async function getKnowledgeNetworkRelationTypeDetail(
         ...record,
         backingDataSourceId: resourceStore?.backingDataSourceId ?? "",
         backingDataSourceName: resourceStore?.backingDataSourceName,
+        ...(resourceStore?.relationProperties !== undefined
+          ? { relationProperties: structuredClone(resourceStore.relationProperties) }
+          : {}),
         resourceMappings: cloneRelationTypeResourceMappings(resourceStore?.resourceMappings ?? []),
         propertyMappings: [],
       };

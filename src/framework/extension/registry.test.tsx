@@ -17,7 +17,6 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionAccountWorkOrders,
   extensionActionExecutionGate,
-  extensionKnowledgeNetworkResourcePanel,
   extensionInstanceHandOvers,
   handOverLimit,
   extensionRoutes,
@@ -81,23 +80,6 @@ describe("extension registry", () => {
     expect(versionNotesText("Accepted: broken_links\nFirst release")).toBe(
       "Published with broken links\nFirst release",
     );
-  });
-
-  it("offers the knowledge-network resource panel only from the knowledge-base extension", () => {
-    const Panel = () => <p>panel</p>;
-    expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
-    registerExtension({
-      id: "unrelated",
-      capability: "other",
-      knowledgeNetworkResourcePanel: Panel,
-    });
-    expect(extensionKnowledgeNetworkResourcePanel()).toBeUndefined();
-    registerExtension({
-      id: "kb",
-      capability: "knowledge_base",
-      knowledgeNetworkResourcePanel: Panel,
-    });
-    expect(extensionKnowledgeNetworkResourcePanel()).toBe(Panel);
   });
 
   it("renders an extension page where the server reports its capability", () => {

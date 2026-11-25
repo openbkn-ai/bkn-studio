@@ -70,7 +70,7 @@ export function definitionOnlyCase({
     ...compiled,
     expected_source: { kind: source, evidence_refs: refs },
     diagnostic_spec: {
-      form_version: 2,
+      form_version: 1,
       definition_only: true,
       resource_case_form: true,
       case_type: "functional",

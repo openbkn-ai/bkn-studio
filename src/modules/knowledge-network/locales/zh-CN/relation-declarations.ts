@@ -77,7 +77,7 @@ export const relationDeclarationsPart = {
     notDeclared: "未声明",
     relationProperties_one: "关系属性：{{count}} 个",
     relationProperties_other: "关系属性：{{count}} 个",
-    relationPropertiesHint: "关系属性暂不能在 Studio 中编辑，保存关系类时保持不变。",
+    relationPropertiesHint: "在关系配置中编辑桥表属性及其约束。",
     requiredBoth: "两端都必有",
     requiredEndOption: {
       source: "{{name}}（起点）",

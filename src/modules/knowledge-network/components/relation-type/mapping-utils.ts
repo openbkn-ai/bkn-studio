@@ -9,7 +9,13 @@ import type {
   RelationTypeResourceRowMapping,
   RelationTypeMappingConfig,
   RelationTypePropertyMapping,
+  StoredRelationProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  constraintFieldsForType,
+  isRangeReversed,
+  rangeBoundFits,
+} from "@/modules/knowledge-network/utils/property-declarations";
 
 /** A field or property a mapping can name, as the mapping tables list them. */
 export type RelationTypeMappingField = {
@@ -114,6 +120,13 @@ export function normalizeRelationTypeMappingValues(
     return {
       mappingMode: value.mappingMode,
       mappingRules: {
+        ...(value.mappingRules.relationProperties !== undefined
+          ? {
+              relationProperties: value.mappingRules.relationProperties.map((property) => ({
+                ...property,
+              })),
+            }
+          : {}),
         backingDataSourceId: value.mappingRules.backingDataSourceId,
         backingDataSourceName: value.mappingRules.backingDataSourceName,
         resourceMappings:
@@ -204,6 +217,34 @@ export function validateRelationTypeMappingValues(
     return t("knowledgeNetwork.relationTypeDuplicateResourceMapping");
   }
 
+  return validateRelationProperties(t, mappingRules.relationProperties);
+}
+
+export function validateRelationProperties(
+  t: (key: string) => string,
+  properties?: StoredRelationProperty[],
+): string | null {
+  if (!properties) return null;
+  const key = "knowledgeNetwork.relationProperties.";
+  const names = properties.map((property) => property.name.trim());
+  if (names.some((name) => !name)) return t(key + "nameRequired");
+  if (new Set(names).size !== names.length) return t(key + "duplicateName");
+  for (const property of properties) {
+    if (!property.type) return t(key + "typeRequired");
+    if (!property.mappedField) return t(key + "fieldRequired");
+    const range = property.constraints?.range;
+    const kind = constraintFieldsForType(property.type).range;
+    if (range) {
+      if (
+        !kind ||
+        [range.min, range.max].some(
+          (bound) => bound !== undefined && !rangeBoundFits(kind, bound),
+        ) ||
+        isRangeReversed(kind, range)
+      )
+        return t(key + "invalidRange");
+    }
+  }
   return null;
 }
 

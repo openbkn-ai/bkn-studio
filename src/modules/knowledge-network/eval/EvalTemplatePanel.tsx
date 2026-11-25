@@ -29,7 +29,7 @@ import {
 import type { TableColumnsType } from "antd";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
-import { resourceKindGroups, rulePreset } from "./eval-template-rules";
+import { isVisibleTemplateRule, resourceKindGroups, rulePreset } from "./eval-template-rules";
 import {
   previewEvalRuleMatches,
   saveEvalTemplateConfig,
@@ -211,6 +211,7 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
   const [rulePage, setRulePage] = useState(1);
   const [detail, setDetail] = useState<EvalTemplateRule | null>(null);
   const [rules, setRules] = useState(config.rules);
+  const availableRules = rules.filter(isVisibleTemplateRule);
   const [editing, setEditing] = useState<EvalTemplateRule | null>(null);
   const [editorMode, setEditorMode] = useState<"create" | "copy" | "edit">("edit");
   const [busy, setBusy] = useState(false);
@@ -269,6 +270,7 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
     () =>
       rules.filter(
         (rule) =>
+          isVisibleTemplateRule(rule) &&
           rule.kind === kind &&
           (!groupFilter || rule.group === groupFilter) &&
           (presetFilter === "all" || rulePreset(rule) === presetFilter) &&
@@ -524,9 +526,9 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
             {label("ruleLibrary")}
             <small
               className={styles.templateLibraryCount}
-              title={label("ruleCount", { count: rules.length })}
+              title={label("ruleCount", { count: availableRules.length })}
             >
-              （{rules.length}）
+              （{availableRules.length}）
             </small>
           </h3>
           {resourceKindGroups.map(({ key, kinds }, index) => (
@@ -541,7 +543,7 @@ export function EvalTemplatePanel({ networkId, config, canManage, onChanged, onA
                   item === "objectType" ? [item, "objectProperty" as const] : [item],
                 )
                 .map((item) => {
-                  const count = rules.filter((rule) => rule.kind === item).length;
+                  const count = availableRules.filter((rule) => rule.kind === item).length;
                   return (
                     <button
                       key={item}

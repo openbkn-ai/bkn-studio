@@ -305,3 +305,26 @@ it("loads Function identities from the current user resource catalogue", async (
     { skipErrorToast: true },
   );
 });
+
+it("keeps deferred rule storage compatible while excluding it from generation and check options", async () => {
+  getMock.mockResolvedValueOnce({
+    data: {
+      revision: 1,
+      checksum: "saved",
+      rules: [
+        { id: "relation-property-values", enabled: true },
+        { id: "relation-query", enabled: true },
+      ],
+      check_capabilities: [
+        { type: "relation_check", bindings: ["relation-property-values", "relation-query"] },
+      ],
+    },
+  });
+  const config = await getEvalTemplateConfig("kn");
+  expect(config.checksum).toBe("saved");
+  expect(config.rules).toEqual([
+    { id: "relation-property-values", enabled: false },
+    { id: "relation-query", enabled: true },
+  ]);
+  expect(config.check_capabilities?.[0].bindings).toEqual(["relation-query"]);
+});

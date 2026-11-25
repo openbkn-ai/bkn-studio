@@ -152,7 +152,11 @@ describe("mapRelationDeclarations", () => {
   });
 
   it("reads the relation properties an indirect relation stores, by name", () => {
-    expect(mapRelationTypeDetail(doctorInDepartment).relationProperties).toEqual([
+    expect(
+      mapRelationTypeDetail(doctorInDepartment).relationProperties?.map(
+        ({ displayName, mappedField, name }) => ({ displayName, mappedField, name }),
+      ),
+    ).toEqual([
       { displayName: "职务", mappedField: "title", name: "title" },
       { displayName: "任职开始", mappedField: "start_date", name: "start_date" },
       { displayName: "任职结束", mappedField: "end_date", name: "end_date" },
