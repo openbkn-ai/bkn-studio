@@ -951,6 +951,7 @@ export function ExperienceScene({
           mcpProfile={mcpProfile}
           onMcpProfileChange={selectMcpProfile}
           appKeyValue={appKey.trim()}
+          mcpAuth={tokenProvider}
           showMcpConnect={showMcpConnect}
           dataBrowserPanel={
             <DataBrowserPanel

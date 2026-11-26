@@ -13,6 +13,8 @@ export type McpConnectionProtocol = "http" | "https";
 
 export interface McpClientConfigOptions {
   allowInsecureTls?: boolean;
+  includeEval?: boolean;
+  evalMcpUrl?: string;
 }
 
 /** Keep client examples on Agent Retrieval's slash-terminated `/mcp/*path` root route. */
@@ -50,6 +52,24 @@ export function mcpServerNameFor(mcpUrl: string): string {
   return /\/mcp-compact(\/|$)/.test(path) ? MCP_COMPACT_SERVER_NAME : MCP_SERVER_NAME;
 }
 
+function mcpConnections(mcpUrl: string, options: McpClientConfigOptions) {
+  const connections = [{ name: mcpServerNameFor(mcpUrl), url: mcpUrl }];
+  if (options.includeEval) {
+    const evalUrl = new URL(options.evalMcpUrl || mcpUrl);
+    const sourcePath = evalUrl.pathname;
+    if (!options.evalMcpUrl)
+      evalUrl.pathname = sourcePath.replace(
+        /\/api\/agent-retrieval\/v1\/mcp(?:-compact)?\/?$/,
+        "/api/bkn-backend/v1/eval/mcp/",
+      );
+    if (!options.evalMcpUrl && evalUrl.pathname === sourcePath) {
+      throw new Error("Cannot derive the Eval MCP URL from this Context Loader URL");
+    }
+    connections.push({ name: "bkn-eval", url: evalUrl.toString() });
+  }
+  return connections;
+}
+
 function createMcpRemoteServer(mcpUrl: string, apiKey: string, options: McpClientConfigOptions) {
   const protocol = getMcpConnectionProtocol(mcpUrl);
   const args = ["-y", "mcp-remote", withMcpTrailingSlash(mcpUrl), "--transport", "http-only"];
@@ -83,22 +103,26 @@ export function createMcpRemoteJsonConfig(
 ): string {
   return JSON.stringify(
     {
-      mcpServers: {
-        [mcpServerNameFor(mcpUrl)]: createMcpRemoteServer(mcpUrl, apiKey, options),
-      },
+      mcpServers: Object.fromEntries(
+        mcpConnections(mcpUrl, options).map(({ name, url }) => [
+          name,
+          createMcpRemoteServer(url, apiKey, options),
+        ]),
+      ),
     },
     null,
     2,
   );
 }
 
-export function createClaudeCodeMcpCommand(
+function createSingleClaudeCodeMcpCommand(
   mcpUrl: string,
   apiKey: string,
-  options: McpClientConfigOptions = {},
+  options: McpClientConfigOptions,
+  serverName: string,
 ): string {
   const protocol = getMcpConnectionProtocol(mcpUrl);
-  const lines = [`claude mcp add ${mcpServerNameFor(mcpUrl)} \\`, "  --scope user \\"];
+  const lines = [`claude mcp add ${serverName} \\`, "  --scope user \\"];
 
   if (protocol === "https" && options.allowInsecureTls) {
     lines.push(`  --env ${TLS_BYPASS_ENV} \\`);
@@ -118,15 +142,31 @@ export function createClaudeCodeMcpCommand(
   return lines.join("\n");
 }
 
+export function createClaudeCodeMcpCommand(
+  mcpUrl: string,
+  apiKey: string,
+  options: McpClientConfigOptions = {},
+): string {
+  return mcpConnections(mcpUrl, options)
+    .map(({ name, url }) => createSingleClaudeCodeMcpCommand(url, apiKey, options, name))
+    .join("\n\n");
+}
+
 /* ---------- Sign-in mode: the client gets only the URL and signs in through the browser ---------- */
 
 /** JSON for clients that sign in by themselves (WorkBuddy, Cursor, generic mcp.json): URL only. */
-export function createMcpUrlJsonConfig(mcpUrl: string): string {
+export function createMcpUrlJsonConfig(
+  mcpUrl: string,
+  options: McpClientConfigOptions = {},
+): string {
   return JSON.stringify(
     {
-      mcpServers: {
-        [mcpServerNameFor(mcpUrl)]: { type: "http", url: withMcpTrailingSlash(mcpUrl) },
-      },
+      mcpServers: Object.fromEntries(
+        mcpConnections(mcpUrl, options).map(({ name, url }) => [
+          name,
+          { type: "http", url: withMcpTrailingSlash(url) },
+        ]),
+      ),
     },
     null,
     2,
@@ -134,8 +174,16 @@ export function createMcpUrlJsonConfig(mcpUrl: string): string {
 }
 
 /** Claude Code command for the sign-in mode: the client opens the browser login on first use. */
-export function createClaudeCodeMcpUrlCommand(mcpUrl: string): string {
-  return `claude mcp add --transport http --scope user ${mcpServerNameFor(mcpUrl)} ${withMcpTrailingSlash(mcpUrl)}`;
+export function createClaudeCodeMcpUrlCommand(
+  mcpUrl: string,
+  options: McpClientConfigOptions = {},
+): string {
+  return mcpConnections(mcpUrl, options)
+    .map(
+      ({ name, url }) =>
+        `claude mcp add --transport http --scope user ${name} ${withMcpTrailingSlash(url)}`,
+    )
+    .join("\n\n");
 }
 
 const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;

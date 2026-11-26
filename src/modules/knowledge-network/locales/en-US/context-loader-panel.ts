@@ -279,6 +279,15 @@ export const contextLoaderPanelPart = {
       },
     },
     mcpConnect: {
+      evalChecking: "Checking the evaluation MCP connection…",
+      evalUnavailable: "Eval MCP did not return all five evaluation tools.",
+      evalConnectionFailed:
+        "Cannot connect to Eval MCP. Check your sign-in status and the service connection.",
+      evalRetry: "Check again",
+      includeEval: "Also connect quality evaluation",
+      evalHint:
+        "Generate a separate Eval MCP connection to find suites and run evaluations. Requires a backend with the standalone Eval MCP endpoint.",
+      cliMultipleTitle: "CLI setup commands (run in order)",
       title: "Let agents call OpenBKN capabilities",
       description:
         "This page generates MCP integration config. After copying it into an agent platform, the agent can access OpenBKN retrieval, query, and action capabilities through MCP tools.",

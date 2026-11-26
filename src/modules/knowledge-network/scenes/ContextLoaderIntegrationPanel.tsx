@@ -14,13 +14,15 @@ import {
   FileTextOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
-import { Input, Modal, Segmented, Select, Spin, Tooltip } from "antd";
+import { Checkbox, Input, Modal, Segmented, Select, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import {
+  listMcpTools,
+  type McpAuth,
   opSupportsTestData,
   requestDataAssistantKindOf,
   type ContextLoaderMode,
@@ -111,6 +113,7 @@ type ContextLoaderIntegrationPanelProps = {
   onMcpProfileChange: (profile: McpProfile) => void;
   appKeyValue: string;
   showMcpConnect?: boolean;
+  mcpAuth?: McpAuth;
 };
 
 function formatBytes(bytes: number): string {
@@ -402,9 +405,60 @@ export function ContextLoaderIntegrationPanel({
   onMcpProfileChange,
   appKeyValue,
   showMcpConnect = false,
+  mcpAuth,
 }: ContextLoaderIntegrationPanelProps) {
   const { t } = useTranslation();
   const location = useLocation();
+  const [evalConnection, setEvalConnection] = useState<
+    "loading" | "available" | "unavailable" | "error"
+  >("loading");
+  const [evalRetry, setEvalRetry] = useState(0);
+  const evalAvailable = evalConnection === "available";
+  const evalConnectionHint = {
+    available: "evalHint",
+    loading: "evalChecking",
+    unavailable: "evalUnavailable",
+    error: "evalConnectionFailed",
+  }[evalConnection];
+  useEffect(() => {
+    if (mode !== "mcp" || !showMcpConnect) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    setEvalConnection("loading");
+    listMcpTools(
+      {
+        base: window.location.origin,
+        token: mcpAuth?.getToken?.() ?? "",
+        knId: "",
+        mcpEndpoint: `${window.location.origin}/api/bkn-backend/v1/eval/mcp/`,
+      },
+      mcpAuth,
+      controller.signal,
+    )
+      .then((tools) => {
+        if (cancelled) return;
+        const names = new Set(tools.map((tool) => tool.name));
+        const complete = [
+          "bkn_eval_list_suites",
+          "bkn_eval_start_run",
+          "bkn_eval_next_case",
+          "bkn_eval_submit_result",
+          "bkn_eval_get_progress",
+        ].every((name) => names.has(name));
+        setEvalConnection(complete ? "available" : "unavailable");
+      })
+      .catch(() => {
+        if (!cancelled) setEvalConnection("error");
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [mode, showMcpConnect, mcpAuth, evalRetry]);
+  const [includeEval, setIncludeEval] = useState(false);
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
@@ -431,15 +485,23 @@ export function ContextLoaderIntegrationPanel({
     mcpProtocol,
   );
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
-  const mcpClientOptions = { allowInsecureTls };
+  const mcpClientOptions = {
+    allowInsecureTls,
+    includeEval: evalAvailable && includeEval,
+    // Local Eval APIs are proxied through Vite while platform sign-in stays remote.
+    evalMcpUrl:
+      import.meta.env.DEV && import.meta.env.VITE_EVAL_BACKEND_TARGET
+        ? new URL("/api/bkn-backend/v1/eval/mcp/", window.location.origin).toString()
+        : undefined,
+  };
   const isOauthMode = mcpAuthMode === "oauth";
   // WorkBuddy is only offered for the sign-in mode; fall back when switching to API Key.
   const activeMcpConfigTab = !isOauthMode && mcpConfigTab === "workbuddy" ? "claude" : mcpConfigTab;
   const mcpRemoteJsonConfig = isOauthMode
-    ? createMcpUrlJsonConfig(mcpUrlWithSlash)
+    ? createMcpUrlJsonConfig(mcpUrlWithSlash, mcpClientOptions)
     : createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey, mcpClientOptions);
   const claudeCliConfig = isOauthMode
-    ? createClaudeCodeMcpUrlCommand(mcpUrlWithSlash)
+    ? createClaudeCodeMcpUrlCommand(mcpUrlWithSlash, mcpClientOptions)
     : createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey, mcpClientOptions);
   const mcpConfigTabs = (
     [
@@ -653,7 +715,11 @@ export function ContextLoaderIntegrationPanel({
             {isOauthMode ? (
               <McpOauthSteps
                 client={activeMcpConfigTab}
-                serverName={mcpServerNameFor(mcpUrlWithSlash)}
+                serverName={
+                  mcpClientOptions.includeEval
+                    ? `${mcpServerNameFor(mcpUrlWithSlash)} / bkn-eval`
+                    : mcpServerNameFor(mcpUrlWithSlash)
+                }
               />
             ) : (
               <ol className={styles.mcpSteps}>
@@ -722,11 +788,34 @@ export function ContextLoaderIntegrationPanel({
               allowInsecureTls={allowInsecureTls}
               onAllowInsecureTlsChange={setAllowInsecureTls}
             />
+            <div className={styles.mcpProfileRow}>
+              <Checkbox
+                disabled={!evalAvailable}
+                checked={mcpClientOptions.includeEval}
+                onChange={(event) => setIncludeEval(event.target.checked)}
+              >
+                {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.includeEval")}
+              </Checkbox>
+              <span className={styles.mcpProfileHint}>
+                {t(`knowledgeNetwork.contextLoaderPanel.mcpConnect.${evalConnectionHint}`)}
+              </span>
+              {(evalConnection === "error" || evalConnection === "unavailable") && (
+                <button
+                  type="button"
+                  className={styles.guideLink}
+                  onClick={() => setEvalRetry((value) => value + 1)}
+                >
+                  {t("knowledgeNetwork.contextLoaderPanel.mcpConnect.evalRetry")}
+                </button>
+              )}
+            </div>
             <div className={styles.mcpConfigBody}>
               {activeMcpConfigTab === "claude" ? (
                 <>
                   <CodeBlock
-                    title={t("knowledgeNetwork.contextLoaderPanel.mcpConnect.cliTitle")}
+                    title={t(
+                      `knowledgeNetwork.contextLoaderPanel.mcpConnect.${mcpClientOptions.includeEval ? "cliMultipleTitle" : "cliTitle"}`,
+                    )}
                     code={claudeCliConfig}
                     onCopy={() =>
                       onCopy(
