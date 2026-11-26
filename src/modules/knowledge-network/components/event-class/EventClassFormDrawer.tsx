@@ -50,6 +50,7 @@ import type { RelationTypePropertyOption } from "@/modules/knowledge-network/com
 import {
   createKnEventType,
   describeKnEventError,
+  listKnEventHandlingCandidates,
   listKnEventRuleTools,
   trialKnEventRule,
   updateKnEventType,
@@ -63,6 +64,10 @@ import type {
   ActionTypeConditionValueFrom,
 } from "@/modules/knowledge-network/types/action-type";
 import type {
+  KnEventHandlingCandidate,
+  KnEventHandlingInput,
+  KnEventHandlingMode,
+  KnEventHandlingParameter,
   KnEventRule,
   KnEventRuleTool,
   KnEventRuleToolOption,
@@ -96,7 +101,11 @@ type EventClassFormDrawerProps = {
 
 type FormValues = {
   code: string;
+  handlingAction?: string;
+  handlingMode?: KnEventHandlingMode;
   handlingNote?: string;
+  /** Values for the inputs of the handling action, by the input's name. */
+  handlingParameters?: Record<string, HandlingParameterDraft>;
   mergeHours?: number;
   name: string;
   ruleTool?: string;
@@ -110,6 +119,12 @@ type RuleBasis = KnEventRule["basis"];
 
 /** A parameter of the rule tool as the form edits it. */
 type ParameterDraft = { mode: "fixed" | "checkDate"; value?: unknown };
+
+/** An input of the handling action as the form edits it. */
+type HandlingParameterDraft = {
+  from?: KnEventHandlingParameter["value_from"];
+  value?: boolean | number | string | null;
+};
 
 /** The code is the ID of the event class, an object type. */
 const CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -142,6 +157,58 @@ function isCheckTime(value: unknown) {
 
 function isNumberType(type: string | undefined) {
   return type === "number" || type === "integer";
+}
+
+/** The types of action type parameters that take a number. */
+const NUMERIC_INPUT_TYPES = new Set([
+  "decimal",
+  "double",
+  "float",
+  "integer",
+  "long",
+  "number",
+  "short",
+]);
+
+function isBlankValue(value: unknown) {
+  return value === undefined || value === null || (typeof value === "string" && !value.trim());
+}
+
+function handlingDrafts(
+  parameters: Record<string, KnEventHandlingParameter> | undefined,
+): Record<string, HandlingParameterDraft> {
+  return Object.fromEntries(
+    Object.entries(parameters ?? {}).map(([name, parameter]) => [
+      name,
+      {
+        from: parameter.value_from,
+        value:
+          parameter.value === null ||
+          typeof parameter.value === "boolean" ||
+          typeof parameter.value === "number" ||
+          typeof parameter.value === "string"
+            ? parameter.value
+            : JSON.stringify(parameter.value),
+      },
+    ]),
+  );
+}
+
+/** The values the form gives the named inputs; inputs left blank are left out. */
+function handlingParametersOf(
+  names: readonly string[],
+  drafts: Record<string, HandlingParameterDraft> | undefined,
+): Record<string, KnEventHandlingParameter> | undefined {
+  const parameters: Record<string, KnEventHandlingParameter> = {};
+  for (const name of names) {
+    const draft = drafts?.[name];
+    if (!draft || isBlankValue(draft.value)) continue;
+    parameters[name] = {
+      value: typeof draft.value === "string" ? draft.value.trim() : draft.value,
+      value_from: draft.from ?? "const",
+    };
+  }
+  return Object.keys(parameters).length ? parameters : undefined;
 }
 
 /** Only a text parameter can take the day of the check. */
@@ -232,6 +299,11 @@ export function EventClassFormDrawer({
   const watchedSubject = Form.useWatch("subject", form);
   const watchedCode = Form.useWatch("code", form);
   const watchedName = Form.useWatch("name", form);
+  const handlingActionId = Form.useWatch("handlingAction", form);
+  const handlingMode = Form.useWatch("handlingMode", form);
+  const handlingParameterDrafts = Form.useWatch("handlingParameters", form);
+  const [handlingCandidates, setHandlingCandidates] = useState<KnEventHandlingCandidate[]>([]);
+  const [handlingLoading, setHandlingLoading] = useState(false);
   const [subjects, setSubjects] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
@@ -256,7 +328,12 @@ export function EventClassFormDrawer({
     form.resetFields();
     form.setFieldsValue({
       code: eventType?.code ?? "",
+      handlingAction: eventType?.handling_action?.action_type_id,
+      handlingMode:
+        eventType?.handling_action?.mode ??
+        ((eventType?.source ?? "rule") === "rule" ? "auto" : "suggest"),
       handlingNote: eventType?.handling_note ?? "",
+      handlingParameters: handlingDrafts(eventType?.handling_action?.parameters),
       mergeHours: eventType?.merge_hours ?? 0,
       name: eventType?.name ?? "",
       ruleTool:
@@ -323,9 +400,39 @@ export function EventClassFormDrawer({
     };
   }, [basis, networkId, open, source, toolsTick]);
 
-  // A condition compares the subject's properties.
+  // A handling action acts on the subject.
   useEffect(() => {
-    if (!open || !networkId || source !== "rule" || !watchedSubject) {
+    if (!open || !networkId || !watchedSubject) {
+      setHandlingCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    setHandlingLoading(true);
+    void listKnEventHandlingCandidates(networkId, watchedSubject)
+      .then((items) => {
+        if (!cancelled) setHandlingCandidates(items);
+      })
+      .catch(() => {
+        if (!cancelled) setHandlingCandidates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHandlingLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, open, watchedSubject]);
+
+  // A reported event is not found by a check: nothing runs its handling action by itself.
+  useEffect(() => {
+    if (source === "report" && form.getFieldValue("handlingMode") === "auto") {
+      form.setFieldValue("handlingMode", "suggest");
+    }
+  }, [form, source]);
+
+  // A condition compares the subject's properties; an input of the handling action can take one.
+  useEffect(() => {
+    if (!open || !networkId || !watchedSubject) {
       setPropertyOptions([]);
       return;
     }
@@ -350,7 +457,7 @@ export function EventClassFormDrawer({
     return () => {
       cancelled = true;
     };
-  }, [networkId, open, source, watchedSubject]);
+  }, [networkId, open, watchedSubject]);
 
   // A condition on another object type's properties means nothing for a new subject.
   useEffect(() => {
@@ -567,8 +674,27 @@ export function EventClassFormDrawer({
         cron = checked.cron;
       }
     }
+    // Until the candidates are read, the inputs are the ones the class already gives.
+    const chosenHandling = handlingCandidates.find((item) => item.id === values.handlingAction);
+    const handlingInputNames = chosenHandling
+      ? chosenHandling.inputs.map((input) => input.name)
+      : values.handlingAction === eventType?.handling_action?.action_type_id
+        ? Object.keys(eventType?.handling_action?.parameters ?? {})
+        : [];
+    const handlingParameters = handlingParametersOf(
+      handlingInputNames,
+      form.getFieldValue("handlingParameters") as
+        Record<string, HandlingParameterDraft> | undefined,
+    );
     const shared = {
       check_schedule: rule ? { cron, timezone } : null,
+      handling_action: values.handlingAction
+        ? {
+            action_type_id: values.handlingAction,
+            mode: isRule ? (values.handlingMode ?? "auto") : ("suggest" as const),
+            ...(handlingParameters ? { parameters: handlingParameters } : {}),
+          }
+        : null,
       handling_note: values.handlingNote?.trim() ?? "",
       merge_hours: isRule ? (eventType?.merge_hours ?? 0) : (values.mergeHours ?? 0),
       name: values.name.trim(),
@@ -680,6 +806,95 @@ export function EventClassFormDrawer({
 
   const subjectRecord = subjects.filter((item) => item.id === watchedSubject);
   const F = "knowledgeNetwork.eventClasses.form";
+  const chosenHandlingAction = handlingCandidates.find((item) => item.id === handlingActionId);
+  // Run by itself, nobody is there to give an input: the class gives each one.
+  const runsByItself = source === "rule" && handlingMode === "auto";
+
+  const renderHandlingInput = (input: KnEventHandlingInput) => {
+    const from = handlingParameterDrafts?.[input.name]?.from ?? "const";
+    const valueLabel = t(`${F}.handlingParameterValue`, { name: input.name });
+    const valueControl =
+      from === "property" ? (
+        <Select
+          aria-label={valueLabel}
+          className={styles.handlingValue}
+          optionFilterProp="label"
+          options={propertyOptions.map((option) => ({
+            label: option.label === option.name ? option.name : `${option.label} (${option.name})`,
+            value: option.name,
+          }))}
+          placeholder={t(`${F}.handlingParameterPropertyPlaceholder`)}
+          showSearch
+        />
+      ) : input.type === "boolean" ? (
+        <Select
+          aria-label={valueLabel}
+          className={styles.handlingValue}
+          options={[
+            { label: t(`${F}.handlingParameterTrue`), value: true },
+            { label: t(`${F}.handlingParameterFalse`), value: false },
+          ]}
+          placeholder={t(`${F}.handlingParameterValuePlaceholder`)}
+        />
+      ) : input.type && NUMERIC_INPUT_TYPES.has(input.type) ? (
+        <InputNumber
+          aria-label={valueLabel}
+          className={styles.handlingValue}
+          placeholder={t(`${F}.handlingParameterValuePlaceholder`)}
+        />
+      ) : (
+        <Input
+          aria-label={valueLabel}
+          className={styles.handlingValue}
+          placeholder={t(`${F}.handlingParameterValuePlaceholder`)}
+        />
+      );
+    return (
+      <div className={styles.parameterRow} key={input.name}>
+        <div className={styles.parameterName}>
+          <Typography.Text code>{input.name}</Typography.Text>
+          {input.type ? <Typography.Text type="secondary">{input.type}</Typography.Text> : null}
+        </div>
+        {input.comment ? (
+          <Typography.Text className={styles.parameterHint} type="secondary">
+            {input.comment}
+          </Typography.Text>
+        ) : null}
+        <div className={styles.handlingInput}>
+          <Form.Item initialValue="const" name={["handlingParameters", input.name, "from"]} noStyle>
+            <Select
+              aria-label={t(`${F}.handlingParameterFrom`, { name: input.name })}
+              className={styles.handlingFrom}
+              onChange={() =>
+                form.setFieldValue(["handlingParameters", input.name, "value"], undefined)
+              }
+              options={[
+                { label: t(`${F}.handlingParameterConst`), value: "const" },
+                { label: t(`${F}.handlingParameterProperty`), value: "property" },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            dependencies={["handlingMode", "source"]}
+            name={["handlingParameters", input.name, "value"]}
+            noStyle
+            rules={[
+              {
+                validator: (_, value: unknown) =>
+                  runsByItself && isBlankValue(value)
+                    ? Promise.reject(
+                        new Error(t(`${F}.handlingParameterRequired`, { name: input.name })),
+                      )
+                    : Promise.resolve(),
+              },
+            ]}
+          >
+            {valueControl}
+          </Form.Item>
+        </div>
+      </div>
+    );
+  };
 
   const basisHint =
     basis === "condition"
@@ -943,9 +1158,85 @@ export function EventClassFormDrawer({
           </FormCard>
         ) : null}
         <FormCard keyword={t(`${F}.then`)}>
-          <Form.Item className={styles.lastField} name="handlingNote">
+          <Row gutter={16}>
+            <Col span={handlingActionId ? 14 : 24}>
+              <Form.Item
+                label={t(`${F}.handlingAction`)}
+                name="handlingAction"
+                tooltip={t(`${F}.handlingActionHint`)}
+              >
+                <Select
+                  allowClear
+                  aria-label={t(`${F}.handlingAction`)}
+                  disabled={!watchedSubject}
+                  loading={handlingLoading}
+                  notFoundContent={handlingLoading ? undefined : t(`${F}.handlingActionEmpty`)}
+                  optionFilterProp="searchText"
+                  // The chosen action shows by its name; what it asks for is below.
+                  optionLabelProp="searchText"
+                  options={handlingCandidates.map((item) => ({
+                    // Run by itself, an action that asks for input needs a value for each input.
+                    label: item.inputs.length ? (
+                      <span>
+                        <span>{item.name}</span>{" "}
+                        <Typography.Text type="secondary">
+                          {t(`${F}.handlingActionInputs`, { count: item.inputs.length })}
+                        </Typography.Text>
+                      </span>
+                    ) : (
+                      item.name
+                    ),
+                    searchText: item.name,
+                    value: item.id,
+                  }))}
+                  placeholder={t(`${F}.handlingActionPlaceholder`)}
+                  showSearch
+                />
+              </Form.Item>
+            </Col>
+            {handlingActionId ? (
+              <Col span={10}>
+                <Form.Item
+                  dependencies={["handlingAction"]}
+                  label={t(`${F}.handlingMode`)}
+                  name="handlingMode"
+                  tooltip={t(
+                    source === "rule" ? `${F}.handlingModeHint` : `${F}.handlingModeReportHint`,
+                  )}
+                >
+                  <Radio.Group
+                    optionType="button"
+                    options={[
+                      {
+                        disabled: source !== "rule",
+                        label: t(`${F}.handlingModeAuto`),
+                        value: "auto",
+                      },
+                      { label: t(`${F}.handlingModeSuggest`), value: "suggest" },
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+            ) : null}
+          </Row>
+          {chosenHandlingAction?.inputs.length ? (
+            <Form.Item
+              label={t(`${F}.handlingParameters`)}
+              required={runsByItself}
+              tooltip={t(`${F}.handlingParametersHint`)}
+            >
+              <div className={styles.parameters}>
+                {chosenHandlingAction.inputs.map(renderHandlingInput)}
+              </div>
+            </Form.Item>
+          ) : null}
+          <Form.Item
+            className={styles.lastField}
+            label={t(`${F}.handlingNote`)}
+            name="handlingNote"
+          >
             <Input.TextArea
-              aria-label={t(`${F}.then`)}
+              aria-label={t(`${F}.handlingNote`)}
               autoSize={{ maxRows: 6, minRows: 3 }}
               maxLength={500}
               placeholder={t(`${F}.handlingNotePlaceholder`)}

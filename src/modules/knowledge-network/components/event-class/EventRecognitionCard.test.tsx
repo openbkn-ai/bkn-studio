@@ -118,3 +118,89 @@ describe("EventRecognitionCard check now", () => {
     expect(screen.queryByText(`${PREFIX}.checkNow`)).toBeNull();
   });
 });
+
+describe("EventRecognitionCard handling", () => {
+  it("names the action type the events are handed to and how it runs", () => {
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{
+          ...overdue,
+          handling_action: { action_type_id: "notify_buyer", mode: "auto" },
+        }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("notify_buyer")).toBeVisible();
+    expect(screen.getByText(`${PREFIX}.handlingModes.auto`)).toBeVisible();
+  });
+
+  it("shows what the class gives the inputs of its handling action", () => {
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{
+          ...overdue,
+          handling_action: {
+            action_type_id: "refund",
+            mode: "auto",
+            parameters: {
+              buyer: { value: "buyer_id", value_from: "property" },
+              reason: { value: "late", value_from: "const" },
+            },
+          },
+        }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("buyer")).toBeVisible();
+    expect(screen.getByText(`${PREFIX}.handlingParameterProperty`)).toBeVisible();
+    expect(screen.getByText("reason")).toBeVisible();
+    expect(screen.getByText(`${PREFIX}.handlingParameterConst`)).toBeVisible();
+  });
+});
+
+describe("EventRecognitionCard execution records", () => {
+  it("opens the records of the recognition action and of the handling action", () => {
+    const onOpenExecutions = vi.fn();
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{
+          ...overdue,
+          handling_action: { action_type_id: "notify_buyer", mode: "auto" },
+        }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+        onOpenExecutions={onOpenExecutions}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(`${PREFIX}.viewExecutions`));
+    fireEvent.click(screen.getByText(`${PREFIX}.handlingExecutions`));
+
+    expect(onOpenExecutions.mock.calls).toEqual([["order_overdue_recognition"], ["notify_buyer"]]);
+  });
+
+  it("offers no records for a class without a recognition action", () => {
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{ ...overdue, recognition_action_id: undefined, rule_tool: null }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+        onOpenExecutions={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(`${PREFIX}.viewExecutions`)).toBeNull();
+  });
+});

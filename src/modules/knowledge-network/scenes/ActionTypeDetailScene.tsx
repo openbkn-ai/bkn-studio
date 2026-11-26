@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert } from "antd";
+import { Alert, Typography } from "antd";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -69,6 +69,7 @@ export function ActionTypeDetailScene() {
     actionSource.type === "manual" ||
     (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
+  const detailPath = `${listPath}/${actionTypeId}/detail`;
   const returnPath = knowledgeNetworkReturnPath(networkId, location.state, listPath);
 
   const confirmDelete = () => {
@@ -194,6 +195,30 @@ export function ActionTypeDetailScene() {
         title={detail.name}
       >
         <div className={styles.contentPanel}>
+          {detail.eventClassId ? (
+            <Alert
+              className={styles.eventClassNote}
+              description={t("knowledgeNetwork.actionTypeRecognitionNote")}
+              message={
+                <>
+                  {t("knowledgeNetwork.actionTypeEventClass")}
+                  <Typography.Link
+                    onClick={() => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/${encodeURIComponent(detail.eventClassId ?? "")}/detail`,
+                        { state: knowledgeNetworkReturnState(detailPath) },
+                      );
+                    }}
+                  >
+                    {objectTypes.find((item) => item.id === detail.eventClassId)?.name ||
+                      detail.eventClassId}
+                  </Typography.Link>
+                </>
+              }
+              showIcon
+              type="info"
+            />
+          ) : null}
           <DeprecatedBanner
             declarations={detail.declarations}
             kind="action_type"

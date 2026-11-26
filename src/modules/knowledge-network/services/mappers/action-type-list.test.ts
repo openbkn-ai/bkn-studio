@@ -53,6 +53,25 @@ describe("action type list mapper", () => {
     expect(detail.operations).toEqual(["modify", "authorize", "delete"]);
   });
 
+  it("names the event class of a recognition action, and none of another action", () => {
+    const recognition = mapActionTypeDetail({
+      action_type: "add",
+      id: "order_overdue_recognition",
+      name: "Overdue order recognition",
+      operation_config: { event_class: "order_overdue", type: "event" },
+    } as unknown as Parameters<typeof mapActionTypeDetail>[0]);
+    const other = mapActionTypeDetail({
+      action_type: "modify",
+      id: "action-1",
+      name: "Edit order",
+      operation_config: { type: "object" },
+    });
+
+    expect(recognition.eventClassId).toBe("order_overdue");
+    expect(recognition.operationConfig).toBeUndefined();
+    expect(other.eventClassId).toBeUndefined();
+  });
+
   it("maps concept group action type entries with lowercase backend enums", () => {
     const detail = mapConceptGroupDetail({
       action_types: [

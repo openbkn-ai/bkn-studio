@@ -17,6 +17,7 @@ type SetSearchParams = (
 ) => void;
 
 const mocks = vi.hoisted(() => ({
+  getKnowledgeNetworkActionType: vi.fn(),
   getKnowledgeNetworkActionTypeDetail: vi.fn(),
   getKnowledgeNetwork: vi.fn(),
   getKnowledgeNetworkMetric: vi.fn(),
@@ -159,6 +160,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   deleteKnowledgeNetworkActionType: vi.fn(),
   deleteKnowledgeNetworkObjectType: vi.fn(),
   deleteKnowledgeNetworkRelationType: vi.fn(),
+  getKnowledgeNetworkActionType: mocks.getKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail: mocks.getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetwork: mocks.getKnowledgeNetwork,
   getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
@@ -221,6 +223,7 @@ import { RelationTypeDetailScene } from "./RelationTypeDetailScene";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 beforeEach(() => {
@@ -288,6 +291,50 @@ describe("knowledge network detail scene headers", () => {
     expect(
       await screen.findByText("knowledgeNetwork.actionRelationOtherCondition:Brand"),
     ).not.toBeNull();
+  });
+
+  it("links a recognition action to its event class, and comes back to the action", async () => {
+    mocks.routeParams.current = {
+      actionTypeId: "order_overdue_recognition",
+      networkId: "network-1",
+    };
+    mocks.searchParams.current = "?view=detail";
+    mocks.listKnowledgeNetworkObjectTypes.mockResolvedValue([
+      { id: "order", name: "Order" },
+      { id: "order_overdue", name: "Overdue order" },
+    ]);
+    mocks.getKnowledgeNetworkActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#126ee3",
+      description: "",
+      eventClassId: "order_overdue",
+      executionConfig: {
+        actionSource: { type: "manual" },
+        parameters: [],
+        sourceName: "Manual",
+        sourceType: "manual",
+      },
+      id: "order_overdue_recognition",
+      name: "Overdue order recognition",
+      objectTypeId: "order",
+      objectTypeName: "Order",
+      tags: [],
+      updateTime: "2026-11-25 10:00:00",
+      updaterName: "admin",
+    });
+
+    render(<ActionTypeDetailScene />);
+
+    fireEvent.click(await screen.findByText("Overdue order"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/object-types/order_overdue/detail",
+      {
+        state: {
+          knowledgeNetworkReturnTo:
+            "/knowledge-network/workspace/network-1/action-types/order_overdue_recognition/detail",
+        },
+      },
+    );
   });
 
   it("shows action type operations granted by the detail record", async () => {
@@ -393,6 +440,84 @@ describe("knowledge network detail scene headers", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "back" }));
     expect(mocks.navigate).toHaveBeenCalledWith(graphReturnTo);
+  });
+
+  it("counts and lists the actions an event class uses", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "late_order" };
+    mocks.searchParams.current = "?tab=related&relatedSection=actions";
+    // The tables of the related tab ask for the viewport size.
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: false,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    );
+    mocks.listKnEventTypes.mockResolvedValue([
+      {
+        code: "late_order",
+        handling_action: { action_type_id: "notify_buyer", mode: "suggest" },
+        name: "Late order",
+        object_type_id: "late_order",
+        recognition_action_id: "late_order_recognition",
+        source: "rule",
+        subject: "order",
+      },
+    ]);
+    mocks.getKnowledgeNetworkActionType.mockImplementation((_network: string, id: string) =>
+      id === "late_order_recognition"
+        ? Promise.resolve({
+            id,
+            name: "Find late orders",
+            objectTypeId: "order",
+            objectTypeName: "Order",
+          })
+        : Promise.reject(new Error("not found")),
+    );
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "late_order",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Late order",
+      operations: ["view_detail"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    expect(await screen.findByText("knowledgeNetwork.objectTypeDetailEventActions")).not.toBeNull();
+    expect(await screen.findByText("Find late orders")).not.toBeNull();
+    expect(
+      screen.getByText("knowledgeNetwork.objectTypeDetailEventActionRoles.recognition"),
+    ).not.toBeNull();
+    // A handling action the network no longer has is still listed, as missing.
+    expect(await screen.findByText("notify_buyer")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.objectTypeDetailEventActionMissing")).not.toBeNull();
+    expect(
+      screen.getByText("knowledgeNetwork.objectTypeDetailEventActionRoles.handling"),
+    ).not.toBeNull();
+
+    fireEvent.click(screen.getByText("Find late orders"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/late_order_recognition/detail",
+      expect.anything(),
+    );
   });
 
   it("offers no object type edit or delete until it is known whether it is an event class", async () => {

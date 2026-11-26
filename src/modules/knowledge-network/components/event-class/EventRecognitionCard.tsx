@@ -31,6 +31,8 @@ type EventRecognitionCardProps = {
   eventType: KnEventType;
   networkId: string;
   onEdit: () => void;
+  /** Opens the execution records of an action type: the recognition action or the handling one. */
+  onOpenExecutions?: (actionTypeId: string) => void;
   onOpenSubject?: (objectTypeId: string) => void;
   /** Shows the class's events, one per object a check hit. */
   onShowEvents?: () => void;
@@ -63,6 +65,7 @@ export function EventRecognitionCard({
   eventType,
   networkId,
   onEdit,
+  onOpenExecutions,
   onOpenSubject,
   onShowEvents,
   subjectName,
@@ -153,7 +156,6 @@ export function EventRecognitionCard({
           </div>
         ) : null}
       </div>
-      <p className={styles.note}>{t(`${PREFIX}.managedNote`)}</p>
       {isRule && !eventType.recognition_action_id ? (
         <Alert message={t(`${PREFIX}.noRuleTool`)} showIcon type="warning" />
       ) : null}
@@ -182,6 +184,46 @@ export function EventRecognitionCard({
           ),
         )}
         {field(t(`${PREFIX}.severity`), eventType.severity || placeholder)}
+        {field(
+          t(`${PREFIX}.handling`),
+          eventType.handling_action ? (
+            <>
+              <code className={styles.code}>{eventType.handling_action.action_type_id}</code>{" "}
+              {t(`${PREFIX}.handlingModes.${eventType.handling_action.mode}`)}
+              {onOpenExecutions ? (
+                <>
+                  {" · "}
+                  <Typography.Link
+                    onClick={() =>
+                      onOpenExecutions(eventType.handling_action?.action_type_id ?? "")
+                    }
+                  >
+                    {t(`${PREFIX}.handlingExecutions`)}
+                  </Typography.Link>
+                </>
+              ) : null}
+              {Object.entries(eventType.handling_action.parameters ?? {}).map(
+                ([name, parameter]) => (
+                  <div className={styles.handlingParameter} key={name}>
+                    <code className={styles.code}>{name}</code>{" "}
+                    {parameter.value_from === "property"
+                      ? t(`${PREFIX}.handlingParameterProperty`, {
+                          property: String(parameter.value),
+                        })
+                      : t(`${PREFIX}.handlingParameterConst`, {
+                          value:
+                            typeof parameter.value === "object"
+                              ? JSON.stringify(parameter.value)
+                              : String(parameter.value as string | number | boolean),
+                        })}
+                  </div>
+                ),
+              )}
+            </>
+          ) : (
+            placeholder
+          ),
+        )}
         {eventType.source === "report"
           ? field(
               t(`${PREFIX}.mergeHours`),
@@ -264,6 +306,16 @@ export function EventRecognitionCard({
               ) : (
                 t(`${PREFIX}.neverChecked`)
               ),
+            )
+          : null}
+        {isRule && eventType.recognition_action_id && onOpenExecutions
+          ? field(
+              t(`${PREFIX}.executions`),
+              <Typography.Link
+                onClick={() => onOpenExecutions(eventType.recognition_action_id ?? "")}
+              >
+                {t(`${PREFIX}.viewExecutions`)}
+              </Typography.Link>,
             )
           : null}
       </dl>

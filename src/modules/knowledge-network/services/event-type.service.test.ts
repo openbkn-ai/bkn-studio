@@ -45,6 +45,7 @@ import {
   cronOfFixedRate,
   deleteKnEventType,
   getKnEventType,
+  listKnEventHandlingCandidates,
   listKnEventRuleTools,
   listKnEventTypes,
   parameterFromBackend,
@@ -277,6 +278,105 @@ describe("event-type.service", () => {
     expect(types.map((type) => type.code)).toEqual(["order_overdue"]);
     expect(types[0]).toMatchObject({ check_schedule: null, rule_tool: null });
     expect(types[0]?.recognition_action_id).toBeUndefined();
+  });
+
+  it("reads the handling action of a class, and none when it has not one", async () => {
+    getMock.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: {
+          entries:
+            url === `${KN}/object-types`
+              ? [
+                  eventClass({
+                    event: {
+                      handling_action: { action_type_id: "notify_buyer", mode: "auto" },
+                      source: "rule",
+                      subject: "order",
+                    },
+                  }),
+                  eventClass({ id: "order_late" }),
+                ]
+              : [],
+          total_count: 2,
+        },
+      }),
+    );
+
+    const [handled, plain] = await listKnEventTypes("kn-1");
+
+    expect(handled?.handling_action).toEqual({ action_type_id: "notify_buyer", mode: "auto" });
+    expect(plain?.handling_action).toBeNull();
+  });
+
+  it("writes the handling action of a class, and leaves it out to clear it", async () => {
+    postMock.mockResolvedValue({ data: [{ id: "order_overdue" }] });
+    serve();
+
+    await createKnEventType("kn-1", {
+      code: "order_overdue",
+      handling_action: { action_type_id: "notify_buyer", mode: "suggest" },
+      name: "Quality complaint",
+      rule: null,
+      source: "report",
+      subject: "order",
+    });
+    putMock.mockResolvedValue({ data: "" });
+    await updateKnEventType("kn-1", "order_overdue", {
+      handling_action: null,
+      name: "Overdue",
+      rule: null,
+      subject: "order",
+    });
+
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({
+      entries: [
+        {
+          event: { handling_action: { action_type_id: "notify_buyer", mode: "suggest" } },
+        },
+      ],
+    });
+    const replaced = putMock.mock.calls[0]?.[1] as { event: Record<string, unknown> };
+    expect(replaced.event).not.toHaveProperty("handling_action");
+  });
+
+  it("offers the action types on the subject, other than recognition, with what they ask for", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "refund",
+            name: "Refund",
+            object_type_id: "order",
+            parameters: [
+              { comment: "Why", name: "reason", type: "string" },
+              { name: "order_id", value_from: "property" },
+              { name: "note", value_from: "input" },
+            ],
+          },
+          { id: "notify_buyer", name: "", object_type_id: "order" },
+          recognition(),
+          { id: "ship", name: "Ship", object_type_id: "shipment" },
+        ],
+        total_count: 4,
+      },
+    });
+
+    const candidates = await listKnEventHandlingCandidates("kn-1", "order");
+
+    expect(getMock).toHaveBeenCalledWith(
+      `${KN}/action-types`,
+      expect.objectContaining({
+        params: expect.objectContaining({ object_type_id: "order" }) as unknown,
+      }),
+    );
+    expect(candidates).toEqual([
+      {
+        id: "refund",
+        inputs: [{ comment: "Why", name: "reason", type: "string" }, { name: "note" }],
+        name: "Refund",
+      },
+      { id: "notify_buyer", inputs: [], name: "notify_buyer" },
+    ]);
   });
 
   it("names a basis other than a function and leaves the rule tool empty", async () => {

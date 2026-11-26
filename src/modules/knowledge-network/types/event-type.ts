@@ -81,6 +81,45 @@ export type KnEventRule =
   | { basis: "cypher"; cypher: KnEventCypherRule }
   | { basis: "function"; tool: KnEventRuleTool };
 
+/**
+ * How a class handles its events with an action type: `auto` runs it on the object of each event a
+ * check newly finds, `suggest` only offers it to the person handling an event.
+ */
+export type KnEventHandlingMode = "auto" | "suggest";
+
+/**
+ * The value of an input of a handling action: a constant, or the property of the event's object
+ * that `value` names.
+ */
+export type KnEventHandlingParameter = {
+  value: unknown;
+  value_from: "const" | "property";
+};
+
+/** The action type that handles the events of a class, and how. */
+export type KnEventHandlingAction = {
+  action_type_id: string;
+  mode: KnEventHandlingMode;
+  /** Values for inputs of the action type, by name: `auto` needs one for each input. */
+  parameters?: Record<string, KnEventHandlingParameter>;
+};
+
+/** An input of an action type: a parameter its caller gives. */
+export type KnEventHandlingInput = {
+  comment?: string;
+  name: string;
+  /** The parameter's type, such as string, integer or boolean. */
+  type?: string;
+};
+
+/** An action type that can handle the events of a class: it acts on the subject. */
+export type KnEventHandlingCandidate = {
+  id: string;
+  /** The parameters a caller gives; run by itself, the class gives each a value. */
+  inputs: KnEventHandlingInput[];
+  name: string;
+};
+
 export type KnEventType = {
   check_schedule?: KnEventCheckSchedule | null;
   /** The account the scheduled checks run as (the action type's `execution_subject`). */
@@ -89,6 +128,7 @@ export type KnEventType = {
   code: string;
   create_time?: number;
   creator?: string;
+  handling_action?: KnEventHandlingAction | null;
   handling_note?: string;
   kn_id?: string;
   merge_hours?: number;
@@ -125,6 +165,8 @@ export type KnEventTypeInput = {
   check_schedule?: KnEventCheckSchedule | null;
   /** The ID of the new object type: lowercase letters, digits, `_` and `-`, at most 64. */
   code: string;
+  /** The action type that handles the class's events; null or absent for none. */
+  handling_action?: KnEventHandlingAction | null;
   handling_note?: string;
   merge_hours?: number;
   name: string;

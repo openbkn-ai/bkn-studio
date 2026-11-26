@@ -244,10 +244,20 @@ export function mapActionTypeExecutionConfigFromBackend(
   };
 }
 
+/** The event class a recognition action records events of; the operation config of any other is not "event". */
+function recognisedEventClass(config: unknown): string | undefined {
+  const event = config as { event_class?: unknown; type?: unknown } | undefined;
+  return event?.type === "event" && typeof event.event_class === "string" && event.event_class
+    ? event.event_class
+    : undefined;
+}
+
 export function mapActionTypeDetail(item: BackendActionType): ActionTypeDetail {
   const declarations = mapDefinitionDeclarations(item);
+  const eventClassId = recognisedEventClass(item.operation_config);
   return {
     ...(declarations ? { declarations } : {}),
+    ...(eventClassId ? { eventClassId } : {}),
     id: item.id,
     ...(item.operation_config
       ? { operationConfig: mapActionOperationConfig(item.operation_config) }

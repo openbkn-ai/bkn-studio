@@ -87,6 +87,33 @@ describe("throwIfStillReferenced", () => {
     expect((thrown as DefinitionStillReferencedError).references).toEqual(references);
   });
 
+  it("says in the user's language that an event class handles its events with an action type", () => {
+    const error = backendError(409, "BknBackend.ActionType.StillReferenced", {
+      references: ['action type "notify" handles the events of event class "late" (Late)'],
+    }) as { response: { data: Record<string, unknown> } };
+    error.response.data.metadata = {
+      references: [
+        {
+          id: "notify",
+          kind: "action_type",
+          message: 'action type "notify" handles the events of event class "late" (Late)',
+          referrer_id: "late",
+          referrer_kind: "object_type",
+          via: "handling_action",
+        },
+      ],
+    };
+    let thrown: unknown;
+    try {
+      throwIfStillReferenced(error, { id: "notify", kind: "action_type" });
+    } catch (caught) {
+      thrown = caught;
+    }
+    expect((thrown as DefinitionStillReferencedError).references).toEqual([
+      "事件类「late」用它处置事件，先在事件类里改掉处置行动类",
+    ]);
+  });
+
   it("leaves any other error alone", () => {
     expect(() =>
       throwIfStillReferenced(backendError(500, "BknBackend.ObjectType.InternalError", {}), {

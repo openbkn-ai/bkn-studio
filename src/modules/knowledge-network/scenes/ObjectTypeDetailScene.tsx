@@ -60,6 +60,7 @@ import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/co
 import {
   deleteKnowledgeNetworkObjectType,
   getKnowledgeNetwork,
+  getKnowledgeNetworkActionType,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage,
@@ -193,6 +194,13 @@ function parsePermissionRequestValues(value: string | null) {
   ];
 }
 
+/** An action an event class uses, with what it does for the class; null when it is not there. */
+type EventActionRow = {
+  id: string;
+  record: KnowledgeNetworkActionTypeRecord | null;
+  role: "handling" | "recognition";
+};
+
 export function ObjectTypeDetailScene() {
   const entitlement = useEntitlement();
   const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
@@ -246,6 +254,20 @@ export function ObjectTypeDetailScene() {
   );
   const eventClassIds = useMemo(() => new Set(eventTypes.byClassId.keys()), [eventTypes.byClassId]);
   const showEventsSection = eventTypes.available && !eventType;
+  // The actions an event class uses act on its subject, not on the class: its recognition action
+  // and its handling action.
+  const eventActionRoles = useMemo(() => {
+    const roles: { id: string; role: "handling" | "recognition" }[] = [];
+    if (eventType?.recognition_action_id) {
+      roles.push({ id: eventType.recognition_action_id, role: "recognition" });
+    }
+    const handlingId = eventType?.handling_action?.action_type_id;
+    if (handlingId && !roles.some((item) => item.id === handlingId)) {
+      roles.push({ id: handlingId, role: "handling" });
+    }
+    return roles;
+  }, [eventType?.handling_action?.action_type_id, eventType?.recognition_action_id]);
+  const [eventActions, setEventActions] = useState<EventActionRow[]>([]);
   const versioned = useKnVersioned(networkId);
   const [versionView] = useKnVersionView(networkId);
   const canModifyNetwork = useKnowledgeNetworkCanOperate(networkId, "modify");
@@ -743,6 +765,26 @@ export function ObjectTypeDetailScene() {
     relatedRequestKeyword,
     shouldLoadRelatedMetrics,
   ]);
+
+  useEffect(() => {
+    if (!networkId || !eventActionRoles.length) {
+      setEventActions([]);
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      eventActionRoles.map(({ id, role }) =>
+        getKnowledgeNetworkActionType(networkId, id, { skipErrorToast: true })
+          .catch(() => null)
+          .then((record): EventActionRow => ({ id, record: record ?? null, role })),
+      ),
+    ).then((rows) => {
+      if (!cancelled) setEventActions(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventActionRoles, networkId]);
 
   useEffect(() => {
     if (!shouldLoadRelatedActions || !networkId || !objectTypeId) {
@@ -1385,6 +1427,12 @@ export function ObjectTypeDetailScene() {
           eventType={eventType}
           networkId={networkId}
           onEdit={() => setEventForm({ eventType, open: true })}
+          onOpenExecutions={(actionTypeId) => {
+            void navigate(
+              `/knowledge-network/workspace/${networkId}/action-types/${encodeURIComponent(actionTypeId)}/execution?tab=tasks`,
+              { state: knowledgeNetworkReturnState(`${location.pathname}${location.search}`) },
+            );
+          }}
           onOpenSubject={(subjectId) => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/object-types/${subjectId}/detail`,
@@ -1460,7 +1508,7 @@ export function ObjectTypeDetailScene() {
             disabled={
               relatedActionsLoadedObjectTypeId === objectTypeId &&
               !relatedActionsLoading &&
-              relatedActionsTotalCount === 0
+              relatedActionsTotalCount + eventActionRoles.length === 0
             }
             onClick={() => {
               openTab("related", { relatedSection: "actions" });
@@ -1478,7 +1526,7 @@ export function ObjectTypeDetailScene() {
                 error: relatedActionsError,
                 loaded: relatedActionsLoadedObjectTypeId === objectTypeId,
                 loading: relatedActionsLoading,
-                value: relatedActionsTotalCount,
+                value: relatedActionsTotalCount + eventActionRoles.length,
               })}
             </span>
           </button>
@@ -1586,6 +1634,61 @@ export function ObjectTypeDetailScene() {
     },
   ];
 
+  const openActionType = (actionTypeId: string) => {
+    void navigate(`/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/detail`, {
+      state: { knowledgeNetworkReturnTo: detailPath },
+    });
+  };
+  const eventActionColumns: TableProps<EventActionRow>["columns"] = [
+    {
+      key: "name",
+      title: t("common.name"),
+      width: 260,
+      render: (_value, row) =>
+        row.record ? (
+          <button
+            className={styles.tableLink}
+            onClick={() => openActionType(row.id)}
+            title={row.record.name}
+            type="button"
+          >
+            {row.record.name || row.id}
+          </button>
+        ) : (
+          <>
+            <code>{row.id}</code>{" "}
+            <Tag color="error">{t("knowledgeNetwork.objectTypeDetailEventActionMissing")}</Tag>
+          </>
+        ),
+    },
+    {
+      key: "role",
+      title: t("knowledgeNetwork.objectTypeDetailEventActionRole"),
+      width: 140,
+      render: (_value, row) => (
+        <Tag color={row.role === "recognition" ? "blue" : "green"}>
+          {t(`knowledgeNetwork.objectTypeDetailEventActionRoles.${row.role}`)}
+        </Tag>
+      ),
+    },
+    {
+      key: "subject",
+      title: t("knowledgeNetwork.objectTypeDetailEventActionObject"),
+      width: 180,
+      render: (_value, row) => row.record?.objectTypeName || row.record?.objectTypeId || "--",
+    },
+    {
+      key: "actions",
+      title: t("common.actions"),
+      width: 120,
+      render: (_value, row) =>
+        row.record ? (
+          <button className={styles.tableLink} onClick={() => openActionType(row.id)} type="button">
+            {t("knowledgeNetwork.objectTypeDetailViewDetail")}
+          </button>
+        ) : null,
+    },
+  ];
   const relatedActionColumns: TableProps<KnowledgeNetworkActionTypeRecord>["columns"] = [
     {
       dataIndex: "name",
@@ -2184,7 +2287,29 @@ export function ObjectTypeDetailScene() {
 
         {relatedSection === "actions" ? (
           <>
-            {relatedActionsError ? (
+            {eventActions.length ? (
+              <div className={styles.eventActions}>
+                <h3 className={styles.overviewSectionTitle}>
+                  {t("knowledgeNetwork.objectTypeDetailEventActions")}
+                </h3>
+                <Table<EventActionRow>
+                  columns={eventActionColumns}
+                  dataSource={eventActions}
+                  pagination={false}
+                  rowKey="id"
+                  scroll={{ x: 760 }}
+                  size="small"
+                />
+                {relatedActionsTotalCount ? (
+                  <h3 className={styles.overviewSectionTitle}>
+                    {t("knowledgeNetwork.objectTypeDetailDirectActions")}
+                  </h3>
+                ) : null}
+              </div>
+            ) : null}
+            {eventActions.length &&
+            !relatedActionsTotalCount &&
+            !relatedActionsError ? null : relatedActionsError ? (
               <Alert message={relatedActionsError} showIcon type="error" />
             ) : (
               <>

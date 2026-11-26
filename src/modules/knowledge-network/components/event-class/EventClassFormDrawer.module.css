@@ -147,3 +147,20 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.handlingInput {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.handlingInput .handlingFrom {
+  flex: none;
+  width: 140px;
+}
+
+.handlingInput .handlingValue {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}

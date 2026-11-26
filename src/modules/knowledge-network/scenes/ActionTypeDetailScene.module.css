@@ -53,6 +53,13 @@
   min-width: 0;
 }
 
+/* Lines up with the overview panel below it, which centres at the same width. */
+.eventClassNote {
+  margin: 0 auto 16px;
+  max-width: 1240px;
+  width: 100%;
+}
+
 .loadingState {
   align-items: center;
   display: flex;

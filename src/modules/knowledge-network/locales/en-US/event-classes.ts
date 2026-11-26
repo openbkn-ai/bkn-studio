@@ -102,6 +102,33 @@ export const eventClassesPart = {
       subjectLockedHint:
         "The recognition action is bound to this object type. Delete the action before changing it.",
       handlingNote: "Handling note",
+      handlingAction: "Handling action",
+      handlingActionHint:
+        "An action type on the subject. A recognition action, which records events, cannot be chosen.",
+      handlingActionPlaceholder: "None: only the handling note",
+      handlingActionEmpty: "The subject has no action types yet",
+      handlingActionInputs_one: "asks for {{count}} input",
+      handlingActionInputs_other: "asks for {{count}} inputs",
+      handlingParameters: "Parameters",
+      handlingParametersHint:
+        "The inputs the action type asks for. Run automatically, each needs a value: a constant, or a property of the event's object. Suggested, the values are offered to the person handling the event and may be left blank.",
+      handlingParameterFrom: "Where {{name}} comes from",
+      handlingParameterValue: "Value of {{name}}",
+      handlingParameterConst: "Constant",
+      handlingParameterProperty: "Object property",
+      handlingParameterPropertyPlaceholder: "Choose a property",
+      handlingParameterValuePlaceholder: "Enter a value",
+      handlingParameterTrue: "True",
+      handlingParameterFalse: "False",
+      handlingParameterRequired:
+        "Nobody gives inputs when the action runs by itself: give {{name}} a value",
+      handlingMode: "Handling",
+      handlingModeAuto: "Run automatically",
+      handlingModeSuggest: "Suggest only",
+      handlingModeHint:
+        "Run automatically: for each event a check newly finds (not a backlog), the platform runs the action once on the event's object as the recognition's execution subject. A governed action type is not started by the platform; the event is marked as needing a person. Suggest only: the person handling an event sees the suggestion and runs it.",
+      handlingModeReportHint:
+        "Reported events are not handled automatically; the action is suggested to whoever handles them.",
       handlingNotePlaceholder: "What to do about an event of this class",
       subjectPlaceholder: "Choose an object type",
       subjectRequired: "Choose the object type the events are about",
@@ -166,11 +193,9 @@ export const eventClassesPart = {
       },
     },
     recognition: {
-      title: "Recognition",
+      title: "Event settings",
       edit: "Edit",
       checkNow: "Check now",
-      managedNote:
-        "This is an event class: the platform keeps its properties, data source and relation to the object type it is about, and they cannot be changed here. Its recognition action type finds the events on schedule.",
       noRuleTool:
         "There is no recognition action yet, so the platform does not check this event class. Edit it and set a recognition rule to have it checked on schedule.",
       noAction: "This event class has no recognition action to check.",
@@ -188,6 +213,13 @@ export const eventClassesPart = {
       source: "Source",
       subject: "About",
       severity: "Default severity",
+      handling: "Handling action",
+      handlingModes: { auto: "runs automatically", suggest: "suggested" },
+      handlingExecutions: "handling runs",
+      handlingParameterConst: "the constant {{value}}",
+      handlingParameterProperty: "the object's property {{property}}",
+      executions: "Execution records",
+      viewExecutions: "See the record of each check",
       mergeHours: "Merge window",
       mergeHoursValue_one: "{{count}} hour",
       mergeHoursValue_other: "{{count}} hours",

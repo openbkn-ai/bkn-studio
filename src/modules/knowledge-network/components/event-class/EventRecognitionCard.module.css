@@ -36,13 +36,6 @@
   gap: 8px;
 }
 
-.note {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-  margin: 0;
-}
-
 .fields {
   display: grid;
   gap: 14px 24px;
@@ -98,4 +91,8 @@
   font-size: 14px;
   padding: 0;
   text-align: left;
+}
+
+.handlingParameter {
+  margin-top: 4px;
 }
