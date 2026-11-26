@@ -7,7 +7,12 @@
 
 .root {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+
+.tableSurface :global(.ant-table-thead > tr > th).singleLineHeader {
+  white-space: nowrap;
 }
 
 .tableSurface :global(.ant-table-wrapper),

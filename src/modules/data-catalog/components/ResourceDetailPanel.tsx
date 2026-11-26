@@ -28,6 +28,7 @@ import { LimitedTagsSelect } from "@/framework/ui/common/LimitedTagsSelect";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { FilterTreeEditor } from "@/modules/data-catalog/components/FilterTreeEditor";
+import { ResourceStatusMessage } from "@/modules/data-catalog/components/ResourceStatusMessage";
 import {
   canEnableFieldFiltering,
   findUnsupportedFilterableField,
@@ -770,7 +771,16 @@ export function ResourceDetailPanel({
                   <span className={styles.basicInfoLabel}>
                     {t("dataCatalog.resource.statusMessage")}
                   </span>
-                  <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
+                  <div className={styles.basicInfoValue}>
+                    {resource.statusMessage ? (
+                      <ResourceStatusMessage
+                        key={resource.id}
+                        statusMessage={resource.statusMessage}
+                      />
+                    ) : (
+                      "-"
+                    )}
+                  </div>
                 </div>
               ) : null}
             </>

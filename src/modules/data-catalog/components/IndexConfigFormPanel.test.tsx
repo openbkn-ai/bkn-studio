@@ -443,7 +443,7 @@ describe("IndexConfigFormPanel", () => {
       "dataset",
       409,
       "VegaBackend.InvalidParameter.RequestBody",
-      "The existing Dataset index structure or fulltext field analyzer cannot be changed directly. Rebuild the Dataset to apply the new configuration.",
+      "The existing dataset index structure or fulltext field analyzer cannot be changed directly. Rebuild the dataset to apply the new configuration.",
     ],
     [
       "zh-CN",

@@ -1263,6 +1263,23 @@ describe("resource.service · getCatalogResources", () => {
     vi.unstubAllEnvs();
   });
 
+  it("preserves the original discovery diagnostic and omits whitespace-only messages", async () => {
+    const statusMessage = "  Error 1105: column metadata failed\n    at readColumns\n \n";
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          { id: "res-error", catalog_id: "cat-1", status_message: statusMessage },
+          { id: "res-blank", catalog_id: "cat-1", status_message: " \n\t" },
+        ],
+      },
+    });
+    const { getCatalogResources } = await import("./resource.service");
+
+    const resources = await getCatalogResources(["res-error", "res-blank"]);
+
+    expect(resources.map((resource) => resource.statusMessage)).toEqual([statusMessage, undefined]);
+  });
+
   it("uses the same index fields for detail responses", async () => {
     getMock.mockResolvedValue({
       data: {

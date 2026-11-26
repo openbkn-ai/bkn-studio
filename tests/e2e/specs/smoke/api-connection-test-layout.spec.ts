@@ -22,7 +22,7 @@ const translations = [
     language: "en-US",
     scope: "Configuration to test",
     removedTarget: "Validation scope",
-    configurations: ["Current configuration (unsaved)", "Saved Catalog configuration"],
+    configurations: ["Current configuration (unsaved)", "Saved catalog configuration"],
     configurationHints: [
       /runs one login and validates its response/,
       /checks TCP\/TLS reachability only/,

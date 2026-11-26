@@ -108,6 +108,7 @@ export const dataCatalogZhCN = {
       metadataUnavailableDescription:
         "当前没有可用的字段元数据，请补充或刷新资源字段后再查询或构建索引。",
       statusMessageDetail: "状态详情：{{message}}",
+      showFullStatusMessage: "查看完整状态详情",
       openDiscovery: "前往探查",
       refreshCount: "刷新精确数量",
       refreshCountDescription: "创建精确计数任务。大表计数可能耗时较长，并增加数据源负载。",

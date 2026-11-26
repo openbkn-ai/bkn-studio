@@ -21,7 +21,7 @@ for (const locale of ["en-US", "zh-CN"]) {
       await expect(table.locator("tbody tr[data-row-key]").first()).toBeVisible();
       const names =
         locale === "en-US"
-          ? ["Resource Status", "Discovery Status", "Local Index Status"]
+          ? ["Resource status", "Discovery status", "Local index status"]
           : ["资源状态", "探查状态", "本地索引状态"];
       for (const name of names) {
         const header = table.getByRole("columnheader", { name, exact: true });

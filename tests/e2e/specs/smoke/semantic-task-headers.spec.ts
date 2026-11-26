@@ -15,7 +15,7 @@ for (const width of [720, 1280, 1920]) {
     await page.goto("/studio/task-management?tab=semantic-understanding");
     const table = page.locator(".ant-table-content");
     await expect(table.locator("tbody tr[data-row-key]").first()).toBeVisible();
-    for (const name of ["Confidence", "Application Status"]) {
+    for (const name of ["Confidence", "Application status"]) {
       const header = table.getByRole("columnheader", { name: new RegExp(name) });
       await header.scrollIntoViewIfNeeded();
       const words = await header.evaluate((element) => {
@@ -45,7 +45,7 @@ for (const width of [720, 1280, 1920]) {
       }
     }
     const trigger = table
-      .getByRole("columnheader", { name: /Application Status/ })
+      .getByRole("columnheader", { name: /Application status/ })
       .locator(".ant-table-filter-trigger");
     await trigger.click();
     await expect(page.locator(".ant-table-filter-dropdown:visible")).toBeVisible();

@@ -28,7 +28,7 @@ for (const path of [
           .filter({ has: page.locator(".ant-table-filter-trigger") });
         const english = locale === "en-US";
         const priorityHeader = table.getByRole("columnheader", {
-          name: english ? "Queue Priority" : "队列优先级",
+          name: english ? "Queue priority" : "队列优先级",
           exact: true,
         });
         const priorityGeometry = await priorityHeader.evaluate((element) => {

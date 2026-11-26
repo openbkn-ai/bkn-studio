@@ -479,7 +479,7 @@ describe("catalog.service · mock listCatalogs", () => {
     expect(firstPage.items.map((catalog) => catalog.name)).toEqual(["analytics_hana", "api_demo"]);
     expect(secondPage.items.map((catalog) => catalog.name)).toEqual([
       "customer_master",
-      "finance_dw",
+      "doris_discovery_demo",
     ]);
     expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
       "summary_only_resource_catalog",

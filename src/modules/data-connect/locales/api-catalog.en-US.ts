@@ -38,14 +38,14 @@ export const apiCatalogEnUS = {
     "Connection configuration is unchanged. Saving preserves stored configuration and credentials.",
   replacement:
     "Connection configuration will be replaced in full. Re-enter every sensitive variable you retain.",
-  newConfig: "Saving runs a connection test. Passing it does not verify business Resource access.",
+  newConfig: "Saving runs a connection test. Passing it does not verify business resource access.",
   readonly:
     "This configuration cannot be edited losslessly with the current editor. You can still update its basic information.",
   unavailable:
     "This API connector is unavailable. Confirm that it is installed, enabled and licensed for Professional or higher.",
   enableLogin: "Run one login before the business request",
   loginHint:
-    "Reference Catalog variables for credentials. The backend manages Cookies for this call only.",
+    "Reference catalog variables for credentials. The backend manages cookies for this call only.",
   noLogin:
     "Login is not configured. Resource request templates can reference variables to construct authentication headers.",
   preview: "Redacted preview",
@@ -55,22 +55,22 @@ export const apiCatalogEnUS = {
   testTitle: "Test API connection",
   testScope: "Configuration to test",
   draft: "Current configuration (unsaved)",
-  saved: "Saved Catalog configuration",
+  saved: "Saved catalog configuration",
   loginTestHint:
     "The selected configuration defines a login request. The test runs one login and validates its response and success conditions.",
   transportTestHint:
     "The selected configuration has no login request. The test checks TCP/TLS reachability only; tokens, API keys and business access are not verified.",
   resourceTestHint:
-    "Validate business responses and field mappings when saving an API Resource or previewing its data.",
+    "Validate business responses and field mappings when saving an API resource or previewing its data.",
   startTest: "Run test",
-  connectionSuccess: "Connection test passed. Business Resource access has not been verified.",
+  connectionSuccess: "Connection test passed. Business resource access has not been verified.",
   savedResult: "Result applies to saved configuration. It does not validate unsaved changes.",
   draftResult:
     "Result applies to the current unsaved connection configuration. No configuration was saved.",
   staleResult: "Configuration changed while or after testing. This result is out of date.",
-  cannotTestDraft: "Testing unsaved configuration requires Catalog create permission.",
+  cannotTestDraft: "Testing unsaved configuration requires catalog create permission.",
   conflict:
-    "This Catalog was updated elsewhere. Your draft is retained. Reload the latest version before saving again.",
+    "This catalog was updated elsewhere. Your draft is retained. Reload the latest version before saving again.",
   reload: "Reload latest configuration",
   reloadTitle: "Discard the draft and reload?",
   reloadHint: "This clears unsaved changes and credentials entered in this editing session.",

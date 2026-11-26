@@ -17,6 +17,8 @@ import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
+import styles from "./ResourceSemanticUnderstandingPanel.module.css";
+
 const {
   applySemanticUnderstandingTaskMock,
   getSemanticUnderstandingTaskMock,
@@ -417,7 +419,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect(createResourceSemanticUnderstandingTaskMock).not.toHaveBeenCalled();
   }, 20_000);
 
-  it("keeps table header filters available when no task matches", async () => {
+  it("keeps application and confidence headers on one line when no task matches", async () => {
     render(
       <ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />,
     );
@@ -427,10 +429,16 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       [unknown, { limit: number; offset: number }]
     >;
     expect(calls.filter(([, window]) => window.limit === 10)).toHaveLength(1);
+    for (const column of ["applyMode", "applied"]) {
+      const header = screen.getByRole("columnheader", {
+        name: (name) => name.startsWith(`dataCatalog.taskManagement.columns.${column}`),
+      });
+      expect(header).toHaveClass(styles.singleLineHeader);
+      expect(header.querySelector(".ant-table-filter-trigger")).toBeInTheDocument();
+    }
     expect(
-      screen.getByText("dataCatalog.taskManagement.columns.applyMode").closest("th"),
-    ).not.toBeNull();
-    expect(document.querySelectorAll(".ant-table-filter-trigger").length).toBeGreaterThan(0);
+      screen.getByRole("columnheader", { name: "dataCatalog.taskManagement.columns.confidence" }),
+    ).toHaveClass(styles.singleLineHeader);
   });
 
   it.each([false, true])(
@@ -545,14 +553,14 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     );
 
     await screen.findByText("semantic-task-1");
-    const finishTime = screen.getByText("dataCatalog.task.finishedAt");
-    const createTime = screen.getByText("dataCatalog.task.createTime");
+    const finishTime = screen.getByRole("columnheader", { name: /dataCatalog\.task\.finishedAt/ });
+    const createTime = screen.getByRole("columnheader", { name: /dataCatalog\.task\.createTime/ });
     const applicationState = screen.getByText("dataCatalog.taskManagement.applied.notApplied");
     expect(
       finishTime.compareDocumentPosition(createTime) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
-    expect(finishTime.closest("th")?.classList.contains("ant-table-column-has-sorters")).toBe(true);
-    expect(createTime.closest("th")?.classList.contains("ant-table-column-has-sorters")).toBe(true);
+    expect(finishTime).toHaveClass("ant-table-column-has-sorters");
+    expect(createTime).toHaveClass("ant-table-column-has-sorters");
     expect(document.querySelector('col[style*="width: 160px"]')).not.toBeNull();
     expect(document.querySelectorAll('col[style*="width: 180px"]')).toHaveLength(2);
     expect(applicationState.classList.contains(sharedStyles.tag)).toBe(true);
