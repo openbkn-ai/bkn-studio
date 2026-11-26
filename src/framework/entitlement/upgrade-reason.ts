@@ -23,6 +23,20 @@ import type { EntitlementView } from "@/framework/entitlement/types";
  */
 export type UpgradeReason = "buy" | "image" | "image-likely";
 
+export function hasRequiredEdition(
+  snapshot: EntitlementView | null,
+  minEdition: Edition,
+  reportedByEndpoint: boolean,
+): snapshot is EntitlementView {
+  return (
+    snapshot !== null &&
+    atLeast(snapshot.edition, minEdition) &&
+    (minEdition === "community" ||
+      snapshot.licensed ||
+      (reportedByEndpoint && snapshot.legacyLicenseResponse === true))
+  );
+}
+
 export function upgradeReason(
   capability: string,
   snapshot: EntitlementView | null,
@@ -31,7 +45,7 @@ export function upgradeReason(
   missingInFrontend = false,
 ): UpgradeReason {
   // 快照没到就按「还没买」说——不能凭空断言客户的证书已经够了。
-  if (!snapshot || !atLeast(snapshot.edition, minEdition)) {
+  if (!hasRequiredEdition(snapshot, minEdition, reportedByEndpoint)) {
     return "buy";
   }
 
@@ -71,20 +85,9 @@ export function capabilitySatisfied(
   minEdition: Edition,
   reportedByEndpoint: boolean,
 ): boolean {
-  if (!snapshot || !atLeast(snapshot.edition, minEdition)) {
+  if (!hasRequiredEdition(snapshot, minEdition, reportedByEndpoint)) {
     return false;
   }
 
-  if (reportedByEndpoint) {
-    return capabilityState(capability, snapshot) === "available";
-  }
-
-  /*
-    端点报不出时,档位是唯一判据——但不能只看它。`edition.ts` 记着「后端在一切异常下都
-    回落 community」,那是别人的兜底行为,不是这里能保证的事;万一某天失效证仍报出证面上
-    的档位,付费页就会对着一张废证打开。再问一次 `licensed` 把这条腿钉住。
-
-    社区档的能力例外:无证部署的 `licensed` 本来就是 false,一并要求会把免费能力也拦掉。
-  */
-  return minEdition === "community" || snapshot.licensed;
+  return !reportedByEndpoint || capabilityState(capability, snapshot) === "available";
 }

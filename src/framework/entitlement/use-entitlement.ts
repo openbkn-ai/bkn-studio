@@ -8,6 +8,8 @@
 import { useContext } from "react";
 
 import { capabilityState } from "@/framework/entitlement/capability-state";
+import type { Edition } from "@/framework/entitlement/edition";
+import { hasRequiredEdition } from "@/framework/entitlement/upgrade-reason";
 import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import {
   FALLBACK_ENTITLEMENT,
@@ -52,8 +54,13 @@ export function useRefreshEntitlement() {
  * 返回四态而不是布尔:调用方常常要区分「藏起来」和「藏起来但告诉他可以买」,压成布尔
  * 就只能再去翻一次快照。
  */
-export function useCapability(capability: string): CapabilityState {
-  return capabilityState(capability, useEntitlementContext().snapshot);
+export function useCapability(capability: string, minEdition?: Edition): CapabilityState {
+  const { snapshot } = useEntitlementContext();
+  if (snapshot && minEdition && !hasRequiredEdition(snapshot, minEdition, true)) {
+    return "not-licensed";
+  }
+
+  return capabilityState(capability, snapshot);
 }
 
 /**

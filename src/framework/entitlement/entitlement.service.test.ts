@@ -7,6 +7,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
+
 const mockGet = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
@@ -76,10 +79,34 @@ describe("fetchEntitlement", () => {
   // #638 之前的后端不吐 licensed。缺字段当无授权,而不是当有——少给,不错给。
   it("licensed 缺失或非布尔一律当 false", async () => {
     mockGet.mockReturnValue(ok({ edition: "enterprise", state: "valid" }));
-    expect((await (await importFetchEntitlement())()).licensed).toBe(false);
+    expect(await (await importFetchEntitlement())()).toMatchObject({
+      licensed: false,
+      legacyLicenseResponse: true,
+    });
 
     mockGet.mockReturnValue(ok({ edition: "enterprise", licensed: "yes" }));
-    expect((await (await importFetchEntitlement())()).licensed).toBe(false);
+    const malformed = await (await importFetchEntitlement())();
+    expect(malformed.licensed).toBe(false);
+    expect(malformed.legacyLicenseResponse).toBeUndefined();
+  });
+
+  it("lets a legacy endpoint authorize only the capabilities it reports as available", async () => {
+    mockGet.mockReturnValue(
+      ok({
+        edition: "enterprise",
+        capabilities: [CAPABILITIES.OBJECT_METRICS],
+        extensions: [CAPABILITIES.OBJECT_METRICS, CAPABILITIES.SSO],
+      }),
+    );
+    const snapshot = await (await importFetchEntitlement())();
+
+    expect(capabilitySatisfied(CAPABILITIES.OBJECT_METRICS, snapshot, "professional", true)).toBe(
+      true,
+    );
+    expect(capabilitySatisfied(CAPABILITIES.SSO, snapshot, "professional", true)).toBe(false);
+    expect(
+      capabilitySatisfied(CAPABILITIES.EXECUTION_FACTORY, snapshot, "professional", false),
+    ).toBe(false);
   });
 
   // 后端可能先于前端加档位/状态取值,认不出来时按最低权限解释。

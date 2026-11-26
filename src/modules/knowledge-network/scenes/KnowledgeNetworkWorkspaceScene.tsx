@@ -28,6 +28,8 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
+import type { EditionUpgradeCopy } from "@/framework/entitlement/RequireEdition";
+import { WORKSPACE_MOUNT_SECTIONS } from "@/modules/knowledge-network/constants/workspace-mount-sections";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import type { CapabilityState } from "@/framework/entitlement/types";
@@ -88,6 +90,7 @@ type WorkspaceNavItem = {
   paidCapabilityState?: CapabilityState;
   paidEdition?: Edition;
   path?: string;
+  upgradeCopy?: EditionUpgradeCopy;
 };
 
 type WorkspaceNavGroup = "verification" | "analysis" | "concept" | "dynamic" | "governance";
@@ -134,20 +137,17 @@ export function KnowledgeNetworkWorkspaceScene({
     "professional",
     capabilityReportedByEndpoint(CAPABILITIES.EVAL),
   );
-  // The event module answers by the licence tier and reports nothing to the capability endpoint:
-  // without a Professional licence the entry is not offered at all.
-  const eventClassesLicensed = capabilitySatisfied(
-    CAPABILITIES.KN_EVENTS,
-    snapshot,
-    "professional",
-    false,
-  );
+  const professionalCapabilityState: CapabilityState = !snapshot
+    ? "unknown"
+    : capabilitySatisfied(CAPABILITIES.KN_TOOL_MOUNTS, snapshot, "professional", false)
+      ? "available"
+      : "not-licensed";
   const evalCapabilityState: CapabilityState = !snapshot
     ? "unknown"
     : evalLicensed
       ? "available"
       : "not-licensed";
-  const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS);
+  const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS, "professional");
   const fineGrainedCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
   const [versionView, setVersionView] = useKnVersionView(activeNetworkId);
   // Bumped when a publish, switch or reset changed what every page of the workspace reads.
@@ -284,17 +284,19 @@ export function KnowledgeNetworkWorkspaceScene({
         label: t("knowledgeNetwork.workspaceActionTypes"),
         icon: <KnowledgeResourceIcon kind="action" />,
         count: detail?.statistics.actionTypesTotal ?? 0,
+        paidCapability: CAPABILITIES.KN_ACTION_MODELING,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
-      ...(eventClassesLicensed
-        ? [
-            {
-              key: "event-classes" as const,
-              label: t("knowledgeNetwork.eventClasses.nav"),
-              icon: <KnowledgeResourceIcon kind="eventClass" />,
-              count: detail?.statistics.eventClassesTotal,
-            },
-          ]
-        : []),
+      {
+        key: "event-classes",
+        label: t("knowledgeNetwork.eventClasses.nav"),
+        icon: <KnowledgeResourceIcon kind="eventClass" />,
+        count: detail?.statistics.eventClassesTotal,
+        paidCapability: CAPABILITIES.KN_EVENTS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
+      },
       {
         key: "metrics",
         label: t("knowledgeNetwork.workspaceMetrics"),
@@ -306,27 +308,43 @@ export function KnowledgeNetworkWorkspaceScene({
       },
       {
         key: "functions",
-        label: t("knowledgeNetwork.workspaceFunctions"),
+        label: t(WORKSPACE_MOUNT_SECTIONS.functions.titleKey),
+        upgradeCopy: WORKSPACE_MOUNT_SECTIONS.functions,
         icon: <KnowledgeResourceIcon kind="function" />,
         count: detail?.statistics.functionsTotal ?? 0,
+        paidCapability: CAPABILITIES.KN_TOOL_MOUNTS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
       {
         key: "apis",
-        label: t("knowledgeNetwork.workspaceApis"),
+        label: t(WORKSPACE_MOUNT_SECTIONS.apis.titleKey),
+        upgradeCopy: WORKSPACE_MOUNT_SECTIONS.apis,
         icon: <KnowledgeResourceIcon kind="api" />,
         count: detail?.statistics.apisTotal ?? 0,
+        paidCapability: CAPABILITIES.KN_TOOL_MOUNTS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
       {
         key: "mcp",
-        label: t("knowledgeNetwork.workspaceMcpTools"),
+        label: t(WORKSPACE_MOUNT_SECTIONS.mcp.titleKey),
+        upgradeCopy: WORKSPACE_MOUNT_SECTIONS.mcp,
         icon: <KnowledgeResourceIcon kind="mcp" />,
         count: detail?.statistics.mcpToolsTotal ?? 0,
+        paidCapability: CAPABILITIES.KN_TOOL_MOUNTS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
       {
         key: "skills",
-        label: t("knowledgeNetwork.workspaceSkills"),
+        label: t(WORKSPACE_MOUNT_SECTIONS.skills.titleKey),
+        upgradeCopy: WORKSPACE_MOUNT_SECTIONS.skills,
         icon: <KnowledgeResourceIcon kind="skill" />,
         count: detail?.statistics.skillsTotal ?? 0,
+        paidCapability: CAPABILITIES.KN_TOOL_MOUNTS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
     ];
 
@@ -337,10 +355,10 @@ export function KnowledgeNetworkWorkspaceScene({
     actionControlLicensed,
     detail,
     evalCapabilityState,
-    eventClassesLicensed,
     hiddenNavigation,
     objectMetricsCapability,
     permissionMatrixLicensed,
+    professionalCapabilityState,
     snapshot,
     t,
   ]);
@@ -483,6 +501,7 @@ export function KnowledgeNetworkWorkspaceScene({
     if (section === "overview") {
       return (
         <WorkspaceOverviewSection
+          canCreateActionType={canModify && professionalCapabilityState === "available"}
           detail={detail}
           detailLoading={detailLoading}
           loadRecentObjects={loadRecentObjects}
@@ -767,6 +786,7 @@ export function KnowledgeNetworkWorkspaceScene({
           minEdition={upgradeItem.paidEdition}
           onClose={() => setUpgradeItem(null)}
           open
+          upgradeCopy={upgradeItem.upgradeCopy}
         />
       ) : null}
     </section>

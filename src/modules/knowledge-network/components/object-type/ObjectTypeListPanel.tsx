@@ -113,7 +113,8 @@ export function ObjectTypeListPanel({
 }: ObjectTypeListPanelProps) {
   const entitlement = useEntitlement();
   const policyScopeCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
-  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
+  const objectMetricsAvailable =
+    useCapability(CAPABILITIES.OBJECT_METRICS, "professional") === "available";
   const permissionRequestsEnabled = !isCommunityBuild(entitlement);
   const policyScopePreviewsEnabled =
     canPreviewObjectTypePolicyScope(policyScopeCapability) &&

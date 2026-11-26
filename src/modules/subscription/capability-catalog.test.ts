@@ -52,13 +52,13 @@ describe("capability catalog", () => {
     expect(CAPABILITY_CATALOG.slice(firstPlanned).every((entry) => entry.planned)).toBe(true);
   });
 
-  it("key 不重复,档位分布与上游登记表一致", () => {
+  it("key 不重复,档位分布符合产品能力划分", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
 
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(10);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(14);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(9);
     expect(
       CAPABILITY_CATALOG.find((entry) => entry.key === CAPABILITIES.ACTION_GOVERNANCE),
@@ -105,14 +105,7 @@ describe("capability catalog", () => {
   // 时才收,否则版本页就在卖还没有的东西。发布时把它加进目录,并从这里移出。
   it("覆盖 CAPABILITIES 里的每个 key", () => {
     const keys = CAPABILITY_CATALOG.map((entry) => entry.key);
-    // 事件类:入口按专业档门控,事件类功能发布前不进在售目录。
-    const inDevelopment: string[] = ["kn_events"];
-
     for (const key of Object.values(CAPABILITIES)) {
-      if (inDevelopment.includes(key)) {
-        expect(keys).not.toContain(key);
-        continue;
-      }
       expect(keys).toContain(key);
     }
   });
@@ -123,6 +116,7 @@ describe("capability catalog", () => {
     const tierOf = (key: string) =>
       CAPABILITY_CATALOG.find((entry) => entry.key === key)?.minEdition;
 
+    expect(tierOf(CAPABILITIES.KN_ACTION_MODELING)).toBe("professional");
     expect(tierOf("bkn_project")).toBe("professional");
     expect(tierOf(CAPABILITIES.KNOWLEDGE_BASE)).toBe("professional");
     expect(tierOf(CAPABILITIES.OBJECT_METRICS)).toBe("professional");

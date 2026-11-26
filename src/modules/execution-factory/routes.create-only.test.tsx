@@ -9,6 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation, useRoutes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
 import { executionFactoryRoutes } from "@/modules/execution-factory/routes";
 
 const services = vi.hoisted(() => ({
@@ -105,7 +106,23 @@ describe("execution factory create-only routes", () => {
 
     render(
       <MemoryRouter initialEntries={[path]}>
-        <CreateRoute />
+        <EntitlementContext.Provider
+          value={{
+            loading: false,
+            refresh: async () => {},
+            snapshot: {
+              capabilities: [],
+              edition: "professional",
+              extensions: [],
+              features: [],
+              licensed: true,
+              limits: {},
+              state: "valid",
+            },
+          }}
+        >
+          <CreateRoute />
+        </EntitlementContext.Provider>
       </MemoryRouter>,
     );
 

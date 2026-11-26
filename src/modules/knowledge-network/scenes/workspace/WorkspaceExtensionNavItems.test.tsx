@@ -28,14 +28,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function registerGraphExplorer(openIn?: "workspace") {
+function registerGraphExplorer(openIn?: "workspace", id = "graph-explorer") {
   registerExtension({
     capability: "graph_explorer",
-    id: "graph-explorer",
+    id,
     workspaceNavItems: [
       {
         icon: <span data-testid="graph-explorer-icon" />,
-        id: "graph-explorer",
+        id,
         labelKey: "knowledgeNetwork.graphExplorer.openAction",
         openIn,
         path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
@@ -213,9 +213,7 @@ describe("WorkspaceExtensionNavItems", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: i18n.t("knowledgeNetwork.graphExplorer.openAction") }),
-    );
+    fireEvent.click(screen.getByTitle(i18n.t("knowledgeNetwork.graphExplorer.openAction")));
 
     expect(open).not.toHaveBeenCalled();
     expect(screen.getByTestId("return-to").textContent).toBe(
@@ -307,11 +305,29 @@ describe("WorkspaceExtensionNavItems", () => {
     );
   });
 
-  it("leaves the upgrade entry out when the build has the page", () => {
-    registerGraphExplorer();
-    renderItems();
+  it("shows the licensed graph explorer's Professional badge after its registration is renamed", () => {
+    registerGraphExplorer(undefined, "renamed-explorer");
+    const snapshot: Entitlement = {
+      capabilities: ["graph_explorer"],
+      edition: "professional",
+      extensions: ["graph_explorer"],
+      features: [],
+      licensed: true,
+      limits: {},
+      state: "valid",
+    };
+    render(
+      <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
+        <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+          <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />
+        </MemoryRouter>
+      </EntitlementContext.Provider>,
+    );
 
-    expect(screen.getByTestId("workspace-nav-graph-explorer")).toBeTruthy();
+    const item = screen.getByTestId("workspace-nav-renamed-explorer");
+    expect(
+      within(item).getByText(i18n.t("common.entitlement.editionsShort.professional")),
+    ).toBeTruthy();
     expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
   });
 

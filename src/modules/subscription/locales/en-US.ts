@@ -14,6 +14,42 @@
 export const subscriptionEnUS = {
   subscription: {
     capabilities: {
+      kn_action_modeling: {
+        name: "Action modelling",
+        description:
+          "Define action types, configure execution parameters, and run actions in a knowledge network.",
+        bullets: {
+          b1: "Object operations and tool calls",
+          b2: "Configure action parameters and review execution history",
+        },
+      },
+      kn_events: {
+        bullets: {
+          b1: "Configure event classes and detection rules",
+          b2: "Review event records and detection results",
+        },
+        name: "Event classes",
+        description:
+          "Define event classes, configure detection rules, and view event records in a knowledge network.",
+      },
+      kn_tool_mounts: {
+        name: "Knowledge network resource mounting",
+        description:
+          "Mount functions, APIs, MCP servers, and Skills for direct use by a knowledge network.",
+        bullets: {
+          b1: "Mount functions, APIs, MCP servers, and Skills",
+        },
+      },
+      execution_factory: {
+        name: "Execution Factory",
+        description:
+          "Manage, publish, and debug execution units, browse all units, and manage the sandbox runtime.",
+        bullets: {
+          b1: "Connect OpenAPI, functions, MCP servers, and Skills",
+          b2: "Create, publish, debug, and browse execution units",
+          b3: "Manage sandbox runtimes",
+        },
+      },
       sso: {
         name: "Single sign-on",
         description: "Manage identity providers, browser sign-in and API token exchange.",
@@ -91,10 +127,16 @@ export const subscriptionEnUS = {
         name: "Ontology knowledge base",
       },
       action_governance: {
+        bullets: {
+          b1: "Require confirmation, block execution, or trigger business approval",
+        },
         name: "Action control",
         description: "Configure confirmation, denial and business approval rules for actions.",
       },
       permission_matrix: {
+        bullets: {
+          b1: "Inspect effective permissions and their sources",
+        },
         name: "Permission matrix",
         description: "Review user and role permissions across knowledge network resources.",
       },
@@ -177,16 +219,13 @@ export const subscriptionEnUS = {
      * ticked for every edition on the public pricing page.
      */
     community: {
-      actionSandbox: "Action execution in a secure sandbox",
       basicAudit: "Basic activity audit",
       cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
       commonSources: "MySQL, PostgreSQL, MariaDB and OpenSearch",
-      executionFactory: "Execution Factory connects OpenAPI, MCP, SKILL and functions",
       indexing: "Data discovery, batch indexing and vectorisation",
       localAuth: "Local sign-in with user, department and built-in role management",
-      mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
       modelingSurfaces: "Model from Studio, CLI, SDK and Skills",
-      modelingTypes: "Object, relation and action modelling",
+      modelingTypes: "Object and relation modelling",
       draftAndRunning: "Knowledge network draft and running version",
       oneClickExperience: "Try it in one click with dynamically loaded official examples",
       queryAndSearch: "Relation queries, path queries and semantic search",
@@ -235,16 +274,16 @@ export const subscriptionEnUS = {
         unit: "Self-hosted · perpetual",
       },
       enterprise: {
-        audience:
-          "For organisations running their enterprise AI agents on OpenBKN. Adds Workshop, the analysis canvas, risk control, knowledge network versions, SAP HANA connectivity, row- and column-level permission control and business provenance on top of Professional.",
         hanaConnector: "SAP HANA",
+        audience:
+          "For organizations running business applications and governing and auditing production use.",
         price: "Contact us",
         unit: "Per contract",
       },
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "For fast-growing AI-native teams. Adds custom roles and permissions, object authorization, advanced data connectivity (including API connections), project management and the knowledge base on top of Community.",
+          "For teams that model together, connect more data and tools, and need finer access control.",
         price: "¥99,600",
         unit: "/ year · list price",
       },
@@ -259,6 +298,6 @@ export const subscriptionEnUS = {
       "Full capability comparison, service terms and current discounts are in the pricing page; for sales, business@openbkn.ai.",
     title: "Editions & subscription",
     subtitle:
-      "Knowledge network modelling, common data connections and queries are open in every edition. Projects and the knowledge base, permission control, versions and business apps scale with the edition.",
+      "Every edition supports object and relation modelling, common data connections, and queries.",
   },
 } as const;

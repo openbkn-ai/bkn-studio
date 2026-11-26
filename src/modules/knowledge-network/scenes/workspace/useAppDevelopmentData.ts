@@ -265,7 +265,8 @@ async function loadAppDevelopmentData(
 /** Everything the page renders, read once per network; nothing here writes. */
 export function useAppDevelopmentData(networkId: string, knId: string) {
   const runtimeConfig = useRuntimeConfig();
-  const metricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
+  const metricsAvailable =
+    useCapability(CAPABILITIES.OBJECT_METRICS, "professional") === "available";
   const [state, setState] = useState<State>({ status: "loading" });
 
   const auth = useMemo<McpAuth>(

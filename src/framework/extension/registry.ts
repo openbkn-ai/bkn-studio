@@ -287,12 +287,13 @@ export function extensionWorkspaceActions(): (WorkspaceAction & { key: string })
 /** The workspace sidebar entries extensions registered, or those of one group when named. */
 export function extensionWorkspaceNavItems(
   section?: WorkspaceNavSection,
-): (WorkspaceNavEntry & { key: string })[] {
+): (WorkspaceNavEntry & { capability: string; key: string })[] {
   return installed.flatMap((extension) =>
     (extension.workspaceNavItems ?? [])
       .filter((item) => !section || (item.section ?? "verification") === section)
       .map((item) => ({
         ...item,
+        capability: extension.capability,
         key: `${extension.id}:${item.id}`,
       })),
   );

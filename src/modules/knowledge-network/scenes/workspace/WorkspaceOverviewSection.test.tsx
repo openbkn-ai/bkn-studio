@@ -84,11 +84,12 @@ function installHttpClipboardFallback(result: boolean) {
   return copiedTexts;
 }
 
-function renderOverview(basename?: string, record = detail) {
+function renderOverview(basename?: string, record = detail, canCreateActionType = false) {
   render(
     <MemoryRouter basename={basename} initialEntries={[`${basename ?? ""}/`]}>
       <WorkspaceOverviewSection
-        canModify={false}
+        canCreateActionType={canCreateActionType}
+        canModify
         detail={record}
         loadRecentObjects={vi.fn().mockResolvedValue(undefined)}
         networkId="network-1"
@@ -103,6 +104,7 @@ function renderLoadingOverview() {
   render(
     <MemoryRouter>
       <WorkspaceOverviewSection
+        canCreateActionType={false}
         canModify={false}
         detail={null}
         detailLoading
@@ -213,4 +215,10 @@ it("loads authorization management on demand and preserves drawer close behavior
   expect(drawer).toHaveAttribute("data-open", "true");
   fireEvent.click(screen.getByRole("button", { name: "close authorization" }));
   expect(drawer).toHaveAttribute("data-open", "false");
+});
+
+it.each([false, true])("shows the action create shortcut when allowed: %s", (canCreate) => {
+  renderOverview(undefined, detail, canCreate);
+  const button = screen.queryByRole("button", { name: "knowledgeNetwork.createActionTypeEntry" });
+  expect(Boolean(button)).toBe(canCreate);
 });

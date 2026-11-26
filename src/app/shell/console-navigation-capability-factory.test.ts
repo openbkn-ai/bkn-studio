@@ -26,6 +26,10 @@ describe("capability factory navigation", () => {
   it("groups management, market, and sandbox runtime under the official factory", () => {
     const group = factoryGroup();
     expect(group).toBeDefined();
+    expect(group?.paidEdition).toBeUndefined();
+    for (const child of group?.children ?? []) {
+      expect(child.paidEdition).toBe("professional");
+    }
     expect(keys(group!.children ?? [])).toEqual(
       expect.arrayContaining([
         "execution-unit-management",

@@ -28,6 +28,17 @@ describe("subscription permission terminology", () => {
 });
 
 describe("subscription capability copy", () => {
+  it("lists action modelling in the Professional capability copy", () => {
+    expect(subscriptionZhCN.subscription.community.modelingTypes).toBe("对象与关系建模");
+    expect(subscriptionEnUS.subscription.community.modelingTypes).toBe(
+      "Object and relation modelling",
+    );
+    expect(subscriptionZhCN.subscription.capabilities.kn_action_modeling.name).toBe("行动建模");
+    expect(subscriptionEnUS.subscription.capabilities.kn_action_modeling.name).toBe(
+      "Action modelling",
+    );
+  });
+
   it("describes semantic understanding for data resources", () => {
     expect(subscriptionZhCN.subscription.capabilities.semantic_task.name).toBe(
       "数据资源支持语义理解",
@@ -46,16 +57,16 @@ describe("subscription capability copy", () => {
     );
   });
 
-  it("shows common sources, Execution Factory and one-click examples on the Community card", () => {
+  it("lists community sources and examples and describes Execution Factory as a paid capability", () => {
     const cardIds = COMMUNITY_CAPABILITIES.filter((entry) => entry.onCard).map((entry) => entry.id);
-    expect(cardIds).toEqual(
-      expect.arrayContaining(["commonSources", "executionFactory", "oneClickExperience"]),
-    );
+    expect(cardIds).toEqual(expect.arrayContaining(["commonSources", "oneClickExperience"]));
     expect(subscriptionZhCN.subscription.community.commonSources).toBe(
       "MySQL、PostgreSQL、MariaDB、OpenSearch",
     );
-    expect(subscriptionZhCN.subscription.community.executionFactory).toBe(
-      "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
+    expect(COMMUNITY_CAPABILITIES.map((entry) => entry.id)).not.toContain("executionFactory");
+    expect(subscriptionZhCN.subscription.capabilities.execution_factory.name).toBe("执行工厂");
+    expect(subscriptionEnUS.subscription.capabilities.execution_factory.name).toBe(
+      "Execution Factory",
     );
     expect(subscriptionZhCN.subscription.community.oneClickExperience).toBe(
       "支持一键体验，动态加载官方样例",

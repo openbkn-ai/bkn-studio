@@ -8,6 +8,9 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
+import { FALLBACK_ENTITLEMENT, type Entitlement } from "@/framework/entitlement/types";
+
 import { CypherQueryPage } from "./CypherQueryPage";
 
 const mocks = vi.hoisted(() => ({
@@ -45,10 +48,25 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+const professional: Entitlement = {
+  ...FALLBACK_ENTITLEMENT,
+  edition: "professional",
+  licensed: true,
+  state: "valid",
+};
+
+function renderPage(snapshot: Entitlement | null) {
+  render(
+    <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
+      <CypherQueryPage knId="supply" networkId="kn-1" />
+    </EntitlementContext.Provider>,
+  );
+}
+
 describe("CypherQueryPage", () => {
   it("publishes to the toolbox's workbench with the draft and a way back here", () => {
     mocks.permissions = ["execution-factory:function:edit"];
-    render(<CypherQueryPage knId="supply" networkId="kn-1" />);
+    renderPage(professional);
 
     lastSceneProps().onPublishFunction?.("box 1", { query: "RETURN 1", knId: "kn-1" });
 
@@ -60,9 +78,20 @@ describe("CypherQueryPage", () => {
     });
   });
 
+  it.each([
+    { edition: "Community", snapshot: FALLBACK_ENTITLEMENT },
+    { edition: "expired Professional", snapshot: { ...professional, licensed: false } },
+    { edition: "unknown", snapshot: null },
+  ])("offers no publishing with $edition even when the role can edit", ({ snapshot }) => {
+    mocks.permissions = ["execution-factory:function:edit"];
+    renderPage(snapshot);
+
+    expect(lastSceneProps().onPublishFunction).toBeUndefined();
+  });
+
   it("offers no publishing without the right to edit functions", () => {
     mocks.permissions = [];
-    render(<CypherQueryPage knId="supply" networkId="kn-1" />);
+    renderPage(professional);
     expect(lastSceneProps().onPublishFunction).toBeUndefined();
   });
 });

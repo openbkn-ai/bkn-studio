@@ -7,6 +7,7 @@
 
 import { AppstoreOutlined, CloudServerOutlined, ExperimentOutlined } from "@ant-design/icons";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
 
@@ -19,6 +20,8 @@ export const executionFactoryLabNavigation: ConsoleNavContribution = {
       key: "execution-factory-lab-capabilities",
       labelKey: "shell.items.executionFactoryLabCapabilities",
       icon: <ExperimentOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory-lab/capabilities",
       permission: executionFactoryLabPermissions.capabilityView,
     },
@@ -26,6 +29,8 @@ export const executionFactoryLabNavigation: ConsoleNavContribution = {
       key: "execution-factory-lab-catalog",
       labelKey: "shell.items.executionFactoryLabCatalog",
       icon: <AppstoreOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory-lab/catalog",
       permission: executionFactoryLabPermissions.catalogView,
     },
@@ -33,6 +38,8 @@ export const executionFactoryLabNavigation: ConsoleNavContribution = {
       key: "execution-factory-lab-sandbox-runtime",
       labelKey: "shell.items.executionFactoryLabSandboxRuntime",
       icon: <CloudServerOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory-lab/sandbox-runtime",
       permission: executionFactoryLabPermissions.sandboxRuntimeView,
     },

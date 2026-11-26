@@ -86,13 +86,14 @@ export const CAPABILITIES = {
    * 端点报不出,入口只按证书档位标。草稿与运行版本随社区版提供,入口不挡。
    */
   VERSION_MGMT: "version_mgmt",
-  /**
-   * 事件类:事件类的定义、识别行动类、按检查时间识别与事件记录。专业档起。
-   *
-   * 由社区版 bkn-backend 的事件模块按证书档位放行(无证时事件路由按不存在回答),装配表登记在
-   * bkn-backend 进程里,`/api/safe/v1/capabilities` 报不出,入口只按证书档位判。
-   */
+  /** 知识网络行动建模与行动类页面。专业档起。 */
+  KN_ACTION_MODELING: "kn_action_modeling",
+  /** 知识网络事件类与事件记录。Studio 按证书档位开放。 */
   KN_EVENTS: "kn_events",
+  /** 函数、API、MCP 与 Skill 的知识网络挂载页面。专业档起。 */
+  KN_TOOL_MOUNTS: "kn_tool_mounts",
+  /** 执行工厂及其实验室的页面。专业档起。 */
+  EXECUTION_FACTORY: "execution_factory",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

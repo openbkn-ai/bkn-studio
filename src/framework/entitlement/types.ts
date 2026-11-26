@@ -54,6 +54,8 @@ export type Entitlement = {
    * payload,报成 licensed 会让菜单全开而每个调用都被拒。
    */
   licensed: boolean;
+  /** Older endpoints omit licensed but can still report available capabilities. */
+  legacyLicenseResponse?: true;
   /** 证带的数值配额,如 `max_users` / `max_nodes`。-1 = 不限。只用于展示。 */
   limits: Record<string, number>;
   /** 授权状态,只驱动横幅**措辞**;判定看 `edition`,有无授权看 `licensed`。 */
