@@ -409,6 +409,9 @@ export function ContextLoaderIntegrationPanel({
 }: ContextLoaderIntegrationPanelProps) {
   const { t } = useTranslation();
   const location = useLocation();
+  // Keep discovery stable during credential edits; explicit retries use the latest provider.
+  const mcpAuthRef = useRef(mcpAuth);
+  mcpAuthRef.current = mcpAuth;
   const [evalConnection, setEvalConnection] = useState<
     "loading" | "available" | "unavailable" | "error"
   >("loading");
@@ -422,6 +425,7 @@ export function ContextLoaderIntegrationPanel({
   }[evalConnection];
   useEffect(() => {
     if (mode !== "mcp" || !showMcpConnect) return;
+    const auth = mcpAuthRef.current;
     let cancelled = false;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15000);
@@ -429,11 +433,11 @@ export function ContextLoaderIntegrationPanel({
     listMcpTools(
       {
         base: window.location.origin,
-        token: mcpAuth?.getToken?.() ?? "",
+        token: auth?.getToken?.() ?? "",
         knId: "",
         mcpEndpoint: `${window.location.origin}/api/bkn-backend/v1/eval/mcp/`,
       },
-      mcpAuth,
+      auth,
       controller.signal,
     )
       .then((tools) => {
@@ -457,7 +461,7 @@ export function ContextLoaderIntegrationPanel({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [mode, showMcpConnect, mcpAuth, evalRetry]);
+  }, [mode, showMcpConnect, evalRetry]);
   const [includeEval, setIncludeEval] = useState(false);
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [summaryOpen, setSummaryOpen] = useState(false);

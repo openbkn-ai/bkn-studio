@@ -496,10 +496,17 @@ describe("Eval MCP connect option", () => {
 it("discovers Eval from its authenticated endpoint and retries failed discovery", async () => {
   const auth = { getToken: () => "session-token", refresh: vi.fn() };
   vi.mocked(listMcpTools).mockRejectedValueOnce(new Error("connection unavailable"));
-  renderPanel({ showMcpConnect: true, mcpAuth: auth });
+  const { rerender, props } = renderPanel({ showMcpConnect: true, mcpAuth: auth });
   expect(
     await screen.findByText("knowledgeNetwork.contextLoaderPanel.mcpConnect.evalConnectionFailed"),
   ).toBeVisible();
+  const latestAuth = { getToken: () => "new-session-token", refresh: vi.fn() };
+  rerender(
+    <MemoryRouter>
+      <ContextLoaderIntegrationPanel {...props} mcpAuth={latestAuth} />
+    </MemoryRouter>,
+  );
+  expect(listMcpTools).toHaveBeenCalledTimes(1);
   vi.mocked(listMcpTools).mockResolvedValue(evalTools);
   fireEvent.click(
     screen.getByRole("button", {
@@ -516,9 +523,46 @@ it("discovers Eval from its authenticated endpoint and retries failed discovery"
   expect(listMcpTools).toHaveBeenLastCalledWith(
     expect.objectContaining({
       mcpEndpoint: `${window.location.origin}/api/bkn-backend/v1/eval/mcp/`,
-      token: "session-token",
+      token: "new-session-token",
     }),
-    auth,
+    latestAuth,
     expect.any(AbortSignal),
   );
+});
+
+it("preserves the selected Eval connection while credentials are edited", async () => {
+  vi.mocked(listMcpTools).mockResolvedValue(evalTools);
+  localStorage.setItem("bkn-mcp-connect-auth-mode", "apiKey");
+  const onCopy = vi.fn();
+  const { rerender, props } = renderPanel({
+    showMcpConnect: true,
+    appKeyValue: "bak_initial",
+    mcpAuth: { getToken: () => "bak_initial" },
+    onCopy,
+  });
+  const option = screen.getByRole("checkbox", {
+    name: "knowledgeNetwork.contextLoaderPanel.mcpConnect.includeEval",
+  });
+  await waitFor(() => expect(option).toBeEnabled());
+  fireEvent.click(option);
+  for (const key of ["bak_changed", "bak_changed_again"]) {
+    rerender(
+      <MemoryRouter>
+        <ContextLoaderIntegrationPanel
+          {...props}
+          appKeyValue={key}
+          mcpAuth={{ getToken: () => key }}
+        />
+      </MemoryRouter>,
+    );
+  }
+  expect(listMcpTools).toHaveBeenCalledTimes(1);
+  expect(option).toBeEnabled();
+  expect(option).toBeChecked();
+  fireEvent.click(
+    screen
+      .getByText("knowledgeNetwork.contextLoaderPanel.mcpConnect.cliMultipleTitle")
+      .parentElement!.querySelector("button")!,
+  );
+  expect(onCopy.mock.calls.at(-1)?.[0]).toContain("bkn-eval");
 });
