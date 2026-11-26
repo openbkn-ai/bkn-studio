@@ -26,11 +26,14 @@ export type UpgradeReason = "buy" | "image" | "image-likely";
 export function hasRequiredEdition(
   snapshot: EntitlementView | null,
   minEdition: Edition,
+  reportedByEndpoint: boolean,
 ): snapshot is EntitlementView {
   return (
     snapshot !== null &&
     atLeast(snapshot.edition, minEdition) &&
-    (minEdition === "community" || snapshot.licensed)
+    (minEdition === "community" ||
+      snapshot.licensed ||
+      (reportedByEndpoint && snapshot.legacyLicenseResponse === true))
   );
 }
 
@@ -42,7 +45,7 @@ export function upgradeReason(
   missingInFrontend = false,
 ): UpgradeReason {
   // 快照没到就按「还没买」说——不能凭空断言客户的证书已经够了。
-  if (!hasRequiredEdition(snapshot, minEdition)) {
+  if (!hasRequiredEdition(snapshot, minEdition, reportedByEndpoint)) {
     return "buy";
   }
 
@@ -82,7 +85,7 @@ export function capabilitySatisfied(
   minEdition: Edition,
   reportedByEndpoint: boolean,
 ): boolean {
-  if (!hasRequiredEdition(snapshot, minEdition)) {
+  if (!hasRequiredEdition(snapshot, minEdition, reportedByEndpoint)) {
     return false;
   }
 

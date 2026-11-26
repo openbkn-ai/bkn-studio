@@ -7,8 +7,8 @@
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-// Run against a local Studio dev server in mock mode (VITE_USE_MOCK=true). The mock function
-// toolbox has no functions: each case drafts one on the page, which needs no backend.
+// Run against Studio with VITE_USE_MOCK=true and VITE_MOCK_EDITION=professional.
+// The mock function toolbox has no functions: each case drafts one on the page.
 //
 // bkn-studio#1441: the Cypher editor kept the height of its text, so where the column was short it
 // spilled over the console below it. The console's parameters and its regenerate link drew over

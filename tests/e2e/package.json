@@ -14,7 +14,7 @@
     "test:lab": "playwright test specs/execution-factory-lab",
     "test:lab:api": "playwright test specs/execution-factory-lab/e2e-lab-api.spec.ts",
     "test:lab:ui": "playwright test specs/execution-factory-lab/e2e-lab-ui.spec.ts",
-    "test:smoke": "playwright test specs/smoke",
+    "test:smoke": "playwright test --config playwright.smoke.config.ts specs/smoke",
     "pretest:realworld": "npm run cleanup:e2e",
     "install:browsers": "playwright install chromium"
   },

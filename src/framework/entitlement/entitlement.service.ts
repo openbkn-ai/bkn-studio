@@ -246,6 +246,7 @@ export function parseEntitlement(data: CapabilitiesResponse): Entitlement {
     features: toStringArray(data.features),
     // 字段缺失(#638 之前的后端)当无授权处理:少给,不错给。
     licensed: data.licensed === true,
+    ...(data.licensed === undefined ? { legacyLicenseResponse: true } : {}),
     limits: toLimits(data.limits),
     state: parseLicenseState(data.state),
   };

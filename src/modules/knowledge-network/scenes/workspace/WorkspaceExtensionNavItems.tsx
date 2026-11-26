@@ -109,7 +109,7 @@ function ExtensionNavItem({
 }: {
   active: boolean;
   collapsed: boolean;
-  item: WorkspaceNavEntry & { key: string };
+  item: WorkspaceNavEntry & { capability: string };
   networkId: string;
 }) {
   const { t } = useTranslation();
@@ -120,8 +120,9 @@ function ExtensionNavItem({
   const isActive = active || (item.openIn === "workspace" && Boolean(match));
   const label = t(item.labelKey);
   const minEdition =
-    item.key === "graph-explorer:graph-explorer"
-      ? capabilityMinEdition(CAPABILITIES.GRAPH_EXPLORER)
+    item.capability === CAPABILITIES.GRAPH_EXPLORER &&
+    (item.section ?? "verification") === "verification"
+      ? capabilityMinEdition(item.capability)
       : null;
 
   return (

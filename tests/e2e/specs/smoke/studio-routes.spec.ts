@@ -37,3 +37,9 @@ test.describe("studio route smoke", () => {
     });
   }
 });
+
+test("execution factory requires Professional in the Community fixture", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("bkn-studio:locale", "zh-CN"));
+  await page.goto("/studio/execution-factory/units");
+  await expect(page.getByRole("heading", { name: "解锁专业版能力" })).toBeVisible();
+});

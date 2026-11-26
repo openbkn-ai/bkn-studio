@@ -56,7 +56,7 @@ export function useRefreshEntitlement() {
  */
 export function useCapability(capability: string, minEdition?: Edition): CapabilityState {
   const { snapshot } = useEntitlementContext();
-  if (snapshot && minEdition && !hasRequiredEdition(snapshot, minEdition)) {
+  if (snapshot && minEdition && !hasRequiredEdition(snapshot, minEdition, true)) {
     return "not-licensed";
   }
 

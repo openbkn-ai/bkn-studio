@@ -28,14 +28,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function registerGraphExplorer(openIn?: "workspace") {
+function registerGraphExplorer(openIn?: "workspace", id = "graph-explorer") {
   registerExtension({
     capability: "graph_explorer",
-    id: "graph-explorer",
+    id,
     workspaceNavItems: [
       {
         icon: <span data-testid="graph-explorer-icon" />,
-        id: "graph-explorer",
+        id,
         labelKey: "knowledgeNetwork.graphExplorer.openAction",
         openIn,
         path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
@@ -305,8 +305,8 @@ describe("WorkspaceExtensionNavItems", () => {
     );
   });
 
-  it("shows the Professional badge on the installed graph explorer even when licensed", () => {
-    registerGraphExplorer();
+  it("shows the licensed graph explorer's Professional badge after its registration is renamed", () => {
+    registerGraphExplorer(undefined, "renamed-explorer");
     const snapshot: Entitlement = {
       capabilities: ["graph_explorer"],
       edition: "professional",
@@ -324,7 +324,7 @@ describe("WorkspaceExtensionNavItems", () => {
       </EntitlementContext.Provider>,
     );
 
-    const item = screen.getByTestId("workspace-nav-graph-explorer");
+    const item = screen.getByTestId("workspace-nav-renamed-explorer");
     expect(
       within(item).getByText(i18n.t("common.entitlement.editionsShort.professional")),
     ).toBeTruthy();
