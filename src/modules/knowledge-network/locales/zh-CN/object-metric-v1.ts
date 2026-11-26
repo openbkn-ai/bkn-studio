@@ -7,6 +7,13 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  applyCompositeResultInference: "应用推导结果",
+  compositeResultConflict: "公式推导结果与当前结果配置不一致",
+  compositeResultSuggestion: "建议结果类型为 {{p0}}，单位为 {{p1}}。",
+  compositeResultTypeHelp: "结果数据类型由公式推导。类型与当前配置冲突时，可确认后应用推导结果。",
+  compositeResultTypeSuggestion: "建议结果类型为 {{p0}}。",
+  compositeResultUnitUnknown: "无法推导公式结果的单位，请确认当前单位",
+  keepCompositeResultUnit: "保留当前单位",
   allowApproximate: "允许近似计算",
   allowApproximateHelp:
     "允许使用估算值以降低计算成本；关闭后必须精确计算，可能耗时更长或因执行预算不足而失败。",
