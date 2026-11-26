@@ -1598,7 +1598,8 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     compositeResultInference?.unitKnown &&
     (inferredUnit
       ? !sameUnit(inferredUnit, declaredUnit)
-      : declaredUnit && declaredUnit.quantity_kind !== "dimensionless"),
+      : declaredUnit &&
+        (!supportsUnit(inferredPhysicalType) || declaredUnit.quantity_kind !== "dimensionless")),
   );
 
   const applyCompositeResultInference = () => {
@@ -2850,7 +2851,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               rounding_mode: values.physicalType === "decimal" ? values.roundingMode : undefined,
               scale: values.physicalType === "decimal" ? values.scale : undefined,
               semantic_type: values.semanticType,
-              unit: resultUnitFromForm(form.getFieldsValue(true) as Partial<FormValues>),
+              unit: resultUnitFromForm({
+                ...values,
+                rateUnitParts: getFieldValue("rateUnitParts"),
+              }),
             },
     };
     next.query_capabilities = objectMetricQueryCapabilities(

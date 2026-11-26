@@ -1488,6 +1488,7 @@ describe("ObjectMetricFormScene edit loading", () => {
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
     mocks.runObjectMetricDesigner.mockImplementation((params) => {
       const nameOnly = params.message === "临时改名";
+      const textFormula = params.message === "把公式改为文本结果";
       return Promise.resolve({
         answer: nameOnly ? "建议临时改名" : "建议调整公式",
         proposal: {
@@ -1504,7 +1505,9 @@ describe("ObjectMetricFormScene edit loading", () => {
               ]
             : [
                 {
-                  after: { ...originalExpression },
+                  after: textFormula
+                    ? { node_type: "literal", value_type: "string", value: "样例" }
+                    : { ...originalExpression },
                   before: originalExpression,
                   field: "composite.expression",
                   operation: "replace" as const,
@@ -1627,6 +1630,20 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(mocks.validateObjectMetricV1.mock.lastCall?.[1].result_semantics.value.unit).toEqual(
       amountPerHour.result_semantics.value.unit,
     );
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: /对象指标值类型/ }));
+    fireEvent.click(await screen.findByText("百分比"));
+    fireEvent.change(prompt, { target: { value: "把公式改为文本结果" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    fireEvent.click(await findButtonByText("应用所选修改"));
+    fireEvent.click(await findButtonByText("应用推导结果"));
+
+    mocks.validateObjectMetricV1.mockClear();
+    fireEvent.click(getButtonByText("语义校验"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    const textValue = mocks.validateObjectMetricV1.mock.lastCall?.[1].result_semantics.value;
+    expect(textValue).toMatchObject({ physical_type: "string", semantic_type: "category" });
+    expect(textValue?.unit).toBeUndefined();
   }, 60_000);
 
   it("clears a formula validation highlight when the formula changes", async () => {
