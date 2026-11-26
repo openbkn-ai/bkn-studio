@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { readErrorCode, readErrorDetails } from "@/framework/request/error-message";
 import type { DeclarationDefinitionKind } from "@/modules/knowledge-network/types/knowledge-network";
 
@@ -106,6 +107,20 @@ export class DefinitionStillReferencedError extends Error {
   }
 }
 
+/** A record of `metadata.references`: what is referred to, who refers to it, and through what. */
+type ReferenceRecord = { message?: string; referrer_id?: string; via?: string };
+
+function referenceRecords(error: unknown): ReferenceRecord[] {
+  const references = (
+    error as { response?: { data?: { metadata?: { references?: unknown } } } } | null
+  )?.response?.data?.metadata?.references;
+  return Array.isArray(references)
+    ? references.filter(
+        (item): item is ReferenceRecord => typeof item === "object" && item !== null,
+      )
+    : [];
+}
+
 function errorDescription(error: unknown, fallback: string) {
   const description = (error as { response?: { data?: { description?: unknown } } } | null)
     ?.response?.data?.description;
@@ -114,7 +129,8 @@ function errorDescription(error: unknown, fallback: string) {
 
 /**
  * Throws a `DefinitionStillReferencedError` for the backend's 409 on deleting a definition that
- * another one still names in `replaced_by` or `fallback_for`; does nothing for any other error.
+ * another one still names in `replaced_by` or `fallback_for`, or an event class still handles its
+ * events with; does nothing for any other error.
  */
 export function throwIfStillReferenced(error: unknown, definition: NamedDefinition) {
   const code = readErrorCode(error);
@@ -122,8 +138,23 @@ export function throwIfStillReferenced(error: unknown, definition: NamedDefiniti
     return;
   }
   const details = readErrorDetails(error) as { references?: unknown } | undefined;
-  const references = Array.isArray(details?.references)
+  const sentences = Array.isArray(details?.references)
     ? details.references.filter((item): item is string => typeof item === "string" && item !== "")
     : [];
-  throw new DefinitionStillReferencedError(errorDescription(error, code), definition, references);
+  // An event class that handles its events with the action type is said in the user's language.
+  const records = referenceRecords(error);
+  const references = records.length
+    ? records.map((record, index) =>
+        record.via === "handling_action" && record.referrer_id
+          ? i18n.t("knowledgeNetwork.definitionDeclarations.deleteRefused.handlingAction", {
+              eventClass: record.referrer_id,
+            })
+          : record.message || sentences[index] || "",
+      )
+    : sentences;
+  throw new DefinitionStillReferencedError(
+    errorDescription(error, code),
+    definition,
+    references.filter(Boolean),
+  );
 }

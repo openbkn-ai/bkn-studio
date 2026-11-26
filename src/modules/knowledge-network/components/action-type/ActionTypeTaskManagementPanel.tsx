@@ -169,9 +169,30 @@ export function ActionTypeTaskManagementPanel({
     () => [
       { label: t("common.all"), value: "" },
       { label: t("knowledgeNetwork.actionTypeExecutionTriggerManual"), value: "manual" },
-      { label: t("knowledgeNetwork.actionTypeExecutionTriggerSchedule"), value: "schedule" },
+      { label: t("knowledgeNetwork.actionTypeExecutionTriggerSchedule"), value: "scheduled" },
       { label: t("knowledgeNetwork.actionTypeExecutionTriggerEvent"), value: "event" },
+      { label: t("knowledgeNetwork.actionTypeExecutionTriggerAgent"), value: "agent" },
     ],
+    [t],
+  );
+
+  const getTriggerLabel = useCallback(
+    (value: string) => {
+      switch (value) {
+        case "manual":
+          return t("knowledgeNetwork.actionTypeExecutionTriggerManual");
+        // The platform records "scheduled"; "schedule" is what older records may hold.
+        case "schedule":
+        case "scheduled":
+          return t("knowledgeNetwork.actionTypeExecutionTriggerSchedule");
+        case "event":
+          return t("knowledgeNetwork.actionTypeExecutionTriggerEvent");
+        case "agent":
+          return t("knowledgeNetwork.actionTypeExecutionTriggerAgent");
+        default:
+          return value || "--";
+      }
+    },
     [t],
   );
 
@@ -492,14 +513,7 @@ export function ActionTypeTaskManagementPanel({
     {
       dataIndex: "triggerType",
       key: "triggerType",
-      render: (value: string) =>
-        value === "manual"
-          ? t("knowledgeNetwork.actionTypeExecutionTriggerManual")
-          : value === "schedule"
-            ? t("knowledgeNetwork.actionTypeExecutionTriggerSchedule")
-            : value === "event"
-              ? t("knowledgeNetwork.actionTypeExecutionTriggerEvent")
-              : value || "--",
+      render: (value: string) => getTriggerLabel(value),
       title: t("knowledgeNetwork.actionTypeExecutionTriggerType"),
       width: 120,
     },
@@ -645,7 +659,7 @@ export function ActionTypeTaskManagementPanel({
                 {getStatusLabel(currentLog.status)}
               </Descriptions.Item>
               <Descriptions.Item label={t("knowledgeNetwork.actionTypeExecutionTriggerType")}>
-                {currentLog.triggerType}
+                {getTriggerLabel(currentLog.triggerType)}
               </Descriptions.Item>
               <Descriptions.Item label={t("knowledgeNetwork.actionTypeExecutionStartTime")}>
                 {currentLog.startTime}

@@ -27,6 +27,7 @@ export const definitionDeclarationsPart = {
     },
     bannerReplacedBy: "请改用",
     deleteRefused: {
+      handlingAction: "事件类「{{eventClass}}」用它处置事件，先在事件类里改掉处置行动类",
       references: "引用它的定义",
       title: "不能删除「{{name}}」",
     },

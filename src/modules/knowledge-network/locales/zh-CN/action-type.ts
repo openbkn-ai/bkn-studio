@@ -70,6 +70,9 @@ export const actiontypePart = {
   actionTypeDeleteTitle: "删除行动类",
   actionTypeDetailDescription: "查看行动类详情、绑定对象与执行映射。",
   actionTypeDetailTitle: "行动类详情",
+  actionTypeEventClass: "所属事件类：",
+  actionTypeRecognitionNote:
+    "这是事件类的识别行动类，按事件类的规则和检查时间找出事件；规则和检查时间请在事件类里修改。",
   actionTypeUpdater: "更新人",
   actionTypeUpdateTime: "更新时间",
   actionTypeEditDescription: "编辑行动类基础信息与执行映射。",
@@ -216,6 +219,7 @@ export const actiontypePart = {
   actionTypeExecutionTriggerManual: "手动",
   actionTypeExecutionTriggerSchedule: "定时",
   actionTypeExecutionTriggerEvent: "事件",
+  actionTypeExecutionTriggerAgent: "智能体",
   actionTypeExecutionRunStatus: "执行状态",
   actionTypeExecutionRunSummary: "执行结果",
   actionTypeExecutionStatusPending: "待执行",

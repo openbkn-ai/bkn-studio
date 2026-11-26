@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   permissions: { current: [] as string[] },
   resolveDisplay: vi.fn(),
   search: { current: "" },
+  setSearch: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -42,7 +43,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useLocation: () => ({ state: mocks.locationState.current }),
   useNavigate: () => mocks.navigate,
   useParams: () => ({ actionTypeId: "action-1", networkId: "network-1" }),
-  useSearchParams: () => [new URLSearchParams(mocks.search.current), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(mocks.search.current), mocks.setSearch],
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -225,6 +226,22 @@ describe("ActionTypeExecutionScene review regressions", () => {
     expect(screen.getByText("knowledgeNetwork.actionTypeExecutionRunTitle")).not.toBeNull();
     expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionConfig")).toBeNull();
     expect(screen.getByTestId("execution-header-actions").childElementCount).toBe(1);
+  });
+
+  it("keeps where the user came from when the tab changes", async () => {
+    const eventClass = "/knowledge-network/workspace/network-1/object-types/order_overdue/detail";
+    mocks.locationState.current = { knowledgeNetworkReturnTo: eventClass };
+    mocks.getDetail.mockResolvedValue(createDetail({ type: "manual" }));
+
+    render(<ActionTypeExecutionScene />);
+
+    fireEvent.click(
+      (await screen.findAllByText("knowledgeNetwork.actionTypeDetailTaskManagement"))[0],
+    );
+    expect(mocks.setSearch).toHaveBeenLastCalledWith(
+      { tab: "tasks" },
+      { state: { knowledgeNetworkReturnTo: eventClass } },
+    );
   });
 
   it("opens the action overview while preserving the original graph return target", async () => {

@@ -101,6 +101,8 @@ export type KnowledgeNetworkActionTypeRecord = {
   /** Its aliases and lifecycle; absent when it declares neither. */
   declarations?: DefinitionDeclarations;
   description: string;
+  /** The event class whose events this action recognises; set only on a recognition action. */
+  eventClassId?: string;
   id: string;
   name: string;
   objectTypeId: string;

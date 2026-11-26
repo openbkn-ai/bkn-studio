@@ -169,13 +169,10 @@ export function ActionTypeExecutionScene() {
     };
   }, [actionSource, canResolveActionSource]);
 
+  // A tab is a search parameter; keep the navigation state so the back button still leads
+  // where the user came from.
   const setActiveTab = (tab: ExecutionTab) => {
-    if (tab === "run") {
-      setSearchParams({});
-      return;
-    }
-
-    setSearchParams({ tab });
+    setSearchParams(tab === "run" ? {} : { tab }, { state: location.state as unknown });
   };
 
   const executeNow = async (

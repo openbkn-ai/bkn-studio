@@ -27,6 +27,8 @@ export const definitionDeclarationsPart = {
     },
     bannerReplacedBy: "Use instead",
     deleteRefused: {
+      handlingAction:
+        "Event class “{{eventClass}}” handles its events with it; change the event class’s handling action first",
       references: "Definitions that reference it",
       title: "“{{name}}” cannot be deleted",
     },

@@ -30,6 +30,8 @@ import type { ActionTypeCondition } from "@/modules/knowledge-network/types/acti
 import type {
   KnEventCheckSchedule,
   KnEventCheckSubject,
+  KnEventHandlingAction,
+  KnEventHandlingCandidate,
   KnEventRecognitionBasis,
   KnEventRule,
   KnEventRuleCheck,
@@ -63,6 +65,7 @@ registerErrorCodeMessage("BknBackend.KnEvent.EventTypeExisted", () =>
  */
 
 type BackendEventConfig = {
+  handling_action?: KnEventHandlingAction;
   handling_note?: string;
   merge_hours?: number;
   severity?: string;
@@ -403,6 +406,7 @@ export function eventTypeFromBackend(
     code: record.id,
     create_time: record.create_time,
     creator: record.creator?.name ?? record.creator?.id,
+    handling_action: event.handling_action ?? null,
     handling_note: event.handling_note,
     kn_id: networkId,
     merge_hours: event.merge_hours,
@@ -436,6 +440,42 @@ async function listRecognitionActions(
       action.operation_config?.type === "event" &&
       (!eventClass || action.operation_config.event_class === eventClass),
   );
+}
+
+type BackendHandlingCandidate = {
+  id: string;
+  name?: string;
+  object_type_id?: string;
+  operation_config?: { type?: string };
+  parameters?: { comment?: string; name?: string; type?: string; value_from?: string }[];
+};
+
+/**
+ * The action types that can handle the events of a class about `subject`: those that act on it,
+ * other than recognition actions, which record events.
+ */
+export async function listKnEventHandlingCandidates(
+  networkId: string,
+  subject: string,
+): Promise<KnEventHandlingCandidate[]> {
+  const actions = await readAll<BackendHandlingCandidate>(actionTypesPath(networkId), {
+    object_type_id: subject,
+  });
+  return actions
+    .filter(
+      (action) => action.object_type_id === subject && action.operation_config?.type !== "event",
+    )
+    .map((action) => ({
+      id: action.id,
+      inputs: (action.parameters ?? [])
+        .filter((parameter) => parameter.name && (parameter.value_from ?? "input") === "input")
+        .map((parameter) => ({
+          ...(parameter.comment ? { comment: parameter.comment } : {}),
+          name: parameter.name as string,
+          ...(parameter.type ? { type: parameter.type } : {}),
+        })),
+      name: action.name || action.id,
+    }));
 }
 
 async function listPlatformSchedules(
@@ -537,7 +577,7 @@ export async function getKnEventType(networkId: string, code: string): Promise<K
 
 type EventClassFields = Pick<
   KnEventTypeInput,
-  "handling_note" | "merge_hours" | "name" | "severity" | "subject"
+  "handling_action" | "handling_note" | "merge_hours" | "name" | "severity" | "subject"
 >;
 
 /**
@@ -553,6 +593,8 @@ function eventClassBody(
   return {
     ...(options.id ? { id: options.id } : {}),
     event: {
+      // A replace that leaves it out clears it.
+      ...(fields.handling_action ? { handling_action: fields.handling_action } : {}),
       ...(replace || fields.handling_note ? { handling_note: fields.handling_note ?? "" } : {}),
       ...(replace || fields.merge_hours ? { merge_hours: fields.merge_hours ?? 0 } : {}),
       ...(replace || fields.severity ? { severity: fields.severity ?? "" } : {}),

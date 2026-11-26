@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   getObjectType: vi.fn(),
   listObjectTypes: vi.fn(),
+  listHandling: vi.fn(),
   listRuleTools: vi.fn(),
   success: vi.fn(),
   trial: vi.fn(),
@@ -46,6 +47,7 @@ vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   createKnEventType: mocks.create,
   describeKnEventError: (error: unknown) =>
     error instanceof Error ? error.message : String(error),
+  listKnEventHandlingCandidates: mocks.listHandling,
   listKnEventRuleTools: mocks.listRuleTools,
   trialKnEventRule: mocks.trial,
   updateKnEventType: mocks.update,
@@ -154,6 +156,10 @@ beforeEach(() => {
       { name: "status", type: "string" },
     ],
   });
+  mocks.listHandling.mockResolvedValue([
+    { id: "notify_buyer", inputs: [], name: "Notify buyer" },
+    { id: "refund", inputs: [{ comment: "Why", name: "reason", type: "string" }], name: "Refund" },
+  ]);
   mocks.listRuleTools.mockResolvedValue([
     {
       boxId: "box-1",
@@ -258,6 +264,7 @@ describe("EventClassFormDrawer", () => {
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(mocks.update).toHaveBeenCalledWith("network-1", "order_overdue", {
       check_schedule: { cron: "0 8 * * *", timezone: "Asia/Shanghai" },
+      handling_action: null,
       handling_note: "",
       merge_hours: 0,
       name: "Overdue order",
@@ -519,6 +526,7 @@ describe("EventClassFormDrawer", () => {
     expect(mocks.create).toHaveBeenCalledWith("network-1", {
       check_schedule: null,
       code: "quality_complaint",
+      handling_action: null,
       handling_note: "",
       merge_hours: 0,
       name: "Quality complaint",
@@ -529,6 +537,156 @@ describe("EventClassFormDrawer", () => {
     });
     expect(mocks.success).toHaveBeenCalledWith("common.success");
     expect(mocks.warning).not.toHaveBeenCalled();
+  });
+
+  it("hands the events to an action type on the subject, run automatically by default", async () => {
+    const onSaved = renderDrawer(overdue);
+    await vi.waitFor(() => expect(mocks.listHandling).toHaveBeenCalledWith("network-1", "order"));
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.handlingAction` }));
+    fireEvent.click(await screen.findByText("Notify buyer"));
+    expect(await screen.findByText(`${PREFIX}.handlingModeAuto`)).toBeVisible();
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        handling_action: { action_type_id: "notify_buyer", mode: "auto" },
+      }),
+    );
+  });
+
+  it("runs an action type that asks for input by itself once the class gives each input", async () => {
+    const onSaved = renderDrawer(overdue);
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.handlingAction` }));
+    // The options say which action types ask for input.
+    expect(await screen.findByText(`${PREFIX}.handlingActionInputs`)).toBeVisible();
+    fireEvent.click(await screen.findByText("Refund"));
+    expect(await screen.findByText(`${PREFIX}.handlingParameters`)).toBeVisible();
+    expect(screen.getByText("Why")).toBeVisible();
+
+    save();
+
+    expect(await screen.findByText(`${PREFIX}.handlingParameterRequired`)).toBeVisible();
+    expect(mocks.update).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole("textbox", { name: `${PREFIX}.handlingParameterValue` }), {
+      target: { value: " late " },
+    });
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        handling_action: {
+          action_type_id: "refund",
+          mode: "auto",
+          parameters: { reason: { value: "late", value_from: "const" } },
+        },
+      }),
+    );
+  });
+
+  it("gives an input a property of the event's object", async () => {
+    const onSaved = renderDrawer(overdue);
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.handlingAction` }));
+    fireEvent.click(await screen.findByText("Refund"));
+    fireEvent.mouseDown(
+      await screen.findByRole("combobox", { name: `${PREFIX}.handlingParameterFrom` }),
+    );
+    fireEvent.click(await screen.findByText(`${PREFIX}.handlingParameterProperty`));
+    fireEvent.mouseDown(
+      await screen.findByRole("combobox", { name: `${PREFIX}.handlingParameterValue` }),
+    );
+    fireEvent.click(await screen.findByTitle("status"));
+
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        handling_action: {
+          action_type_id: "refund",
+          mode: "auto",
+          parameters: { reason: { value: "status", value_from: "property" } },
+        },
+      }),
+    );
+  });
+
+  it("suggests an action type with its inputs left to the person", async () => {
+    const onSaved = renderDrawer(overdue);
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.handlingAction` }));
+    fireEvent.click(await screen.findByText("Refund"));
+    fireEvent.click(await screen.findByText(`${PREFIX}.handlingModeSuggest`));
+
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({ handling_action: { action_type_id: "refund", mode: "suggest" } }),
+    );
+  });
+
+  it("keeps the inputs a class gives its handling action", async () => {
+    const onSaved = renderDrawer({
+      ...overdue,
+      handling_action: {
+        action_type_id: "refund",
+        mode: "auto",
+        parameters: { reason: { value: "status", value_from: "property" } },
+      },
+    });
+    expect(
+      await screen.findByRole("combobox", { name: `${PREFIX}.handlingParameterValue` }),
+    ).toBeVisible();
+    expect(screen.getByTitle("status")).toBeVisible();
+
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        handling_action: {
+          action_type_id: "refund",
+          mode: "auto",
+          parameters: { reason: { value: "status", value_from: "property" } },
+        },
+      }),
+    );
+  });
+
+  it("only suggests the handling action of a reported class", async () => {
+    const onSaved = renderDrawer(undefined, "order");
+    fillNewClass("Quality complaint", "quality_complaint");
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.eventClasses.source.report"));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.handlingAction` }));
+    fireEvent.click(await screen.findByText("Notify buyer"));
+    expect(screen.getByRole("radio", { name: `${PREFIX}.handlingModeAuto` })).toBeDisabled();
+
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.create).toHaveBeenCalledWith(
+      "network-1",
+      expect.objectContaining({
+        handling_action: { action_type_id: "notify_buyer", mode: "suggest" },
+      }),
+    );
   });
 
   it("tells how many objects the trial of a save found", async () => {

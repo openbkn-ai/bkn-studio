@@ -77,6 +77,9 @@ export const actiontypePart = {
   actionTypeDetailDescription:
     "Review action type details, bound object type, and execution mapping.",
   actionTypeDetailTitle: "Action type detail",
+  actionTypeEventClass: "Event class: ",
+  actionTypeRecognitionNote:
+    "This action recognises the events of an event class, by its rule and check times. Change the rule and the check times on the event class.",
   actionTypeUpdater: "Updated by",
   actionTypeUpdateTime: "Updated at",
   actionTypeEditDescription: "Edit action type basics and execution mapping.",
@@ -234,6 +237,7 @@ export const actiontypePart = {
   actionTypeExecutionTriggerManual: "Manual",
   actionTypeExecutionTriggerSchedule: "Schedule",
   actionTypeExecutionTriggerEvent: "Event",
+  actionTypeExecutionTriggerAgent: "Agent",
   actionTypeExecutionRunStatus: "Run status",
   actionTypeExecutionRunSummary: "Run summary",
   actionTypeExecutionStatusPending: "Pending",

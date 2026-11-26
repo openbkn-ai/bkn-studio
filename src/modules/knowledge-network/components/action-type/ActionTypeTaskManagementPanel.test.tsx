@@ -537,6 +537,46 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
   }, 15_000);
 });
 
+describe("ActionTypeTaskManagementPanel trigger types", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.list.mockResolvedValue({
+      entries: [
+        { ...log, triggerType: "scheduled" },
+        { ...log, id: "exec-2", triggerType: "agent" },
+      ],
+      totalCount: 2,
+    });
+  });
+
+  it("names the runs the platform schedules, and filters by what it records", async () => {
+    render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.actionTypeExecutionTriggerSchedule"),
+    ).toBeVisible();
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionTriggerAgent")).toBeVisible();
+    expect(screen.queryByText("scheduled")).toBeNull();
+
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[1]);
+    const option = await waitFor(() => {
+      const found = document.querySelector(
+        '.ant-select-item-option[title="knowledgeNetwork.actionTypeExecutionTriggerSchedule"]',
+      );
+      expect(found).toBeTruthy();
+      return found as HTMLElement;
+    });
+    fireEvent.click(option);
+
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        "network-1",
+        expect.objectContaining({ triggerType: "scheduled" }),
+      ),
+    );
+  });
+});
+
 describe("ActionTypeTaskManagementPanel data synchronization", () => {
   const failedSync: ActionTypeExecutionLogResultItem = {
     displayName: "Huawei",
