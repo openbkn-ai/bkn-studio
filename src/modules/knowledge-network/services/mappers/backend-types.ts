@@ -35,6 +35,7 @@ export type BackendKnowledgeNetwork = {
     apis_total?: number;
     functions_total?: number;
     mcp_tools_total?: number;
+    event_classes_total?: number;
     metrics_total?: number;
     object_types_total?: number;
     relation_types_total?: number;
@@ -252,7 +253,8 @@ export type BackendActionType = import("./declarations").BackendDefinitionDeclar
     operation?: string;
     sub_conditions?: BackendActionType["condition"][];
     value?: string | string[];
-    value_from?: "const" | "property" | "input";
+    /** `check_time` and `check_date` only in a record-event action's condition. */
+    value_from?: "const" | "property" | "input" | "check_time" | "check_date";
   };
   id: string;
   name: string;

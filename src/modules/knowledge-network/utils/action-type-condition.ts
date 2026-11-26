@@ -24,7 +24,7 @@ export type BackendActionCondition = {
   operation?: string;
   sub_conditions?: (BackendActionCondition | undefined)[];
   value?: string | string[];
-  value_from?: "const" | "property" | "input";
+  value_from?: "const" | "property" | "input" | "check_time" | "check_date";
 };
 
 export function toBackendActionCondition(
@@ -121,6 +121,13 @@ export function validateActionCondition(
       ? null
       : "knowledgeNetwork.actionTypeConditionPropertyRequired";
   }
+  if (valueFrom === "check_time" || valueFrom === "check_date") {
+    return condition.value === undefined ||
+      (typeof condition.value === "string" &&
+        isCheckOffset(condition.value, valueFrom === "check_date"))
+      ? null
+      : "knowledgeNetwork.eventClasses.form.offsetInvalid";
+  }
   if (valueFrom === "input") {
     const parameter = parameters.find(
       (item) => item.name === condition.value && (item.valueFrom ?? "input") === "input",
@@ -147,6 +154,38 @@ export function validateActionCondition(
   )
     return "knowledgeNetwork.actionTypeConditionRangeRequired";
   return null;
+}
+
+const CHECK_OFFSET_UNITS = new Set(["Y", "M", "W", "D", "TH", "TM", "TS"]);
+
+/**
+ * Whether a value is a duration that moves the time of a check (or, with `date`, its day) as the
+ * platform reads it: an optional sign and an ISO 8601 duration such as `-PT48H` or `-P1D`, each
+ * unit at most once; a day moves by whole days only. Empty means no move.
+ */
+export function isCheckOffset(value: string, date: boolean): boolean {
+  let text = value.trim();
+  if (!text) return true;
+  if (text.startsWith("-") || text.startsWith("+")) text = text.slice(1);
+  if (!text.startsWith("P") || text.length === 1) return false;
+  text = text.slice(1);
+  let clock = false;
+  const seen = new Set<string>();
+  while (text) {
+    if (text.startsWith("T")) {
+      if (clock || date || text.length === 1) return false;
+      clock = true;
+      text = text.slice(1);
+      continue;
+    }
+    const match = /^(\d+)([A-Z])/.exec(text);
+    if (!match || Number(match[1]) > 1_000_000) return false;
+    const unit = `${clock ? "T" : ""}${match[2]}`;
+    if (seen.has(unit) || !CHECK_OFFSET_UNITS.has(unit)) return false;
+    seen.add(unit);
+    text = text.slice(match[0].length);
+  }
+  return true;
 }
 
 export function isLogicalOperation(

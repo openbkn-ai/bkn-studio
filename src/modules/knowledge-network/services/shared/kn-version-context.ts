@@ -32,15 +32,16 @@ const NETWORK_PATH = /^\/bkn-backend\/v1\/knowledge-networks\/([^/?#]+)(\/[^?#]*
 
 /**
  * Sub-resources that are not definitions, or that take version arguments of their own. Events are
- * kept on the network, not on a branch: the event module writes an event type's class into the
- * draft by itself, so its requests carry no version arguments.
+ * kept on the network, not on a branch, and so are the platform's action schedules: one is kept
+ * for each recognition action of the running version, so their requests carry no version
+ * arguments.
  */
 const UNSCOPED_PREFIXES = [
   "/versions",
   "/versioning",
   "/draft",
   "/evals",
-  "/event-types",
+  "/action-schedules",
   "/events",
   "/rule-checks",
 ];

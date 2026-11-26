@@ -12,6 +12,7 @@ import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
+  error: vi.fn(),
   getTool: vi.fn(),
   listChecks: vi.fn(),
   success: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: mocks.success, warning: mocks.warning },
+    message: { error: mocks.error, success: mocks.success, warning: mocks.warning },
   }),
 }));
 
@@ -38,6 +39,7 @@ vi.mock("@/modules/execution-factory/services/tool.service", () => ({
 
 vi.mock("@/modules/knowledge-network/services/event-type.service", () => ({
   checkKnEventType: mocks.check,
+  describeKnEventError: (error: unknown) => (error instanceof Error ? error.message : ""),
   listKnEventRuleChecks: mocks.listChecks,
 }));
 
@@ -51,6 +53,8 @@ const overdue: KnEventType = {
   merge_hours: 0,
   name: "Overdue order",
   object_type_id: "order_overdue",
+  recognition_action_id: "order_overdue_recognition",
+  recognition_basis: "function",
   rule_tool: { box_id: "box-1", tool_id: "tool-1" },
   severity: "P2",
   source: "rule",
@@ -81,19 +85,36 @@ const checkNow = () => {
 };
 
 describe("EventRecognitionCard check now", () => {
-  it("reports how many objects the check found", async () => {
-    mocks.check.mockResolvedValue({
-      check: { event_type: "order.overdue", hits: 2, status: "ok" },
-    });
+  it("says the check started, since the platform runs it in the background", async () => {
+    mocks.check.mockResolvedValue({ execution_id: "ex-1" });
     checkNow();
 
-    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkDone:2`));
+    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkStarted`));
+    expect(mocks.check).toHaveBeenCalledWith("network-1", "order.overdue");
   });
 
-  it("does not report zero found when the check does not say how many", async () => {
-    mocks.check.mockResolvedValue({ check: { event_type: "order.overdue", status: "ok" } });
+  it("says why a check now could not start", async () => {
+    mocks.check.mockRejectedValue(new Error("the class has no schedule yet"));
+
     checkNow();
 
-    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith(`${PREFIX}.checkFinished`));
+    await vi.waitFor(() =>
+      expect(mocks.error).toHaveBeenCalledWith("the class has no schedule yet"),
+    );
+    expect(mocks.success).not.toHaveBeenCalled();
+  });
+
+  it("offers no check now for a class without a recognition action", () => {
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={{ ...overdue, recognition_action_id: undefined, rule_tool: null }}
+        networkId="network-1"
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(`${PREFIX}.checkNow`)).toBeNull();
   });
 });

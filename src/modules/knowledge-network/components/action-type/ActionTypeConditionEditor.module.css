@@ -5,6 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
+.editorRoot {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.fill {
+  width: 100%;
+}
+
 .conditionList {
   display: flex;
   flex-direction: column;
@@ -119,6 +128,24 @@
   .operationSelect,
   .valueEditor {
     flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+/* A host narrower than a full row: the property takes a line, the comparison the next. */
+@container (max-width: 760px) {
+  .conditionRow {
+    flex-wrap: wrap;
+  }
+
+  .objectTypeSelect,
+  .fieldSelect {
+    flex: 1 1 100%;
+    width: auto;
+  }
+
+  .valueEditor {
+    flex: 1 1 280px;
     min-width: 0;
   }
 }

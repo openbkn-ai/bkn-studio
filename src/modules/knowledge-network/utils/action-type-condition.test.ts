@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ActionTypeCondition } from "@/modules/knowledge-network/types/knowledge-network";
 import {
+  isCheckOffset,
   promoteLegacyActionCondition,
   hasReferencedConditionValue,
   validateActionCondition,
@@ -251,5 +252,35 @@ describe("action-type-condition", () => {
         },
       ],
     });
+  });
+
+  it("reads a check's offset as the platform does", () => {
+    for (const value of ["", "-PT48H", "+P1D", "P1Y2M3W4D", "PT1H30M", "-P1DT12H", "P1D1Y"]) {
+      expect(isCheckOffset(value, false)).toBe(true);
+    }
+    for (const value of ["48h", "-P", "PT", "P1H", "PT1D", "P1DT", "P1D1D", "PT1H1H", "P1d"]) {
+      expect(isCheckOffset(value, false)).toBe(false);
+    }
+    // A check date moves by whole days.
+    expect(isCheckOffset("-P1D", true)).toBe(true);
+    expect(isCheckOffset("-PT24H", true)).toBe(false);
+  });
+
+  it("checks the offset of a condition on the time of a check", () => {
+    const onCheck = (value: string | undefined, valueFrom: "check_time" | "check_date") =>
+      validateActionCondition(
+        { field: "status", operation: "<", value, valueFrom },
+        properties,
+        [],
+      );
+
+    expect(onCheck(undefined, "check_time")).toBeNull();
+    expect(onCheck("-PT48H", "check_time")).toBeNull();
+    expect(onCheck("-PT48H", "check_date")).toBe(
+      "knowledgeNetwork.eventClasses.form.offsetInvalid",
+    );
+    expect(onCheck("2 days", "check_time")).toBe(
+      "knowledgeNetwork.eventClasses.form.offsetInvalid",
+    );
   });
 });

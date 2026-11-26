@@ -14,15 +14,19 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import { KnowledgeNetworkWorkspaceScene } from "@/modules/knowledge-network/scenes/KnowledgeNetworkWorkspaceScene";
 
-const mocks = vi.hoisted(() => ({
-  evalAccess: vi.fn(),
-  evalAccessStatus: "allowed",
-  evalReportedByEndpoint: false,
-  extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
-  hiddenNavigation: [] as string[],
-  navigate: vi.fn(),
-  pathname: "/knowledge-network/workspace/network-1/overview",
-}));
+const mocks = vi.hoisted(() => {
+  const noDetail: unknown = null;
+  return {
+    evalAccess: vi.fn(),
+    evalAccessStatus: "allowed",
+    evalReportedByEndpoint: false,
+    extensionEntries: { items: [] as unknown[], upgrades: [] as unknown[] },
+    hiddenNavigation: [] as string[],
+    navigate: vi.fn(),
+    pathname: "/knowledge-network/workspace/network-1/overview",
+    detail: noDetail,
+  };
+});
 
 vi.mock("@/modules/subscription/capability-catalog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/subscription/capability-catalog")>();
@@ -127,7 +131,7 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection",
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/useWorkspaceData", () => ({
   useWorkspaceData: () => ({
-    detail: null,
+    detail: mocks.detail,
     detailError: null,
     detailLoading: false,
     loadRecentObjects: vi.fn(),
@@ -507,23 +511,62 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
   });
 });
 
+describe("KnowledgeNetworkWorkspaceScene event class navigation", () => {
+  it("offers event classes under the dynamic model, after action types, with a Professional licence", () => {
+    renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }));
+
+    const entry = screen.getByRole("button", { name: "knowledgeNetwork.eventClasses.nav" });
+    expect(screen.getByRole("button", { name: /行动类/ }).nextElementSibling).toBe(entry);
+
+    fireEvent.click(entry);
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/event-classes",
+    );
+  });
+
+  it("counts the event classes the network's statistics report", () => {
+    mocks.detail = { id: "network-1", statistics: { eventClassesTotal: 3 } };
+    try {
+      renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }));
+
+      const entry = screen.getByRole("button", { name: /knowledgeNetwork\.eventClasses\.nav/ });
+      expect(within(entry).getByText("3")).toBeTruthy();
+    } finally {
+      mocks.detail = null;
+    }
+  });
+
+  it.each([
+    { name: "the community edition", overrides: {} },
+    { name: "an expired Professional licence", overrides: { edition: "professional" as const } },
+  ])("does not offer event classes in $name", ({ overrides }) => {
+    renderScene(entitlement(overrides));
+
+    expect(screen.getByRole("button", { name: /行动类/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "knowledgeNetwork.eventClasses.nav" })).toBeNull();
+  });
+});
+
 describe("KnowledgeNetworkWorkspaceScene resource list padding", () => {
   // Each list panel pads itself; a padded section around it would double the gutter.
-  it.each(["concept-groups", "object-types", "relation-types", "action-types"] as const)(
-    "lays the %s list flush against the workspace",
-    async (section) => {
-      render(
-        <EntitlementContext.Provider
-          value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
-        >
-          <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
-        </EntitlementContext.Provider>,
-      );
+  it.each([
+    "concept-groups",
+    "object-types",
+    "relation-types",
+    "action-types",
+    "event-classes",
+  ] as const)("lays the %s list flush against the workspace", async (section) => {
+    render(
+      <EntitlementContext.Provider
+        value={{ loading: false, refresh: async () => {}, snapshot: entitlement() }}
+      >
+        <KnowledgeNetworkWorkspaceScene networkId="network-1" section={section} />
+      </EntitlementContext.Provider>,
+    );
 
-      const content = await screen.findByTestId("resource-content");
-      expect(content.parentElement?.className).toMatch(/workspaceSectionFlush/);
-    },
-  );
+    const content = await screen.findByTestId("resource-content");
+    expect(content.parentElement?.className).toMatch(/workspaceSectionFlush/);
+  });
 });
 
 describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {

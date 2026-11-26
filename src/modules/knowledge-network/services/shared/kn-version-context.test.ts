@@ -353,10 +353,8 @@ describe("kn version context", () => {
   it("leaves event requests alone: events are kept on the network, not on a branch", async () => {
     routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
 
-    await http.get(`${NETWORK}/event-types`);
-    await http.put(`${NETWORK}/event-types/order.overdue`, {});
-    await http.delete(`${NETWORK}/event-types/order.overdue`);
-    await http.post(`${NETWORK}/event-types/order.overdue/check`);
+    await http.get(`${NETWORK}/action-schedules`);
+    await http.post(`${NETWORK}/action-schedules/sch-1/run`);
     await http.get(`${NETWORK}/rule-checks`);
     await http.get(`${NETWORK}/events`);
 
@@ -364,16 +362,14 @@ describe("kn version context", () => {
       expect(config.params, `${config.method} ${config.url}`).toBeUndefined();
       expect(config.headers.has("If-Match"), `${config.method} ${config.url}`).toBe(false);
     }
-    // Nothing was read to find an ETag for the event type.
-    expect(request("get", `${NETWORK}/event-types/order.overdue`)).toHaveLength(0);
   });
 
-  it("lets event types change while a published version is on screen", async () => {
+  it("lets a platform schedule run while a published version is on screen", async () => {
     routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
     await http.get(`${NETWORK}/object-types`);
     setKnVersionView("kn-1", 3);
 
-    await expect(http.put(`${NETWORK}/event-types/order.overdue`, {})).resolves.toBeDefined();
+    await expect(http.post(`${NETWORK}/action-schedules/sch-1/run`)).resolves.toBeDefined();
   });
 
   it("says somebody else changed it when a save hits a stale definition", () => {

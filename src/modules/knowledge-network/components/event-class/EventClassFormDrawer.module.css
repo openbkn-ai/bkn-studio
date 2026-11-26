@@ -15,10 +15,6 @@
   width: 100%;
 }
 
-.form {
-  margin-top: 12px;
-}
-
 .parameters {
   display: flex;
   flex-direction: column;
@@ -69,4 +65,89 @@
 
 .timezone {
   width: 240px;
+}
+
+.trialStale {
+  opacity: 0.6;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px 20px 4px;
+}
+
+.cardHead {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.clauseKeyword {
+  align-items: center;
+  background: var(--color-primary-600);
+  border-radius: 6px;
+  color: var(--color-text-inverse);
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 600;
+  height: 28px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 8px;
+}
+
+.hintIcon {
+  color: var(--color-text-tertiary);
+  cursor: help;
+}
+
+.trial {
+  margin: 16px 0 12px;
+}
+
+.lastField {
+  margin-bottom: 16px !important;
+}
+
+.functionRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.functionSelect {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.cypherQuery {
+  background: var(--color-fill-secondary);
+  border-radius: 6px;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  margin: 0;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.keptRate {
+  margin-bottom: 8px;
 }

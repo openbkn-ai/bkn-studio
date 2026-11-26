@@ -5,16 +5,17 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Tooltip } from "antd";
+import { Alert, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { getTool } from "@/modules/execution-factory/services/tool.service";
-import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
+import { describeCheckSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import {
   checkKnEventType,
+  describeKnEventError,
   listKnEventRuleChecks,
 } from "@/modules/knowledge-network/services/event-type.service";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
@@ -31,6 +32,8 @@ type EventRecognitionCardProps = {
   networkId: string;
   onEdit: () => void;
   onOpenSubject?: (objectTypeId: string) => void;
+  /** Shows the class's events, one per object a check hit. */
+  onShowEvents?: () => void;
   subjectName?: string;
 };
 
@@ -61,6 +64,7 @@ export function EventRecognitionCard({
   networkId,
   onEdit,
   onOpenSubject,
+  onShowEvents,
   subjectName,
 }: EventRecognitionCardProps) {
   const { t } = useTranslation();
@@ -112,23 +116,12 @@ export function EventRecognitionCard({
   const checkNow = async () => {
     setChecking(true);
     try {
-      const result = await checkKnEventType(networkId, eventType.code);
-      const check = result.check;
-      if (check?.status === "unknown") {
-        void message.warning(
-          t(`${PREFIX}.checkUnknown`, { message: check.message || t(`${PREFIX}.noMessage`) }),
-        );
-      } else {
-        // A check that does not say how many it found is reported without a count.
-        void message.success(
-          typeof check?.hits === "number"
-            ? t(`${PREFIX}.checkDone`, { count: check.hits })
-            : t(`${PREFIX}.checkFinished`),
-        );
-      }
+      // The platform runs the schedule in the background: the answer is that it started.
+      await checkKnEventType(networkId, eventType.code);
+      void message.success(t(`${PREFIX}.checkStarted`));
       setCheckTick((current) => current + 1);
-    } catch {
-      // The request layer has shown why.
+    } catch (error) {
+      void message.error(describeKnEventError(error));
     } finally {
       setChecking(false);
     }
@@ -149,7 +142,7 @@ export function EventRecognitionCard({
         <h3 className={styles.title}>{t(`${PREFIX}.title`)}</h3>
         {canModify ? (
           <div className={styles.actions}>
-            {isRule && ruleTool ? (
+            {isRule && eventType.recognition_action_id ? (
               <AppButton loading={checking} onClick={() => void checkNow()} size="small">
                 {t(`${PREFIX}.checkNow`)}
               </AppButton>
@@ -161,15 +154,8 @@ export function EventRecognitionCard({
         ) : null}
       </div>
       <p className={styles.note}>{t(`${PREFIX}.managedNote`)}</p>
-      {isRule && !ruleTool ? (
+      {isRule && !eventType.recognition_action_id ? (
         <Alert message={t(`${PREFIX}.noRuleTool`)} showIcon type="warning" />
-      ) : null}
-      {isRule && ruleTool && (eventType.check_failures ?? 0) > 0 ? (
-        <Alert
-          message={t(`${PREFIX}.failures`, { count: eventType.check_failures ?? 0 })}
-          showIcon
-          type="warning"
-        />
       ) : null}
       <dl className={styles.fields}>
         {field(t(`${PREFIX}.code`), <code className={styles.code}>{eventType.code}</code>)}
@@ -204,37 +190,41 @@ export function EventRecognitionCard({
                 : t(`${PREFIX}.mergeOff`),
             )
           : null}
-        {isRule && ruleTool ? (
+        {isRule && eventType.recognition_action_id ? (
           <>
             {field(
-              t(`${PREFIX}.ruleTool`),
-              <Tooltip title={`${ruleTool.box_id} / ${ruleTool.tool_id}`}>
-                <span>{toolName || ruleTool.tool_id}</span>
-              </Tooltip>,
+              t(`${PREFIX}.basis`),
+              t(`${PREFIX}.bases.${eventType.recognition_basis ?? "condition"}`),
             )}
-            {field(
-              t(`${PREFIX}.parameters`),
-              parameters.length ? (
-                <ul className={styles.list}>
-                  {parameters.map(([name, value]) => (
-                    <li key={name}>
-                      <code className={styles.code}>{name}</code>{" "}
-                      {isCheckTime(value) ? t(`${PREFIX}.checkDate`) : formatArgument(value)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                placeholder
-              ),
-            )}
+            {ruleTool
+              ? field(
+                  t(`${PREFIX}.ruleTool`),
+                  <Tooltip title={`${ruleTool.box_id} / ${ruleTool.tool_id}`}>
+                    <span>{toolName || ruleTool.tool_id}</span>
+                  </Tooltip>,
+                )
+              : null}
+            {ruleTool
+              ? field(
+                  t(`${PREFIX}.parameters`),
+                  parameters.length ? (
+                    <ul className={styles.list}>
+                      {parameters.map(([name, value]) => (
+                        <li key={name}>
+                          <code className={styles.code}>{name}</code>{" "}
+                          {isCheckTime(value) ? t(`${PREFIX}.checkDate`) : formatArgument(value)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    placeholder
+                  ),
+                )
+              : null}
             {field(
               t(`${PREFIX}.schedule`),
               eventType.check_schedule
-                ? describeSchedule(
-                    eventType.check_schedule.cron,
-                    t,
-                    eventType.check_schedule.timezone,
-                  )
+                ? describeCheckSchedule(eventType.check_schedule, t)
                 : placeholder,
             )}
             {field(
@@ -253,11 +243,19 @@ export function EventRecognitionCard({
               lastCheck ? (
                 <span>
                   {lastCheck.time ? `${formatTimestamp(lastCheck.time)} · ` : ""}
-                  {lastCheck.status === "ok"
-                    ? t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })
-                    : t(`${PREFIX}.lastCheckUnknown`, {
-                        message: lastCheck.message || t(`${PREFIX}.noMessage`),
-                      })}
+                  {lastCheck.status === "ok" ? (
+                    onShowEvents && (lastCheck.hits ?? 0) > 0 ? (
+                      <Typography.Link onClick={onShowEvents}>
+                        {t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })}
+                      </Typography.Link>
+                    ) : (
+                      t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })
+                    )
+                  ) : (
+                    t(`${PREFIX}.lastCheckUnknown`, {
+                      message: lastCheck.message || t(`${PREFIX}.noMessage`),
+                    })
+                  )}
                 </span>
               ) : (
                 t(`${PREFIX}.neverChecked`)

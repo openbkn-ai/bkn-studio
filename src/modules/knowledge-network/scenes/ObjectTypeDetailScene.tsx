@@ -238,7 +238,7 @@ export function ObjectTypeDetailScene() {
   const dataSection =
     activeTab === "data" ? parseObjectTypeDataSection(searchParams.get("section")) : "instance";
   const eventTypes = useKnEventTypes(networkId);
-  // This object type is the class of an event type: the platform writes it from that type.
+  // This object type is an event class: its data source and properties are the platform's.
   const eventType = eventTypes.byClassId.get(objectTypeId);
   const subjectEventTypes = useMemo(
     () => eventTypes.types.filter((type) => type.subject === objectTypeId),
@@ -1391,6 +1391,7 @@ export function ObjectTypeDetailScene() {
               { state: { knowledgeNetworkReturnTo: detailPath } },
             );
           }}
+          onShowEvents={() => openTab("data")}
           subjectName={subjectName}
         />
       ) : null}

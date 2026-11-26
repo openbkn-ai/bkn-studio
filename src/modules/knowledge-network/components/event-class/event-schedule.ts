@@ -7,6 +7,8 @@
 
 import type { TFunction } from "i18next";
 
+import type { KnEventCheckSchedule } from "@/modules/knowledge-network/types/event-type";
+
 /**
  * A rule's check schedule as the form offers it. The backend keeps a five-field cron expression;
  * the common shapes are edited as presets and anything else as the expression itself.
@@ -116,6 +118,13 @@ export function describeSchedule(
       break;
   }
   return timezone ? `${text} (${timezone})` : text;
+}
+
+/** How a class is checked: its cron in words, or the fixed rate it keeps. */
+export function describeCheckSchedule(schedule: KnEventCheckSchedule, t: TFunction): string {
+  if (!schedule.rate) return describeSchedule(schedule.cron, t, schedule.timezone);
+  const text = t("knowledgeNetwork.eventClasses.schedule.describe.rate", { rate: schedule.rate });
+  return schedule.timezone ? `${text} (${schedule.timezone})` : text;
 }
 
 /** IANA time zones the runtime knows, the default first. */

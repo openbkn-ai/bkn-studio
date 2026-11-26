@@ -25,6 +25,7 @@ import type { RelationTypePropertyOption } from "@/modules/knowledge-network/com
 import type {
   ActionTypeCondition,
   ActionTypeConditionOperation,
+  ActionTypeConditionValueFrom,
   ActionTypeExecutionParameter,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -33,6 +34,24 @@ import styles from "./ActionTypeConditionEditor.module.css";
 
 const VALUELESS_OPERATIONS = new Set<ActionTypeConditionOperation>(["exist", "not_exist"]);
 const LOGIC_OPERATIONS = new Set<ActionTypeConditionOperation>(["and", "or"]);
+/** What an action type's condition compares with. */
+const DEFAULT_VALUE_SOURCES: readonly ActionTypeConditionValueFrom[] = [
+  "const",
+  "property",
+  "input",
+];
+const VALUE_SOURCE_LABEL_KEYS: Record<ActionTypeConditionValueFrom, string> = {
+  check_date: "knowledgeNetwork.eventClasses.form.valueFromCheckDate",
+  check_time: "knowledgeNetwork.eventClasses.form.valueFromCheckTime",
+  const: "knowledgeNetwork.actionTypeExecutionValueFromConst",
+  input: "knowledgeNetwork.actionTypeExecutionValueFromInput",
+  property: "knowledgeNetwork.actionTypeExecutionValueFromProperty",
+};
+
+/** The time or the day of a record-event action's check, moved by an optional duration. */
+function isCheckValueSource(source: ActionTypeConditionValueFrom) {
+  return source === "check_time" || source === "check_date";
+}
 
 function isValuelessOperation(operation?: ActionTypeConditionOperation) {
   return operation !== undefined && VALUELESS_OPERATIONS.has(operation);
@@ -80,6 +99,7 @@ type ConditionRowProps = {
   showAddGroupButton?: boolean;
   onAdd?: () => void;
   value: ActionTypeCondition;
+  valueSources: readonly ActionTypeConditionValueFrom[];
 };
 
 function ConditionRow({
@@ -95,6 +115,7 @@ function ConditionRow({
   showAddButton,
   showAddGroupButton,
   value,
+  valueSources,
 }: ConditionRowProps) {
   const { t } = useTranslation();
 
@@ -179,6 +200,7 @@ function ConditionRow({
       <div className={styles.fieldSelect}>
         <Select
           allowClear
+          className={styles.fill}
           disabled={!objectTypeId}
           onChange={(nextField) => {
             const property = findConditionProperty(propertyOptions, nextField ?? undefined);
@@ -202,7 +224,12 @@ function ConditionRow({
           updateRow({
             operation: resolveConditionOperation(fieldType, nextOperation ?? undefined),
             value: undefined,
-            valueFrom: isValuelessOperation(nextOperation) ? "const" : valueFrom,
+            // A list or a range is not compared with the time of a check.
+            valueFrom:
+              isValuelessOperation(nextOperation) ||
+              (isCheckValueSource(valueFrom) && conditionNeedsArray(nextOperation ?? undefined))
+                ? "const"
+                : valueFrom,
           });
         }}
         options={operationOptions}
@@ -218,19 +245,30 @@ function ConditionRow({
             onChange={(nextValueFrom: NonNullable<ActionTypeCondition["valueFrom"]>) => {
               updateRow({ valueFrom: nextValueFrom, value: undefined });
             }}
-            options={(["const", "property", "input"] as const).map((source) => ({
-              label: t(
-                {
-                  const: "knowledgeNetwork.actionTypeExecutionValueFromConst",
-                  property: "knowledgeNetwork.actionTypeExecutionValueFromProperty",
-                  input: "knowledgeNetwork.actionTypeExecutionValueFromInput",
-                }[source],
-              ),
-              value: source,
-            }))}
+            options={valueSources
+              .filter(
+                (source) => !isCheckValueSource(source) || !conditionNeedsArray(currentOperation),
+              )
+              .map((source) => ({ label: t(VALUE_SOURCE_LABEL_KEYS[source]), value: source }))}
             value={valueFrom}
           />
-          {valueFrom === "const" ? (
+          {isCheckValueSource(valueFrom) ? (
+            <Input
+              aria-label={t("knowledgeNetwork.eventClasses.form.offset")}
+              className={styles.valueInput}
+              disabled={!objectTypeId || !value.field}
+              onChange={(event) => {
+                updateRow({ value: event.target.value.trim() || undefined });
+              }}
+              placeholder={t(
+                valueFrom === "check_date"
+                  ? "knowledgeNetwork.eventClasses.form.offsetDatePlaceholder"
+                  : "knowledgeNetwork.eventClasses.form.offsetTimePlaceholder",
+              )}
+              title={t("knowledgeNetwork.eventClasses.form.offsetHint")}
+              value={scalarValue}
+            />
+          ) : valueFrom === "const" ? (
             <Input
               className={styles.valueInput}
               disabled={!objectTypeId}
@@ -310,6 +348,8 @@ type ActionTypeConditionEditorProps = {
   executionParameters?: ActionTypeExecutionParameter[];
   value?: ActionTypeCondition | null;
   onChange?: (value?: ActionTypeCondition | null) => void;
+  /** What a row may compare with; an action type's runtime inputs by default. */
+  valueSources?: readonly ActionTypeConditionValueFrom[];
 };
 
 type ConditionRowsEditorProps = {
@@ -326,6 +366,7 @@ type ConditionRowsEditorProps = {
   executionParameters: ActionTypeExecutionParameter[];
   rows: ActionTypeCondition[];
   showGroupHeader: boolean;
+  valueSources: readonly ActionTypeConditionValueFrom[];
 };
 
 function ConditionRowsEditor({
@@ -339,6 +380,7 @@ function ConditionRowsEditor({
   executionParameters,
   rows,
   showGroupHeader,
+  valueSources,
 }: ConditionRowsEditorProps) {
   const { t } = useTranslation();
   const visibleRows = rows.length > 0 ? rows : [createEmptyConditionRow(boundObjectTypeId)];
@@ -407,6 +449,7 @@ function ConditionRowsEditor({
             propertyOptions={propertyOptions}
             rows={item.subConditions ?? []}
             showGroupHeader
+            valueSources={valueSources}
           />
         ) : (
           <ConditionRow
@@ -423,6 +466,7 @@ function ConditionRowsEditor({
             showAddButton={index === visibleRows.length - 1}
             showAddGroupButton={index === visibleRows.length - 1}
             value={item}
+            valueSources={valueSources}
           />
         ),
       )}
@@ -438,6 +482,7 @@ export function ActionTypeConditionEditor({
   executionParameters = [],
   value,
   onChange,
+  valueSources = DEFAULT_VALUE_SOURCES,
 }: ActionTypeConditionEditorProps) {
   const rootCondition: ActionTypeCondition = value ?? {
     objectTypeId: boundObjectTypeId,
@@ -484,17 +529,21 @@ export function ActionTypeConditionEditor({
     });
   };
 
+  // The editor lays its rows out by its own width, so a narrow host such as a drawer wraps them.
   return (
-    <ConditionRowsEditor
-      executionParameters={executionParameters}
-      boundObjectTypeId={boundObjectTypeId}
-      groupOperation={groupOperation}
-      hideObjectTypeSelect={hideObjectTypeSelect}
-      objectTypes={objectTypes}
-      onChange={updateRows}
-      propertyOptions={propertyOptions}
-      rows={rows}
-      showGroupHeader={rows.length > 1}
-    />
+    <div className={styles.editorRoot}>
+      <ConditionRowsEditor
+        executionParameters={executionParameters}
+        boundObjectTypeId={boundObjectTypeId}
+        groupOperation={groupOperation}
+        hideObjectTypeSelect={hideObjectTypeSelect}
+        objectTypes={objectTypes}
+        onChange={updateRows}
+        propertyOptions={propertyOptions}
+        rows={rows}
+        showGroupHeader={rows.length > 1}
+        valueSources={valueSources}
+      />
+    </div>
   );
 }
