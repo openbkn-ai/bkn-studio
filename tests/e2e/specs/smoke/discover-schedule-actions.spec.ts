@@ -40,7 +40,7 @@ for (const locale of ["en-US", "zh-CN"]) {
     const trigger = actions.getByRole("button", {
       name: locale === "en-US" ? "More actions" : "更多操作",
     });
-    for (const name of locale === "en-US" ? ["Run Now", "Delete"] : ["立即执行", "删除"]) {
+    for (const name of locale === "en-US" ? ["Run now", "Delete"] : ["立即执行", "删除"]) {
       await trigger.click();
       await expect(page.getByRole("menuitem")).toHaveCount(4);
       await expect(page.locator(".ant-dropdown-menu-item-danger:visible")).toBeVisible();
@@ -54,7 +54,7 @@ for (const locale of ["en-US", "zh-CN"]) {
     }
     await trigger.click();
     await page
-      .getByRole("menuitem", { name: locale === "en-US" ? "View Tasks" : "查看任务", exact: true })
+      .getByRole("menuitem", { name: locale === "en-US" ? "View tasks" : "查看任务", exact: true })
       .click();
     await expect(page).toHaveURL(/tab=tasks/);
   });
