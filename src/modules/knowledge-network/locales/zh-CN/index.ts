@@ -21,7 +21,6 @@ import { propertyDeclarationsPart } from "./property-declarations";
 import { definitionDeclarationsPart } from "./definition-declarations";
 import { relationDeclarationsPart } from "./relation-declarations";
 import { valueTypesPart } from "./value-types";
-import { knowledgeBasePart } from "./knowledge-base";
 import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
@@ -49,7 +48,6 @@ export const knowledgeNetworkZhCN = {
     ...definitionDeclarationsPart,
     ...relationDeclarationsPart,
     ...valueTypesPart,
-    ...knowledgeBasePart,
     ...propertyAuthorizationPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,

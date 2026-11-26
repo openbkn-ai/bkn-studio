@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { getTool } from "@/modules/execution-factory/services/tool.service";
-import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
+import { describeCheckSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import {
   checkKnEventType,
   describeKnEventError,
@@ -266,11 +266,7 @@ export function EventRecognitionCard({
             {field(
               t(`${PREFIX}.schedule`),
               eventType.check_schedule
-                ? describeSchedule(
-                    eventType.check_schedule.cron,
-                    t,
-                    eventType.check_schedule.timezone,
-                  )
+                ? describeCheckSchedule(eventType.check_schedule, t)
                 : placeholder,
             )}
             {field(

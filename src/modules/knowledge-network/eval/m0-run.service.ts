@@ -4,6 +4,7 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
+import { isVisibleTemplateRule } from "./eval-template-rules";
 import {
   readEvalOverviewProgress,
   type EvalOverviewProgressOptions,
@@ -904,6 +905,16 @@ export type EvalExecutionPlan = {
   budget: { max_attempts: 1; timeout_seconds: number };
 };
 
+export type EvalRelationDeclarationSnapshot = {
+  relation_id: string;
+  sha256: string;
+  properties: Record<string, unknown>[];
+  source_object_type_id: string;
+  target_object_type_id: string;
+  bridge_resource_id: string;
+  value_types?: Record<string, unknown>;
+};
+
 export type EvalResourceQuerySummary = {
   relation_check?: {
     rule: string;
@@ -913,6 +924,10 @@ export type EvalResourceQuerySummary = {
     checked: number;
     violations?: number;
     findings?: Record<string, unknown>[];
+    violation_unit?: "record_properties" | "bridge_records";
+    findings_total?: number;
+    findings_truncated?: boolean;
+    declaration_snapshot?: EvalRelationDeclarationSnapshot;
     actual?: Record<string, unknown>;
     boundary?: string;
     scope?: Record<string, unknown>;
@@ -1003,7 +1018,16 @@ export async function getEvalTemplateConfig(networkId: string): Promise<EvalTemp
     transformResponse: (data: unknown) =>
       typeof data === "string" ? parsePrecisionPreservingJSON(data) : data,
   });
-  return response.data;
+  return {
+    ...response.data,
+    rules: response.data.rules.map((rule) =>
+      isVisibleTemplateRule(rule) ? rule : { ...rule, enabled: false },
+    ),
+    check_capabilities: response.data.check_capabilities?.map((capability) => ({
+      ...capability,
+      bindings: capability.bindings?.filter((binding) => binding !== "relation-property-values"),
+    })),
+  };
 }
 
 export type EvalRuleMatchPreview = {

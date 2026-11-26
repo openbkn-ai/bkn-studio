@@ -26,6 +26,8 @@ export type RelationTypeResourceRowMapping = {
 export type RelationTypeMappingConfig = {
   backingDataSourceId: string;
   backingDataSourceName?: string;
+  /** Defined when this save edits relation properties, including an explicit empty list. */
+  relationProperties?: StoredRelationProperty[];
   resourceMappings: RelationTypeResourceRowMapping[];
   propertyMappings: RelationTypePropertyMapping[];
   sourceObjectTypeId: string;
@@ -33,6 +35,7 @@ export type RelationTypeMappingConfig = {
 };
 
 export type RelationTypeResourceMappingStore = {
+  relationProperties?: StoredRelationProperty[];
   backingDataSourceId: string;
   backingDataSourceName?: string;
   resourceMappings: RelationTypeResourceRowMapping[];
@@ -66,18 +69,26 @@ export type RelationTypeDetail = KnowledgeNetworkRelationTypeRecord & {
   backingDataSourceName?: string;
   resourceMappings: RelationTypeResourceRowMapping[];
   propertyMappings: RelationTypePropertyMapping[];
-  /**
-   * The relation properties an indirect relation stores (`mapping_rules.properties`). Studio does
-   * not edit them yet, and a save never sends them, so the backend keeps them.
-   */
+  /** The relation properties stored in `mapping_rules.properties`. */
   relationProperties?: StoredRelationProperty[];
 };
 
-/** A stored relation property, by what names it: its name and the backing resource column. */
+/** Editable relation fields together with their complete saved declaration. */
 export type StoredRelationProperty = {
+  constraints?: Record<string, unknown> & {
+    range?: {
+      min?: number | string;
+      max?: number | string;
+      [key: string]: unknown;
+    };
+  };
+  /** Retains declaration fields the property editor does not expose. */
+  declaration?: Record<string, unknown>;
   displayName?: string;
   mappedField?: string;
   name: string;
+  required?: boolean;
+  type?: string;
 };
 
 /** The declarations a save edits, and what they were when the relation type was read. */

@@ -12,7 +12,7 @@ import {
 } from "@/framework/request/precision-safe-json";
 import { CopyOutlined } from "@ant-design/icons";
 import { Alert, Button, Checkbox, Modal, Select, Spin, Tooltip } from "antd";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
@@ -211,7 +211,7 @@ function ResourcePreviewContent({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{
     message: string;
-    description?: string;
+    description?: ReactNode;
     invalidResponse?: boolean;
     retryPage?: { page: number; pageSize: number };
   } | null>(null);
@@ -321,6 +321,7 @@ function ResourcePreviewContent({
       setError(null);
       setForbidden(false);
       setSourceReadDetails(null);
+      const hasFilter = activeFilter.children.length > 0;
       let targetPage = pendingPage;
       try {
         const query: ResourcePreviewQuery = {
@@ -328,7 +329,7 @@ function ResourcePreviewContent({
             ? { binaryMode: binaryContent ? "content" : "metadata" }
             : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
-          ...(activeFilter.children.length
+          ...(hasFilter
             ? { filterCondition: filterToBackend(activeFilter, resource.schema, filterQueryPath) }
             : {}),
           limit: nextLimit,
@@ -407,6 +408,26 @@ function ResourcePreviewContent({
           });
           return;
         }
+        if (
+          isApiResource &&
+          hasFilter &&
+          details.code === "VegaBackend.Query.InvalidParameter" &&
+          details.metadata?.stage === "request" &&
+          details.metadata.upstream_status === 0 &&
+          details.details
+        ) {
+          setError({
+            retryPage,
+            message: details.description,
+            description: (
+              <>
+                <div>{details.details}</div>
+                <div>{t("dataCatalog.preview.apiFilterRequestHint")}</div>
+              </>
+            ),
+          });
+          return;
+        }
         const projectionMessage = PROJECTION_ERROR_MESSAGES.get(details.code ?? "");
         const explanation = projectionMessage ? t(projectionMessage) : details.description;
         setError({
@@ -433,6 +454,7 @@ function ResourcePreviewContent({
       hasBinaryField,
       hasLocalIndex,
       invalidViewMetadata,
+      isApiResource,
       isDerivedView,
       isTableView,
       sourceBlockReason,

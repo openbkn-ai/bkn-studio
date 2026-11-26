@@ -42,17 +42,21 @@ export type BackendRelationTypeMappingRules =
         name?: string;
         type?: string;
       };
-      /** BKN spec 3.0 relation properties. Studio counts them and never sends them. */
+      /** BKN spec 3.0 relation properties, included when a save edits them. */
       properties?: BackendRelationProperty[] | null;
       source_mapping_rules?: BackendRelationPropertyMapping[];
       target_mapping_rules?: BackendRelationPropertyMapping[];
     };
 
-/** A relation property as the backend sends it; Studio reads only what names it. */
+/** A relation property and any additional declaration fields returned by the backend. */
 export type BackendRelationProperty = {
+  [key: string]: unknown;
+  constraints?: StoredRelationProperty["constraints"];
   display_name?: string;
-  mapped_field?: { name?: string } | null;
+  mapped_field?: { [key: string]: unknown; name?: string; type?: string } | null;
   name?: string;
+  required?: boolean;
+  type?: string;
 };
 
 export type BackendRelationTypeCreateEntry = BackendRelationDeclarationFields &
@@ -123,6 +127,38 @@ function toBackendResourceMappingRules(
     },
     source_mapping_rules: sourceMappingRules,
     target_mapping_rules: targetMappingRules,
+    ...(mappingRules.relationProperties !== undefined
+      ? { properties: mappingRules.relationProperties.map(toBackendRelationProperty) }
+      : {}),
+  };
+}
+
+function toBackendRelationProperty(property: StoredRelationProperty): BackendRelationProperty {
+  const declaration = property.declaration ?? {};
+  const storedField = declaration.mapped_field;
+  const mappedField =
+    storedField && typeof storedField === "object" && !Array.isArray(storedField)
+      ? storedField
+      : {};
+
+  return {
+    ...declaration,
+    name: property.name,
+    ...(property.displayName !== undefined ? { display_name: property.displayName } : {}),
+    ...(property.type !== undefined ? { type: property.type } : {}),
+    ...(property.required !== undefined ? { required: property.required } : {}),
+    ...(property.mappedField !== undefined
+      ? {
+          mapped_field: {
+            ...mappedField,
+            name: property.mappedField,
+            ...(!("type" in mappedField) && property.type !== undefined
+              ? { type: property.type }
+              : {}),
+          },
+        }
+      : {}),
+    ...(property.constraints !== undefined ? { constraints: property.constraints } : {}),
   };
 }
 
@@ -184,7 +220,7 @@ export function mapRelationTypeMappingsFromBackend(
   };
 }
 
-/** The relation properties an indirect relation stores, by name; none for a direct one. */
+/** Read editable fields while retaining the full declaration for subsequent saves. */
 export function mapStoredRelationProperties(
   mappingRules?: BackendRelationTypeMappingRules,
 ): StoredRelationProperty[] {
@@ -196,8 +232,16 @@ export function mapStoredRelationProperties(
       ? [
           {
             name: item.name,
-            ...(item.display_name ? { displayName: item.display_name } : {}),
-            ...(item.mapped_field?.name ? { mappedField: item.mapped_field.name } : {}),
+            declaration: structuredClone(item),
+            ...(item.display_name !== undefined ? { displayName: item.display_name } : {}),
+            ...(item.mapped_field?.name !== undefined
+              ? { mappedField: item.mapped_field.name }
+              : {}),
+            ...(item.type !== undefined ? { type: item.type } : {}),
+            ...(item.required !== undefined ? { required: item.required } : {}),
+            ...(item.constraints !== undefined
+              ? { constraints: structuredClone(item.constraints) }
+              : {}),
           },
         ]
       : [],

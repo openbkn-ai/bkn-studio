@@ -11,7 +11,7 @@ import type { TableProps } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
+import { describeCheckSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
 
@@ -85,7 +85,7 @@ export function SubjectEventClassesPanel({
       width: 220,
       render: (_value, record) =>
         record.source === "rule" && record.check_schedule
-          ? describeSchedule(record.check_schedule.cron, t, record.check_schedule.timezone)
+          ? describeCheckSchedule(record.check_schedule, t)
           : "--",
     },
     {

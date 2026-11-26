@@ -136,6 +136,8 @@ export const eventClassesPart = {
       scheduleHint:
         "两次检查至少相隔 5 分钟。保存时以你的身份试运行一次，之后的检查也以你的身份读取数据。",
       scheduleKind: "检查频率",
+      keptRate:
+        "现在按固定频率每 {{rate}} 检查一次，这里无法编辑这个频率。不改检查时间就保持原频率，改了则按新的时间检查。",
       cronInvalid: "cron 表达式须有 5 段：分 时 日 月 周",
       savedWithTrial_one: "已保存。试运行命中 {{count}} 个对象。",
       savedWithTrial_other: "已保存。试运行命中 {{count}} 个对象。",
@@ -172,6 +174,7 @@ export const eventClassesPart = {
         daily: "每天 {{time}}",
         weekly: "每{{weekday}} {{time}}",
         cron: "cron：{{cron}}",
+        rate: "每 {{rate}}",
       },
     },
     recognition: {

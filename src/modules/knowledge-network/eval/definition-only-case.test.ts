@@ -40,7 +40,7 @@ it("preserves an independently specified expectation and cannot carry a runnable
   expect(result.expected_spec).toEqual({ criteria: { value_0: "缺少编号" } });
   expect(result.diagnostic_spec).toMatchObject({
     definition_only: true,
-    form_version: 2,
+    form_version: 1,
     template_rule_id: "function-input",
   });
   expect(result.execution_spec.target).toMatchObject({ kn_id: "kn", resource_id: "resource" });

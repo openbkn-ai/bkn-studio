@@ -12,7 +12,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
-import { extensionKnowledgeNetworkResourcePanel } from "@/framework/extension/registry";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
 import { CapabilityListPanel } from "@/modules/knowledge-network/components/capability/CapabilityListPanel";
@@ -228,13 +227,6 @@ export function WorkspaceResourceSection({
           }}
         />
       );
-    }
-    case "knowledge-bases": {
-      // The professional edition's; the community image has none and shows nothing here.
-      const KnowledgeBases = extensionKnowledgeNetworkResourcePanel();
-      return KnowledgeBases ? (
-        <KnowledgeBases canModify={canModify} key={networkId} networkId={networkId} />
-      ) : null;
     }
     default:
       return null;

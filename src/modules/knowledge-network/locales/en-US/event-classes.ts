@@ -154,6 +154,8 @@ export const eventClassesPart = {
       scheduleHint:
         "Checks are at least 5 minutes apart. Saving tries the rule once as you, and later checks read the data as you too.",
       scheduleKind: "Frequency",
+      keptRate:
+        "Checked at a fixed rate of every {{rate}}, which this form cannot edit. Leave the check time alone to keep it; change it to check at the new time instead.",
       cronInvalid: "A cron expression has 5 fields: minute, hour, day of month, month, day of week",
       savedWithTrial_one: "Saved. The trial found {{count}} object.",
       savedWithTrial_other: "Saved. The trial found {{count}} objects.",
@@ -190,6 +192,7 @@ export const eventClassesPart = {
         daily: "Daily at {{time}}",
         weekly: "Every {{weekday}} at {{time}}",
         cron: "Cron: {{cron}}",
+        rate: "Every {{rate}}",
       },
     },
     recognition: {

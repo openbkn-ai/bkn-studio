@@ -40,7 +40,6 @@ import {
   listKnowledgeNetworkRelationTypes,
 } from "./relation-type.service";
 import { getKnowledgeNetwork, listKnowledgeNetworks } from "./network.service";
-import { listQueryableKnowledgeBases } from "./knowledge-base.service";
 
 describe("knowledge-network mock child operations", () => {
   beforeEach(() => {
@@ -128,11 +127,5 @@ describe("knowledge-network mock viewer", () => {
       }
       expect((await entry.detail(records[0].id))?.operations).toEqual(["view_detail"]);
     }
-  });
-
-  it("does not offer queryable knowledge bases to a definition-only viewer", async () => {
-    expect(await listQueryableKnowledgeBases()).toEqual([]);
-    vi.stubEnv("VITE_MOCK_USER", "admin");
-    expect((await listQueryableKnowledgeBases()).length).toBeGreaterThan(0);
   });
 });

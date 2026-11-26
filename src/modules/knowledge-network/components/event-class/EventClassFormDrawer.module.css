@@ -148,6 +148,10 @@
   word-break: break-word;
 }
 
+.keptRate {
+  margin-bottom: 8px;
+}
+
 .handlingInput {
   display: flex;
   gap: 8px;

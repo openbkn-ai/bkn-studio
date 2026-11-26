@@ -363,7 +363,7 @@ function scheduleFromBackend(action: BackendRecognitionAction): KnEventCheckSche
   const timezone = schedule.timezone || undefined;
   if (schedule.type === "FIX_RATE") {
     const cron = cronOfFixedRate(schedule.expression);
-    return cron ? { cron, timezone } : null;
+    return cron ? { cron, timezone } : { cron: "", rate: schedule.expression, timezone };
   }
   if (schedule.type && schedule.type !== "CRON") return null;
   return { cron: schedule.expression, timezone };
@@ -632,9 +632,9 @@ function recognitionDefinition(
       type: "event",
     },
     schedule: {
-      expression: fields.check_schedule?.cron ?? "",
+      expression: fields.check_schedule?.rate || fields.check_schedule?.cron || "",
       timezone: fields.check_schedule?.timezone || DEFAULT_TIMEZONE,
-      type: "CRON",
+      type: fields.check_schedule?.rate ? "FIX_RATE" : "CRON",
     },
     ...(existing?.tags ? { tags: existing.tags } : {}),
   };

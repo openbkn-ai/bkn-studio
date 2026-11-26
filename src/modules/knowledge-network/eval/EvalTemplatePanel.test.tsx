@@ -622,3 +622,24 @@ it("clears a tag removed by a configuration update instead of leaving an empty i
     ),
   ).toBeTruthy();
 });
+
+it("hides the deferred relation-property rule without removing its stored definition", () => {
+  const deferred = {
+    ...rules[0],
+    id: "relation-property-values",
+    kind: "relationType" as const,
+    title: "关系属性值符合约束",
+  };
+  render(
+    <EvalTemplatePanel
+      networkId="kn-1"
+      config={{ ...config, rules: [...rules, deferred] }}
+      canManage
+      onChanged={vi.fn()}
+      onApply={vi.fn()}
+    />,
+  );
+  const nav = screen.getByRole("navigation", { name: /规则库|ruleLibrary/ });
+  fireEvent.click(within(nav).getByRole("button", { name: /kinds.relationType/ }));
+  expect(screen.queryByText("关系属性值符合约束")).not.toBeInTheDocument();
+});
