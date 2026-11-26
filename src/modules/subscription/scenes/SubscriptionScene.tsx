@@ -158,7 +158,9 @@ export function SubscriptionScene() {
       <div className={styles.planGrid}>
         {SUBSCRIPTION_PLANS.map((plan) => {
           const isCurrent = plan.edition === entitlement.edition;
-          const introduced = capabilitiesIntroducedBy(plan.edition);
+          const introduced = capabilitiesIntroducedBy(plan.edition).filter(
+            (entry) => entry.onCard !== false,
+          );
           const className = [
             styles.plan,
             plan.featured ? styles.planFeatured : "",

@@ -10,6 +10,7 @@ import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import type { EditionUpgradeCopy } from "@/framework/entitlement/RequireEdition";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
@@ -32,6 +33,7 @@ type CapabilityUpgradeDialogProps = {
   missingInFrontend?: boolean;
   onClose: () => void;
   open: boolean;
+  upgradeCopy?: EditionUpgradeCopy;
 };
 
 /**
@@ -49,6 +51,7 @@ export function CapabilityUpgradeDialog({
   missingInFrontend = false,
   onClose,
   open,
+  upgradeCopy,
 }: CapabilityUpgradeDialogProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -75,7 +78,7 @@ export function CapabilityUpgradeDialog({
     missingInFrontend,
   );
   const imageIssue = reason !== "buy";
-  const bullets = capabilityBullets(t, capability);
+  const bullets = upgradeCopy ? [] : capabilityBullets(t, capability);
 
   return (
     <Modal
@@ -124,11 +127,13 @@ export function CapabilityUpgradeDialog({
         </span>
         <div>
           <div className="console-upgrade-hero-title">
-            {t(`subscription.capabilities.${capability}.name`)}
+            {t(upgradeCopy?.titleKey ?? `subscription.capabilities.${capability}.name`)}
             <EditionBadge alwaysShow edition={minEdition} />
           </div>
           <p className="console-upgrade-hero-desc">
-            {t(`subscription.capabilities.${capability}.description`)}
+            {t(
+              upgradeCopy?.descriptionKey ?? `subscription.capabilities.${capability}.description`,
+            )}
           </p>
         </div>
       </div>

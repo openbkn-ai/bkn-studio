@@ -8,9 +8,9 @@
 import { isValidElement, Suspense, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
+import { WORKSPACE_MOUNT_SECTIONS } from "@/modules/knowledge-network/constants/workspace-mount-sections";
 import { ObjectTypeAuthorizationPage } from "@/modules/knowledge-network/routes/lazy-pages";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { KnowledgeNetworkChildModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkChildModifyRouteGate";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
@@ -35,12 +35,56 @@ function routeChild(path: string): ReactElement {
 function objectMetricsRouteChild(path: string): ReactElement {
   const gate = routeChild(path) as ReactElement<{ capability: string; children: ReactElement }>;
 
-  expect(gate.type).toBe(RequireCapability);
-  expect(gate.props.capability).toBe(CAPABILITIES.OBJECT_METRICS);
+  expect(gate.type).toBe(RequireEdition);
+  expect(gate.props).toMatchObject({
+    capability: CAPABILITIES.OBJECT_METRICS,
+    minEdition: "professional",
+    mountLockedContent: false,
+  });
+  return gate.props.children;
+}
+
+function actionModelingRouteChild(path: string): ReactElement {
+  const gate = routeChild(path) as ReactElement<{ children: ReactElement }>;
+
+  expect(gate.type).toBe(RequireEdition);
+  expect(gate.props).toMatchObject({
+    capability: CAPABILITIES.KN_ACTION_MODELING,
+    minEdition: "professional",
+    mountLockedContent: false,
+  });
   return gate.props.children;
 }
 
 describe("knowledge network standalone routes", () => {
+  it.each(["", "/:actionTypeId/detail", "/:actionTypeId/execution"])(
+    "requires Professional for the action type read or execution route %s",
+    (suffix) => {
+      expect(
+        isValidElement(
+          actionModelingRouteChild(`/knowledge-network/workspace/:networkId/action-types${suffix}`),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    ["event-classes", CAPABILITIES.KN_EVENTS, undefined],
+    ["functions", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.functions],
+    ["apis", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.apis],
+    ["mcp", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.mcp],
+    ["skills", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.skills],
+  ])("requires Professional for the %s page", (section, capability, upgradeCopy) => {
+    const gate = routeChild(`/knowledge-network/workspace/:networkId/${section}`);
+    expect(gate.type).toBe(RequireEdition);
+    expect(gate.props).toMatchObject({
+      capability,
+      minEdition: "professional",
+      mountLockedContent: false,
+      upgradeCopy,
+    });
+  });
+
   it("protects the permission matrix workspace route with the Enterprise gate", () => {
     const gate = routeChild("/knowledge-network/workspace/:networkId/permissions");
     expect(gate.type).toBe(RequireEdition);
@@ -99,7 +143,10 @@ describe("knowledge network standalone routes", () => {
   ])(
     "uses the child resource operation gate for $path",
     ({ loadResource, path, resourceIdParam }) => {
-      const gate = routeChild(path) as ReactElement<{
+      const element = path.includes("/action-types/")
+        ? actionModelingRouteChild(path)
+        : routeChild(path);
+      const gate = element as ReactElement<{
         loadResource: unknown;
         resourceIdParam: string;
       }>;
@@ -116,7 +163,10 @@ describe("knowledge network standalone routes", () => {
     "/knowledge-network/workspace/:networkId/relation-types/create",
     "/knowledge-network/workspace/:networkId/action-types/create",
   ])("keeps the parent knowledge-network operation gate for %s", (path) => {
-    expect(routeChild(path).type).toBe(KnowledgeNetworkModifyRouteGate);
+    const element = path.includes("/action-types/")
+      ? actionModelingRouteChild(path)
+      : routeChild(path);
+    expect(element.type).toBe(KnowledgeNetworkModifyRouteGate);
   });
 
   it.each([

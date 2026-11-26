@@ -21,13 +21,19 @@ import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-
 
 const LICENSE_PORTAL_URL = "https://license.openbkn.ai/";
 
+export type EditionUpgradeCopy = {
+  descriptionKey: string;
+  titleKey: string;
+};
+
 type RequireEditionProps = {
-  /** 能力 key,只用于取文案(`subscription.capabilities.<key>.*`)。 */
+  /** 能力 key，用于授权判断与默认升级文案。 */
   capability: string;
   children: ReactNode;
   /** 锁定时是否仍挂载内容预览。默认保留现有升级引导体验。 */
   mountLockedContent?: boolean;
   minEdition: Edition;
+  upgradeCopy?: EditionUpgradeCopy;
 };
 
 /**
@@ -46,6 +52,7 @@ export function RequireEdition({
   children,
   minEdition,
   mountLockedContent = true,
+  upgradeCopy,
 }: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -106,11 +113,14 @@ export function RequireEdition({
             </span>
             <div>
               <div className="console-upgrade-hero-title">
-                {t(`subscription.capabilities.${capability}.name`)}
+                {t(upgradeCopy?.titleKey ?? `subscription.capabilities.${capability}.name`)}
                 <EditionBadge alwaysShow edition={minEdition} />
               </div>
               <p className="console-upgrade-hero-desc">
-                {t(`subscription.capabilities.${capability}.description`)}
+                {t(
+                  upgradeCopy?.descriptionKey ??
+                    `subscription.capabilities.${capability}.description`,
+                )}
               </p>
             </div>
           </div>

@@ -8,13 +8,16 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { executionFactoryLabNavigation } from "@/modules/execution-factory-lab/navigation";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { executionFactoryLabModuleManifest } from "@/modules/execution-factory-lab/module.manifest";
 import { CatalogLabPage } from "@/modules/execution-factory-lab/pages/CatalogLabPage";
 import { CapabilityLabPage } from "@/modules/execution-factory-lab/pages/CapabilityLabPage";
 import { SandboxRuntimePage } from "@/modules/execution-factory-lab/pages/SandboxRuntimePage";
 
-export const executionFactoryLabRoutes: RouteObject[] = [
+const routes = [
   {
     path: "execution-factory-lab/capabilities",
     handle: {
@@ -60,7 +63,26 @@ export const executionFactoryLabRoutes: RouteObject[] = [
       </RequirePermission>
     ),
   },
-];
+] satisfies RouteObject[];
+
+export const executionFactoryLabRoutes: RouteObject[] = routes.map((route) => {
+  const { titleKey, descriptionKey } = route.handle.console;
+  const entry = executionFactoryLabNavigation.items.find((item) => item.path === `/${route.path}`);
+
+  return {
+    ...route,
+    element: (
+      <RequireEdition
+        capability={CAPABILITIES.EXECUTION_FACTORY}
+        minEdition="professional"
+        mountLockedContent={false}
+        upgradeCopy={{ titleKey: entry?.labelKey ?? titleKey, descriptionKey }}
+      >
+        {route.element}
+      </RequireEdition>
+    ),
+  };
+});
 
 export const executionFactoryLabRouteContribution: AppRouteContribution = {
   moduleId: "execution-factory-lab",

@@ -147,8 +147,10 @@ describe("mock edition and user gate matrix", () => {
   it.each(["admin", "viewer"])(
     "%s can browse the market, while installation and sync remain administrator-only",
     async (role) => {
+      vi.stubEnv("VITE_MOCK_EDITION", "professional");
       vi.stubEnv("VITE_MOCK_USER", role);
       const config = createRuntimeConfig();
+      const snapshot = await fetchEntitlement();
       const { permissions, isSuperAdmin } = config.currentUser;
       const navigation = filterNavByPermission(consoleNavigation, permissions, isSuperAdmin);
       const market = navigation
@@ -165,10 +167,14 @@ describe("mock edition and user gate matrix", () => {
         <AppProviders runtimeConfig={config} updateLocale={vi.fn()}>
           <AntdProviders runtimeConfig={config}>
             <MemoryRouter initialEntries={["/execution-factory/catalog"]}>
-              <Routes>
-                <Route path={route.path} element={route.element} />
-                <Route path={DEFAULT_APP_ENTRY_PATH} element={<p>home</p>} />
-              </Routes>
+              <EntitlementContext.Provider
+                value={{ loading: false, refresh: async () => {}, snapshot }}
+              >
+                <Routes>
+                  <Route path={route.path} element={route.element} />
+                  <Route path={DEFAULT_APP_ENTRY_PATH} element={<p>home</p>} />
+                </Routes>
+              </EntitlementContext.Provider>
               <ExecutionUnitCardMenu
                 activeTab="toolbox"
                 item={{ id: "market-toolbox", name: "Market toolbox", installedInDomain: false }}

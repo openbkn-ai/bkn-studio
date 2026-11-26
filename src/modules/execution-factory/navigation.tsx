@@ -7,11 +7,9 @@
 
 import { AppstoreOutlined, CloudServerOutlined, ToolOutlined } from "@ant-design/icons";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
-// Navigation entries are product entry points. Execution Unit Management is always available and
-// the API filters the resources it returns. Sandbox runtime remains permission-gated because it is
-// an administrative runtime operation.
 export const executionFactoryNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory",
   items: [
@@ -19,12 +17,16 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       key: "execution-unit-management",
       labelKey: "shell.items.executionUnitManagement",
       icon: <ToolOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory/units",
     },
     {
       key: "all-execution-units",
       labelKey: "shell.items.allExecutionUnits",
       icon: <AppstoreOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory/catalog",
       permission: "execution-factory:catalog:view",
     },
@@ -32,6 +34,8 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       key: "execution-factory-sandbox-runtime",
       labelKey: "shell.items.executionFactorySandboxRuntime",
       icon: <CloudServerOutlined />,
+      paidCapability: CAPABILITIES.EXECUTION_FACTORY,
+      paidEdition: "professional",
       path: "/execution-factory/sandbox-runtime",
       permission: "execution-factory-lab:sandbox-runtime:view",
     },

@@ -9,6 +9,9 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
@@ -75,7 +78,7 @@ function withPublicRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
-export const executionFactoryRoutes: RouteObject[] = [
+const routes = [
   {
     path: "execution-factory/units",
     handle: {
@@ -252,7 +255,26 @@ export const executionFactoryRoutes: RouteObject[] = [
       "execution-factory-lab:sandbox-runtime:view",
     ]),
   },
-];
+] satisfies RouteObject[];
+
+export const executionFactoryRoutes: RouteObject[] = routes.map((route) => {
+  const { titleKey, descriptionKey } = route.handle.console;
+  const entry = executionFactoryNavigation.items.find((item) => item.path === `/${route.path}`);
+
+  return {
+    ...route,
+    element: (
+      <RequireEdition
+        capability={CAPABILITIES.EXECUTION_FACTORY}
+        minEdition="professional"
+        mountLockedContent={false}
+        upgradeCopy={{ titleKey: entry?.labelKey ?? titleKey, descriptionKey }}
+      >
+        {route.element}
+      </RequireEdition>
+    ),
+  };
+});
 
 export const executionFactoryRouteContribution: AppRouteContribution = {
   moduleId: "execution-factory",

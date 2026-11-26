@@ -50,6 +50,7 @@ const ObjectAuthorizeDrawer = lazy(async () => ({
 }));
 
 type WorkspaceOverviewSectionProps = {
+  canCreateActionType: boolean;
   canModify: boolean;
   detail: KnowledgeNetworkRecord | null;
   detailLoading?: boolean;
@@ -65,6 +66,7 @@ function formatOverviewCount(value?: number) {
 }
 
 export function WorkspaceOverviewSection({
+  canCreateActionType,
   canModify,
   detail,
   detailLoading = false,
@@ -310,7 +312,7 @@ export function WorkspaceOverviewSection({
                 <p>{formatOverviewCount(detail?.statistics.actionTypesTotal)}</p>
               </dd>
             </dl>
-            {canModify ? (
+            {canCreateActionType ? (
               <AppButton
                 className={styles.overviewStatAction}
                 onClick={() => setCreateActionEntryOpen(true)}
@@ -405,7 +407,7 @@ export function WorkspaceOverviewSection({
             `/knowledge-network/workspace/${networkId}/action-types/create?operation=${operation}`,
           );
         }}
-        open={createActionEntryOpen}
+        open={canCreateActionType && createActionEntryOpen}
       />
     </div>
   );

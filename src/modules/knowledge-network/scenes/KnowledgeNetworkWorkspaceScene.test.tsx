@@ -492,8 +492,20 @@ describe("KnowledgeNetworkWorkspaceScene knowledge-base navigation", () => {
 });
 
 describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
-  it("keeps action types and mounted execution resources as separate entries", () => {
+  it("opens the Professional upgrade dialog for Community action modelling", () => {
     renderScene(entitlement());
+
+    const actionEntry = screen.getByRole("button", { name: /行动类/ });
+    expect(within(actionEntry).getByText("专业版")).toBeTruthy();
+    fireEvent.click(actionEntry);
+    expect(
+      screen.getByText("subscription.capabilities.kn_action_modeling.description"),
+    ).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps action types and mounted execution resources as separate entries", () => {
+    renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }));
 
     expect(screen.queryByRole("button", { name: "MCP 调试" })).toBeNull();
     const actionEntry = screen.getByRole("button", { name: /行动类/ });
@@ -501,6 +513,11 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
       screen.getByRole("button", { name: "knowledgeNetwork.workspaceDynamicModel" })
         .nextElementSibling?.firstElementChild,
     ).toBe(actionEntry);
+    expect(within(actionEntry).queryByText("专业版")).toBeNull();
+    fireEvent.click(actionEntry);
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types",
+    );
     expect(screen.getByRole("button", { name: /函数/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /API/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /MCP 资源/ })).toBeTruthy();
@@ -508,6 +525,23 @@ describe("KnowledgeNetworkWorkspaceScene action capability navigation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /MCP 资源/ }));
     expect(mocks.navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/mcp");
+  });
+});
+
+describe("KnowledgeNetworkWorkspaceScene resource mount navigation", () => {
+  it.each([
+    [/函数/, "knowledgeNetwork.capabilityFunctionsDescription"],
+    [/^API/, "knowledgeNetwork.capabilityApisDescription"],
+    [/MCP 资源/, "knowledgeNetwork.capabilityMcpToolsDescription"],
+    [/knowledgeNetwork.workspaceSkills/, "knowledgeNetwork.capabilitySkillsDescription"],
+  ])("shows the upgrade copy for %s", (name, description) => {
+    renderScene(entitlement());
+
+    const entry = screen.getByRole("button", { name });
+    expect(within(entry).getByText("专业版")).toBeTruthy();
+    fireEvent.click(entry);
+    expect(within(screen.getByRole("dialog")).getByText(description)).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });
 
@@ -539,11 +573,18 @@ describe("KnowledgeNetworkWorkspaceScene event class navigation", () => {
   it.each([
     { name: "the community edition", overrides: {} },
     { name: "an expired Professional licence", overrides: { edition: "professional" as const } },
-  ])("does not offer event classes in $name", ({ overrides }) => {
+  ])("locks event classes and mounted resources in $name", ({ overrides }) => {
     renderScene(entitlement(overrides));
 
     expect(screen.getByRole("button", { name: /行动类/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "knowledgeNetwork.eventClasses.nav" })).toBeNull();
+    const eventClasses = screen.getByRole("button", { name: /knowledgeNetwork.eventClasses.nav/ });
+    expect(within(eventClasses).getByText("专业版")).toBeTruthy();
+    fireEvent.click(eventClasses);
+    expect(screen.getByText("subscription.capabilities.kn_events.description")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(
+      within(screen.getByRole("button", { name: /MCP 资源/ })).getByText("专业版"),
+    ).toBeTruthy();
   });
 });
 

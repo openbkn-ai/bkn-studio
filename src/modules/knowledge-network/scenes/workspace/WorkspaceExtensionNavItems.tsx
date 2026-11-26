@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHref, useLocation, useMatch, useNavigate } from "react-router-dom";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { CapabilityUpgradeDialog } from "@/framework/entitlement/CapabilityUpgradeDialog";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import type { WorkspaceNavEntry, WorkspaceNavSection } from "@/framework/extension/registry";
@@ -108,7 +109,7 @@ function ExtensionNavItem({
 }: {
   active: boolean;
   collapsed: boolean;
-  item: WorkspaceNavEntry;
+  item: WorkspaceNavEntry & { key: string };
   networkId: string;
 }) {
   const { t } = useTranslation();
@@ -118,6 +119,10 @@ function ExtensionNavItem({
   const match = useMatch({ path: item.path(networkId), end: false });
   const isActive = active || (item.openIn === "workspace" && Boolean(match));
   const label = t(item.labelKey);
+  const minEdition =
+    item.key === "graph-explorer:graph-explorer"
+      ? capabilityMinEdition(CAPABILITIES.GRAPH_EXPLORER)
+      : null;
 
   return (
     <button
@@ -141,6 +146,11 @@ function ExtensionNavItem({
         {item.icon}
         {collapsed ? null : <span>{label}</span>}
       </span>
+      {!collapsed && minEdition ? (
+        <span className={styles.sideItemStatus}>
+          <EditionBadge alwaysShow edition={minEdition} />
+        </span>
+      ) : null}
     </button>
   );
 }

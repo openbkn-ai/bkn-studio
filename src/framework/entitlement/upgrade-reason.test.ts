@@ -98,6 +98,24 @@ describe("upgradeReason — 别的服务实现的能力", () => {
   });
 });
 
+describe("upgradeReason — 证书失效", () => {
+  it.each([false, true])(
+    "prompts for renewal and locks the page even when reported is %s",
+    (reported) => {
+      const snapshot = deployment({
+        capabilities: [RBAC],
+        extensions: [RBAC],
+        edition: "professional",
+        licensed: false,
+        state: "invalid",
+      });
+
+      expect(upgradeReason(RBAC, snapshot, "professional", reported)).toBe("buy");
+      expect(capabilitySatisfied(RBAC, snapshot, "professional", reported)).toBe(false);
+    },
+  );
+});
+
 describe("upgradeReason — 快照缺席", () => {
   // 拿不到快照时不能凭空断言客户已经买了。
   it("按未购买处理", () => {

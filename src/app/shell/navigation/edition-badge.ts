@@ -5,16 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
+
 /**
  * A nav item's static tier label is useful only when the frontend cannot
  * determine whether its capability is currently available. When the item has
  * a capability key, EditionBadge can use the entitlement snapshot instead.
  */
 export function shouldAlwaysShowEditionBadge(item: { paidCapability?: string }) {
-  // The knowledge base entry advertises a licence requirement in community builds too.
-  // Its badge follows the active licence; route guards still decide actual availability.
-  if (item.paidCapability === CAPABILITIES.KNOWLEDGE_BASE) return false;
+  if (
+    item.paidCapability === CAPABILITIES.KNOWLEDGE_BASE ||
+    item.paidCapability === CAPABILITIES.EXECUTION_FACTORY
+  ) {
+    return false;
+  }
   return !item.paidCapability || !capabilityReportedByEndpoint(item.paidCapability);
 }
-import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";

@@ -10,14 +10,45 @@
  * (`server/internal/store/capabilities.go`)——那是签进客户证书、也是客户在门户上
  * 看到的同一份文案。两边不一致会让客户拿着证书对不上产品页。
  *
- * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用;`cardBullets` 有值时
- * 卡片改用它(见 `capabilityCardBullets`)。权限三项的条目
+ * `bullets` 用于升级弹窗与版本卡片。`cardBullets` 可为卡片提供较短的文案。权限相关能力描述
  * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行过滤与列权限 / 审计),
  * 矩阵改了这里要跟着改。
  */
 export const subscriptionZhCN = {
   subscription: {
     capabilities: {
+      kn_action_modeling: {
+        name: "行动建模",
+        description: "在知识网络中定义行动类、配置执行参数并执行行动。",
+        bullets: {
+          b1: "支持对象操作和工具调用",
+          b2: "配置行动参数，查看执行记录",
+        },
+      },
+      kn_events: {
+        bullets: {
+          b1: "配置事件类和识别规则",
+          b2: "查看事件记录与识别结果",
+        },
+        name: "事件类",
+        description: "在知识网络中定义事件类、配置识别规则并查看事件记录。",
+      },
+      kn_tool_mounts: {
+        name: "知识网络资源挂载",
+        description: "将函数、API、MCP 与 Skill 挂载到知识网络，供网络直接调用。",
+        bullets: {
+          b1: "函数、API、MCP 与 Skill 挂载",
+        },
+      },
+      execution_factory: {
+        name: "执行工厂",
+        description: "管理、发布与调试执行单元，浏览全部执行单元并管理沙箱运行时。",
+        bullets: {
+          b1: "接入 OpenAPI、函数、MCP 与 Skill",
+          b2: "创建、发布、调试和浏览执行单元",
+          b3: "沙箱运行时管理",
+        },
+      },
       sso: {
         name: "单点登录",
         description: "管理第三方身份源、浏览器登录和接口令牌换发。",
@@ -46,7 +77,6 @@ export const subscriptionZhCN = {
           b3: "与社区连接器同一套建模、索引与查询链路，切换不改模型",
           b4: "使用连接器需要有效的对应版本授权，以及包含对应连接器实现的 Vega 部署镜像",
         },
-        // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
         cardBullets: {
           b1: "SQL Server",
           b2: "Oracle",
@@ -90,10 +120,16 @@ export const subscriptionZhCN = {
         name: "本体知识库",
       },
       action_governance: {
+        bullets: {
+          b1: "按规则要求确认、禁止执行或发起业务审批",
+        },
         name: "行动管控",
         description: "配置行动执行的确认、禁止与业务审批规则。",
       },
       permission_matrix: {
+        bullets: {
+          b1: "查看生效权限与授权来源",
+        },
         name: "权限矩阵",
         description: "查看知识网络中用户和角色对各类资源的权限。",
       },
@@ -166,16 +202,13 @@ export const subscriptionZhCN = {
      * 所以这些条目没有 key、不参与门控,来源是对外版本说明里三档都打 ✓ 的那些行。
      */
     community: {
-      actionSandbox: "行动运行与安全沙箱环境",
       basicAudit: "基础操作审计",
       cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
       commonSources: "MySQL、PostgreSQL、MariaDB、OpenSearch",
-      executionFactory: "执行工厂可接入 OpenAPI、MCP、 SKILL 与函数",
       indexing: "数据发现、批量索引与向量化",
       localAuth: "本地登录，用户、部门与内置角色管理",
-      mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "Studio、CLI、SDK 与 Skill 建模",
-      modelingTypes: "对象、关系与行动建模",
+      modelingTypes: "对象与关系建模",
       draftAndRunning: "知识网络草稿与运行版本",
       oneClickExperience: "支持一键体验，动态加载官方样例",
       queryAndSearch: "关系查询、路径查询与语义检索",
@@ -222,16 +255,14 @@ export const subscriptionZhCN = {
         unit: "自部署 · 无限期",
       },
       enterprise: {
-        audience:
-          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织，在专业版基础上增加应用工坊、分析画布、风险管控、知识网络版本管理、SAP HANA 数据连接、行列级权限管控和业务溯源。",
         hanaConnector: "SAP HANA",
+        audience: "面向需要将知识网络用于业务应用、生产管理和审计的组织。",
         price: "洽谈",
         unit: "按合同授权",
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience:
-          "面向快速成长的 AI 原生团队，在社区版基础上增加自定义角色与权限、对象授权、高级数据连接（含 API 方式连接）、项目管理与知识库。",
+        audience: "面向需要协作建模、接入更多数据和工具，并细化授权的团队。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },
@@ -244,7 +275,6 @@ export const subscriptionZhCN = {
     },
     contact: "完整能力对比、服务条款与优惠计划见版本说明；商务咨询 business@openbkn.ai。",
     title: "版本与订阅",
-    subtitle:
-      "知识网络建模、常用数据接入与查询在所有版本中开放；项目与知识库、权限管控、版本管理与业务应用随版本递进。",
+    subtitle: "所有版本均支持对象与关系建模、常用数据接入与查询。",
   },
 } as const;

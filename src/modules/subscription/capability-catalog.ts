@@ -44,6 +44,8 @@ export type CapabilityCatalogEntry = {
   /** 登记表主键,同时是证书 `features[]` 里的拼写,也是后端装配表 `MarkAssembled` 的名字。 */
   key: string;
   minEdition: Edition;
+  /** Omit a capability from the plan card when other entries cover its scope there. */
+  onCard?: false;
   /**
    * `/api/safe/v1/capabilities` 报不报得出这一项。
    *
@@ -88,18 +90,6 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   {
     category: "permission",
-    key: CAPABILITIES.ACTION_GOVERNANCE,
-    minEdition: "enterprise",
-    reportedByEndpoint: false,
-  },
-  {
-    category: "permission",
-    key: CAPABILITIES.PERMISSION_MATRIX,
-    minEdition: "enterprise",
-    reportedByEndpoint: false,
-  },
-  {
-    category: "permission",
     key: CAPABILITIES.SSO,
     minEdition: "professional",
     reportedByEndpoint: true,
@@ -132,12 +122,17 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     minEdition: "professional",
   },
   {
-    // 实现在企业版前端镜像,bkn-safe-ee 登记进装配表,端点报得出。
-    category: "semantic",
-    key: CAPABILITIES.GRAPH_EXPLORER,
-    reportedByEndpoint: true,
+    // Action modelling, event classes and resource mounting use the licence tier.
+    category: "modeling",
+    key: CAPABILITIES.KN_ACTION_MODELING,
     minEdition: "professional",
-    sinceVersion: "0.1.6",
+    reportedByEndpoint: false,
+  },
+  {
+    category: "modeling",
+    key: CAPABILITIES.KN_EVENTS,
+    minEdition: "professional",
+    reportedByEndpoint: false,
   },
   {
     // 管理与查询分别由 bkn-backend-ee、ontology-query-ee 实现；bkn-safe-ee
@@ -147,6 +142,35 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     reportedByEndpoint: true,
     minEdition: "professional",
     sinceVersion: "0.2.1",
+  },
+  {
+    // 实现在企业版前端镜像,bkn-safe-ee 登记进装配表,端点报得出。
+    category: "semantic",
+    key: CAPABILITIES.GRAPH_EXPLORER,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+    sinceVersion: "0.1.6",
+  },
+  {
+    // Studio provides the page; bkn-backend-ee enforces the Professional license.
+    // bkn-safe does not report Eval, so endpoint absence is not an installation verdict.
+    category: "semantic",
+    key: CAPABILITIES.EVAL,
+    reportedByEndpoint: false,
+    minEdition: "professional",
+    sinceVersion: "0.2.2",
+  },
+  {
+    category: "semantic",
+    key: CAPABILITIES.EXECUTION_FACTORY,
+    minEdition: "professional",
+    reportedByEndpoint: false,
+  },
+  {
+    category: "modeling",
+    key: CAPABILITIES.KN_TOOL_MOUNTS,
+    minEdition: "professional",
+    reportedByEndpoint: false,
   },
   {
     // 项目管理是专业档能力。bkn-safe-ee 的 bknproject.Setup 登记装配表,端点报得出:
@@ -174,15 +198,6 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.2",
   },
   {
-    // Studio provides the page; bkn-backend-ee enforces the Professional license.
-    // bkn-safe does not report Eval, so endpoint absence is not an installation verdict.
-    category: "semantic",
-    key: CAPABILITIES.EVAL,
-    reportedByEndpoint: false,
-    minEdition: "professional",
-    sinceVersion: "0.2.2",
-  },
-  {
     // 上游 e8fdf2f 把它降到社区档:技术 Trace 免费,对外能力对比里 CLI/SDK 的 trace
     // 查询本来就列在社区行。留在表里是为了让对比矩阵显示「三档都有」,不是付费项。
     category: "observability",
@@ -204,31 +219,6 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     reportedByEndpoint: false,
     minEdition: "community",
     sinceVersion: "0.1.3",
-  },
-  {
-    category: "permission",
-    key: CAPABILITIES.PERM_OBJECT_LEVEL,
-    reportedByEndpoint: true,
-    minEdition: "enterprise",
-  },
-  {
-    // 风险管控:知识网络的权限矩阵与行动类的执行管控。上游登记表还没有这一行,也没有服务登记
-    // 装配表,端点报不出,只能按证书档位判。
-    category: "permission",
-    key: "risk_control",
-    reportedByEndpoint: false,
-    minEdition: "enterprise",
-    sinceVersion: "0.2.2",
-  },
-  {
-    // 知识网络版本管理(完整版本历史、比较、回退)。上游登记表里是 planned 的 version_mgmt。
-    // 由社区版 bkn-backend 按证书档位放行,没有服务登记装配表,端点报不出:工作区侧栏的
-    // 徽标按证书档位判,企业证生效即消失。
-    category: "modeling",
-    key: CAPABILITIES.VERSION_MGMT,
-    reportedByEndpoint: false,
-    minEdition: "enterprise",
-    sinceVersion: "0.2.2",
   },
   {
     // 应用工坊整体归企业档(2026-11-19),方案推演、模型试算与执行行动都在这一行里,不另列
@@ -253,12 +243,50 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.2",
   },
   {
+    // 知识网络版本管理(完整版本历史、比较、回退)。上游登记表里是 planned 的 version_mgmt。
+    // 由社区版 bkn-backend 按证书档位放行,没有服务登记装配表,端点报不出:工作区侧栏的
+    // 徽标按证书档位判,企业证生效即消失。
+    category: "modeling",
+    key: CAPABILITIES.VERSION_MGMT,
+    reportedByEndpoint: false,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
+  },
+  {
     category: "observability",
     key: CAPABILITIES.BUSINESS_PROVENANCE,
     // 上游状态仍是 planned,没有真实现,端点里自然没有它;今天由前端按档位判。
     reportedByEndpoint: false,
     minEdition: "enterprise",
     sinceVersion: "0.1.3",
+  },
+  {
+    category: "permission",
+    key: CAPABILITIES.ACTION_GOVERNANCE,
+    minEdition: "enterprise",
+    reportedByEndpoint: false,
+  },
+  {
+    category: "permission",
+    key: CAPABILITIES.PERMISSION_MATRIX,
+    minEdition: "enterprise",
+    reportedByEndpoint: false,
+  },
+  {
+    category: "permission",
+    key: CAPABILITIES.PERM_OBJECT_LEVEL,
+    reportedByEndpoint: true,
+    minEdition: "enterprise",
+  },
+  {
+    // 风险管控:知识网络的权限矩阵与行动类的执行管控。上游登记表还没有这一行,也没有服务登记
+    // 装配表,端点报不出,只能按证书档位判。
+    category: "permission",
+    key: "risk_control",
+    onCard: false,
+    reportedByEndpoint: false,
+    minEdition: "enterprise",
+    sinceVersion: "0.2.2",
   },
   // 规划中的放在最后(2026-11-19):卡片和对比表都按这份顺序排。企业档运维看板,上游登记表里
   // 是 planned 的 ops_dashboard,这一版还没有,页面标「规划中」。

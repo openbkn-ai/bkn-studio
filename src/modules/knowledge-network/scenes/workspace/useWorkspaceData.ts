@@ -128,7 +128,8 @@ function sectionCacheKey(networkId: string, section: WorkspaceDataSection) {
  * versioned network on screen; everything is loaded again then.
  */
 export function useWorkspaceData(networkId: string, section: WorkspaceDataSection, reloadKey = "") {
-  const objectMetricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
+  const objectMetricsAvailable =
+    useCapability(CAPABILITIES.OBJECT_METRICS, "professional") === "available";
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
   const [metrics, setMetrics] = useState<ObjectMetricRecordV1[]>([]);

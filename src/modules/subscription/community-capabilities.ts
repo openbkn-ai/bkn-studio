@@ -40,9 +40,6 @@ export const COMMUNITY_CAPABILITIES: CommunityCapability[] = [
   { category: "modeling", id: "queryAndSearch", onCard: true },
   { category: "dataConnect", id: "commonSources", onCard: true },
   { category: "dataConnect", id: "indexing" },
-  { category: "semantic", id: "mcpTooling" },
-  { category: "semantic", id: "executionFactory", onCard: true },
-  { category: "semantic", id: "actionSandbox" },
   // 权限基线,对应对外版本说明「权限能力矩阵」里三档都成立的那几行:内置角色 / 顶层资源
   // 整体授权 / 基础审计。矩阵社区列里的「只授顶层、固定权限包」是限制不是能力——这张表的
   // 社区行三档全勾,限制只能由付费行的「—」表达;把限制措辞写进来,会和紧挨着的「授权到

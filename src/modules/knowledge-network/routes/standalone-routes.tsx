@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import type { WorkspaceNavEntry, WorkspaceNavPage } from "@/framework/extension/registry";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
-import { RequireCapability } from "@/framework/entitlement/RequireCapability";
-import { RequireEdition } from "@/framework/entitlement/RequireEdition";
+import { RequireEdition, type EditionUpgradeCopy } from "@/framework/entitlement/RequireEdition";
+import { WORKSPACE_MOUNT_SECTIONS } from "@/modules/knowledge-network/constants/workspace-mount-sections";
 import {
   ActionTypeCreatePage,
   ActionTypeDetailPage,
@@ -57,7 +57,33 @@ function modifyRoute(element: ReactNode) {
 }
 
 function objectMetricsRoute(element: ReactNode) {
-  return <RequireCapability capability={CAPABILITIES.OBJECT_METRICS}>{element}</RequireCapability>;
+  return professionalWorkspaceRoute(CAPABILITIES.OBJECT_METRICS, element);
+}
+
+function professionalWorkspaceRoute(
+  capability: string,
+  element: ReactNode,
+  upgradeCopy?: EditionUpgradeCopy,
+) {
+  return (
+    <RequireEdition
+      capability={capability}
+      minEdition="professional"
+      mountLockedContent={false}
+      upgradeCopy={upgradeCopy}
+    >
+      {element}
+    </RequireEdition>
+  );
+}
+
+function mountWorkspaceRoute(section: keyof typeof WORKSPACE_MOUNT_SECTIONS): RouteObject {
+  const copy = WORKSPACE_MOUNT_SECTIONS[section];
+  return createKnowledgeNetworkRoute(
+    `/knowledge-network/workspace/:networkId/${section}`,
+    copy,
+    professionalWorkspaceRoute(CAPABILITIES.KN_TOOL_MOUNTS, workspaceSectionPage(section), copy),
+  );
 }
 
 function childModifyRoute(
@@ -233,7 +259,10 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypesDescription",
       titleKey: "knowledgeNetwork.workspaceActionTypes",
     },
-    workspaceSectionPage("action-types"),
+    professionalWorkspaceRoute(
+      CAPABILITIES.KN_ACTION_MODELING,
+      workspaceSectionPage("action-types"),
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/event-classes",
@@ -241,40 +270,12 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.eventClasses.description",
       titleKey: "knowledgeNetwork.eventClasses.nav",
     },
-    workspaceSectionPage("event-classes"),
+    professionalWorkspaceRoute(CAPABILITIES.KN_EVENTS, workspaceSectionPage("event-classes")),
   ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/functions",
-    {
-      descriptionKey: "knowledgeNetwork.capabilityFunctionsDescription",
-      titleKey: "knowledgeNetwork.workspaceFunctions",
-    },
-    workspaceSectionPage("functions"),
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/apis",
-    {
-      descriptionKey: "knowledgeNetwork.capabilityApisDescription",
-      titleKey: "knowledgeNetwork.workspaceApis",
-    },
-    workspaceSectionPage("apis"),
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/mcp",
-    {
-      descriptionKey: "knowledgeNetwork.capabilityMcpToolsDescription",
-      titleKey: "knowledgeNetwork.workspaceMcpTools",
-    },
-    workspaceSectionPage("mcp"),
-  ),
-  createKnowledgeNetworkRoute(
-    "/knowledge-network/workspace/:networkId/skills",
-    {
-      descriptionKey: "knowledgeNetwork.capabilitySkillsDescription",
-      titleKey: "knowledgeNetwork.workspaceSkills",
-    },
-    workspaceSectionPage("skills"),
-  ),
+  mountWorkspaceRoute("functions"),
+  mountWorkspaceRoute("apis"),
+  mountWorkspaceRoute("mcp"),
+  mountWorkspaceRoute("skills"),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/knowledge-bases",
     {
@@ -393,7 +394,10 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeCreateDescription",
       titleKey: "knowledgeNetwork.actionTypeCreateTitle",
     },
-    modifyRoute(<ActionTypeCreatePage />),
+    professionalWorkspaceRoute(
+      CAPABILITIES.KN_ACTION_MODELING,
+      modifyRoute(<ActionTypeCreatePage />),
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/edit",
@@ -401,7 +405,10 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeEditDescription",
       titleKey: "knowledgeNetwork.actionTypeEditTitle",
     },
-    childModifyRoute(<ActionTypeEditPage />, "actionTypeId", getKnowledgeNetworkActionTypeDetail),
+    professionalWorkspaceRoute(
+      CAPABILITIES.KN_ACTION_MODELING,
+      childModifyRoute(<ActionTypeEditPage />, "actionTypeId", getKnowledgeNetworkActionTypeDetail),
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/detail",
@@ -409,7 +416,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeDetailDescription",
       titleKey: "knowledgeNetwork.actionTypeDetailTitle",
     },
-    <ActionTypeDetailPage />,
+    professionalWorkspaceRoute(CAPABILITIES.KN_ACTION_MODELING, <ActionTypeDetailPage />),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/execution",
@@ -417,6 +424,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeExecutionDescription",
       titleKey: "knowledgeNetwork.actionTypeExecutionTitle",
     },
-    <ActionTypeExecutionPage />,
+    professionalWorkspaceRoute(CAPABILITIES.KN_ACTION_MODELING, <ActionTypeExecutionPage />),
   ),
 ];

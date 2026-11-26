@@ -278,7 +278,8 @@ function FocusedObjectTypeGraph({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const metricsAvailable = useCapability(CAPABILITIES.OBJECT_METRICS) === "available";
+  const metricsAvailable =
+    useCapability(CAPABILITIES.OBJECT_METRICS, "professional") === "available";
   const [objectType, setObjectType] = useState<ObjectTypeDetail | null>();
   const [error, setError] = useState<string>();
   const [trialMetric, setTrialMetric] = useState<ObjectMetricRecordV1>();
