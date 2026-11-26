@@ -7,6 +7,14 @@
 
 // Object Metric V1 copy. en-US wording is provisional pending product review.
 export const objectMetricV1Part = {
+  applyCompositeResultInference: "Apply inferred result",
+  compositeResultConflict: "The formula result conflicts with the current result configuration",
+  compositeResultSuggestion: "Suggested result type: {{p0}}. Unit: {{p1}}.",
+  compositeResultTypeHelp:
+    "The formula determines the result data type. Review and apply the inferred result if the type conflicts with the current configuration.",
+  compositeResultTypeSuggestion: "Suggested result type: {{p0}}.",
+  compositeResultUnitUnknown: "The formula unit could not be inferred. Confirm the current unit.",
+  keepCompositeResultUnit: "Keep current unit",
   allowApproximate: "Allow approximate results",
   allowApproximateHelp:
     "Allow estimates to reduce computation cost. Turning this off requires exact results and may take longer or fail when the execution budget is exhausted.",

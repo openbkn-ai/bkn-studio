@@ -55,6 +55,8 @@ import {
   expressionLabel,
   expressionReferencesProperty,
   inferCompositeExpressionValueV1,
+  sameUnit,
+  type InferredCompositeValueV1,
   replaceObjectMetricDependencyAliases,
 } from "@/modules/knowledge-network/components/object-metric/object-metric-model";
 import {
@@ -140,6 +142,7 @@ import type {
   ObjectMetricRecordV1,
   ObjectMetricRelationStepV1,
   ObjectMetricTypeV1,
+  ObjectMetricUnitSpecV1,
   ObjectMetricValidationResultV1,
 } from "@/modules/knowledge-network/types/object-metric";
 import type { ObjectTypeDetail } from "@/modules/knowledge-network/types/object-type";
@@ -394,12 +397,7 @@ type FormValues = {
   weekStart?: "monday" | "sunday";
   unitCode?: string;
   unitScaleFactor?: number;
-  unitDenominatorCode?: string;
-  unitDenominatorKind?: Exclude<UnitQuantityKind, "rate">;
-  unitDenominatorSystem?: "UCUM" | "ISO_4217" | "registered";
-  unitNumeratorCode?: string;
-  unitNumeratorKind?: Exclude<UnitQuantityKind, "rate">;
-  unitNumeratorSystem?: "UCUM" | "ISO_4217" | "registered";
+  rateUnitParts?: [ObjectMetricUnitSpecV1["numerator"], ObjectMetricUnitSpecV1["denominator"]];
   unitSystem?: "UCUM" | "ISO_4217" | "registered";
   nullPolicy?: "propagate" | "coalesce_zero";
   zeroDivisionPolicy?: "unavailable" | "null" | "zero";
@@ -1218,6 +1216,65 @@ function dependencyFilterContext(
   };
 }
 
+function resultUnitFromForm(values: Partial<FormValues>): ObjectMetricUnitSpecV1 | undefined {
+  if (!values.unitCode || !values.unitSystem || !values.quantityKind) return undefined;
+  return {
+    code: values.unitCode,
+    numerator: values.quantityKind === "rate" ? values.rateUnitParts?.[0] : undefined,
+    denominator: values.quantityKind === "rate" ? values.rateUnitParts?.[1] : undefined,
+    quantity_kind: values.quantityKind,
+    scale_factor: values.unitScaleFactor ?? 1,
+    system: values.unitSystem,
+  };
+}
+
+function resultUnitFormFields(unit?: ObjectMetricUnitSpecV1): Partial<FormValues> {
+  return {
+    quantityKind: unit?.quantity_kind,
+    unitCode: unit?.code,
+    unitScaleFactor: unit?.scale_factor,
+    // Ant Design replaces the tuple as a whole when switching between rates.
+    rateUnitParts: unit?.quantity_kind === "rate" ? [unit.numerator, unit.denominator] : undefined,
+    unitSystem: unit?.system,
+  };
+}
+
+function compatibleCompositeSemanticType(
+  semanticType: FormValues["semanticType"] | undefined,
+  physicalType: FormValues["physicalType"],
+  unit: ObjectMetricUnitSpecV1 | undefined,
+): FormValues["semanticType"] {
+  const expectedQuantityKind: Partial<Record<FormValues["semanticType"], UnitQuantityKind>> = {
+    amount: "currency",
+    count: "count",
+    duration: "duration",
+    percentage: "dimensionless",
+    rank: "dimensionless",
+    ratio: "dimensionless",
+    score: "dimensionless",
+  };
+  if (
+    semanticType &&
+    physicalTypesBySemanticType[semanticType].includes(physicalType) &&
+    (unit
+      ? !expectedQuantityKind[semanticType] ||
+        expectedQuantityKind[semanticType] === unit.quantity_kind
+      : semanticType !== "amount" && semanticType !== "percentage")
+  ) {
+    return semanticType;
+  }
+
+  if (physicalType === "string") return "category";
+  if (physicalType === "datetime") return "timestamp";
+  if (physicalType === "boolean" || physicalType === "date" || physicalType === "duration") {
+    return physicalType;
+  }
+  if (unit?.quantity_kind === "count") return "count";
+  if (physicalType === "decimal" && unit?.quantity_kind === "currency") return "amount";
+  if (physicalType === "decimal" && unit?.quantity_kind === "dimensionless") return "ratio";
+  return "measure";
+}
+
 function formValuesFromDefinition(definition: ObjectMetricDefinitionV1): Partial<FormValues> {
   const value = definition.result_semantics.value;
   const grain = definition.result_semantics.statistical_grain;
@@ -1235,24 +1292,12 @@ function formValuesFromDefinition(definition: ObjectMetricDefinitionV1): Partial
     noDataPolicy: definition.result_semantics.no_data_policy,
     physicalType: value.physical_type,
     precision: value.precision,
-    quantityKind: value.unit?.quantity_kind,
     roundingMode: value.rounding_mode,
     scale: value.scale,
     semanticType: value.semantic_type,
     timeDimensions: definition.query_capabilities.time_dimensions.map((item) => item.property_name),
     timeGranularity: grain.time_granularity,
-    unitCode: value.unit?.code,
-    unitScaleFactor: value.unit?.scale_factor,
-    unitDenominatorCode: value.unit?.denominator?.code,
-    unitDenominatorKind: value.unit?.denominator?.quantity_kind as Exclude<
-      UnitQuantityKind,
-      "rate"
-    >,
-    unitDenominatorSystem: value.unit?.denominator?.system,
-    unitNumeratorCode: value.unit?.numerator?.code,
-    unitNumeratorKind: value.unit?.numerator?.quantity_kind as Exclude<UnitQuantityKind, "rate">,
-    unitNumeratorSystem: value.unit?.numerator?.system,
-    unitSystem: value.unit?.system,
+    ...resultUnitFormFields(value.unit),
   };
   if (definition.specification.kind === "atomic") {
     common.aggregation = definition.specification.measure.aggregation;
@@ -1426,11 +1471,11 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const aiTrialRequestedRef = useRef(false);
   const aiTrialSnapshotRef = useRef<{ snapshot: string; formRevision: string } | null>(null);
   const aiSkipCompositeDefaultRef = useRef(false);
-  const aiSkipCompositeInferenceRef = useRef(false);
-  const compositeInferenceInputsRef = useRef<{
-    expression: ObjectMetricExpressionV1;
-    dependencies: ObjectMetricDependencyV1[];
-  } | null>(null);
+  const skipLoadedCompositeInferenceRef = useRef(false);
+  const compositeInferenceInputsRef = useRef<string | undefined>(undefined);
+  const [compositeResultInference, setCompositeResultInference] =
+    useState<InferredCompositeValueV1>();
+  const [confirmedUnknownUnit, setConfirmedUnknownUnit] = useState<InferredCompositeValueV1>();
   const aiSkipDerivedSyncRef = useRef(false);
   const [aiProposal, setAiProposal] = useState<{
     intent: ObjectMetricAiIntent;
@@ -1544,6 +1589,39 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const unitCode = Form.useWatch("unitCode", form);
   const unitScaleFactor = Form.useWatch("unitScaleFactor", form);
   const unitSystem = Form.useWatch("unitSystem", form);
+  const declaredUnit = Form.useWatch(resultUnitFromForm, { form, preserve: true });
+  const inferredPhysicalType = compositeResultInference?.physicalType;
+  const inferredUnit = compositeResultInference?.unit;
+  const unitUnknown = Boolean(compositeResultInference && !compositeResultInference.unitKnown);
+  const typeConflict = Boolean(inferredPhysicalType && inferredPhysicalType !== physicalType);
+  const unitConflict = Boolean(
+    compositeResultInference?.unitKnown &&
+    (inferredUnit
+      ? !sameUnit(inferredUnit, declaredUnit)
+      : declaredUnit && declaredUnit.quantity_kind !== "dimensionless"),
+  );
+
+  const applyCompositeResultInference = () => {
+    if (!inferredPhysicalType) return;
+    const nextUnit =
+      unitConflict && !inferredUnit && inferredPhysicalType === "decimal"
+        ? ({ code: "1", quantity_kind: "dimensionless", scale_factor: 1, system: "UCUM" } as const)
+        : unitConflict
+          ? inferredUnit
+          : declaredUnit;
+    form.setFieldsValue({
+      ...(unitConflict ? resultUnitFormFields(nextUnit) : {}),
+      physicalType: inferredPhysicalType,
+      precision: inferredPhysicalType === "decimal" ? (precision ?? 18) : undefined,
+      roundingMode: inferredPhysicalType === "decimal" ? (roundingMode ?? "half_up") : undefined,
+      scale: inferredPhysicalType === "decimal" ? (scale ?? 2) : undefined,
+      semanticType: compatibleCompositeSemanticType(semanticType, inferredPhysicalType, nextUnit),
+    });
+    setFormValidationIssueCount(0);
+    setValidation(undefined);
+    setPreview(undefined);
+  };
+
   // Older services may return `issues: null` for a successful validation. Treat it
   // as the empty collection so a server-side contract variation cannot crash the
   // authoring screen while a compatibility deployment is rolling out.
@@ -1685,20 +1763,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   const updateCompositeExpression = (next: ObjectMetricExpressionV1) => {
     setValidation(undefined);
     setCompositeExpression(next);
-    const dependencyTypes = Object.fromEntries(
-      dependencies.flatMap((dependency) => {
-        const selected = publishedMetrics.find(
-          (item) =>
-            item.definition.id === dependency.metric_ref.metric_id &&
-            item.definition.version === dependency.metric_ref.version,
-        );
-        return selected
-          ? [[dependency.alias, selected.definition.result_semantics.value.physical_type] as const]
-          : [];
-      }),
-    ) as Record<string, ExpressionValueType>;
-    const nextPhysicalType = expressionValueType(next, [], dependencyTypes);
-    if (nextPhysicalType) applyValueSuggestion(valueSuggestionForPhysicalType(nextPhysicalType));
   };
   const applyAiIntent = (intent: ObjectMetricAiIntent) => {
     const allowedProperties = new Set(properties.map((item) => item.propertyName));
@@ -1789,7 +1853,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       });
       if (intent.composite.dependencies) {
         aiSkipCompositeDefaultRef.current = true;
-        aiSkipCompositeInferenceRef.current = true;
         setDependencies(nextDependencies);
       }
       if (intent.composite.expression) {
@@ -1804,7 +1867,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         );
         if (nextExpression) {
           aiSkipCompositeDefaultRef.current = true;
-          aiSkipCompositeInferenceRef.current = true;
           setCompositeExpression(nextExpression);
         }
       }
@@ -2038,12 +2100,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     const restoredCompositeExpression = aiUndo.before
       .compositeExpression as ObjectMetricExpressionV1;
     const restoredDependencies = aiUndo.before.dependencies as ObjectMetricDependencyV1[];
-    if (
-      restoredCompositeExpression !== compositeExpression ||
-      restoredDependencies !== dependencies
-    ) {
-      aiSkipCompositeInferenceRef.current = true;
-    }
     setBusinessCondition(aiUndo.before.businessCondition as ObjectMetricConditionV1 | undefined);
     setCompositeExpression(restoredCompositeExpression);
     setDependencies(restoredDependencies);
@@ -2467,6 +2523,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   useEffect(() => {
     if (!networkId) return;
     let active = true;
+    skipLoadedCompositeInferenceRef.current = false;
+    compositeInferenceInputsRef.current = undefined;
+    setCompositeResultInference(undefined);
     setLoadError(null);
     if (mode === "edit") setRecord(undefined);
     if (mode === "edit" && !metricId) {
@@ -2551,7 +2610,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               ),
             );
           } else {
-            aiSkipCompositeInferenceRef.current = true;
+            skipLoadedCompositeInferenceRef.current = true;
             setDependencies(nextRecord.definition.specification.dependencies);
             setCompositeExpression(nextRecord.definition.specification.expression);
           }
@@ -2666,21 +2725,29 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   }, [compositeExpression.node_type, dependencies, metricType]);
 
   useEffect(() => {
-    if (metricType !== "composite") return;
-    const previousInputs = compositeInferenceInputsRef.current;
-    if (
-      previousInputs?.expression === compositeExpression &&
-      previousInputs.dependencies === dependencies
-    ) {
+    if (loading || metricType !== "composite") return;
+    const referencedDependencies = dependencies.filter((dependency) =>
+      expressionReferencesDependencyAlias(compositeExpression, dependency.alias),
+    );
+    // Evaluation windows, filters and alignment do not enter result inference.
+    const inputs = JSON.stringify([
+      compositeExpression,
+      referencedDependencies.map(({ alias, metric_ref }) => [
+        alias,
+        metric_ref.metric_id,
+        metric_ref.version,
+      ]),
+    ]);
+    if (skipLoadedCompositeInferenceRef.current) {
+      skipLoadedCompositeInferenceRef.current = false;
+      compositeInferenceInputsRef.current = inputs;
+      setCompositeResultInference(undefined);
       return;
     }
-    compositeInferenceInputsRef.current = { expression: compositeExpression, dependencies };
-    if (aiSkipCompositeInferenceRef.current) {
-      aiSkipCompositeInferenceRef.current = false;
-      return;
-    }
+    if (compositeInferenceInputsRef.current === inputs) return;
+
     const dependencyValues = Object.fromEntries(
-      dependencies.flatMap((dependency) => {
+      referencedDependencies.flatMap((dependency) => {
         const metric = publishedMetrics.find(
           (item) =>
             item.definition.id === dependency.metric_ref.metric_id &&
@@ -2692,68 +2759,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       }),
     );
     const inferred = inferCompositeExpressionValueV1(compositeExpression, dependencyValues);
-    if (!inferred.physicalType) return;
-    const physicalTypeChanged = form.getFieldValue("physicalType") !== inferred.physicalType;
-
-    const currentSemanticType = form.getFieldValue("semanticType") as
-      FormValues["semanticType"] | undefined;
-    const inferredSemanticType = inferred.unit
-      ? inferred.unit.quantity_kind === "count"
-        ? "count"
-        : inferred.unit.quantity_kind === "currency"
-          ? "amount"
-          : inferred.unit.quantity_kind === "duration"
-            ? "duration"
-            : currentSemanticType
-      : inferred.unitKnown && inferred.physicalType === "decimal"
-        ? "ratio"
-        : currentSemanticType;
-    const compatibleSemanticType =
-      inferredSemanticType &&
-      physicalTypesBySemanticType[inferredSemanticType].includes(inferred.physicalType)
-        ? inferredSemanticType
-        : "measure";
-    const unit = inferred.unitKnown
-      ? (inferred.unit ??
-        (compatibleSemanticType === "ratio"
-          ? {
-              code: "1",
-              quantity_kind: "dimensionless" as const,
-              scale_factor: 1,
-              system: "UCUM" as const,
-            }
-          : undefined))
-      : undefined;
-    const currentPrecision = form.getFieldValue("precision") as FormValues["precision"];
-    const currentRoundingMode = form.getFieldValue("roundingMode") as FormValues["roundingMode"];
-    const currentScale = form.getFieldValue("scale") as FormValues["scale"];
-    form.setFieldsValue({
-      physicalType: inferred.physicalType,
-      precision:
-        inferred.physicalType === "decimal"
-          ? physicalTypeChanged
-            ? 18
-            : (currentPrecision ?? 18)
-          : undefined,
-      quantityKind: unit?.quantity_kind,
-      roundingMode:
-        inferred.physicalType === "decimal"
-          ? physicalTypeChanged
-            ? "half_up"
-            : (currentRoundingMode ?? "half_up")
-          : undefined,
-      scale:
-        inferred.physicalType === "decimal"
-          ? physicalTypeChanged
-            ? 2
-            : (currentScale ?? 2)
-          : undefined,
-      semanticType: compatibleSemanticType,
-      unitCode: unit?.code,
-      unitScaleFactor: unit?.scale_factor ?? 1,
-      unitSystem: unit?.system,
-    });
-  }, [compositeExpression, dependencies, form, metricType, publishedMetrics]);
+    if (inferred.physicalType) compositeInferenceInputsRef.current = inputs;
+    setCompositeResultInference(inferred.physicalType ? inferred : undefined);
+  }, [compositeExpression, dependencies, loading, metricType, publishedMetrics]);
 
   useEffect(() => {
     if (metricType !== "derived" || !selectedBaseDefinition) return;
@@ -2767,22 +2775,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       minimum: value.minimum,
       physicalType: value.physical_type,
       precision: value.precision,
-      quantityKind: value.unit?.quantity_kind,
       roundingMode: value.rounding_mode,
       scale: value.scale,
       semanticType: value.semantic_type,
-      unitCode: value.unit?.code,
-      unitDenominatorCode: value.unit?.denominator?.code,
-      unitDenominatorKind: value.unit?.denominator?.quantity_kind as Exclude<
-        UnitQuantityKind,
-        "rate"
-      >,
-      unitDenominatorSystem: value.unit?.denominator?.system,
-      unitNumeratorCode: value.unit?.numerator?.code,
-      unitNumeratorKind: value.unit?.numerator?.quantity_kind as Exclude<UnitQuantityKind, "rate">,
-      unitNumeratorSystem: value.unit?.numerator?.system,
-      unitScaleFactor: value.unit?.scale_factor,
-      unitSystem: value.unit?.system,
+      ...resultUnitFormFields(value.unit),
     });
   }, [form, metricType, selectedBaseDefinition]);
 
@@ -2854,39 +2850,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
               rounding_mode: values.physicalType === "decimal" ? values.roundingMode : undefined,
               scale: values.physicalType === "decimal" ? values.scale : undefined,
               semantic_type: values.semanticType,
-              unit:
-                values.unitCode && values.unitSystem && values.quantityKind
-                  ? {
-                      code: values.unitCode,
-                      numerator:
-                        values.quantityKind === "rate" &&
-                        values.unitNumeratorCode &&
-                        values.unitNumeratorKind &&
-                        values.unitNumeratorSystem
-                          ? {
-                              code: values.unitNumeratorCode,
-                              quantity_kind: values.unitNumeratorKind,
-                              scale_factor: 1,
-                              system: values.unitNumeratorSystem,
-                            }
-                          : undefined,
-                      denominator:
-                        values.quantityKind === "rate" &&
-                        values.unitDenominatorCode &&
-                        values.unitDenominatorKind &&
-                        values.unitDenominatorSystem
-                          ? {
-                              code: values.unitDenominatorCode,
-                              quantity_kind: values.unitDenominatorKind,
-                              scale_factor: 1,
-                              system: values.unitDenominatorSystem,
-                            }
-                          : undefined,
-                      quantity_kind: values.quantityKind,
-                      scale_factor: values.unitScaleFactor ?? 1,
-                      system: values.unitSystem,
-                    }
-                  : undefined,
+              unit: resultUnitFromForm(form.getFieldsValue(true) as Partial<FormValues>),
             },
     };
     next.query_capabilities = objectMetricQueryCapabilities(
@@ -4878,24 +4842,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     <Form.Item hidden name="maximum">
                       <InputNumber />
                     </Form.Item>
-                    <Form.Item hidden name="unitNumeratorSystem">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item hidden name="unitNumeratorKind">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item hidden name="unitNumeratorCode">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item hidden name="unitDenominatorSystem">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item hidden name="unitDenominatorKind">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item hidden name="unitDenominatorCode">
-                      <Input />
-                    </Form.Item>
                   </>
                 ) : (
                   <div className={styles.inheritedValuePlaceholder}>
@@ -4904,6 +4850,54 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                 )
               ) : (
                 <>
+                  {metricType === "composite" && (typeConflict || unitConflict) ? (
+                    <Alert
+                      className={styles.full}
+                      action={
+                        <Button onClick={applyCompositeResultInference} size="small">
+                          {objectMetricText("applyCompositeResultInference")}
+                        </Button>
+                      }
+                      description={objectMetricText(
+                        unitUnknown ? "compositeResultTypeSuggestion" : "compositeResultSuggestion",
+                        {
+                          p0:
+                            physicalTypeOptions.find((item) => item.value === inferredPhysicalType)
+                              ?.label ?? inferredPhysicalType,
+                          p1:
+                            inferredUnit?.code ??
+                            objectMetricText(
+                              supportsUnit(inferredPhysicalType)
+                                ? "unitGroupDimensionless"
+                                : "m3be9bf13138e",
+                            ),
+                        },
+                      )}
+                      message={objectMetricText("compositeResultConflict")}
+                      showIcon
+                      style={{ marginBottom: 12 }}
+                      type="warning"
+                    />
+                  ) : null}
+                  {metricType === "composite" &&
+                  unitUnknown &&
+                  confirmedUnknownUnit !== compositeResultInference ? (
+                    <Alert
+                      className={styles.full}
+                      action={
+                        <Button
+                          onClick={() => setConfirmedUnknownUnit(compositeResultInference)}
+                          size="small"
+                        >
+                          {objectMetricText("keepCompositeResultUnit")}
+                        </Button>
+                      }
+                      message={objectMetricText("compositeResultUnitUnknown")}
+                      showIcon
+                      style={{ marginBottom: 12 }}
+                      type="warning"
+                    />
+                  ) : null}
                   <Form.Item
                     name="physicalType"
                     hidden
@@ -4919,8 +4913,16 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                           {physicalTypeOptions.find((item) => item.value === physicalType)?.label ??
                             objectMetricText("m67a71e70110c")}
                         </strong>
-                        <span>{objectMetricText("mfa92619fb598")}</span>
-                        <Tooltip title={objectMetricText("mb31168a91f2a")}>
+                        {metricType === "atomic" ? (
+                          <span>{objectMetricText("mfa92619fb598")}</span>
+                        ) : null}
+                        <Tooltip
+                          title={objectMetricText(
+                            metricType === "composite"
+                              ? "compositeResultTypeHelp"
+                              : "mb31168a91f2a",
+                          )}
+                        >
                           <Button
                             aria-label={objectMetricText("ma8ed40325903")}
                             className={styles.inlineHelpButton}
@@ -5188,28 +5190,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                       </Form.Item>
                     </>
                   ) : null}
-                  {quantityKind === "rate" ? (
-                    <>
-                      <Form.Item hidden name="unitNumeratorSystem">
-                        <Input />
-                      </Form.Item>
-                      <Form.Item hidden name="unitNumeratorKind">
-                        <Input />
-                      </Form.Item>
-                      <Form.Item hidden name="unitNumeratorCode">
-                        <Input />
-                      </Form.Item>
-                      <Form.Item hidden name="unitDenominatorSystem">
-                        <Input />
-                      </Form.Item>
-                      <Form.Item hidden name="unitDenominatorKind">
-                        <Input />
-                      </Form.Item>
-                      <Form.Item hidden name="unitDenominatorCode">
-                        <Input />
-                      </Form.Item>
-                    </>
-                  ) : null}
+                  {quantityKind === "rate" ? <></> : null}
                   {physicalType === "int64" ||
                   physicalType === "decimal" ||
                   physicalType === "duration" ? (

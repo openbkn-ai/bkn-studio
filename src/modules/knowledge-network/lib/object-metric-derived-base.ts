@@ -37,12 +37,8 @@ export type DerivedBaseMetricFormPatch = {
   timeWindowUnit: undefined;
   timezone: undefined;
   unitCode: string | undefined;
-  unitDenominatorCode: string | undefined;
-  unitDenominatorKind: Exclude<UnitQuantityKind, "rate"> | undefined;
-  unitDenominatorSystem: ObjectMetricUnitSpecV1["system"] | undefined;
-  unitNumeratorCode: string | undefined;
-  unitNumeratorKind: Exclude<UnitQuantityKind, "rate"> | undefined;
-  unitNumeratorSystem: ObjectMetricUnitSpecV1["system"] | undefined;
+  rateUnitParts:
+    [ObjectMetricUnitSpecV1["numerator"], ObjectMetricUnitSpecV1["denominator"]] | undefined;
   unitScaleFactor: number | undefined;
   unitSystem: ObjectMetricUnitSpecV1["system"] | undefined;
   weekStart: undefined;
@@ -82,14 +78,10 @@ export function derivedBaseMetricFormPatch(
     timeWindowUnit: undefined,
     timezone: undefined,
     unitCode: value.unit?.code,
-    unitDenominatorCode: value.unit?.denominator?.code,
-    unitDenominatorKind: value.unit?.denominator?.quantity_kind as
-      Exclude<UnitQuantityKind, "rate"> | undefined,
-    unitDenominatorSystem: value.unit?.denominator?.system,
-    unitNumeratorCode: value.unit?.numerator?.code,
-    unitNumeratorKind: value.unit?.numerator?.quantity_kind as
-      Exclude<UnitQuantityKind, "rate"> | undefined,
-    unitNumeratorSystem: value.unit?.numerator?.system,
+    rateUnitParts:
+      value.unit?.quantity_kind === "rate"
+        ? [value.unit.numerator, value.unit.denominator]
+        : undefined,
     unitScaleFactor: value.unit?.scale_factor,
     unitSystem: value.unit?.system,
     weekStart: undefined,

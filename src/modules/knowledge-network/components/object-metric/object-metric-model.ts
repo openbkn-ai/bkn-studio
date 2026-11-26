@@ -33,7 +33,7 @@ export type InferredCompositeValueV1 = {
   unitKnown: boolean;
 };
 
-function sameUnit(left?: ObjectMetricUnitSpecV1, right?: ObjectMetricUnitSpecV1): boolean {
+export function sameUnit(left?: ObjectMetricUnitSpecV1, right?: ObjectMetricUnitSpecV1): boolean {
   if (!left || !right) return left === right;
   return (
     left.system === right.system &&
@@ -46,17 +46,17 @@ function sameUnit(left?: ObjectMetricUnitSpecV1, right?: ObjectMetricUnitSpecV1)
 }
 
 function promoteNumber(left?: string, right?: string, forceDecimal = false) {
-  if (!left || !right) return undefined;
+  const numericTypes = ["int64", "decimal", "duration"];
+  if (!left || !right || !numericTypes.includes(left) || !numericTypes.includes(right)) {
+    return undefined;
+  }
   if (forceDecimal || left === "decimal" || right === "decimal") return "decimal" as const;
   if (left === "duration" && right === "duration") return "duration" as const;
   return "int64" as const;
 }
 
 /**
- * Mirrors the backend's composite-expression inference closely enough for the
- * editor to keep the hidden physical result contract in sync with the formula.
- * Business semantics remain user-editable, while technical type/unit values
- * are derived from the selected immutable dependency versions.
+ * Infers the formula's data type and unit from the selected dependency versions.
  */
 export function inferCompositeExpressionValueV1(
   expression: ObjectMetricExpressionV1,
@@ -120,6 +120,9 @@ export function inferCompositeExpressionValueV1(
       }
       if (["duration_between", "date_diff"].includes(expression.function)) {
         return { physicalType: "duration", unitKnown: false };
+      }
+      if (expression.function === "to_number") {
+        return { physicalType: "decimal", unitKnown: false };
       }
       if (["date_part", "length"].includes(expression.function)) {
         return { physicalType: "int64", unitKnown: true };

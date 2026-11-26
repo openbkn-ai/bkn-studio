@@ -1405,7 +1405,7 @@ describe("ObjectMetricFormScene object properties", () => {
 });
 
 describe("ObjectMetricFormScene edit loading", () => {
-  it("preserves an existing composite result contract when AI edits only its expression", async () => {
+  it("preserves composite result settings until the user applies a conflicting inference", async () => {
     const recordFor = (definition: ReturnType<typeof createObjectMetricDefinitionV1>) => ({
       branch: "main",
       create_time: 0,
@@ -1427,13 +1427,21 @@ describe("ObjectMetricFormScene edit loading", () => {
       semantic_type: "amount",
       unit: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
     };
-    const usdAmount = createObjectMetricDefinitionV1("atomic", "order");
-    usdAmount.id = "usd-amount";
-    usdAmount.name = "美元实付金额";
-    usdAmount.lifecycle.status = "published";
-    usdAmount.result_semantics.value = {
+    const amountPerHour = createObjectMetricDefinitionV1("atomic", "order");
+    amountPerHour.id = "amount-per-hour";
+    amountPerHour.name = "每小时实付金额";
+    amountPerHour.lifecycle.status = "published";
+    amountPerHour.result_semantics.value = {
       ...amount.result_semantics.value,
-      unit: { code: "USD", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+      semantic_type: "measure",
+      unit: {
+        code: "CNY/h",
+        quantity_kind: "rate",
+        scale_factor: 1,
+        system: "registered",
+        numerator: { code: "CNY", quantity_kind: "currency", scale_factor: 1, system: "ISO_4217" },
+        denominator: { code: "h", quantity_kind: "duration", scale_factor: 3600, system: "UCUM" },
+      },
     };
     const count = createObjectMetricDefinitionV1("atomic", "order");
     count.id = "count";
@@ -1474,7 +1482,7 @@ describe("ObjectMetricFormScene edit loading", () => {
     const originalExpression = draft.specification.expression;
     mocks.getObjectMetricV1.mockResolvedValue(recordFor(draft));
     mocks.listObjectMetricsV1.mockResolvedValue({
-      entries: [recordFor(amount), recordFor(count), recordFor(usdAmount)],
+      entries: [recordFor(amount), recordFor(count), recordFor(amountPerHour)],
       total_count: 3,
     });
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
@@ -1561,13 +1569,64 @@ describe("ObjectMetricFormScene edit loading", () => {
     fireEvent.click(await findButtonByText("撤销本次应用"));
     expect(screen.getByLabelText("对象指标名称")).toHaveValue("平均实付金额");
 
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 1 个依赖的计算时间范围" }));
+    fireEvent.click(await screen.findByText("最近一段时间"));
+    mocks.runObjectMetricDesigner.mockClear();
+    fireEvent.change(prompt, { target: { value: "读取修改窗口后的表单" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalled());
+    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot).toMatchObject({
+      precision: 18,
+      roundingMode: "half_up",
+      scale: 6,
+      semanticType: "amount",
+      unitCode: "CNY",
+    });
+
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 1 个依赖对象指标" }));
-    fireEvent.click(await screen.findByText(/美元实付金额 · v1/));
+    fireEvent.click(await screen.findByText(/每小时实付金额 · v1/));
     mocks.runObjectMetricDesigner.mockClear();
     fireEvent.change(prompt, { target: { value: "读取当前表单" } });
     fireEvent.click(screen.getByLabelText("发送对象指标描述"));
     await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalled());
-    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot.unitCode).toBeUndefined();
+    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot.unitCode).toBe("CNY");
+    expect(await screen.findByText("无法推导公式结果的单位，请确认当前单位")).toBeInTheDocument();
+    fireEvent.click(getButtonByText("保留当前单位"));
+    expect(screen.queryByText("无法推导公式结果的单位，请确认当前单位")).not.toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 2 个依赖对象指标" }));
+    fireEvent.click(
+      await screen.findByText(/每小时实付金额 · v1/, {
+        selector:
+          ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+      }),
+    );
+    expect(await screen.findByText("公式推导结果与当前结果配置不一致")).toBeInTheDocument();
+
+    fireEvent.click(getButtonByText("应用推导结果"));
+    expect(screen.queryByText("公式推导结果与当前结果配置不一致")).not.toBeInTheDocument();
+    mocks.runObjectMetricDesigner.mockClear();
+    fireEvent.change(prompt, { target: { value: "读取应用推导后的表单" } });
+    fireEvent.click(screen.getByLabelText("发送对象指标描述"));
+    await waitFor(() => expect(mocks.runObjectMetricDesigner).toHaveBeenCalled());
+    expect(mocks.runObjectMetricDesigner.mock.lastCall?.[0].formSnapshot).toMatchObject({
+      precision: 18,
+      roundingMode: "half_up",
+      scale: 6,
+      semanticType: "ratio",
+      unitCode: "1",
+    });
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "运算符" }));
+    fireEvent.click(await screen.findByText("加"));
+    fireEvent.click(await findButtonByText("应用推导结果"));
+    expect(screen.queryByText("公式推导结果与当前结果配置不一致")).not.toBeInTheDocument();
+    mocks.validateObjectMetricV1.mockClear();
+    fireEvent.click(getButtonByText("语义校验"));
+    await waitFor(() => expect(mocks.validateObjectMetricV1).toHaveBeenCalled());
+    expect(mocks.validateObjectMetricV1.mock.lastCall?.[1].result_semantics.value.unit).toEqual(
+      amountPerHour.result_semantics.value.unit,
+    );
   }, 60_000);
 
   it("clears a formula validation highlight when the formula changes", async () => {
@@ -1638,7 +1697,7 @@ describe("ObjectMetricFormScene edit loading", () => {
       output_shape: "summary",
     });
 
-    render(<ObjectMetricFormScene mode="edit" />);
+    const { container } = render(<ObjectMetricFormScene mode="edit" />);
     await screen.findByText("实付金额");
     await screen.findByText("订单数");
     fireEvent.click(getButtonByText("语义校验"));
@@ -1655,6 +1714,18 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(screen.getByRole("combobox", { name: "运算符" }).closest(".ant-select")).not.toHaveClass(
       "ant-select-status-error",
     );
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "第 1 个依赖对象指标" }));
+    fireEvent.click(
+      await screen.findByText(/订单数 · v1/, {
+        selector:
+          ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+      }),
+    );
+    const physicalType = container.querySelector("input#physicalType");
+    expect(physicalType).toHaveValue("decimal");
+    fireEvent.click(await findButtonByText("应用推导结果"));
+    expect(physicalType).toHaveValue("int64");
   });
 
   it("resets inherited fields when AI changes a derived metric's base metric", async () => {
