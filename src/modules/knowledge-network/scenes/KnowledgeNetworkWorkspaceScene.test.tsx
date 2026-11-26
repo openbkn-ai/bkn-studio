@@ -72,6 +72,8 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.evalNav": "评测",
           "knowledgeNetwork.versions.nav": "版本管理",
           "knowledgeNetwork.riskActionControlNav": "行动管控",
+          "governance.actionControl": "行动管控",
+          "governance.actionControlBeta": "行动管控 (Beta)",
           "knowledgeNetwork.riskActionPending": "待实现",
           "knowledgeNetwork.permissionMatrix.nav": "权限管控",
           "knowledgeNetwork.workspaceActionTypes": "行动类",
@@ -807,3 +809,48 @@ it.each(["enterprise", "industry"] as const)("hides risk badges on %s", (edition
   );
   resetExtensionsForTesting();
 });
+
+it.each(["enterprise", "industry"] as const)(
+  "uses the installed governance label including Beta on %s",
+  (edition) => {
+    resetExtensionsForTesting();
+    registerExtension({
+      id: "governance",
+      capability: CAPABILITIES.ACTION_GOVERNANCE,
+      workspaceNavItems: [
+        {
+          id: "action-control",
+          section: "risk-control",
+          labelKey: "governance.actionControlBeta",
+          path: (id) => "/knowledge-network/workspace/" + id + "/action-control",
+        },
+      ],
+    });
+    try {
+      render(
+        <EntitlementContext.Provider
+          value={{
+            loading: false,
+            refresh: async () => {},
+            snapshot: entitlement({ edition, licensed: true }),
+          }}
+        >
+          <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
+        </EntitlementContext.Provider>,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+      );
+      const item = screen.getByTitle("行动管控 (Beta)");
+      expect(item).toHaveTextContent("行动管控 (Beta)");
+      expect(item).not.toBeDisabled();
+      expect(item).not.toHaveTextContent("企业版");
+      fireEvent.click(item);
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/action-control",
+      );
+    } finally {
+      resetExtensionsForTesting();
+    }
+  },
+);
