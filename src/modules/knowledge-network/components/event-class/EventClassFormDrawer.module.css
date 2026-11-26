@@ -147,3 +147,7 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.keptRate {
+  margin-bottom: 8px;
+}

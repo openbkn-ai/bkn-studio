@@ -16,7 +16,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { EventClassFormDrawer } from "@/modules/knowledge-network/components/event-class/EventClassFormDrawer";
 import { readEventClassIntent } from "@/modules/knowledge-network/components/event-class/event-class-navigation";
 import { knowledgeNetworkReturnState } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
-import { describeSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
+import { describeCheckSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import { useEventClassDelete } from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
 import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
 import {
@@ -241,7 +241,7 @@ export function EventClassListPanel({
       width: 180,
       render: (_value, item) =>
         recognized(item) && item.check_schedule
-          ? describeSchedule(item.check_schedule.cron, t, item.check_schedule.timezone)
+          ? describeCheckSchedule(item.check_schedule, t)
           : placeholder,
     },
     {

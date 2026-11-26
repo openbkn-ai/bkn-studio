@@ -955,4 +955,33 @@ describe("event-type.service", () => {
 
     expect(eventType.check_schedule).toEqual({ cron: "*/30 * * * *", timezone: "Asia/Shanghai" });
   });
+
+  it("keeps a fixed rate no cron says the same, and writes it back as it was", async () => {
+    serve({
+      action: recognition({
+        schedule: { expression: "90m", timezone: "Asia/Shanghai", type: "FIX_RATE" },
+      }),
+      schedule,
+    });
+
+    const eventType = await getKnEventType("kn-1", "order_overdue");
+    expect(eventType.check_schedule).toEqual({
+      cron: "",
+      rate: "90m",
+      timezone: "Asia/Shanghai",
+    });
+
+    putMock.mockResolvedValue({ data: "" });
+    await updateKnEventType("kn-1", "order_overdue", {
+      check_schedule: eventType.check_schedule!,
+      name: "Overdue",
+      rule: eventType.rule!,
+      severity: "",
+      subject: "order",
+    });
+    const action = putMock.mock.calls.find(([url]) => String(url).includes("/action-types/"));
+    expect(action?.[1]).toMatchObject({
+      schedule: { expression: "90m", timezone: "Asia/Shanghai", type: "FIX_RATE" },
+    });
+  });
 });

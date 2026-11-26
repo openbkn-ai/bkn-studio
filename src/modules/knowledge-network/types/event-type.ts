@@ -31,8 +31,13 @@ export type KnEventRuleTool = {
 };
 
 export type KnEventCheckSchedule = {
-  /** Five fields: minute, hour, day of month, month, day of week. */
+  /** Five fields: minute, hour, day of month, month, day of week; empty when `rate` is kept. */
   cron: string;
+  /**
+   * A fixed rate the platform runs the recognition action at, such as `90m`, that no cron here
+   * says the same: the form cannot edit it, and a save that leaves the schedule alone keeps it.
+   */
+  rate?: string;
   /** IANA time zone; the backend takes `Asia/Shanghai` when it is empty. */
   timezone?: string;
 };

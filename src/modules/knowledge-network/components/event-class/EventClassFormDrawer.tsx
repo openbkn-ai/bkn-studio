@@ -243,6 +243,8 @@ export function EventClassFormDrawer({
   const [parameters, setParameters] = useState<Record<string, ParameterDraft>>({});
   const [schedule, setSchedule] = useState<EventScheduleDraft>(DEFAULT_EVENT_SCHEDULE);
   const [timezone, setTimezone] = useState(DEFAULT_EVENT_TIMEZONE);
+  // A fixed rate the stored schedule runs at that the editor cannot show; kept until edited.
+  const [keptRate, setKeptRate] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [trial, setTrial] = useState<Omit<EventRuleTrialState, "stale">>({ running: false });
@@ -279,6 +281,7 @@ export function EventClassFormDrawer({
         : DEFAULT_EVENT_SCHEDULE,
     );
     setTimezone(eventType?.check_schedule?.timezone || DEFAULT_EVENT_TIMEZONE);
+    setKeptRate(eventType?.check_schedule?.rate || null);
     setProblem(null);
     trialRequest.current += 1;
     setTrial({ running: false });
@@ -466,7 +469,8 @@ export function EventClassFormDrawer({
     return { rule: built.ruleTool ? { basis: "function", tool: built.ruleTool } : null };
   };
 
-  const buildSchedule = (): { cron: string } | { problem: string } => {
+  const buildSchedule = (): { cron: string; rate?: string } | { problem: string } => {
+    if (keptRate) return { cron: "", rate: keptRate };
     const cron = cronFromSchedule(schedule);
     if (cron.split(/\s+/).length !== 5) {
       return { problem: t("knowledgeNetwork.eventClasses.form.cronInvalid") };
@@ -512,7 +516,7 @@ export function EventClassFormDrawer({
       const result = await trialKnEventRule(
         networkId,
         {
-          check_schedule: { cron: checked.cron, timezone },
+          check_schedule: { ...checked, timezone },
           code: (watchedCode ?? "").trim() || eventType?.code || "",
           name: (watchedName ?? "").trim() || eventType?.name || "",
           rule: built.rule,
@@ -546,7 +550,7 @@ export function EventClassFormDrawer({
     }
     const isRule = values.source === "rule";
     let rule: KnEventRule | null = null;
-    let cron = "";
+    let checkSchedule: { cron: string; rate?: string } = { cron: "" };
     if (isRule) {
       const built = buildRule();
       if ("problem" in built) {
@@ -564,11 +568,11 @@ export function EventClassFormDrawer({
           setProblem(checked.problem);
           return;
         }
-        cron = checked.cron;
+        checkSchedule = checked;
       }
     }
     const shared = {
-      check_schedule: rule ? { cron, timezone } : null,
+      check_schedule: rule ? { ...checkSchedule, timezone } : null,
       handling_note: values.handlingNote?.trim() ?? "",
       merge_hours: isRule ? (eventType?.merge_hours ?? 0) : (values.mergeHours ?? 0),
       name: values.name.trim(),
@@ -910,8 +914,19 @@ export function EventClassFormDrawer({
         {source === "rule" ? (
           <FormCard hint={t(`${F}.whenHint`)} keyword={t(`${F}.when`)}>
             <Form.Item label={t(`${F}.schedule`)} tooltip={t(`${F}.scheduleHint`)}>
+              {keptRate ? (
+                <Alert
+                  className={styles.keptRate}
+                  message={t(`${F}.keptRate`, { rate: keptRate })}
+                  showIcon
+                  type="info"
+                />
+              ) : null}
               <EventScheduleEditor
-                onChange={setSchedule}
+                onChange={(next) => {
+                  setSchedule(next);
+                  setKeptRate(null);
+                }}
                 onTimezoneChange={setTimezone}
                 schedule={schedule}
                 timezone={timezone}

@@ -267,6 +267,44 @@ describe("EventClassFormDrawer", () => {
     });
   });
 
+  it("keeps a fixed rate the form cannot show until the check time is changed", async () => {
+    const rated: KnEventType = {
+      ...overdue,
+      check_schedule: { cron: "", rate: "90m", timezone: "Asia/Shanghai" },
+    };
+    const onSaved = renderDrawer(rated);
+    expect(await screen.findByText(`${PREFIX}.keptRate`)).toBeVisible();
+    expect(await screen.findByText(`${PREFIX}.parameters`)).toBeVisible();
+
+    save();
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.update).toHaveBeenLastCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        check_schedule: { cron: "", rate: "90m", timezone: "Asia/Shanghai" },
+      }),
+    );
+
+    // Picking another frequency replaces the rate with the cron of the new one.
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: `${PREFIX}.scheduleKind` }));
+    fireEvent.click(
+      await screen.findByTitle("knowledgeNetwork.eventClasses.schedule.kinds.minutes"),
+    );
+    expect(screen.queryByText(`${PREFIX}.keptRate`)).toBeNull();
+    save();
+
+    await vi.waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update).toHaveBeenLastCalledWith(
+      "network-1",
+      "order_overdue",
+      expect.objectContaining({
+        check_schedule: { cron: "*/15 * * * *", timezone: "Asia/Shanghai" },
+      }),
+    );
+  });
+
   it("opens a condition class on its condition and saves it back as it was", async () => {
     const onSaved = renderDrawer(withRule(conditionRule));
 
