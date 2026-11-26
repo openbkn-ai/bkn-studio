@@ -238,6 +238,14 @@ export const contextLoaderPanelPart = {
       },
     },
     mcpConnect: {
+      evalChecking: "正在检测质量评测 MCP 连接…",
+      evalUnavailable: "Eval MCP 未返回完整的五个评测工具。",
+      evalConnectionFailed: "暂时无法连接质量评测 MCP，请检查登录状态与服务连接。",
+      evalRetry: "重新检测",
+      includeEval: "同时接入质量评测",
+      evalHint:
+        "生成独立的 Eval MCP 配置，用于查找测试集、发起和推进评测。需后端支持独立 Eval MCP 接口。",
+      cliMultipleTitle: "CLI 接入命令（依次执行）",
       title: "让智能体调用 OpenBKN 能力",
       description:
         "这里生成的是 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。",

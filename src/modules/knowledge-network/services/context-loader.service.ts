@@ -302,6 +302,8 @@ export type ContextLoaderEnv = {
   knId: string;
   /** MCP endpoint for tools/list and tools/call; defaults to the full `/mcp/`. */
   mcpProfile?: McpProfile;
+  /** Explicit endpoint for another platform-owned MCP service. */
+  mcpEndpoint?: string;
 };
 
 export function authHeaders(env: ContextLoaderEnv): Record<string, string> {
@@ -561,6 +563,7 @@ export function buildRestUrl(
 }
 
 function mcpBase(env: ContextLoaderEnv): string {
+  if (env.mcpEndpoint) return env.mcpEndpoint;
   return `${env.base.replace(/\/+$/, "")}${mcpPathFor(env.mcpProfile)}`;
 }
 

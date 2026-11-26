@@ -152,19 +152,20 @@ export default defineConfig(({ mode }) => {
               },
             }
           : {}),
+        ...(env.VITE_EVAL_BACKEND_TARGET
+          ? {
+              "^/api/bkn-backend/v1/(?:knowledge-networks/[^/]+/evals|eval-mcp|eval/mcp)(?:/|$)": {
+                changeOrigin: true,
+                xfwd: true,
+                secure: false,
+                target: env.VITE_EVAL_BACKEND_TARGET,
+              },
+            }
+          : {}),
         ...(useMock
           ? {}
           : {
               // Hybrid dev: local BKN services (must precede the generic /api proxy).
-              ...(env.VITE_EVAL_BACKEND_TARGET
-                ? {
-                    "^/api/bkn-backend/v1/(?:knowledge-networks/[^/]+/evals|eval-mcp)(?:/|$)": {
-                      changeOrigin: true,
-                      secure: false,
-                      target: env.VITE_EVAL_BACKEND_TARGET,
-                    },
-                  }
-                : {}),
               ...(env.VITE_BKN_BACKEND_TARGET
                 ? {
                     "/api/bkn-backend": {
