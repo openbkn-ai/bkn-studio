@@ -18,6 +18,14 @@ export const systemAdminEnUS = {
         saved: "Sync configuration saved. Enabling it schedules an initial full sync.",
         queued: "Sync queued. Refresh the status to see the result.",
         enabled: "Sync users and departments",
+        feishuUserIDEnabled: "Fetch Feishu user_id",
+        feishuUserIDHint:
+          "Fetch Feishu user_id during login, token exchange and directory sync for approvals. Independent of user and department sync; requires the identity service extension. Lookup failures do not block login or directory sync.",
+        identityQueryURL: "Identity lookup URL",
+        identityQueryURLHint:
+          "Enter the full endpoint URL. The Casdoor user ID is sent as subject using the provider application ID and secret. Use a trusted endpoint authorized for this application.",
+        identityQueryURLInvalid:
+          "Enter an HTTPS endpoint, or HTTP if allowed by the provider, without credentials, query parameters or a fragment.",
         roleSyncEnabled: "Sync roles",
         roleSyncHint:
           "Import role names and descriptions only; synchronization overwrites local edits to those fields. Users, memberships and permissions are not imported. Turning this off or deleting a role at the source retains imported roles. Existing same-name roles are not merged. Changing this setting requires role creation and editing permissions.",
