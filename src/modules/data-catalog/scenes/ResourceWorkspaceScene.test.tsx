@@ -20,6 +20,7 @@ const deleteCatalogResourceMock = vi.hoisted(() => vi.fn());
 const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
+const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
@@ -71,7 +72,16 @@ vi.mock("antd", () => ({
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { message?: string }) =>
+      key === "dataCatalog.resourceWorkspace.statusMessageDetail" && options?.message !== undefined
+        ? `${key}: ${options.message}`
+        : key,
+  }),
+}));
+
+vi.mock("@/framework/compat/clipboard", () => ({
+  writeTextToClipboard: writeTextToClipboardMock,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -756,7 +766,118 @@ describe("ResourceWorkspaceScene", () => {
     );
     await screen.findByTestId("detail-schema-name");
     expect(screen.getByText("dataCatalog.resourceWorkspace.discoveryFailedTitle")).toBeTruthy();
-    expect(screen.getByText("dataCatalog.resourceWorkspace.statusMessageDetail")).toBeTruthy();
+    expect(
+      screen.getByText("dataCatalog.resourceWorkspace.statusMessageDetail: source error"),
+    ).toBeVisible();
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.showFullStatusMessage")).toBeNull();
+  });
+
+  it("discloses and copies the original discovery error when the preview is shortened", async () => {
+    const error = `  Error 1105 (HY000): failed to read column metadata\n${"模拟堆栈".repeat(1500)}\n \n`;
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      enabled: true,
+      status: "active",
+      lastDiscoverStatus: "error",
+      statusMessage: error,
+    });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+    const toggle = await screen.findByText("dataCatalog.resourceWorkspace.showFullStatusMessage");
+    const details = toggle.closest("details");
+    expect(details).not.toHaveAttribute("open");
+    expect(screen.getByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeVisible();
+    expect(screen.getByTestId("detail-schema-name")).toBeVisible();
+    const preview = screen.getByText(
+      /^dataCatalog\.resourceWorkspace\.statusMessageDetail: Error 1105.*…$/,
+    );
+    expect(preview).toBeVisible();
+    expect(preview.textContent?.length).toBeLessThan(300);
+
+    fireEvent.click(toggle);
+    expect(details).toHaveAttribute("open");
+    const rawError = screen.getByRole("region", {
+      name: "dataCatalog.resourceWorkspace.showFullStatusMessage",
+    });
+    expect(rawError).toBeVisible();
+    expect(rawError.textContent).toBe(error);
+    fireEvent.click(screen.getByRole("button", { name: "common.copy" }));
+    await waitFor(() => expect(messageSuccessMock).toHaveBeenCalledWith("common.copySuccess"));
+    expect(writeTextToClipboardMock).toHaveBeenCalledExactlyOnceWith(error);
+
+    fireEvent.click(toggle);
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("adds and removes the full error control as a short preview starts and stops overflowing", async () => {
+    const statusMessage = "Column metadata could not be loaded.";
+    const toggleLabel = "dataCatalog.resourceWorkspace.showFullStatusMessage";
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    let notifyResize: (() => void) | undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe = observe;
+        disconnect = disconnect;
+        constructor(callback: () => void) {
+          notifyResize = callback;
+        }
+      },
+    );
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      status: "active",
+      lastDiscoverStatus: "error",
+      statusMessage,
+    });
+
+    try {
+      const { unmount } = render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
+      const preview = await screen.findByText(
+        `dataCatalog.resourceWorkspace.statusMessageDetail: ${statusMessage}`,
+      );
+      expect(observe).toHaveBeenCalledWith(preview);
+      expect(notifyResize).toBeDefined();
+      expect(screen.queryByText(toggleLabel)).toBeNull();
+
+      let scrollHeight = 66;
+      Object.defineProperties(preview, {
+        clientHeight: { value: 44 },
+        scrollHeight: { get: () => scrollHeight },
+      });
+      act(notifyResize!);
+      const toggle = screen.getByText(toggleLabel);
+      expect(toggle.closest("details")).not.toHaveAttribute("open");
+      fireEvent.click(toggle);
+      expect(screen.getByRole("region", { name: toggleLabel }).textContent).toBe(statusMessage);
+
+      scrollHeight = 44;
+      act(notifyResize!);
+      expect(screen.queryByText(toggleLabel)).toBeNull();
+
+      unmount();
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("keeps a view out of index tasks, including a direct index tab link", async () => {

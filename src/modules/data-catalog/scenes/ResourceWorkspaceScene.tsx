@@ -31,6 +31,7 @@ import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-qu
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
+import { ResourceStatusMessage } from "@/modules/data-catalog/components/ResourceStatusMessage";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -657,7 +658,7 @@ export function ResourceWorkspaceScene({
             }
             className={styles.resourceAlert}
             description={
-              <div>
+              <div className={styles.resourceAlertDescription}>
                 <div>
                   {t(
                     resourceDisabled
@@ -674,11 +675,11 @@ export function ResourceWorkspaceScene({
                   )}
                 </div>
                 {resource.category !== "dataset" && resource.statusMessage ? (
-                  <div className={styles.resourceStatusMessage}>
-                    {t("dataCatalog.resourceWorkspace.statusMessageDetail", {
-                      message: resource.statusMessage,
-                    })}
-                  </div>
+                  <ResourceStatusMessage
+                    key={resource.id}
+                    showLabel
+                    statusMessage={resource.statusMessage}
+                  />
                 ) : null}
               </div>
             }

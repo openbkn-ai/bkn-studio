@@ -107,6 +107,30 @@ describe("ResourceDetailPanel", () => {
     }));
   });
 
+  it("keeps long status messages compact in basic information", () => {
+    const statusMessage = `Error 1105 (HY000): column metadata failed\n${"模拟堆栈".repeat(1500)}`;
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, statusMessage }}
+        />
+      </MemoryRouter>,
+    );
+    const statusField = within(
+      screen.getByText("dataCatalog.resource.statusMessage").parentElement!,
+    );
+    expect(statusField.getByText(/^Error 1105.*…$/)).toBeVisible();
+    const toggle = statusField.getByText("dataCatalog.resourceWorkspace.showFullStatusMessage");
+    const details = toggle.closest("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(toggle);
+    expect(details).toHaveAttribute("open");
+    expect(statusField.getByRole("region").textContent).toBe(statusMessage);
+  });
+
   it("edits table basic information without submitting the field schema", async () => {
     render(
       <MemoryRouter>

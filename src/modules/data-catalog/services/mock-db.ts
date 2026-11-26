@@ -993,6 +993,40 @@ export const mockResources: CatalogResource[] = [
     expectedUpdateTime: minutesAgo(35),
   }),
   makeResource({
+    id: "res-doris-discovery-long-error",
+    catalogId: "cat-doris-discovery-demo",
+    name: "metadata_probe_demo",
+    category: "table",
+    schemaName: "discovery_demo",
+    sourceIdentifier: "`internal`.`discovery_demo`.`metadata_probe_demo`",
+    description: "用于验收 Doris 探查失败时的长错误预览和复制。",
+    tags: ["demo", "doris"],
+    status: "active",
+    lastDiscoverStatus: "error",
+    statusMessage: [
+      "discover metadata failed: failed to fetch columns: failed to execute column metadata query: Error 1105 (HY000): Simulated Doris column metadata error",
+      ...Array.from(
+        { length: 70 },
+        (_, index) =>
+          `    at mock.doris.MetadataReader.fetchColumns(MetadataReader.java:${100 + index})`,
+      ),
+      `Diagnostic: ${"模拟长诊断".repeat(128)}`,
+    ].join("\n"),
+    schema: [
+      {
+        name: "id",
+        displayName: "ID",
+        description: "",
+        type: "integer",
+        originalName: "id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 0,
+    expectedUpdateTime: minutesAgo(35),
+  }),
+  makeResource({
     id: "res-discovery-error-no-schema",
     catalogId: "cat-001",
     name: "discover_error_no_schema",

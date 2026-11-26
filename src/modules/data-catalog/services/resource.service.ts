@@ -453,7 +453,7 @@ function mapResource(
     estimatedRowCount: item.estimated_row_count ?? null,
     schemaName: item.schema,
     status: normalizeResourceStatus(item.status),
-    statusMessage: item.status_message?.trim() || undefined,
+    statusMessage: item.status_message?.trim() ? item.status_message : undefined,
     expectedUpdateTime: item.update_time ?? 0,
     createTime: item.create_time ? formatTimestamp(item.create_time) : undefined,
     creatorName: item.creator?.name ?? item.creator?.id,

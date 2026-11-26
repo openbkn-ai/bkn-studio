@@ -377,7 +377,8 @@ export function ResourceSemanticUnderstandingPanel({
     {
       dataIndex: "applyMode",
       title: t("dataCatalog.taskManagement.columns.applyMode"),
-      width: 100,
+      width: 144,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       filters: ["dry_run", "fill_empty", "force"].map((value) => ({
         text: t(
           `dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`,
@@ -407,7 +408,8 @@ export function ResourceSemanticUnderstandingPanel({
     {
       dataIndex: "applied",
       title: t("dataCatalog.taskManagement.columns.applied"),
-      width: 100,
+      width: 200,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       filters: [true, false].map((value) => ({
         text: t(
           value
@@ -423,7 +425,8 @@ export function ResourceSemanticUnderstandingPanel({
     {
       dataIndex: "confidence",
       title: t("dataCatalog.taskManagement.columns.confidence"),
-      width: 100,
+      width: 132,
+      onHeaderCell: () => ({ className: styles.singleLineHeader }),
       render: (value: number) => `${Math.round(value * 100)}%`,
     },
     {
@@ -563,6 +566,7 @@ export function ResourceSemanticUnderstandingPanel({
                   }
                 : undefined
             }
+            scroll={{ x: 1232 }}
           />
         </TableSurface>
       )}
