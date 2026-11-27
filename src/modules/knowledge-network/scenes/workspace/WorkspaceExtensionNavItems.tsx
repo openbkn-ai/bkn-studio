@@ -149,7 +149,7 @@ function ExtensionNavItem({
       </span>
       {!collapsed && minEdition ? (
         <span className={styles.sideItemStatus}>
-          <EditionBadge alwaysShow edition={minEdition} />
+          <EditionBadge capability={item.capability} edition={minEdition} />
         </span>
       ) : null}
     </button>

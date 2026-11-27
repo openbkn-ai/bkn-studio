@@ -7,6 +7,8 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+
 import {
   ensureKnVersionContext,
   getKnVersionView,
@@ -31,8 +33,9 @@ export function useKnVersioned(networkId: string): boolean {
 
 /** The version of a network being viewed (always "running" without versioning), and its setter. */
 export function useKnVersionView(networkId: string) {
+  const { snapshot } = useEntitlementContext();
   const view: KnVersionView = useSyncExternalStore(subscribeKnVersionContext, () =>
-    networkId ? getKnVersionView(networkId) : "running",
+    networkId ? getKnVersionView(networkId, snapshot) : "running",
   );
   const setView = useCallback(
     (next: KnVersionView) => {

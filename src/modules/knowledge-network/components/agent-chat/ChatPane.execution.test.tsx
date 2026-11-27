@@ -15,6 +15,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setRequestEntitlementSnapshot } from "@/framework/entitlement/entitlement-context";
 import i18n from "@/app/locales/i18n";
 import {
   BknAgentExecutionError,
@@ -114,7 +115,10 @@ beforeEach(async () => {
   vi.resetAllMocks();
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  setRequestEntitlementSnapshot(null);
+  cleanup();
+});
 
 describe("ChatPane BKN Agent execution", () => {
   it("submits the network scope, then continues in the thread the server issued", async () => {
@@ -140,6 +144,15 @@ describe("ChatPane BKN Agent execution", () => {
   });
 
   it("sends the version on screen with every turn, so a draft view runs against the draft", async () => {
+    setRequestEntitlementSnapshot({
+      capabilities: [],
+      edition: "professional",
+      extensions: [],
+      features: [],
+      licensed: true,
+      limits: {},
+      state: "valid",
+    });
     streams([meta("run-1", "thread-1")]);
     streams([meta("run-2", "thread-1")]);
     streams([meta("run-3", "thread-1")]);

@@ -149,7 +149,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.versions.description",
       titleKey: "knowledgeNetwork.versions.title",
     },
-    workspaceSectionPage("versions"),
+    professionalWorkspaceRoute(CAPABILITIES.KN_DRAFT_VERSIONS, workspaceSectionPage("versions")),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/permissions",

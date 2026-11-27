@@ -82,10 +82,11 @@ export const CAPABILITIES = {
   /**
    * 知识网络版本管理:完整版本历史、按历史版本查询、废止 / 恢复 / 清理。企业档起。
    *
-   * 由社区版 bkn-backend 按证书档位实现(社区版只留运行版本与上一版),没有企业版服务登记装配表,
-   * 端点报不出,入口只按证书档位标。草稿与运行版本随社区版提供,入口不挡。
+   * 完整历史的限制与草稿和发布入口分开。
    */
   VERSION_MGMT: "version_mgmt",
+  /** 知识网络草稿与运行版本管理。专业档起。 */
+  KN_DRAFT_VERSIONS: "kn_draft_versions",
   /** 知识网络行动建模与行动类页面。专业档起。 */
   KN_ACTION_MODELING: "kn_action_modeling",
   /** 知识网络事件类与事件记录。Studio 按证书档位开放。 */

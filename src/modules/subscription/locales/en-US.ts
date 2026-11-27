@@ -165,6 +165,13 @@ export const subscriptionEnUS = {
           "Break an analysis into reviewable cards with AI; results are kept on the server and can be shared with others.",
         name: "Analysis canvas",
       },
+      kn_draft_versions: {
+        name: "Knowledge network drafts and running versions",
+        description: "Manage knowledge network drafts and publish running versions.",
+        bullets: {
+          b1: "Edit drafts, publish changes, and view the running version",
+        },
+      },
       version_mgmt: {
         bullets: {
           b1: "Multiple versions",
@@ -226,7 +233,6 @@ export const subscriptionEnUS = {
       localAuth: "Local sign-in with user, department and built-in role management",
       modelingSurfaces: "Model from Studio, CLI, SDK and Skills",
       modelingTypes: "Object and relation modelling",
-      draftAndRunning: "Knowledge network draft and running version",
       oneClickExperience: "Try it in one click with dynamically loaded official examples",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
