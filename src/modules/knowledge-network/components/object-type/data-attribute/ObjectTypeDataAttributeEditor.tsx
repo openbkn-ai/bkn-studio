@@ -126,8 +126,8 @@ type ObjectTypeDataAttributeEditorProps = {
   /** The primary key stays as given: no property is added to or taken out of it here. */
   primaryKeyLocked?: boolean;
   /**
-   * No property is added here, as for an object whose wording alone may change: the panel offers
-   * no way to add one. Absent, properties are added as usual.
+   * No property is added or removed here, as for an object whose wording alone may change: the
+   * panel offers no way to add one, nor to clear them all. Absent, properties are added as usual.
    */
   addLocked?: boolean;
   /**
@@ -1266,6 +1266,11 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [dataPanelAddMenu, handleDataPanelAddMenuClick],
   );
 
+  // Clearing removes only what may be removed: where only the wording may change, or where every
+  // property is one the host keeps, nothing would go. Said where it would be cleared.
+  const clearLocked =
+    addLocked ||
+    (dataProperties.length > 0 && dataProperties.every((property) => lockedNames.has(property.name)));
   const dataPanelMoreMenu = useMemo<MenuProps["items"]>(
     () => [
       {
@@ -1276,12 +1281,22 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         type: "divider",
       },
       {
-        danger: true,
+        danger: !clearLocked,
+        disabled: clearLocked,
         key: "clearAll",
         label: t("knowledgeNetwork.objectTypeClearAllProperties"),
       },
+      ...(clearLocked
+        ? [
+            {
+              disabled: true,
+              key: "clearLocked",
+              label: t("knowledgeNetwork.objectTypeClearAllLocked"),
+            },
+          ]
+        : []),
     ],
-    [t],
+    [clearLocked, t],
   );
 
   const handleDataPanelMoreMenuClick = useCallback(
@@ -1681,7 +1696,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                     </Dropdown>
                   )}
                   <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
-                    <EllipsisOutlined className={styles.panelActionIcon} />
+                    <EllipsisOutlined
+                      aria-label={t("knowledgeNetwork.objectTypeMorePropertyActions")}
+                      className={styles.panelActionIcon}
+                    />
                   </Dropdown>
                 </div>
               </div>

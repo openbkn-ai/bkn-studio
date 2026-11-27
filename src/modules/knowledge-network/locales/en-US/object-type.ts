@@ -394,6 +394,8 @@ export const objecttypePart = {
   objectTypeSyncAdded_other: "Added {{count}} properties.",
   objectTypeAllFieldsMapped:
     "Every field of the resource has a property; there is no field to add.",
+  objectTypeClearAllLocked: "These properties can't be removed; only their wording can change.",
+  objectTypeMorePropertyActions: "More property actions",
   objectTypeToolbarHint: "This slice covers list, create, edit, and delete for object types first.",
   objectTypeUnsavedLeaveDescription:
     "Your changes have not been saved. Are you sure you want to leave?",

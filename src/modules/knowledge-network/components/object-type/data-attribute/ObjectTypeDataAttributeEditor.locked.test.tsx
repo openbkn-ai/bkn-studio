@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
@@ -177,6 +177,33 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     render({ addLocked: true });
     await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
     expect(screen.queryByLabelText("knowledgeNetwork.objectTypeAddDataProperty")).toBeNull();
+  });
+
+  it("offers no clearing where only the wording may change, or where every property is kept, and says why", async () => {
+    for (const locks of [{ addLocked: true }, { lockedProperties: ["customer_id", "note"] }]) {
+      const view = render(locks);
+      await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+      fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeMorePropertyActions"));
+      expect(
+        await screen.findByText("knowledgeNetwork.objectTypeClearAllLocked"),
+      ).toBeInTheDocument();
+      const clear = screen.getByText("knowledgeNetwork.objectTypeClearAllProperties").closest("li");
+      expect(clear).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(clear!);
+      expect(view).not.toHaveBeenCalled();
+      cleanup();
+    }
+  });
+
+  it("still clears what may be removed", async () => {
+    render({ lockedProperties: ["customer_id"] });
+    await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeMorePropertyActions"));
+    const clear = (
+      await screen.findByText("knowledgeNetwork.objectTypeClearAllProperties")
+    ).closest("li");
+    expect(clear).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("knowledgeNetwork.objectTypeClearAllLocked")).toBeNull();
   });
 
   it("says before adding that every field has a property, and offers no add that saving would refuse", async () => {

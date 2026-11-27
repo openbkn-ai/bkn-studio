@@ -361,6 +361,8 @@ export const objecttypePart = {
   objectTypeSyncAdded_one: "已新增 {{count}} 个属性。",
   objectTypeSyncAdded_other: "已新增 {{count}} 个属性。",
   objectTypeAllFieldsMapped: "资源的字段都已有对应属性，没有可新增的字段。",
+  objectTypeClearAllLocked: "这些属性不能删除，只能修改说法。",
+  objectTypeMorePropertyActions: "更多属性操作",
   objectTypeToolbarHint: "这一刀先补齐对象类的列表、新建、编辑和删除主链路。",
   objectTypeUnsavedLeaveDescription: "当前编辑内容尚未保存，确认离开吗？",
   objectTypeUnsavedLeaveOk: "离开",
