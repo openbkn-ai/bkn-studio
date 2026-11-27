@@ -235,6 +235,12 @@
   padding: 16px;
 }
 
+/* The description shrinks first so the action stays beside it at any width. */
+.archivePanel > div:first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* Run status, alerts and hints sit on their own full-width line. */
 .archivePanel > .archiveRun,
 .archivePanel > :global(.ant-alert),
