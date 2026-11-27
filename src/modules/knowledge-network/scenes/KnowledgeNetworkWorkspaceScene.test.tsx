@@ -254,7 +254,7 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   });
 
   it("places evaluation under ability verification and version management below overview", () => {
-    renderScene(entitlement(), false);
+    renderScene(entitlement({ edition: "professional", licensed: true }), false);
 
     const verification = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceAbilityVerification",
@@ -682,33 +682,31 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     },
   );
 
-  // Draft and running version are community, so the entry stays open; the Enterprise badge marks the
-  // full history until an Enterprise licence is in force.
-  it.each([
-    ["community", false],
-    ["professional", true],
-    ["enterprise", false],
-  ] as const)(
-    "marks version management as Enterprise on %s (licensed: %s)",
-    (edition, licensed) => {
-      renderScene(entitlement({ edition, licensed }));
+  it.each(["community", "professional", "enterprise"] as const)(
+    "requires a valid Professional licence for version management on %s",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: false }));
       const item = screen.getByTitle("版本管理");
 
-      expect(item).toHaveTextContent("企业版");
+      expect(item).toHaveTextContent("专业版");
+      fireEvent.click(item);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(mocks.navigate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["professional", "enterprise", "industry"] as const)(
+    "opens version management when %s is licensed",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+      const item = screen.getByTitle("版本管理");
+
+      expect(item).not.toHaveTextContent("专业版");
       fireEvent.click(item);
       expect(screen.queryByRole("dialog")).toBeNull();
       expect(mocks.navigate).toHaveBeenCalledWith(
         "/knowledge-network/workspace/network-1/versions",
       );
-    },
-  );
-
-  it.each(["enterprise", "industry"] as const)(
-    "drops the version management badge once %s is licensed",
-    (edition) => {
-      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
-
-      expect(screen.getByTitle("版本管理")).not.toHaveTextContent("企业版");
     },
   );
 
