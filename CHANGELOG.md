@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Archive runs in the background: submitting returns at once, Settings shows one line per run state with progress while it runs and refreshes every 3 seconds, and each finished run opens a result with retries and the oversized Trace interactions kept online, also listed from the panel. (bkn-foundry#2947, bkn-foundry#2948)
+
 - Show archive blockers and per-batch progress, distinguish unavailable history from empty history, and refresh task state after unsuccessful archive or cleanup requests. Prevent new same-kind archives while cleanup remains unfinished. (bkn-foundry#2947, bkn-foundry#2948)
 
 - Add knowledge-network versioning to the workspace: a versioned network reads and edits its draft with `If-Match` / `expected_draft_revision` preconditions, a version bar shows the draft state and offers publish, compare and discard, and a Versions page lists versions and events with publish, switch, rollback, copy-to-draft and (Professional edition) deprecate, restore and purge. Metric trial and drill-through follow the version on screen, and the metric-level publish is replaced by save-and-validate on versioned networks. (bkn-foundry#1229)

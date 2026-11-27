@@ -187,13 +187,53 @@ export type LogPolicy = {
 
 export type ArchiveKind = "log" | "trace";
 
+export type ArchiveRunStatus = "queued" | "running" | "retry_wait" | "completed" | "failed";
+
+/** A background archive run; batches stay ordinary archive jobs. */
+export type ArchiveRun = {
+  id: string;
+  kind: ArchiveKind;
+  trigger: "archive" | "retry_cleanup";
+  status: ArchiveRunStatus;
+  eligibleAtStart: number;
+  processedCount: number;
+  retainedCount: number;
+  batchCount: number;
+  retryCount: number;
+  nextAttemptAt?: string;
+  lastFailureCode?: string;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+};
+
+export type RetainedInteraction = {
+  interactionId: string;
+  runId: string;
+  stage: string;
+  measured: number;
+  atLeast: boolean;
+  budget: number;
+  unit: string;
+  retainedAt: string;
+};
+
+export type ArchiveRunResult = ArchiveRun & { retained: RetainedInteraction[] };
+
 export type ArchiveOverview = {
   candidateCount: number;
   cutoffAt: string;
   kind: ArchiveKind;
   retentionDays: number;
   storageStatus: "ready" | "unavailable";
+  /** Latest run of this kind; absent before the first run or on older services. */
+  currentRun?: ArchiveRun;
+  retainedCount: number;
 };
+
+export function isArchiveRunActive(run?: ArchiveRun): boolean {
+  return run?.status === "queued" || run?.status === "running" || run?.status === "retry_wait";
+}
 
 export type ArchiveBlockage = {
   interaction_id: string;
@@ -414,6 +454,8 @@ export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOver
     cutoff_at: string;
     candidate_count: number;
     storage: { status: "ready" | "unavailable" };
+    current_run?: BackendArchiveRun;
+    retained_count?: number;
   }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
   return {
     candidateCount: response.data.candidate_count,
@@ -421,7 +463,88 @@ export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOver
     kind: response.data.archive_kind,
     retentionDays: response.data.retention_days,
     storageStatus: response.data.storage.status,
+    retainedCount: response.data.retained_count ?? 0,
+    ...(response.data.current_run ? { currentRun: mapArchiveRun(response.data.current_run) } : {}),
   };
+}
+
+type BackendArchiveRun = {
+  run_id: string;
+  archive_kind: ArchiveKind;
+  trigger: ArchiveRun["trigger"];
+  status: ArchiveRunStatus;
+  eligible_at_start: number;
+  processed_count: number;
+  retained_count: number;
+  batch_count: number;
+  retry_count: number;
+  next_attempt_at?: string;
+  last_failure_code?: string;
+  created_at: string;
+  started_at?: string;
+  finished_at?: string;
+};
+
+type BackendRetainedInteraction = {
+  interaction_id: string;
+  run_id: string;
+  stage: string;
+  measured: number;
+  at_least?: boolean;
+  budget: number;
+  unit: string;
+  retained_at: string;
+};
+
+function mapArchiveRun(run: BackendArchiveRun): ArchiveRun {
+  return {
+    id: run.run_id,
+    kind: run.archive_kind,
+    trigger: run.trigger,
+    status: run.status,
+    eligibleAtStart: run.eligible_at_start,
+    processedCount: run.processed_count,
+    retainedCount: run.retained_count,
+    batchCount: run.batch_count,
+    retryCount: run.retry_count,
+    createdAt: run.created_at,
+    ...(run.next_attempt_at ? { nextAttemptAt: run.next_attempt_at } : {}),
+    ...(run.last_failure_code ? { lastFailureCode: run.last_failure_code } : {}),
+    ...(run.started_at ? { startedAt: run.started_at } : {}),
+    ...(run.finished_at ? { finishedAt: run.finished_at } : {}),
+  };
+}
+
+function mapRetainedInteraction(item: BackendRetainedInteraction): RetainedInteraction {
+  return {
+    interactionId: item.interaction_id,
+    runId: item.run_id,
+    stage: item.stage,
+    measured: item.measured,
+    atLeast: Boolean(item.at_least),
+    budget: item.budget,
+    unit: item.unit,
+    retainedAt: item.retained_at,
+  };
+}
+
+export async function getArchiveRunResult(runId: string): Promise<ArchiveRunResult> {
+  const response = await http.get<BackendArchiveRun & { retained: BackendRetainedInteraction[] }>(
+    `${OBSERVABILITY_API_PREFIX}/archive-runs/${encodeURIComponent(runId)}`,
+    { skipErrorToast: true },
+  );
+  return {
+    ...mapArchiveRun(response.data),
+    retained: (response.data.retained ?? []).map(mapRetainedInteraction),
+  };
+}
+
+export async function listRetainedInteractions(): Promise<RetainedInteraction[]> {
+  const response = await http.get<BackendRetainedInteraction[]>(
+    `${OBSERVABILITY_API_PREFIX}/trace-archive-retained`,
+    { skipErrorToast: true },
+  );
+  return response.data.map(mapRetainedInteraction);
 }
 
 type BackendArchiveJob = {
@@ -446,14 +569,10 @@ function mapArchiveJob(job: BackendArchiveJob): ArchiveJob {
   };
 }
 
-export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
+/** Submits an archive; progress is read back from the overview. */
+export async function createArchive(kind: ArchiveKind): Promise<void> {
   const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
-  const response = await http.post<BackendArchiveJob>(
-    `${OBSERVABILITY_API_PREFIX}/${resource}`,
-    {},
-    { skipErrorToast: true },
-  );
-  return mapArchiveJob(response.data);
+  await http.post(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { skipErrorToast: true });
 }
 
 export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> {
@@ -476,13 +595,13 @@ export async function downloadArchive(id: string): Promise<ArchiveDownload> {
   return { content: response.data, ...(fileName ? { fileName } : {}) };
 }
 
-export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
-  const response = await http.post<BackendArchiveJob>(
+/** Submits verified cleanup of one job; progress is read back from the overview. */
+export async function retryArchiveCleanup(id: string): Promise<void> {
+  await http.post(
     `${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`,
     {},
     { skipErrorToast: true },
   );
-  return mapArchiveJob(response.data);
 }
 
 function mapLogRecord(record: BackendLogRecord): LogRecord {

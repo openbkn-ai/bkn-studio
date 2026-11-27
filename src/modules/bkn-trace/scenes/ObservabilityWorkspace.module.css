@@ -229,9 +229,32 @@
   background: var(--color-interface-panel-bg);
   border: 1px solid var(--color-border);
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   justify-content: space-between;
   padding: 16px;
+}
+
+/* The description shrinks first so the action stays beside it at any width. */
+.archivePanel > div:first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Run status, alerts and hints sit on their own full-width line. */
+.archivePanel > .archiveRun,
+.archivePanel > :global(.ant-alert),
+.archivePanel > :global(.ant-typography-warning) {
+  flex-basis: 100%;
+}
+
+.archiveRun {
+  display: grid;
+  gap: 4px;
+}
+
+.archiveRun :global(.ant-progress) {
+  margin: 0;
 }
 
 .archiveGrid {

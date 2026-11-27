@@ -17,12 +17,15 @@ import { ObservabilitySettingsScene } from "@/modules/bkn-trace/scenes/Observabi
 import {
   createArchive,
   getArchiveOverview,
+  getArchiveRunResult,
   getLogDetail,
   listArchiveJobs,
+  listRetainedInteractions,
   listLogPolicies,
   listLogs,
   listLogSources,
   retryArchiveCleanup,
+  type ArchiveRun,
   type PublisherCollectionStatus,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
@@ -103,8 +106,10 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
     createArchive: vi.fn(),
     retryArchiveCleanup: vi.fn(),
     getArchiveOverview: vi.fn(),
+    getArchiveRunResult: vi.fn(),
     getLogDetail: vi.fn(),
     listArchiveJobs: vi.fn(),
+    listRetainedInteractions: vi.fn(),
     listLogPolicies: vi.fn(),
     listLogs: vi.fn(),
     listLogSources: vi.fn(),
@@ -164,6 +169,7 @@ describe("observability workspace scenes", () => {
         kind,
         retentionDays: kind === "log" ? 30 : 7,
         storageStatus: "unavailable",
+        retainedCount: 0,
       }),
     );
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
@@ -2093,6 +2099,121 @@ describe("observability workspace scenes", () => {
     ).not.toBeNull();
   });
 
+  const traceRun = (overrides: Partial<ArchiveRun>): ArchiveRun => ({
+    id: "arc_trace_1",
+    kind: "trace",
+    trigger: "archive",
+    status: "running",
+    eligibleAtStart: 10000,
+    processedCount: 3200,
+    retainedCount: 0,
+    batchCount: 2,
+    retryCount: 0,
+    createdAt: "2026-11-27T06:00:00Z",
+    ...overrides,
+  });
+  const overviewWithRun = (run?: ArchiveRun, retainedCount = 0) =>
+    vi.mocked(getArchiveOverview).mockImplementation((kind) =>
+      Promise.resolve({
+        candidateCount: kind === "trace" ? 6800 : 0,
+        cutoffAt: "2026-11-20T00:00:00Z",
+        kind,
+        retentionDays: kind === "log" ? 30 : 7,
+        storageStatus: "ready",
+        retainedCount: kind === "trace" ? retainedCount : 0,
+        ...(kind === "trace" && run ? { currentRun: run } : {}),
+      }),
+    );
+
+  it("后台归档进行中显示进度、禁用立即归档，并在完成后自动刷新", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      currentTranslate = (key, options) =>
+        key === "bknTrace.settings.archive.run.running"
+          ? `running ${String(options?.done)}/${String(options?.total)}`
+          : key === "bknTrace.settings.archive.run.completed"
+            ? `completed ${String(options?.archived)}`
+            : translate(key, options);
+      overviewWithRun(traceRun({}));
+      renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+      expect(await screen.findByText("running 3,200/10,000")).not.toBeNull();
+      const [, traceAction] = screen.getAllByRole("button", {
+        name: "bknTrace.settings.archive.action",
+      });
+      expect(traceAction).toBeDisabled();
+      expect(screen.queryByText("bknTrace.settings.archive.run.viewResult")).toBeNull();
+
+      // A transient polling failure keeps the last progress and polling continues.
+      vi.mocked(getArchiveOverview).mockRejectedValue(new Error("gateway timeout"));
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(getArchiveOverview).toHaveBeenCalledTimes(3));
+      expect(screen.getByText("running 3,200/10,000")).not.toBeNull();
+      expect(screen.queryByText("bknTrace.settings.archive.unavailable")).toBeNull();
+
+      overviewWithRun(traceRun({ status: "completed", processedCount: 10000 }));
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+        await Promise.resolve();
+      });
+      expect(await screen.findByText("completed 10,000")).not.toBeNull();
+      expect(screen.getByText("bknTrace.settings.archive.run.viewResult")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("等待重试时说明原因和下次时间，失败时说明原因", async () => {
+    currentTranslate = (key, options) =>
+      key === "bknTrace.settings.archive.run.retryWait"
+        ? `retry ${String(options?.reason)} ${String(options?.attempt)}`
+        : translate(key, options);
+    overviewWithRun(
+      traceRun({
+        status: "retry_wait",
+        retryCount: 2,
+        lastFailureCode: "temporarily_unavailable",
+        nextAttemptAt: "2026-11-27T06:20:00Z",
+      }),
+    );
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(
+      await screen.findByText(
+        "retry bknTrace.settings.archive.run.reasons.temporarily_unavailable 2",
+      ),
+    ).not.toBeNull();
+  });
+
+  it("完成但有超大交互保留时，可查看本次结果和保留列表", async () => {
+    const retained = {
+      interactionId: "itx_large",
+      runId: "arc_trace_1",
+      stage: "sql_payload",
+      measured: 12 * 1024 * 1024,
+      atLeast: false,
+      budget: 8 * 1024 * 1024,
+      unit: "bytes",
+      retainedAt: "2026-11-27T06:05:00Z",
+    };
+    const run = traceRun({ status: "completed", processedCount: 6799, retainedCount: 1 });
+    overviewWithRun(run, 1);
+    vi.mocked(getArchiveRunResult).mockResolvedValue({ ...run, retained: [retained] });
+    vi.mocked(listRetainedInteractions).mockResolvedValue([retained]);
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(
+      await screen.findByText("bknTrace.settings.archive.run.completedRetained"),
+    ).not.toBeNull();
+    fireEvent.click(screen.getByText("bknTrace.settings.archive.run.viewResult"));
+    expect(await screen.findByText("bknTrace.settings.archive.run.resultTitle")).not.toBeNull();
+    expect(await screen.findByText("itx_large")).not.toBeNull();
+    expect(getArchiveRunResult).toHaveBeenCalledWith("arc_trace_1");
+    fireEvent.click(screen.getByText("bknTrace.settings.archive.run.viewRetained"));
+    expect(await screen.findByText("bknTrace.settings.archive.run.retainedTitle")).not.toBeNull();
+    expect(listRetainedInteractions).toHaveBeenCalled();
+  });
+
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
     vi.mocked(getArchiveOverview).mockResolvedValueOnce({
       candidateCount: 1,
@@ -2100,6 +2221,7 @@ describe("observability workspace scenes", () => {
       kind: "log",
       retentionDays: 30,
       storageStatus: "ready",
+      retainedCount: 0,
     });
     vi.mocked(getArchiveOverview).mockResolvedValueOnce({
       candidateCount: 1,
@@ -2107,6 +2229,7 @@ describe("observability workspace scenes", () => {
       kind: "trace",
       retentionDays: 7,
       storageStatus: "ready",
+      retainedCount: 0,
     });
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
     renderWithoutAntdStyles(<ObservabilitySettingsScene />);
@@ -2131,6 +2254,7 @@ describe("observability workspace scenes", () => {
               kind,
               retentionDays: 30,
               storageStatus: "ready",
+              retainedCount: 0,
             }
           : {
               candidateCount: 1,
@@ -2138,6 +2262,7 @@ describe("observability workspace scenes", () => {
               kind,
               retentionDays: 7,
               storageStatus: "ready",
+              retainedCount: 0,
             },
       ),
     );
@@ -2164,13 +2289,7 @@ describe("observability workspace scenes", () => {
             ],
       ),
     );
-    vi.mocked(createArchive).mockResolvedValue({
-      id: "log-job",
-      kind: "log",
-      range: { from: "2026-07-01", to: "2026-07-15" },
-      candidateCount: 1,
-      status: "completed",
-    });
+    vi.mocked(createArchive).mockResolvedValue(undefined);
 
     renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     expect(await screen.findByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
@@ -2266,6 +2385,7 @@ describe("observability workspace scenes", () => {
         kind,
         retentionDays: 7,
         storageStatus: "ready",
+        retainedCount: 0,
       }),
     );
     vi.mocked(listArchiveJobs).mockRejectedValue(new Error("unavailable"));
@@ -2343,6 +2463,7 @@ describe("observability workspace scenes", () => {
         kind,
         retentionDays: 7,
         storageStatus: "ready",
+        retainedCount: 0,
       }),
     );
     const logJob = {
@@ -2402,6 +2523,7 @@ describe("observability workspace scenes", () => {
         kind,
         retentionDays: 7,
         storageStatus: "ready",
+        retainedCount: 0,
       }),
     );
     vi.mocked(listArchiveJobs).mockImplementation((kind) =>
