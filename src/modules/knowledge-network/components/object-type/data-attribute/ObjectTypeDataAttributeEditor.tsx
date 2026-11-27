@@ -125,6 +125,11 @@ type ObjectTypeDataAttributeEditorProps = {
   lockedProperties?: string[];
   /** The primary key stays as given: no property is added to or taken out of it here. */
   primaryKeyLocked?: boolean;
+  /**
+   * No property is added here, as for an object whose wording alone may change: the panel offers
+   * no way to add one. Absent, properties are added as usual.
+   */
+  addLocked?: boolean;
   onChange: (value: {
     dataProperties: ObjectTypeDataProperty[];
     dataSource?: ObjectTypeDataSource;
@@ -396,6 +401,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     readResourceFields,
     resourceFixed = false,
     lockedProperties,
+    addLocked = false,
     primaryKeyLocked = false,
   },
   ref,
@@ -1057,14 +1063,18 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   };
 
   const handlePickAttributes = (fieldNames: string[]) => {
+    // A field a property already reads, by its name or its mapping, is not added twice.
     const existingNames = new Set(dataProperties.map((item) => item.name));
+    const mappedFields = new Set(dataProperties.map((item) => item.mappedField?.name).filter(Boolean));
     const pickedFields = viewFields.filter((item) => fieldNames.includes(item.name));
     const nextProperties = [...dataProperties];
+    let added = 0;
 
     pickedFields.forEach((field) => {
-      if (existingNames.has(field.name)) {
+      if (existingNames.has(field.name) || mappedFields.has(field.name)) {
         return;
       }
+      added += 1;
 
       nextProperties.push({
         displayKey: false,
@@ -1081,8 +1091,14 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       });
     });
 
-    updateProperties(nextProperties);
     setPickModalOpen(false);
+    if (!added) {
+      // Nothing added is said, with why, rather than closing as if it had worked.
+      void message.info(t("knowledgeNetwork.objectTypeSyncNothingAdded"));
+      return;
+    }
+    updateProperties(nextProperties);
+    void message.success(t("knowledgeNetwork.objectTypeSyncAdded", { count: added }));
   };
 
   const handleClearAllProperties = useCallback(() => {
@@ -1188,19 +1204,33 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [handleViewPanelMenuClick, viewPanelMenu],
   );
 
+  // A new property reads a field of the resource: with every field read already, none can be
+  // added, said where it would be added rather than when saving.
+  const allFieldsMapped =
+    Boolean(selectedViewId) &&
+    viewFields.length > 0 &&
+    viewFields.every((field) =>
+      dataProperties.some(
+        (property) => property.mappedField?.name === field.name || property.name === field.name,
+      ),
+    );
   const dataPanelAddMenu = useMemo<MenuProps["items"]>(
     () => [
       {
+        disabled: allFieldsMapped,
         key: "add",
         label: t("knowledgeNetwork.objectTypeManualCreateProperty"),
       },
       {
-        disabled: !selectedViewId,
+        disabled: !selectedViewId || allFieldsMapped,
         key: "pick",
         label: t("knowledgeNetwork.objectTypeSyncResourceFields"),
       },
+      ...(allFieldsMapped
+        ? [{ disabled: true, key: "allMapped", label: t("knowledgeNetwork.objectTypeAllFieldsMapped") }]
+        : []),
     ],
-    [selectedViewId, t],
+    [allFieldsMapped, selectedViewId, t],
   );
 
   const handleDataPanelAddMenuClick = useCallback(({ key }: { key: string }) => {
@@ -1627,9 +1657,14 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                   <span className={styles.panelCount}>{validProperties.length}</span>
                 </div>
                 <div className={styles.panelActions}>
-                  <Dropdown menu={dataPanelAddMenuConfig} trigger={["click"]}>
-                    <PlusOutlined className={styles.panelActionIcon} />
-                  </Dropdown>
+                  {addLocked ? null : (
+                    <Dropdown menu={dataPanelAddMenuConfig} trigger={["click"]}>
+                      <PlusOutlined
+                        aria-label={t("knowledgeNetwork.objectTypeAddDataProperty")}
+                        className={styles.panelActionIcon}
+                      />
+                    </Dropdown>
+                  )}
                   <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
                     <EllipsisOutlined className={styles.panelActionIcon} />
                   </Dropdown>

@@ -389,6 +389,9 @@ export const objecttypePart = {
   objectTypeSmartMatchingConnection: "Smart matching connections",
   objectTypesTitle: "Object types",
   objectTypeSyncResourceFields: "Sync resource fields",
+  objectTypeSyncNothingAdded: "Every field chosen already has a property; nothing was added.",
+  objectTypeSyncAdded: "Added {{count}} properties.",
+  objectTypeAllFieldsMapped: "Every field of the resource has a property; there is no field to add.",
   objectTypeToolbarHint: "This slice covers list, create, edit, and delete for object types first.",
   objectTypeUnsavedLeaveDescription:
     "Your changes have not been saved. Are you sure you want to leave?",

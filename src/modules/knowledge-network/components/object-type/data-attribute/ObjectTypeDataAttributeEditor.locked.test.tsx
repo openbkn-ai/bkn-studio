@@ -106,7 +106,7 @@ const fields = [
   { displayName: "Note", name: "note", type: "string" },
 ];
 
-function render(locks: { lockedProperties?: string[]; primaryKeyLocked?: boolean }) {
+function render(locks: { addLocked?: boolean; lockedProperties?: string[]; primaryKeyLocked?: boolean }) {
   const onChange = vi.fn();
   renderWithoutAntdStyles(
     <ObjectTypeDataAttributeEditor
@@ -166,5 +166,20 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     expect(row("Customer").getByLabelText("delete")).toBeInTheDocument();
     expect(row("Customer").getByLabelText("disconnect")).toBeInTheDocument();
     expect(row("Note").getByLabelText("book")).toBeInTheDocument();
+  });
+
+  it("offers no way to add a property where only the wording may change", async () => {
+    render({ addLocked: true });
+    await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+    expect(screen.queryByLabelText("knowledgeNetwork.objectTypeAddDataProperty")).toBeNull();
+  });
+
+  it("says before adding that every field has a property, and offers no add that saving would refuse", async () => {
+    render({});
+    await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeAddDataProperty"));
+    expect(await screen.findByText("knowledgeNetwork.objectTypeAllFieldsMapped")).toBeInTheDocument();
+    const add = screen.getByText("knowledgeNetwork.objectTypeManualCreateProperty").closest("li");
+    expect(add).toHaveAttribute("aria-disabled", "true");
   });
 });
