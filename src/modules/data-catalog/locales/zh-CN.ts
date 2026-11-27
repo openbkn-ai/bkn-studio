@@ -783,7 +783,7 @@ export const dataCatalogZhCN = {
       fixedFilterSourceUnknown: "无法确认该视图的固定过滤是否支持原始数据查询，暂不可切换。",
       loadBinaryContent: "读取 Binary 内容",
       dataSourceIndex: "来源：本地索引",
-      indexPageLimit: "共 {{total}} 条，本地索引当前仅可预览前 {{limit}} 条。",
+      indexPageLimit: "共 {{total}} 条，最多可预览前 {{limit}} 条。",
       dataSourceOriginal: "来源：原始数据源",
       noQueryPermission: "没有查看数据的权限",
       sourceReadForbidden: "数据源账号无法读取 {{source}} 的数据",

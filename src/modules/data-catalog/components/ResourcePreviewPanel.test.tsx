@@ -61,14 +61,19 @@ vi.mock("@/framework/context/use-app-services", () => ({
 vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
   TablePaginationBar: ({
     total,
+    pageSize,
     onChange,
   }: {
     total: number;
+    pageSize: number;
     onChange: (page: number, size: number) => void;
   }) => (
     <>
       <span data-testid="pagination-total">{total}</span>
       <button onClick={() => onChange(2, 10)}>next-test-page</button>
+      <button onClick={() => onChange(Math.floor(total / pageSize), pageSize)}>
+        last-full-test-page
+      </button>
     </>
   ),
 }));
@@ -1824,6 +1829,134 @@ describe("ResourcePreviewPanel", () => {
     );
   });
 
+  it("shows rows and an unknown total for an ordinary resource preview", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      querySource: "source",
+      rows: [{ id: 123 }],
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByRole("cell", { name: "123" })).toBeVisible();
+    expect(screen.getByText(/dataCatalog\.apiResource\.unknown/)).toBeVisible();
+    expect(screen.queryByTestId("pagination-total")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" })).toBeDisabled();
+  });
+
+  it("can read another ordinary preview page with an unknown total and return from an empty page", async () => {
+    const firstPage = {
+      querySource: "source",
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: 101 + index })),
+    };
+    previewCatalogResourceMock
+      .mockReset()
+      .mockImplementation((_id: string, { offset }: { offset: number }) =>
+        Promise.resolve(offset === 0 ? firstPage : { querySource: "source", rows: [] }),
+      );
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByRole("cell", { name: "101" })).toBeVisible();
+    const next = screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" });
+    const previous = screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" });
+    expect(previous).toBeDisabled();
+    expect(next).toBeEnabled();
+    fireEvent.click(next);
+
+    expect(await screen.findByText("dataCatalog.preview.empty")).toBeVisible();
+    expect(screen.getByText(/dataCatalog\.apiResource\.unknown/)).toBeVisible();
+    expect(next).toBeDisabled();
+    expect(previous).toBeEnabled();
+    fireEvent.click(previous);
+
+    expect(await screen.findByRole("cell", { name: "101" })).toBeVisible();
+    expect(previewCatalogResourceMock.mock.calls).toEqual([
+      [resource.id, { limit: 10, offset: 0 }],
+      [resource.id, { limit: 10, offset: 10 }],
+      [resource.id, { limit: 10, offset: 0 }],
+    ]);
+  });
+
+  it("reloads the first ordinary preview page when an empty continuation reports a smaller total", async () => {
+    const firstPage = {
+      querySource: "source",
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: 101 + index })),
+    };
+    previewCatalogResourceMock
+      .mockReset()
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce({ querySource: "source", rows: [], total: 10 })
+      .mockResolvedValueOnce({ ...firstPage, total: 10 });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByRole("cell", { name: "101" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" }));
+
+    expect(await screen.findByTestId("pagination-total")).toHaveTextContent("10");
+    expect(screen.getByRole("cell", { name: "101" })).toBeVisible();
+    expect(previewCatalogResourceMock.mock.calls).toEqual([
+      [resource.id, { limit: 10, offset: 0 }],
+      [resource.id, { limit: 10, offset: 10 }],
+      [resource.id, { limit: 10, offset: 0 }],
+    ]);
+  });
+
+  it("keeps an ordinary preview page visible and retries its failed continuation", async () => {
+    previewCatalogResourceMock
+      .mockReset()
+      .mockResolvedValueOnce({
+        querySource: "source",
+        rows: Array.from({ length: 10 }, (_, index) => ({ id: 101 + index })),
+      })
+      .mockRejectedValueOnce(new Error("preview continuation failed"))
+      .mockResolvedValueOnce({ querySource: "source", rows: [{ id: 201 }] });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    expect(await screen.findByRole("cell", { name: "101" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" }));
+    expect(await screen.findByText("preview continuation failed")).toBeVisible();
+    expect(screen.getByRole("cell", { name: "101" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }),
+    ).toBeDisabled();
+    expect(screen.getByText(/dataCatalog\.apiResource\.unknown/)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+
+    expect(await screen.findByRole("cell", { name: "201" })).toBeVisible();
+    expect(screen.queryByText("preview continuation failed")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.apiResource.previousPage" }),
+    ).toBeEnabled();
+    expect(previewCatalogResourceMock.mock.calls).toEqual([
+      [resource.id, { limit: 10, offset: 0 }],
+      [resource.id, { limit: 10, offset: 10 }],
+      [resource.id, { limit: 10, offset: 10 }],
+    ]);
+  });
+
   it("uses the exact filtered total when the result fills one page", async () => {
     previewCatalogResourceMock.mockResolvedValue({
       rows: Array.from({ length: 10 }, (_, index) => ({ id: index + 1 })),
@@ -2443,6 +2576,70 @@ describe("ResourcePreviewPanel", () => {
     expect(await screen.findByTestId("pagination-total")).toHaveTextContent("10000");
     expect(screen.getByText("dataCatalog.preview.indexPageLimit")).toBeTruthy();
   });
+
+  it.each([
+    { name: "table", previewResource: resource, querySource: "local_index", pageSize: 10 },
+    { name: "table", previewResource: resource, querySource: "local_index", pageSize: 7 },
+    {
+      name: "native index",
+      previewResource: { ...resource, category: "index" },
+      querySource: "source",
+      pageSize: 10,
+    },
+    {
+      name: "dataset",
+      previewResource: { ...resource, category: "dataset" },
+      querySource: "source",
+      pageSize: 10,
+    },
+    {
+      name: "native-index view",
+      previewResource: { ...tableView, sourceMetadata: { sourceCategory: "index" } },
+      querySource: "source",
+      pageSize: 10,
+    },
+  ] as const)(
+    "bounds $name preview paging on $querySource with page size $pageSize",
+    async ({ previewResource, querySource, pageSize }) => {
+      const rows = Array.from({ length: pageSize }, (_, id) => ({ id: 101 + id }));
+      previewCatalogResourceMock
+        .mockReset()
+        .mockImplementation((_id: string, { offset }: { offset: number }) =>
+          Promise.resolve({
+            querySource,
+            rows,
+            ...(offset === 0 ? { total: 12000 } : {}),
+          }),
+        );
+      render(
+        <ResourcePreviewPanel
+          active
+          initialPageSize={pageSize}
+          resource={{
+            ...previewResource,
+            rowCount: 12000,
+            schema: [{ name: "id", type: "integer" }],
+          }}
+        />,
+      );
+
+      fireEvent.click(await screen.findByRole("button", { name: "last-full-test-page" }));
+      expect(await screen.findByText(/dataCatalog\.apiResource\.unknown/)).toBeVisible();
+      expect(screen.queryByText("dataCatalog.preview.indexPageLimit")).not.toBeInTheDocument();
+      const previous = screen.getByRole("button", {
+        name: "dataCatalog.apiResource.previousPage",
+      });
+      const next = screen.getByRole("button", { name: "dataCatalog.apiResource.nextPage" });
+      expect(previous).toBeEnabled();
+      expect(next).toBeDisabled();
+      fireEvent.click(next);
+      expect(previewCatalogResourceMock).toHaveBeenNthCalledWith(2, previewResource.id, {
+        limit: pageSize,
+        offset: (Math.floor(10000 / pageSize) - 1) * pageSize,
+      });
+      expect(previewCatalogResourceMock).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("keeps source preview pages accessible beyond the index result window", async () => {
     previewCatalogResourceMock.mockResolvedValue({ querySource: "source", rows: [], total: 12000 });

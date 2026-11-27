@@ -50,9 +50,7 @@ import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resour
 
 import styles from "./ResourcePreviewPanel.module.css";
 
-/** Display data may omit a total when the API response does not provide one. */
-export type ResourcePreviewData = Omit<ResourcePreviewResult, "total"> & {
-  total?: ResourcePreviewResult["total"];
+export type ResourcePreviewData = ResourcePreviewResult & {
   warnings?: unknown[];
 };
 
@@ -335,19 +333,26 @@ function ResourcePreviewContent({
           limit: nextLimit,
           offset: nextOffset,
         };
-        let data = loadPreview
-          ? await loadPreview(resource.id, query, controller.signal)
-          : await previewCatalogResource(resource.id, query);
+        const readPage = (pageQuery: ResourcePreviewQuery) =>
+          loadPreview
+            ? loadPreview(resource.id, pageQuery, controller.signal)
+            : previewCatalogResource(resource.id, pageQuery);
+        let data = await readPage(query);
         if (requestVersion !== requestVersionRef.current) {
           return;
         }
-        if (loadPreview && targetPage !== undefined && nextOffset > 0 && data.total !== undefined) {
+        if (
+          targetPage !== undefined &&
+          nextOffset > 0 &&
+          data.total !== undefined &&
+          (isApiResource || data.rows.length === 0)
+        ) {
           const total = resourceCountAsBigInt(data.total);
           if (BigInt(nextOffset) >= total) {
             targetPage = 1;
             // The first page also stays in range if the source shrinks again.
             if (total > 0n) {
-              data = await loadPreview(resource.id, { ...query, offset: 0 }, controller.signal);
+              data = await readPage({ ...query, offset: 0 });
               if (requestVersion !== requestVersionRef.current) return;
             } else {
               data = { ...data, rows: [] };
@@ -583,9 +588,20 @@ function ResourcePreviewContent({
   const total = apiPagingEnabled
     ? resourceCountForPagination(backendTotal)
     : resourceCountForPagination(backendTotal, fetched, totalUnreliable ? resource.rowCount : null);
+  const usesIndexPaging =
+    result?.querySource === "local_index" ||
+    resource.category === "index" ||
+    resource.category === "dataset" ||
+    (isDerivedView && resource.sourceMetadata?.sourceCategory === "index");
   const indexWindowLimited =
-    result?.querySource === "local_index" && total > INDEX_PREVIEW_PAGE_LIMIT;
+    usesIndexPaging && result?.total !== undefined && total > INDEX_PREVIEW_PAGE_LIMIT;
   const paginationTotal = indexWindowLimited ? INDEX_PREVIEW_PAGE_LIMIT : total;
+  const unknownTotalPagingEnabled = !isApiResource || apiPagingEnabled;
+  const nextPageExceedsIndexWindow =
+    usesIndexPaging && offset + 2 * pageSize > INDEX_PREVIEW_PAGE_LIMIT;
+  const canReadNextPage = isApiResource
+    ? !isEmptyPage
+    : rows.length === pageSize && !nextPageExceedsIndexWindow;
   const showTotal = (count: number) =>
     t("common.total", { total: apiPagingEnabled ? backendTotal : count });
   const columns = resource.schema;
@@ -594,14 +610,7 @@ function ResourcePreviewContent({
     const resolvedPageSize = nextPageSize || pageSize;
     const resolvedPage = resolvedPageSize !== pageSize ? 1 : nextPage;
     const nextOffset = (resolvedPage - 1) * resolvedPageSize;
-
-    if (isApiResource) {
-      void load(nextOffset, resolvedPageSize, resolvedPage);
-      return;
-    }
-    setPage(resolvedPage);
-    setPageSize(resolvedPageSize);
-    void load(nextOffset, resolvedPageSize);
+    void load(nextOffset, resolvedPageSize, resolvedPage);
   };
 
   const failedPage = error?.retryPage;
@@ -942,20 +951,20 @@ function ResourcePreviewContent({
           <span>
             {t("dataCatalog.apiResource.total")}: {t("dataCatalog.apiResource.unknown")}
           </span>
-          {apiPagingEnabled ? (
+          {unknownTotalPagingEnabled ? (
             <div className={styles.unknownPaginationStatus} role="status">
               <span>{t("dataCatalog.apiResource.currentPage", { page })}</span>
               {isEmptyPage ? <span>{t("dataCatalog.apiResource.endOfResults")}</span> : null}
             </div>
           ) : null}
           <Button
-            disabled={loading || !apiPagingEnabled || page === 1}
+            disabled={loading || !unknownTotalPagingEnabled || page === 1}
             onClick={() => handlePaginationChange(page - 1, pageSize)}
           >
             {t("dataCatalog.apiResource.previousPage")}
           </Button>
           <Button
-            disabled={loading || !apiPagingEnabled || isEmptyPage}
+            disabled={loading || !unknownTotalPagingEnabled || !canReadNextPage}
             onClick={() => handlePaginationChange(page + 1, pageSize)}
           >
             {t("dataCatalog.apiResource.nextPage")}
