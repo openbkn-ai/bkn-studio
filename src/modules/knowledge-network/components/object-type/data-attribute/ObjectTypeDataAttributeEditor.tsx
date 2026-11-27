@@ -126,8 +126,8 @@ type ObjectTypeDataAttributeEditorProps = {
   /** The primary key stays as given: no property is added to or taken out of it here. */
   primaryKeyLocked?: boolean;
   /**
-   * No property is added here, as for an object whose wording alone may change: the panel offers
-   * no way to add one. Absent, properties are added as usual.
+   * No property is added or removed here, as for an object whose wording alone may change: the
+   * panel offers no way to add one, nor to clear them all. Absent, properties are added as usual.
    */
   addLocked?: boolean;
   /**
@@ -447,6 +447,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const validProperties = useMemo(() => normalizeProperties(dataProperties), [dataProperties]);
   const lockedNames = useMemo(() => new Set(lockedProperties ?? []), [lockedProperties]);
+  // A property stays where the host keeps it, or where only the wording may change: neither its
+  // row nor "clear all" removes it.
+  const removeLocked = (name: string) => addLocked || lockedNames.has(name);
   const descriptionFillCandidates = useMemo(
     () => buildDescriptionFillCandidates(dataProperties, viewFields),
     [dataProperties, viewFields],
@@ -1266,6 +1269,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [dataPanelAddMenu, handleDataPanelAddMenuClick],
   );
 
+  // Clearing removes only what may be removed: where every property stays, nothing would go. Said
+  // where it would be cleared.
+  const clearLocked =
+    dataProperties.length > 0 && dataProperties.every((property) => removeLocked(property.name));
   const dataPanelMoreMenu = useMemo<MenuProps["items"]>(
     () => [
       {
@@ -1276,12 +1283,22 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         type: "divider",
       },
       {
-        danger: true,
+        danger: !clearLocked,
+        disabled: clearLocked,
         key: "clearAll",
         label: t("knowledgeNetwork.objectTypeClearAllProperties"),
       },
+      ...(clearLocked
+        ? [
+            {
+              disabled: true,
+              key: "clearLocked",
+              label: t("knowledgeNetwork.objectTypeClearAllLocked"),
+            },
+          ]
+        : []),
     ],
-    [t],
+    [clearLocked, t],
   );
 
   const handleDataPanelMoreMenuClick = useCallback(
@@ -1681,7 +1698,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                     </Dropdown>
                   )}
                   <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
-                    <EllipsisOutlined className={styles.panelActionIcon} />
+                    <EllipsisOutlined
+                      aria-label={t("knowledgeNetwork.objectTypeMorePropertyActions")}
+                      className={styles.panelActionIcon}
+                    />
                   </Dropdown>
                 </div>
               </div>
@@ -1832,10 +1852,22 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                     />
                                   </Tooltip>
                                 ) : null}
-                                {lockedNames.has(property.name) ? (
-                                  <Tooltip title={t("knowledgeNetwork.objectTypePropertyLocked")}>
+                                {removeLocked(property.name) ? (
+                                  // A property the host keeps says what stays; one kept only as
+                                  // wording alone may change says it cannot be removed.
+                                  <Tooltip
+                                    title={t(
+                                      lockedNames.has(property.name)
+                                        ? "knowledgeNetwork.objectTypePropertyLocked"
+                                        : "knowledgeNetwork.objectTypePropertyKept",
+                                    )}
+                                  >
                                     <LockOutlined
-                                      aria-label={t("knowledgeNetwork.objectTypePropertyLocked")}
+                                      aria-label={t(
+                                        lockedNames.has(property.name)
+                                          ? "knowledgeNetwork.objectTypePropertyLocked"
+                                          : "knowledgeNetwork.objectTypePropertyKept",
+                                      )}
                                       className={styles.rowActionIcon}
                                     />
                                   </Tooltip>

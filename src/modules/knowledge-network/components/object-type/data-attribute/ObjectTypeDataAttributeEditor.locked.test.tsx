@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/object-type";
@@ -16,10 +16,11 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+const confirmMock = vi.hoisted(() => vi.fn());
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
-    modal: { confirm: vi.fn() },
+    modal: { confirm: confirmMock },
   }),
 }));
 
@@ -177,6 +178,47 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     render({ addLocked: true });
     await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
     expect(screen.queryByLabelText("knowledgeNetwork.objectTypeAddDataProperty")).toBeNull();
+  });
+
+  it("offers no clearing where only the wording may change, or where every property is kept, and says why", async () => {
+    for (const locks of [{ addLocked: true }, { lockedProperties: ["customer_id", "note"] }]) {
+      const view = render(locks);
+      await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+      fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeMorePropertyActions"));
+      expect(
+        await screen.findByText("knowledgeNetwork.objectTypeClearAllLocked"),
+      ).toBeInTheDocument();
+      const clear = screen.getByText("knowledgeNetwork.objectTypeClearAllProperties").closest("li");
+      expect(clear).toHaveAttribute("aria-disabled", "true");
+      confirmMock.mockClear();
+      fireEvent.click(clear!);
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(view).not.toHaveBeenCalled();
+      // No row removes a property either.
+      expect(row("Customer").queryByLabelText("delete")).toBeNull();
+      expect(row("Note").queryByLabelText("delete")).toBeNull();
+      // A row kept only because wording alone may change says only that it cannot be removed.
+      if (locks.addLocked) {
+        expect(
+          row("Note").getByLabelText("knowledgeNetwork.objectTypePropertyKept"),
+        ).toBeInTheDocument();
+      }
+      cleanup();
+    }
+  });
+
+  it("still clears what may be removed", async () => {
+    render({ lockedProperties: ["customer_id"] });
+    await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeMorePropertyActions"));
+    const clear = (
+      await screen.findByText("knowledgeNetwork.objectTypeClearAllProperties")
+    ).closest("li");
+    expect(clear).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("knowledgeNetwork.objectTypeClearAllLocked")).toBeNull();
+    confirmMock.mockClear();
+    fireEvent.click(clear!);
+    expect(confirmMock).toHaveBeenCalledTimes(1);
   });
 
   it("says before adding that every field has a property, and offers no add that saving would refuse", async () => {
