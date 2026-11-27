@@ -6,6 +6,7 @@
  */
 
 .scene {
+  container-type: inline-size;
   display: grid;
   gap: 32px;
   padding: 4px 0 40px;
@@ -210,6 +211,34 @@
 .planFeats .planFeatDetail li {
   display: list-item;
   line-height: 1.5;
+}
+
+@container (min-width: 1040px) {
+  .planGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr) minmax(0, 1fr);
+  }
+
+  .planFeatured .planFeats {
+    display: block;
+    column-count: 2;
+    column-gap: 24px;
+    column-rule: 1px solid var(--admin-color-border);
+  }
+
+  .planFeatured .planFeats > li {
+    break-inside: avoid;
+    margin-block-end: 8px;
+  }
+
+  .planFeatured .planFeats > li:first-child {
+    column-span: all;
+    margin-block-end: 12px;
+  }
+
+  .plan .actions {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 156px), 1fr));
+  }
 }
 
 .tick {
