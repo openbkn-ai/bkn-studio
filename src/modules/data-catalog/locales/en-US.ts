@@ -844,8 +844,7 @@ export const dataCatalogEnUS = {
         "This view's fixed filter cannot be confirmed to support original data queries. Switching is unavailable.",
       loadBinaryContent: "Load binary content",
       dataSourceIndex: "Source: local index",
-      indexPageLimit:
-        "{{total}} rows total. Only the first {{limit}} can be previewed from the local index.",
+      indexPageLimit: "{{total}} rows total. Preview is limited to the first {{limit}} rows.",
       dataSourceOriginal: "Source: original data",
       noQueryPermission: "No permission to read this data",
       sourceReadForbidden: "The data source account cannot read data for {{source}}",

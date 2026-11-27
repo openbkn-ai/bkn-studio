@@ -127,6 +127,25 @@ describe("resource.service · previewCatalogResource", () => {
     expect(result).toEqual({ querySource: "local_index", rows: [{ id: "r-1" }], total: 42 });
   });
 
+  it("keeps rows when the preview total is unavailable", async () => {
+    postMock.mockResolvedValue({ data: { query_source: "source", entries: [{ id: "r-1" }] } });
+    const { previewCatalogResource } = await import("./resource.service");
+
+    const result = await previewCatalogResource("r-1", { limit: 10, offset: 0 });
+
+    expect(result).toEqual({ querySource: "source", rows: [{ id: "r-1" }] });
+    expect(result).not.toHaveProperty("total");
+  });
+
+  it("preserves a known zero preview total", async () => {
+    postMock.mockResolvedValue({ data: { query_source: "source", entries: [], total_count: 0 } });
+    const { previewCatalogResource } = await import("./resource.service");
+
+    const result = await previewCatalogResource("r-1", { limit: 10, offset: 0 });
+
+    expect(result).toEqual({ querySource: "source", rows: [], total: 0 });
+  });
+
   it("sends a preview filter with the query without persisting it", async () => {
     postMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
     const { previewCatalogResource } =
