@@ -977,26 +977,40 @@ function RetainedTable({ load }: { load: (offset: number) => Promise<RetainedPag
   const [page, setPage] = useState(1);
   const [data, setData] = useState<RetainedPage>();
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     setFailed(false);
+    setLoading(true);
     load((page - 1) * RETAINED_PAGE_SIZE)
       .then((value) => {
         if (active) setData(value);
       })
       .catch(() => {
         if (active) setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [load, page]);
-  if (failed) {
-    return (
-      <Alert message={t("bknTrace.settings.archive.run.loadFailed")} showIcon type="warning" />
-    );
-  }
-  if (!data) return <Spin />;
+  }, [attempt, load, page]);
+  const failure = failed ? (
+    <Alert
+      action={
+        <Button size="small" onClick={() => setAttempt((value) => value + 1)}>
+          {t("bknTrace.settings.archive.run.retryLoad")}
+        </Button>
+      }
+      message={t("bknTrace.settings.archive.run.loadFailed")}
+      showIcon
+      type="warning"
+    />
+  ) : null;
+  // Before any page has loaded there is no table to keep.
+  if (!data) return failure ?? <Spin />;
   const limits = new Set(data.items.map((item) => `${item.budget}:${item.unit}`));
   const shared = limits.size === 1 ? data.items[0] : undefined;
   const columns: ColumnsType<RetainedInteraction> = [
@@ -1031,6 +1045,7 @@ function RetainedTable({ load }: { load: (offset: number) => Promise<RetainedPag
   ];
   return (
     <>
+      {failure}
       {shared ? (
         <Typography.Paragraph type="secondary">
           {t("bknTrace.settings.archive.run.allOverLimit", {
@@ -1041,6 +1056,7 @@ function RetainedTable({ load }: { load: (offset: number) => Promise<RetainedPag
       <Table
         columns={columns}
         dataSource={data.items}
+        loading={loading}
         pagination={{
           current: page,
           pageSize: RETAINED_PAGE_SIZE,

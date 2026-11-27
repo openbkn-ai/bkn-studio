@@ -1103,6 +1103,7 @@ export const bknTraceZhCN = {
           viewRetained: "查看",
           retainedTitle: "保留在线的超大交互",
           loadFailed: "暂时无法读取，请稍后重试。",
+          retryLoad: "重试",
           none: "无",
           atLeast: "至少 {{size}}",
           justOver: "略超 {{size}}",

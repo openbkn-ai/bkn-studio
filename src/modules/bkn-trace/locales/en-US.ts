@@ -1168,6 +1168,7 @@ export const bknTraceEnUS = {
           viewRetained: "View",
           retainedTitle: "Oversized interactions kept online",
           loadFailed: "Could not load this. Try again later.",
+          retryLoad: "Retry",
           none: "None",
           atLeast: "At least {{size}}",
           justOver: "Just over {{size}}",

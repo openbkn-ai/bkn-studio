@@ -2234,7 +2234,12 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText(`just over ${formatFileSize(8 * 1024 * 1024)}`)).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.archive.run.allOverLimit")).not.toBeNull();
     expect(screen.queryByText("bknTrace.settings.archive.run.columns.reason")).toBeNull();
+    // A failed page keeps the table and pager, and can be retried.
+    vi.mocked(listRunRetainedInteractions).mockRejectedValueOnce(new Error("timeout"));
     fireEvent.click(screen.getByTitle("2"));
+    expect(await screen.findByText("bknTrace.settings.archive.run.loadFailed")).not.toBeNull();
+    expect(screen.getByTitle("1")).not.toBeNull();
+    fireEvent.click(screen.getByText("bknTrace.settings.archive.run.retryLoad"));
     expect(await screen.findByText("itx_22")).not.toBeNull();
     expect(listRunRetainedInteractions).toHaveBeenLastCalledWith("arc_trace_1", 20);
     fireEvent.click(screen.getByText("bknTrace.settings.archive.run.viewRetained"));
