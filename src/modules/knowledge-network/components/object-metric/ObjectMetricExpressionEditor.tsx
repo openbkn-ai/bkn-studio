@@ -67,6 +67,7 @@ type Props = {
   path?: string;
   onChange: (value: ObjectMetricExpressionV1) => void;
   properties: ObjectMetricExpressionPropertyOption[];
+  requiresDependencyReference?: boolean;
   requiresPropertyReference?: boolean;
   value: ObjectMetricExpressionV1;
 };
@@ -135,6 +136,7 @@ export function ObjectMetricExpressionEditor({
   path = "specification.expression",
   onChange,
   properties,
+  requiresDependencyReference = false,
   requiresPropertyReference = false,
   value,
 }: Props) {
@@ -157,7 +159,18 @@ export function ObjectMetricExpressionEditor({
     ...(dependencyAliases.length
       ? [{ label: objectMetricText("ma6ace5b29ab9"), value: "dependency" }]
       : []),
-    ...(!isAtomicRoot ? [{ label: objectMetricText("m7dc406c92803"), value: "literal" }] : []),
+    ...(!isAtomicRoot
+      ? [
+          {
+            label: objectMetricText("m7dc406c92803"),
+            value: "literal",
+            disabled: requiresDependencyReference,
+            title: requiresDependencyReference
+              ? objectMetricText("compositeRootConstantUnavailable")
+              : undefined,
+          },
+        ]
+      : []),
     { label: objectMetricText("m1832990660bb"), value: "call" },
     { label: objectMetricText("m266eedd2b0da"), value: "unary" },
     ...(depth < 5 ? [{ label: objectMetricText("me4b5641e465c"), value: "binary" }] : []),

@@ -279,7 +279,7 @@ export const objectMetricV1Part = {
   m20fcf2eb775f: "Categorical value",
   m21179deb9a74: "count",
   m21302c2230d1:
-    "The dependent metric referenced by the formula has been deleted and the formula has been reinitialized.",
+    "A dependency used in the formula was removed. Update its references in the formula.",
   m21df9ab9af30: "The business filter format is incomplete and has been skipped",
   m21f55b7680c9: "Relational path not used",
   m21fb1b3e9a3a: "Please select the judgment field first",
@@ -670,6 +670,8 @@ export const objectMetricV1Part = {
   m7d9782471028: "Reading dependent metrics · v{{p0}} (formula symbol: {{p1}})",
   m7da337decf29: "Please select a metric value type",
   m7dc406c92803: "constant",
+  compositeRootConstantUnavailable:
+    "The formula must reference its configured dependencies. Constants are only available inside the formula.",
   m7dee984d9d2c: "Query and analysis capabilities",
   m7ea9fbba115d: "read directly",
   m7eb336e42cb5: "automatic",

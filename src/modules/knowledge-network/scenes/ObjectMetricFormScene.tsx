@@ -1189,9 +1189,6 @@ function expressionReferencesDependencyAlias(
 function defaultCompositeExpression(
   dependencies: ObjectMetricDependencyV1[],
 ): ObjectMetricExpressionV1 {
-  if (dependencies.length < 2) {
-    return { node_type: "literal", value: 0, value_type: "decimal" };
-  }
   return {
     left: { dependency_alias: dependencies[0].alias, node_type: "dependency" },
     node_type: "binary",
@@ -1199,6 +1196,12 @@ function defaultCompositeExpression(
     right: { dependency_alias: dependencies[1].alias, node_type: "dependency" },
   };
 }
+
+const emptyCompositeExpression: ObjectMetricExpressionV1 = {
+  node_type: "literal",
+  value: 0,
+  value_type: "decimal",
+};
 
 function dependencyFilterContext(
   mode: "inherit" | "remove_dimension_filter",
@@ -1437,11 +1440,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
     ObjectMetricExpressionPropertyOption[]
   >([]);
   const [dependencies, setDependencies] = useState<ObjectMetricDependencyV1[]>([]);
-  const [compositeExpression, setCompositeExpression] = useState<ObjectMetricExpressionV1>({
-    node_type: "literal",
-    value: 0,
-    value_type: "decimal",
-  });
+  const [configuredCompositeExpression, setCompositeExpression] =
+    useState<ObjectMetricExpressionV1>();
+  const compositeExpression = configuredCompositeExpression ?? emptyCompositeExpression;
   const [formValidationIssueCount, setFormValidationIssueCount] = useState(0);
   const [validation, setValidation] = useState<ObjectMetricValidationResultV1>();
   const [validationDefinition, setValidationDefinition] = useState<ObjectMetricDefinitionV1>();
@@ -1470,7 +1471,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
   }>();
   const aiTrialRequestedRef = useRef(false);
   const aiTrialSnapshotRef = useRef<{ snapshot: string; formRevision: string } | null>(null);
-  const aiSkipCompositeDefaultRef = useRef(false);
   const skipLoadedCompositeInferenceRef = useRef(false);
   const compositeInferenceInputsRef = useRef<string | undefined>(undefined);
   const [compositeResultInference, setCompositeResultInference] =
@@ -1853,7 +1853,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
         ];
       });
       if (intent.composite.dependencies) {
-        aiSkipCompositeDefaultRef.current = true;
         setDependencies(nextDependencies);
       }
       if (intent.composite.expression) {
@@ -1867,7 +1866,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
           new Set(expressionDependencies.map((item) => item.alias)),
         );
         if (nextExpression) {
-          aiSkipCompositeDefaultRef.current = true;
           setCompositeExpression(nextExpression);
         }
       }
@@ -1912,6 +1910,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       form: form.getFieldsValue(true) as Record<string, unknown>,
       businessCondition,
       compositeExpression,
+      hasCompositeExpression: configuredCompositeExpression !== undefined,
       dependencies,
       measureExpression,
       relatedCondition,
@@ -1921,6 +1920,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       form,
       businessCondition,
       compositeExpression,
+      configuredCompositeExpression,
       dependencies,
       measureExpression,
       relatedCondition,
@@ -2102,7 +2102,9 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       .compositeExpression as ObjectMetricExpressionV1;
     const restoredDependencies = aiUndo.before.dependencies as ObjectMetricDependencyV1[];
     setBusinessCondition(aiUndo.before.businessCondition as ObjectMetricConditionV1 | undefined);
-    setCompositeExpression(restoredCompositeExpression);
+    setCompositeExpression(
+      aiUndo.before.hasCompositeExpression ? restoredCompositeExpression : undefined,
+    );
     setDependencies(restoredDependencies);
     setMeasureExpression(aiUndo.before.measureExpression as ObjectMetricExpressionV1);
     setRelatedCondition(aiUndo.before.relatedCondition as ObjectMetricConditionV1 | undefined);
@@ -2709,21 +2711,6 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
       active = false;
     };
   }, [networkId, ownerObjectTypeId, propertiesReloadKey]);
-
-  useEffect(() => {
-    if (aiSkipCompositeDefaultRef.current) {
-      aiSkipCompositeDefaultRef.current = false;
-      return;
-    }
-    if (
-      metricType !== "composite" ||
-      dependencies.length < 2 ||
-      compositeExpression.node_type !== "literal"
-    ) {
-      return;
-    }
-    setCompositeExpression(defaultCompositeExpression(dependencies));
-  }, [compositeExpression.node_type, dependencies, metricType]);
 
   useEffect(() => {
     if (loading || metricType !== "composite") return;
@@ -4019,16 +4006,14 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                               compositeExpression,
                               dependency.alias,
                             );
-                            setDependencies((current) => {
-                              const next = current.filter((_, itemIndex) => itemIndex !== index);
-                              if (referenced)
-                                setCompositeExpression(defaultCompositeExpression(next));
-                              return next;
-                            });
+                            setDependencies((current) =>
+                              current.filter((_, itemIndex) => itemIndex !== index),
+                            );
                             if (getFieldValue("primaryDependencyAlias") === dependency.alias) {
                               form.setFieldValue("primaryDependencyAlias", undefined);
                             }
                             if (referenced) {
+                              setValidation(undefined);
                               void message.info(objectMetricText("m21302c2230d1"));
                             }
                           }}
@@ -4096,8 +4081,10 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                                   itemIndex === index ? { ...item, alias: nextAlias } : item,
                                 ),
                               );
-                              setCompositeExpression((current) =>
-                                renameDependencyAlias(current, previousAlias, nextAlias),
+                              setCompositeExpression(
+                                (current) =>
+                                  current &&
+                                  renameDependencyAlias(current, previousAlias, nextAlias),
                               );
                               if (getFieldValue("primaryDependencyAlias") === previousAlias) {
                                 form.setFieldValue("primaryDependencyAlias", nextAlias);
@@ -4475,26 +4462,28 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                     disabled={!publishedOptions.length}
                     icon={<PlusOutlined aria-hidden="true" />}
                     onClick={() => {
-                      setDependencies((current) => {
-                        let suffix = current.length + 1;
-                        while (current.some((item) => item.alias === `metric_${suffix}`))
-                          suffix += 1;
-                        return [
-                          ...current,
-                          {
-                            alias: `metric_${suffix}`,
-                            evaluation_context: {
-                              filter_context: { mode: "inherit" },
-                              window: "inherited",
-                            },
-                            metric_ref: { metric_id: "", version: 1 },
-                            object_alignment: {
-                              deduplication: "none",
-                              mode: "same_object",
-                            },
+                      let suffix = dependencies.length + 1;
+                      while (dependencies.some((item) => item.alias === `metric_${suffix}`))
+                        suffix += 1;
+                      const next: ObjectMetricDependencyV1[] = [
+                        ...dependencies,
+                        {
+                          alias: `metric_${suffix}`,
+                          evaluation_context: {
+                            filter_context: { mode: "inherit" },
+                            window: "inherited",
                           },
-                        ];
-                      });
+                          metric_ref: { metric_id: "", version: 1 },
+                          object_alignment: {
+                            deduplication: "none",
+                            mode: "same_object",
+                          },
+                        },
+                      ];
+                      setDependencies(next);
+                      if (mode === "create" && next.length >= 2 && !configuredCompositeExpression) {
+                        setCompositeExpression(defaultCompositeExpression(next));
+                      }
                     }}
                     type="dashed"
                   >
@@ -4526,6 +4515,7 @@ export function ObjectMetricFormScene({ mode }: { mode: "create" | "edit" }) {
                         errorPath={expressionErrorPath}
                         onChange={updateCompositeExpression}
                         properties={[]}
+                        requiresDependencyReference
                         value={compositeExpression}
                       />
                       <div className={styles.formulaPreview} aria-live="polite">

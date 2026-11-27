@@ -1646,6 +1646,95 @@ describe("ObjectMetricFormScene edit loading", () => {
     expect(textValue?.unit).toBeUndefined();
   }, 60_000);
 
+  it("preserves a saved constant formula for correction", async () => {
+    const definition = createObjectMetricDefinitionV1("composite", "order");
+    if (definition.specification.kind !== "composite") throw new Error("expected composite metric");
+    definition.specification.dependencies = ["a", "b"].map((alias) => ({
+      alias,
+      metric_ref: { metric_id: alias, version: 1 },
+      object_alignment: { deduplication: "none", mode: "same_object" },
+      evaluation_context: { filter_context: { mode: "inherit" }, window: "inherited" },
+    }));
+    definition.specification.expression = {
+      node_type: "literal",
+      value: 100,
+      value_type: "decimal",
+    };
+    const metrics = ["a", "b"].map((alias) => {
+      const metric = createObjectMetricDefinitionV1("atomic", "order");
+      metric.id = alias;
+      metric.name = alias;
+      metric.lifecycle.status = "published";
+      return { definition: metric };
+    });
+    mocks.getObjectMetricV1.mockResolvedValue({ definition });
+    mocks.listObjectMetricsV1.mockResolvedValue({ entries: metrics, total_count: metrics.length });
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+
+    render(<ObjectMetricFormScene mode="edit" />);
+
+    expect(await screen.findByText("技术表达式：100")).toBeInTheDocument();
+  });
+
+  it("initializes a new formula and only offers constants inside it", async () => {
+    mocks.routeParams.current = { metricId: undefined, networkId: "network-1" };
+    mocks.searchParams.current = "objectTypeId=order&metricType=composite";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    const metrics = ["base-a", "base-b", "base-c"].map((id) => {
+      const definition = createObjectMetricDefinitionV1("atomic", "order");
+      definition.id = id;
+      definition.name = id;
+      definition.lifecycle.status = "published";
+      return { definition };
+    });
+    mocks.listObjectMetricsV1.mockResolvedValue({ entries: metrics, total_count: metrics.length });
+    render(<ObjectMetricFormScene mode="create" />);
+
+    for (const [index, { definition }] of metrics.entries()) {
+      fireEvent.click(await findButtonByText("添加依赖对象指标"));
+      fireEvent.mouseDown(screen.getByRole("combobox", { name: `第 ${index + 1} 个依赖对象指标` }));
+      fireEvent.click(
+        await screen.findByText(new RegExp(`${definition.id} · v1`), {
+          selector:
+            ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content",
+        }),
+      );
+      if (index === 1) {
+        expect(screen.getByText("技术表达式：(metric_1 + metric_2)")).toBeInTheDocument();
+        fireEvent.mouseDown(screen.getByRole("combobox", { name: "运算符" }));
+        fireEvent.click(await screen.findByText("除"));
+      }
+    }
+
+    expect(screen.getByText("技术表达式：(metric_1 ÷ metric_2)")).toBeInTheDocument();
+    const [root, child] = screen.getAllByRole("combobox", { name: "参数来源" });
+    const optionSelector =
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content";
+    fireEvent.mouseDown(root);
+    const rootConstant = await screen.findByText("常量", { selector: optionSelector });
+    const rootOption = rootConstant.closest(".ant-select-item-option");
+    expect(rootOption).toHaveClass("ant-select-item-option-disabled");
+    expect(rootOption).toHaveAttribute(
+      "title",
+      "复合公式必须引用已配置的依赖指标，常量只能作为子参数。",
+    );
+    fireEvent.click(rootConstant);
+    expect(screen.getByText("技术表达式：(metric_1 ÷ metric_2)")).toBeInTheDocument();
+    fireEvent.keyDown(root, { key: "Escape" });
+    fireEvent.mouseDown(child);
+    const constant = await screen.findByText("常量", { selector: optionSelector });
+    expect(constant.closest(".ant-select-item-option")).not.toHaveClass(
+      "ant-select-item-option-disabled",
+    );
+    fireEvent.click(constant);
+    expect(screen.getByText("技术表达式：(0 ÷ metric_2)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "删除依赖对象指标 metric_2" }));
+    expect(screen.getByText("技术表达式：(0 ÷ metric_2)")).toBeInTheDocument();
+    expect(mocks.message.info).toHaveBeenCalledWith(
+      "已删除公式引用的依赖对象指标，请更新公式中的引用。",
+    );
+  }, 60_000);
+
   it("clears a formula validation highlight when the formula changes", async () => {
     const amount = createObjectMetricDefinitionV1("atomic", "order");
     amount.id = "amount";

@@ -17,6 +17,7 @@ export type ObjectMetricAiEditableSnapshot = {
   form: Record<string, unknown>;
   businessCondition?: unknown;
   compositeExpression: unknown;
+  hasCompositeExpression?: boolean;
   dependencies: unknown;
   measureExpression: unknown;
   relatedCondition?: unknown;
