@@ -2214,6 +2214,37 @@ describe("observability workspace scenes", () => {
     expect(listRetainedInteractions).toHaveBeenCalled();
   });
 
+  it("批次进度中的累计清理数按本地格式显示", async () => {
+    currentTranslate = (key, options) =>
+      key === "bknTrace.settings.archive.runComplete"
+        ? `cleaned ${String(options?.cleaned)}`
+        : translate(key, options);
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(
+        kind === "log"
+          ? [
+              {
+                id: "large-log-run",
+                kind,
+                range: { to: "2026-10-28" },
+                candidateCount: 10000,
+                status: "completed",
+                batchProgress: {
+                  run_id: "run",
+                  batch_number: 32,
+                  cleaned_in_run: 311319,
+                  remaining_at_selection: 0,
+                  run_complete: true,
+                },
+              },
+            ]
+          : [],
+      ),
+    );
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(await screen.findByText("cleaned 311,319")).not.toBeNull();
+  });
+
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {
     vi.mocked(getArchiveOverview).mockResolvedValueOnce({
       candidateCount: 1,

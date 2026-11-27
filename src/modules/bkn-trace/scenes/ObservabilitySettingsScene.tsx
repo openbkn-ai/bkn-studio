@@ -712,7 +712,10 @@ function ArchiveJobStatus({ job }: { job: ArchiveJob }) {
             progress.run_complete
               ? "bknTrace.settings.archive.runComplete"
               : "bknTrace.settings.archive.runIncomplete",
-            { cleaned: progress.cleaned_in_run, remaining: progress.remaining_at_selection },
+            {
+              cleaned: formatNumber(progress.cleaned_in_run),
+              remaining: formatNumber(progress.remaining_at_selection),
+            },
           )}
         </Typography.Paragraph>
       ) : null}
