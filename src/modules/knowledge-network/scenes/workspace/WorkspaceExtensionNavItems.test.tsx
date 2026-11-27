@@ -305,31 +305,36 @@ describe("WorkspaceExtensionNavItems", () => {
     );
   });
 
-  it("shows the licensed graph explorer's Professional badge after its registration is renamed", () => {
-    registerGraphExplorer(undefined, "renamed-explorer");
-    const snapshot: Entitlement = {
-      capabilities: ["graph_explorer"],
-      edition: "professional",
-      extensions: ["graph_explorer"],
-      features: [],
-      licensed: true,
-      limits: {},
-      state: "valid",
-    };
-    render(
-      <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
-        <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
-          <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />
-        </MemoryRouter>
-      </EntitlementContext.Provider>,
-    );
+  it.each(["community", "professional", "enterprise"] as const)(
+    "shows the renamed graph explorer's Professional badge only when access is unavailable (%s)",
+    (edition) => {
+      registerGraphExplorer(undefined, "renamed-explorer");
+      const available = edition !== "community";
+      const snapshot: Entitlement = {
+        capabilities: available ? ["graph_explorer"] : [],
+        edition,
+        extensions: ["graph_explorer"],
+        features: [],
+        licensed: available,
+        limits: {},
+        state: "valid",
+      };
+      render(
+        <EntitlementContext.Provider value={{ loading: false, refresh: async () => {}, snapshot }}>
+          <MemoryRouter basename="/studio" initialEntries={["/studio"]}>
+            <WorkspaceExtensionNavItems collapsed={false} networkId="network-1" />
+          </MemoryRouter>
+        </EntitlementContext.Provider>,
+      );
 
-    const item = screen.getByTestId("workspace-nav-renamed-explorer");
-    expect(
-      within(item).getByText(i18n.t("common.entitlement.editionsShort.professional")),
-    ).toBeTruthy();
-    expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
-  });
+      const item = screen.getByTestId("workspace-nav-renamed-explorer");
+      const badge = within(item).queryByText(
+        i18n.t("common.entitlement.editionsShort.professional"),
+      );
+      expect(Boolean(badge)).toBe(!available);
+      expect(screen.queryByTestId("workspace-nav-upgrade-graph_explorer")).toBeNull();
+    },
+  );
 
   it("lists an entry registered for analysis in that group alone, and the group only then", () => {
     registerGraphExplorer();

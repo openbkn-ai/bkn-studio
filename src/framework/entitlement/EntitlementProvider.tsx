@@ -8,7 +8,10 @@
 import type { PropsWithChildren } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { EntitlementContext } from "@/framework/entitlement/entitlement-context";
+import {
+  EntitlementContext,
+  setRequestEntitlementSnapshot,
+} from "@/framework/entitlement/entitlement-context";
 import { fetchEntitlement } from "@/framework/entitlement/entitlement.service";
 import type { Entitlement } from "@/framework/entitlement/types";
 
@@ -37,12 +40,14 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
     try {
       const next = await fetchEntitlement();
       if (mounted.current) {
+        setRequestEntitlementSnapshot(next);
         setSnapshot(next);
       }
     } catch {
       // 拿不到就维持「未知」,绝不退化成「全都能用」。bkn-safe 不可达时整个产品都登不
       // 进去,这里不是独立故障面,藏掉付费入口是可以接受的降级。
       if (mounted.current) {
+        setRequestEntitlementSnapshot(null);
         setSnapshot(null);
       }
     } finally {
@@ -58,6 +63,7 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
 
     return () => {
       mounted.current = false;
+      setRequestEntitlementSnapshot(null);
     };
   }, [load]);
 

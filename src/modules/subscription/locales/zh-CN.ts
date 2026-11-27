@@ -155,6 +155,13 @@ export const subscriptionZhCN = {
         description: "用 AI 把分析拆成可复核的卡片，结果存在服务端，可带结果分享给他人",
         name: "分析画布",
       },
+      kn_draft_versions: {
+        name: "知识网络草稿与运行版本",
+        description: "管理知识网络草稿并发布运行版本。",
+        bullets: {
+          b1: "编辑草稿、发布与查看运行版本",
+        },
+      },
       version_mgmt: {
         bullets: {
           b1: "多版本管理",
@@ -209,7 +216,6 @@ export const subscriptionZhCN = {
       localAuth: "本地登录，用户、部门与内置角色管理",
       modelingSurfaces: "Studio、CLI、SDK 与 Skill 建模",
       modelingTypes: "对象与关系建模",
-      draftAndRunning: "知识网络草稿与运行版本",
       oneClickExperience: "支持一键体验，动态加载官方样例",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",

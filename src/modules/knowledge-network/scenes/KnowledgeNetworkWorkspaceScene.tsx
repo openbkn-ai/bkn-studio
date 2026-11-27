@@ -46,7 +46,10 @@ import {
   KnVersionBar,
 } from "@/modules/knowledge-network/components/versions/KnVersionBar";
 import { KnVersionsPanel } from "@/modules/knowledge-network/components/versions/KnVersionsPanel";
-import { useKnVersionView } from "@/modules/knowledge-network/hooks/useKnVersionView";
+import {
+  useKnVersioned,
+  useKnVersionView,
+} from "@/modules/knowledge-network/hooks/useKnVersionView";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
 import { KnowledgeResourceIcon } from "@/modules/knowledge-network/components/shared/KnowledgeResourceIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
@@ -54,6 +57,7 @@ import { WorkspaceDevelopSection } from "@/modules/knowledge-network/scenes/work
 import { WorkspaceExtensionNavItems } from "@/modules/knowledge-network/scenes/workspace/WorkspaceExtensionNavItems";
 import { visibleWorkspaceExtensionEntries } from "@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
+import { canManageKnVersions } from "@/modules/knowledge-network/services/shared/kn-version-context";
 import { updateKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
@@ -149,6 +153,8 @@ export function KnowledgeNetworkWorkspaceScene({
       : "not-licensed";
   const objectMetricsCapability = useCapability(CAPABILITIES.OBJECT_METRICS, "professional");
   const fineGrainedCapability = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL);
+  const canManageVersions = canManageKnVersions(snapshot);
+  const versioned = useKnVersioned(activeNetworkId);
   const [versionView, setVersionView] = useKnVersionView(activeNetworkId);
   // Bumped when a publish, switch or reset changed what every page of the workspace reads.
   const [reloadTick, setReloadTick] = useState(0);
@@ -174,7 +180,7 @@ export function KnowledgeNetworkWorkspaceScene({
   const mayModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
   const mayDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
   // Only the draft of a versioned network can be edited; every other version is read-only.
-  const editable = !versioning || versionView === "draft";
+  const editable = (!versioned && !versioning) || versionView === "draft";
   const canModify = mayModify && editable;
   const canDelete = mayDelete && editable;
   const hasCapabilities =
@@ -189,6 +195,9 @@ export function KnowledgeNetworkWorkspaceScene({
   );
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
+    const actionControlNavItem = extensionWorkspaceNavItems("risk-control").find(
+      (item) => item.id === "action-control",
+    );
     const items: WorkspaceNavItem[] = [
       {
         key: "overview",
@@ -204,11 +213,9 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "versions",
         label: t("knowledgeNetwork.versions.nav"),
         icon: <BranchesOutlined />,
-        // Marked, not blocked: the draft and the running version are community; the full history,
-        // compare and rollback are Enterprise. bkn-backend enforces that by the licence tier, so the
-        // badge goes once an Enterprise licence is in force (no service reports version_mgmt).
-        paidCapability: CAPABILITIES.VERSION_MGMT,
-        paidEdition: "enterprise",
+        paidCapability: CAPABILITIES.KN_DRAFT_VERSIONS,
+        paidCapabilityState: professionalCapabilityState,
+        paidEdition: "professional",
       },
       {
         key: "experience-agent",
@@ -245,7 +252,7 @@ export function KnowledgeNetworkWorkspaceScene({
       },
       {
         key: "action-control",
-        label: t("knowledgeNetwork.riskActionControlNav"),
+        label: t(actionControlNavItem?.labelKey ?? "knowledgeNetwork.riskActionControlNav"),
         icon: <ControlOutlined />,
         paidCapability: CAPABILITIES.ACTION_GOVERNANCE,
         paidCapabilityState: !snapshot
@@ -254,12 +261,8 @@ export function KnowledgeNetworkWorkspaceScene({
             ? "available"
             : "not-licensed",
         paidEdition: "enterprise",
-        path: extensionWorkspaceNavItems("risk-control")
-          .find((item) => item.id === "action-control")
-          ?.path(activeNetworkId),
-        disabled:
-          (!snapshot || actionControlLicensed) &&
-          !extensionWorkspaceNavItems("risk-control").some((item) => item.id === "action-control"),
+        path: actionControlNavItem?.path(activeNetworkId),
+        disabled: (!snapshot || actionControlLicensed) && !actionControlNavItem,
       },
       {
         key: "concept-groups",
@@ -715,7 +718,7 @@ export function KnowledgeNetworkWorkspaceScene({
               : styles.workspaceContent
           }
         >
-          {versioning && section !== "versions" ? (
+          {canManageVersions && versioning && section !== "versions" ? (
             <KnVersionBar
               canModify={mayModify}
               hasCapabilities={hasCapabilities}
@@ -725,7 +728,7 @@ export function KnowledgeNetworkWorkspaceScene({
               versioning={versioning}
               view={versionView}
             />
-          ) : detail && section !== "versions" ? (
+          ) : canManageVersions && detail && section !== "versions" ? (
             <KnUnversionedBar
               canModify={mayModify}
               networkId={activeNetworkId}

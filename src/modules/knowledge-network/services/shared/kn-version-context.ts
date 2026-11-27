@@ -8,6 +8,10 @@
 import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 import i18n from "@/app/locales/i18n";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { getRequestEntitlementSnapshot } from "@/framework/entitlement/entitlement-context";
+import type { EntitlementView } from "@/framework/entitlement/types";
+import { capabilitySatisfied } from "@/framework/entitlement/upgrade-reason";
 import { registerErrorCodeMessage } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import type { KnVersioning, KnVersionView } from "@/modules/knowledge-network/types/kn-version";
@@ -222,8 +226,17 @@ export function isKnVersioned(knId: string) {
   return contexts.get(knId)?.versioned ?? false;
 }
 
-export function getKnVersionView(knId: string): KnVersionView {
-  return contexts.get(knId)?.view ?? "running";
+export function canManageKnVersions(
+  snapshot: EntitlementView | null = getRequestEntitlementSnapshot(),
+) {
+  return capabilitySatisfied(CAPABILITIES.KN_DRAFT_VERSIONS, snapshot, "professional", false);
+}
+
+export function getKnVersionView(
+  knId: string,
+  snapshot: EntitlementView | null = getRequestEntitlementSnapshot(),
+): KnVersionView {
+  return canManageKnVersions(snapshot) ? (contexts.get(knId)?.view ?? "running") : "running";
 }
 
 export function setKnVersionView(knId: string, view: KnVersionView) {
@@ -265,6 +278,19 @@ function toVersioning(value: unknown): KnVersioning | null {
   return value && typeof value === "object" ? (value as KnVersioning) : null;
 }
 
+function observedVersioning(response: AxiosResponse, value: unknown): KnVersioning | null {
+  const versioning = toVersioning(value);
+  if (versioning) {
+    return versioning;
+  }
+
+  // Foundry without version management still identifies the published version in this header.
+  const running = Number(headerValue(response, "x-kn-running-version"));
+  return Number.isSafeInteger(running) && running > 0
+    ? { enabled: true, running_version: running, previous_version: 0, full_history: false }
+    : null;
+}
+
 function networkRecord(data: unknown): { versioning?: unknown; operations?: string[] } | null {
   if (!data || typeof data !== "object") {
     return null;
@@ -286,7 +312,7 @@ async function probe(knId: string): Promise<KnVersionContext> {
       return known;
     }
     const record = networkRecord(response.data);
-    recordKnVersioning(knId, toVersioning(record?.versioning), record?.operations);
+    recordKnVersioning(knId, observedVersioning(response, record?.versioning), record?.operations);
   } catch {
     contexts.set(knId, {
       versioned: false,
@@ -319,7 +345,7 @@ export async function ensureKnVersionContext(knId: string): Promise<KnVersionCon
 
 /** `kn_version` of the version on screen, or none when the network has no versioning. */
 export function knVersionParam(context: KnVersionContext): string | undefined {
-  return context.versioned ? String(context.view) : undefined;
+  return context.versioned ? (canManageKnVersions() ? String(context.view) : "running") : undefined;
 }
 
 /**
@@ -433,19 +459,24 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
     return config;
   }
 
+  const canManageVersions = canManageKnVersions();
+  if (!canManageVersions && isWrite(method, target.rest)) {
+    throw new KnVersionReadOnlyError();
+  }
+  const view = canManageVersions ? context.view : "running";
   const existingParams = (config.params ?? {}) as Record<string, unknown>;
   if (method === "get" || method === "head") {
-    if (existingParams.kn_version === undefined && context.view !== "running") {
-      config.params = { ...withoutBranch(existingParams), kn_version: String(context.view) };
+    if (existingParams.kn_version === undefined && view !== "running") {
+      config.params = { ...withoutBranch(existingParams), kn_version: String(view) };
     }
     return config;
   }
 
   if (method === "post") {
     // Creates and validations name the draft: a write without it is published at once.
-    if (context.view === "draft") {
+    if (view === "draft") {
       config.params = { ...existingParams, branch: "draft" };
-    } else if (context.view === "running") {
+    } else if (view === "running") {
       // The running version is on screen: say so, instead of leaving the branch to the backend's
       // default. The backend still refuses the write while the draft has unpublished edits.
       config.params = { ...existingParams, branch: "main" };
@@ -458,7 +489,7 @@ async function applyKnVersion(config: KnRequestConfig): Promise<KnRequestConfig>
     return config;
   }
 
-  if (context.view !== "draft") {
+  if (view !== "draft") {
     throw new KnVersionReadOnlyError();
   }
   // Studio edits the draft and publishes it on its own; a write without the branch would be
@@ -532,7 +563,11 @@ function observeResponse(response: AxiosResponse): AxiosResponse {
   if (method === "get" && target.rest === "" && isFullNetworkRead(config)) {
     const record = networkRecord(response.data);
     if (record && "id" in record) {
-      recordKnVersioning(target.knId, toVersioning(record.versioning), record.operations);
+      recordKnVersioning(
+        target.knId,
+        observedVersioning(response, record.versioning),
+        record.operations,
+      );
     }
   }
 

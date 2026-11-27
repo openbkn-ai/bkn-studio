@@ -1441,7 +1441,7 @@ export async function previewCatalogResource(
   return {
     querySource: response.data.query_source,
     rows: response.data.entries ?? [],
-    total: response.data.total_count ?? 0,
+    ...(response.data.total_count !== undefined ? { total: response.data.total_count } : {}),
   };
 }
 

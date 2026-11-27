@@ -243,9 +243,14 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.2.2",
   },
   {
+    category: "modeling",
+    key: CAPABILITIES.KN_DRAFT_VERSIONS,
+    reportedByEndpoint: false,
+    minEdition: "professional",
+  },
+  {
     // 知识网络版本管理(完整版本历史、比较、回退)。上游登记表里是 planned 的 version_mgmt。
-    // 由社区版 bkn-backend 按证书档位放行,没有服务登记装配表,端点报不出:工作区侧栏的
-    // 徽标按证书档位判,企业证生效即消失。
+    // 完整历史由后端按企业许可档位放行。
     category: "modeling",
     key: CAPABILITIES.VERSION_MGMT,
     reportedByEndpoint: false,

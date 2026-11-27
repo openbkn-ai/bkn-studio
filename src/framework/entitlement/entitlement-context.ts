@@ -35,3 +35,14 @@ export const EntitlementContext = createContext<EntitlementContextValue>({
   refresh: async () => {},
   snapshot: null,
 });
+
+// The request layer consumes the same snapshot as the React provider.
+let requestEntitlementSnapshot: Entitlement | null = null;
+
+export function getRequestEntitlementSnapshot() {
+  return requestEntitlementSnapshot;
+}
+
+export function setRequestEntitlementSnapshot(snapshot: Entitlement | null) {
+  requestEntitlementSnapshot = snapshot;
+}

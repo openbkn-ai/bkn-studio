@@ -25,6 +25,8 @@ const mocks = vi.hoisted(() => {
     navigate: vi.fn(),
     pathname: "/knowledge-network/workspace/network-1/overview",
     detail: noDetail,
+    mayModify: false,
+    versioned: false,
   };
 });
 
@@ -47,6 +49,9 @@ vi.mock("../eval/useEvalAccess", () => ({
 }));
 
 beforeEach(() => {
+  mocks.detail = null;
+  mocks.mayModify = false;
+  mocks.versioned = false;
   mocks.evalAccess.mockClear();
   mocks.evalAccessStatus = "allowed";
   mocks.evalReportedByEndpoint = false;
@@ -72,6 +77,8 @@ vi.mock("react-i18next", async (importOriginal) => {
           "knowledgeNetwork.evalNav": "评测",
           "knowledgeNetwork.versions.nav": "版本管理",
           "knowledgeNetwork.riskActionControlNav": "行动管控",
+          "governance.actionControl": "行动管控",
+          "governance.actionControlBeta": "行动管控 (Beta)",
           "knowledgeNetwork.riskActionPending": "待实现",
           "knowledgeNetwork.permissionMatrix.nav": "权限管控",
           "knowledgeNetwork.workspaceActionTypes": "行动类",
@@ -122,7 +129,19 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/workspaceExtensionEntries"
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection", () => ({
-  WorkspaceOverviewSection: () => <div />,
+  WorkspaceOverviewSection: ({ canModify }: { canModify: boolean }) => (
+    <div data-testid="overview" data-can-modify={String(canModify)} />
+  ),
+}));
+
+vi.mock("@/modules/knowledge-network/components/versions/KnVersionBar", () => ({
+  KnVersionBar: () => <div data-testid="version-bar" />,
+  KnUnversionedBar: () => <div data-testid="unversioned-bar" />,
+}));
+
+vi.mock("@/modules/knowledge-network/hooks/useKnVersionView", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/knowledge-network/hooks/useKnVersionView")>()),
+  useKnVersioned: () => mocks.versioned,
 }));
 
 vi.mock("@/modules/knowledge-network/scenes/workspace/WorkspaceResourceSection", () => ({
@@ -143,7 +162,8 @@ vi.mock("@/modules/knowledge-network/scenes/workspace/useWorkspaceData", () => (
 }));
 
 vi.mock("@/modules/knowledge-network/utils/record-operations", () => ({
-  hasKnowledgeNetworkRecordOperation: () => false,
+  hasKnowledgeNetworkRecordOperation: (_record: unknown, operation: string) =>
+    operation === "modify" && mocks.mayModify,
 }));
 
 function entitlement(overrides: Partial<Entitlement> = {}): Entitlement {
@@ -177,6 +197,34 @@ function renderScene(snapshot: Entitlement, expandGroups = true) {
     }
   }
 }
+
+describe("KnowledgeNetworkWorkspaceScene version controls", () => {
+  it.each([false, true])("keeps Community on published data when versioned is %s", (versioned) => {
+    mocks.detail = { id: "network-1", statistics: {} };
+    mocks.mayModify = true;
+    mocks.versioned = versioned;
+    renderScene(entitlement(), false);
+
+    expect(screen.queryByTestId("version-bar")).toBeNull();
+    expect(screen.queryByTestId("unversioned-bar")).toBeNull();
+    expect(screen.getByTestId("overview").getAttribute("data-can-modify")).toBe(String(!versioned));
+  });
+
+  it.each([false, true])(
+    "shows the Professional version toolbar when versioned is %s",
+    (versioned) => {
+      mocks.detail = {
+        id: "network-1",
+        statistics: {},
+        versioning: versioned ? { enabled: true, running_version: 3 } : undefined,
+      };
+      mocks.versioned = versioned;
+      renderScene(entitlement({ edition: "professional", licensed: true, state: "valid" }), false);
+
+      expect(screen.getByTestId(versioned ? "version-bar" : "unversioned-bar")).toBeTruthy();
+    },
+  );
+});
 
 describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   it("starts collapsed on overview and toggles each group independently", () => {
@@ -252,7 +300,7 @@ describe("KnowledgeNetworkWorkspaceScene sidebar groups", () => {
   });
 
   it("places evaluation under ability verification and version management below overview", () => {
-    renderScene(entitlement(), false);
+    renderScene(entitlement({ edition: "professional", licensed: true }), false);
 
     const verification = screen.getByRole("button", {
       name: "knowledgeNetwork.workspaceAbilityVerification",
@@ -680,33 +728,31 @@ describe("KnowledgeNetworkWorkspaceScene hidden navigation", () => {
     },
   );
 
-  // Draft and running version are community, so the entry stays open; the Enterprise badge marks the
-  // full history until an Enterprise licence is in force.
-  it.each([
-    ["community", false],
-    ["professional", true],
-    ["enterprise", false],
-  ] as const)(
-    "marks version management as Enterprise on %s (licensed: %s)",
-    (edition, licensed) => {
-      renderScene(entitlement({ edition, licensed }));
+  it.each(["community", "professional", "enterprise"] as const)(
+    "requires a valid Professional licence for version management on %s",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: false }));
       const item = screen.getByTitle("版本管理");
 
-      expect(item).toHaveTextContent("企业版");
+      expect(item).toHaveTextContent("专业版");
+      fireEvent.click(item);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(mocks.navigate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["professional", "enterprise", "industry"] as const)(
+    "opens version management when %s is licensed",
+    (edition) => {
+      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
+      const item = screen.getByTitle("版本管理");
+
+      expect(item).not.toHaveTextContent("专业版");
       fireEvent.click(item);
       expect(screen.queryByRole("dialog")).toBeNull();
       expect(mocks.navigate).toHaveBeenCalledWith(
         "/knowledge-network/workspace/network-1/versions",
       );
-    },
-  );
-
-  it.each(["enterprise", "industry"] as const)(
-    "drops the version management badge once %s is licensed",
-    (edition) => {
-      renderScene(entitlement({ edition, licensed: true, state: "valid" }));
-
-      expect(screen.getByTitle("版本管理")).not.toHaveTextContent("企业版");
     },
   );
 
@@ -848,3 +894,48 @@ it.each(["enterprise", "industry"] as const)("hides risk badges on %s", (edition
   );
   resetExtensionsForTesting();
 });
+
+it.each(["enterprise", "industry"] as const)(
+  "uses the installed governance label including Beta on %s",
+  (edition) => {
+    resetExtensionsForTesting();
+    registerExtension({
+      id: "governance",
+      capability: CAPABILITIES.ACTION_GOVERNANCE,
+      workspaceNavItems: [
+        {
+          id: "action-control",
+          section: "risk-control",
+          labelKey: "governance.actionControlBeta",
+          path: (id) => "/knowledge-network/workspace/" + id + "/action-control",
+        },
+      ],
+    });
+    try {
+      render(
+        <EntitlementContext.Provider
+          value={{
+            loading: false,
+            refresh: async () => {},
+            snapshot: entitlement({ edition, licensed: true }),
+          }}
+        >
+          <KnowledgeNetworkWorkspaceScene networkId="network-1" section="overview" />
+        </EntitlementContext.Provider>,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "knowledgeNetwork.workspaceRiskControl" }),
+      );
+      const item = screen.getByTitle("行动管控 (Beta)");
+      expect(item).toHaveTextContent("行动管控 (Beta)");
+      expect(item).not.toBeDisabled();
+      expect(item).not.toHaveTextContent("企业版");
+      fireEvent.click(item);
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/action-control",
+      );
+    } finally {
+      resetExtensionsForTesting();
+    }
+  },
+);

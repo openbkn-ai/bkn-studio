@@ -187,7 +187,7 @@ export type ResourcePreviewQuery = {
 export type ResourcePreviewResult = {
   querySource?: "local_index" | "source";
   rows: Record<string, unknown>[];
-  total: ResourceRowCount;
+  total?: ResourceRowCount;
 };
 
 export type BuildMode = "batch" | "streaming";
