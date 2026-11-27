@@ -1105,6 +1105,8 @@ export const bknTraceZhCN = {
           loadFailed: "暂时无法读取，请稍后重试。",
           none: "无",
           atLeast: "至少 {{size}}",
+          justOver: "略超 {{size}}",
+          allOverLimit: "以下交互均超过 {{limit}} 归档上限，保留在线、未归档。",
           overLimit: "超过 {{limit}} 归档上限",
           retriesValue: "{{attempts}} 次（{{reason}}）",
           fields: {

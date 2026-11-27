@@ -53,8 +53,9 @@ describe("observability service", () => {
           retained_count: 1,
         },
       })
-      .mockResolvedValueOnce({ data: { ...run, retained: [retained] } })
-      .mockResolvedValueOnce({ data: [retained] })
+      .mockResolvedValueOnce({ data: run })
+      .mockResolvedValueOnce({ data: { items: [retained], total: 41 } })
+      .mockResolvedValueOnce({ data: { items: [retained], total: 41 } })
       .mockResolvedValueOnce({
         data: {
           archive_kind: "log",
@@ -69,6 +70,7 @@ describe("observability service", () => {
       getArchiveRunResult,
       isArchiveRunActive,
       listRetainedInteractions,
+      listRunRetainedInteractions,
     } = await import("./observability.service");
     const overview = await getArchiveOverview("trace");
     expect(overview.retainedCount).toBe(1);
@@ -81,8 +83,17 @@ describe("observability service", () => {
       finishedAt: "2026-11-27T06:10:00Z",
     });
     expect(isArchiveRunActive(overview.currentRun)).toBe(false);
-    const result = await getArchiveRunResult("arc_trace_1");
-    expect(result.retained).toEqual([
+    expect((await getArchiveRunResult("arc_trace_1")).retainedCount).toBe(1);
+    const page = await listRunRetainedInteractions("arc_trace_1", 20);
+    expect(getMock).toHaveBeenLastCalledWith(
+      "/observability/v1/archive-runs/arc_trace_1/retained",
+      {
+        params: { offset: 20, limit: 20 },
+        skipErrorToast: true,
+      },
+    );
+    expect(page.total).toBe(41);
+    expect(page.items).toEqual([
       {
         interactionId: "large",
         runId: "arc_trace_1",
@@ -94,7 +105,7 @@ describe("observability service", () => {
         retainedAt: "2026-11-27T06:05:00Z",
       },
     ]);
-    expect((await listRetainedInteractions())[0]?.interactionId).toBe("large");
+    expect((await listRetainedInteractions(0)).items[0]?.interactionId).toBe("large");
     // An older service without runs still yields a usable overview.
     const legacy = await getArchiveOverview("log");
     expect(legacy.currentRun).toBeUndefined();

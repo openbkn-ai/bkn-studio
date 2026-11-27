@@ -1170,6 +1170,9 @@ export const bknTraceEnUS = {
           loadFailed: "Could not load this. Try again later.",
           none: "None",
           atLeast: "At least {{size}}",
+          justOver: "Just over {{size}}",
+          allOverLimit:
+            "Each interaction below exceeds the {{limit}} archive limit and is kept online, not archived.",
           overLimit: "Over the {{limit}} archive limit",
           retriesValue: "{{attempts}} ({{reason}})",
           fields: {
