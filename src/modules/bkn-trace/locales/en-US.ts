@@ -1157,7 +1157,7 @@ export const bknTraceEnUS = {
           queued: "Submitted. The archive will start shortly.",
           running:
             "Archiving in the background: {{done}} of {{total}} done. You can leave this page.",
-          retryWait: "{{reason}}. Retrying at {{time}} (attempt {{attempt}} of {{max}}).",
+          retryWait: "{{reason}}. Retrying at {{time}} (attempt {{attempt}}).",
           completed: "Archive complete: {{archived}} archived and cleaned.",
           completedRetained:
             "Archive complete: {{archived}} archived and cleaned; kept online as oversized: {{retained}}.",

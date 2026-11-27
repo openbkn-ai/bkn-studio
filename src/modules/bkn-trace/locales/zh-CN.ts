@@ -1092,7 +1092,7 @@ export const bknTraceZhCN = {
         run: {
           queued: "已提交，等待后台开始归档。",
           running: "后台归档中，已完成 {{done}} / {{total}} 条，可以离开此页面。",
-          retryWait: "{{reason}}，将于 {{time}} 自动重试（第 {{attempt}} 次，共 {{max}} 次）。",
+          retryWait: "{{reason}}，将于 {{time}} 自动重试（第 {{attempt}} 次）。",
           completed: "归档完成：归档并清理 {{archived}} 条。",
           completedRetained:
             "归档完成：归档并清理 {{archived}} 条，{{retained}} 条超大交互未归档，已保留在线。",

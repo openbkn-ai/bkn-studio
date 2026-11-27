@@ -212,10 +212,20 @@ export function ObservabilitySettingsScene() {
     .join(",");
   useEffect(() => {
     if (!activeArchiveKinds) return;
+    let inFlight = false;
     const timer = window.setInterval(() => {
-      for (const kind of activeArchiveKinds.split(",") as ArchiveKind[]) {
-        void refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable);
-      }
+      // Skip a tick while the previous refresh is still pending on a slow network.
+      if (inFlight) return;
+      inFlight = true;
+      void Promise.allSettled(
+        (activeArchiveKinds.split(",") as ArchiveKind[]).map((kind) =>
+          refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable, {
+            keepOnFailure: true,
+          }),
+        ),
+      ).finally(() => {
+        inFlight = false;
+      });
     }, ARCHIVE_POLL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [activeArchiveKinds]);
@@ -643,11 +653,23 @@ async function refreshArchive(
   ) => void,
   setJobs: (value: ArchiveJob[] | ((previous: ArchiveJob[]) => ArchiveJob[])) => void,
   setUnavailable: (value: ArchiveKind[] | ((previous: ArchiveKind[]) => ArchiveKind[])) => void,
+  { keepOnFailure = false }: { keepOnFailure?: boolean } = {},
 ) {
   const [overview, jobs] = await Promise.allSettled([
     getArchiveOverview(kind),
     listArchiveJobs(kind),
   ]);
+  // Background polling keeps the last known state through a transient
+  // failure, so one failed request neither hides progress nor stops polling.
+  if (keepOnFailure && (overview.status === "rejected" || jobs.status === "rejected")) {
+    if (overview.status === "fulfilled") {
+      setArchives((previous) => [...previous.filter((item) => item.kind !== kind), overview.value]);
+    }
+    if (jobs.status === "fulfilled") {
+      setJobs((previous) => [...previous.filter((job) => job.kind !== kind), ...jobs.value]);
+    }
+    return;
+  }
   setArchives((previous) => [
     ...previous.filter((item) => item.kind !== kind),
     ...(overview.status === "fulfilled" ? [overview.value] : []),
@@ -804,7 +826,7 @@ function ArchivePanel({
             )}
           </Typography.Text>
         )}
-        {archive && archive.retainedCount > 0 ? (
+        {kind === "trace" && archive && archive.retainedCount > 0 ? (
           <Typography.Paragraph type="secondary">
             {t("bknTrace.settings.archive.run.retainedSummary", {
               retained: formatNumber(archive.retainedCount),
@@ -862,7 +884,6 @@ function ArchivePanel({
 }
 
 const ARCHIVE_POLL_INTERVAL_MS = 3000;
-const ARCHIVE_MAX_RETRIES = 3;
 
 function archiveReason(t: TFunction, code?: string): string {
   return t(`bknTrace.settings.archive.run.reasons.${code ?? "temporarily_unavailable"}`, {
@@ -893,7 +914,6 @@ function ArchiveRunLine({ run, onShowResult }: { run: ArchiveRun; onShowResult: 
         reason: archiveReason(t, run.lastFailureCode),
         time: formatDateTime(run.nextAttemptAt),
         attempt: run.retryCount,
-        max: ARCHIVE_MAX_RETRIES,
       });
       break;
     case "completed":

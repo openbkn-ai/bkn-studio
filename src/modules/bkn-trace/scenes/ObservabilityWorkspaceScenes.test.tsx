@@ -2143,6 +2143,16 @@ describe("observability workspace scenes", () => {
       expect(traceAction).toBeDisabled();
       expect(screen.queryByText("bknTrace.settings.archive.run.viewResult")).toBeNull();
 
+      // A transient polling failure keeps the last progress and polling continues.
+      vi.mocked(getArchiveOverview).mockRejectedValue(new Error("gateway timeout"));
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(getArchiveOverview).toHaveBeenCalledTimes(3));
+      expect(screen.getByText("running 3,200/10,000")).not.toBeNull();
+      expect(screen.queryByText("bknTrace.settings.archive.unavailable")).toBeNull();
+
       overviewWithRun(traceRun({ status: "completed", processedCount: 10000 }));
       await act(async () => {
         vi.advanceTimersByTime(3000);
@@ -2158,7 +2168,7 @@ describe("observability workspace scenes", () => {
   it("等待重试时说明原因和下次时间，失败时说明原因", async () => {
     currentTranslate = (key, options) =>
       key === "bknTrace.settings.archive.run.retryWait"
-        ? `retry ${String(options?.reason)} ${String(options?.attempt)}/${String(options?.max)}`
+        ? `retry ${String(options?.reason)} ${String(options?.attempt)}`
         : translate(key, options);
     overviewWithRun(
       traceRun({
@@ -2171,7 +2181,7 @@ describe("observability workspace scenes", () => {
     renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     expect(
       await screen.findByText(
-        "retry bknTrace.settings.archive.run.reasons.temporarily_unavailable 2/3",
+        "retry bknTrace.settings.archive.run.reasons.temporarily_unavailable 2",
       ),
     ).not.toBeNull();
   });
