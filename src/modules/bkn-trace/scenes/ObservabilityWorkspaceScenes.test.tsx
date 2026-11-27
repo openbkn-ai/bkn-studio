@@ -21,6 +21,7 @@ import {
   getLogDetail,
   listArchiveJobs,
   listRetainedInteractions,
+  listRunRetainedInteractions,
   listLogPolicies,
   listLogs,
   listLogSources,
@@ -110,6 +111,7 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
     getLogDetail: vi.fn(),
     listArchiveJobs: vi.fn(),
     listRetainedInteractions: vi.fn(),
+    listRunRetainedInteractions: vi.fn(),
     listLogPolicies: vi.fn(),
     listLogs: vi.fn(),
     listLogSources: vi.fn(),
@@ -2186,7 +2188,11 @@ describe("observability workspace scenes", () => {
     ).not.toBeNull();
   });
 
-  it("完成但有超大交互保留时，可查看本次结果和保留列表", async () => {
+  it("完成但有超大交互保留时，可分页查看本次结果和保留列表，共同原因只写一次", async () => {
+    currentTranslate = (key, options) =>
+      key === "bknTrace.settings.archive.run.justOver"
+        ? `just over ${String(options?.size)}`
+        : translate(key, options);
     const retained = {
       interactionId: "itx_large",
       runId: "arc_trace_1",
@@ -2199,19 +2205,77 @@ describe("observability workspace scenes", () => {
     };
     const run = traceRun({ status: "completed", processedCount: 6799, retainedCount: 1 });
     overviewWithRun(run, 1);
-    vi.mocked(getArchiveRunResult).mockResolvedValue({ ...run, retained: [retained] });
-    vi.mocked(listRetainedInteractions).mockResolvedValue([retained]);
+    const page = (offset: number) => ({
+      items: Array.from({ length: offset === 0 ? 20 : 3 }, (_, i) => ({
+        ...retained,
+        interactionId: `itx_${offset + i}`,
+        // The first row rounds to the limit and must not read as equal to it.
+        measured: offset + i === 0 ? 8 * 1024 * 1024 + 1 : retained.measured,
+      })),
+      total: 23,
+    });
+    vi.mocked(getArchiveRunResult).mockResolvedValue(run);
+    vi.mocked(listRunRetainedInteractions).mockImplementation((_, offset) =>
+      Promise.resolve(page(offset)),
+    );
+    vi.mocked(listRetainedInteractions).mockImplementation((offset) =>
+      Promise.resolve(page(offset)),
+    );
     renderWithoutAntdStyles(<ObservabilitySettingsScene />);
     expect(
       await screen.findByText("bknTrace.settings.archive.run.completedRetained"),
     ).not.toBeNull();
     fireEvent.click(screen.getByText("bknTrace.settings.archive.run.viewResult"));
     expect(await screen.findByText("bknTrace.settings.archive.run.resultTitle")).not.toBeNull();
-    expect(await screen.findByText("itx_large")).not.toBeNull();
+    expect(await screen.findByText("itx_0")).not.toBeNull();
     expect(getArchiveRunResult).toHaveBeenCalledWith("arc_trace_1");
+    expect(listRunRetainedInteractions).toHaveBeenCalledWith("arc_trace_1", 0);
+    expect(screen.queryByText("itx_20")).toBeNull();
+    expect(screen.getByText(`just over ${formatFileSize(8 * 1024 * 1024)}`)).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.run.allOverLimit")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.settings.archive.run.columns.reason")).toBeNull();
+    // A failed page keeps the table and pager, and can be retried.
+    vi.mocked(listRunRetainedInteractions).mockRejectedValueOnce(new Error("timeout"));
+    fireEvent.click(screen.getByTitle("2"));
+    expect(await screen.findByText("bknTrace.settings.archive.run.loadFailed")).not.toBeNull();
+    expect(screen.getByTitle("1")).not.toBeNull();
+    fireEvent.click(screen.getByText("bknTrace.settings.archive.run.retryLoad"));
+    expect(await screen.findByText("itx_22")).not.toBeNull();
+    expect(listRunRetainedInteractions).toHaveBeenLastCalledWith("arc_trace_1", 20);
     fireEvent.click(screen.getByText("bknTrace.settings.archive.run.viewRetained"));
     expect(await screen.findByText("bknTrace.settings.archive.run.retainedTitle")).not.toBeNull();
-    expect(listRetainedInteractions).toHaveBeenCalled();
+    expect(listRetainedInteractions).toHaveBeenCalledWith(0);
+  });
+
+  it("批次进度中的累计清理数按本地格式显示", async () => {
+    currentTranslate = (key, options) =>
+      key === "bknTrace.settings.archive.runComplete"
+        ? `cleaned ${String(options?.cleaned)}`
+        : translate(key, options);
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(
+        kind === "log"
+          ? [
+              {
+                id: "large-log-run",
+                kind,
+                range: { to: "2026-10-28" },
+                candidateCount: 10000,
+                status: "completed",
+                batchProgress: {
+                  run_id: "run",
+                  batch_number: 32,
+                  cleaned_in_run: 311319,
+                  remaining_at_selection: 0,
+                  run_complete: true,
+                },
+              },
+            ]
+          : [],
+      ),
+    );
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(await screen.findByText("cleaned 311,319")).not.toBeNull();
   });
 
   it("点击立即归档先显示不可逆清理确认，而不直接创建归档任务", async () => {

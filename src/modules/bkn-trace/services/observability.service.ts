@@ -218,7 +218,10 @@ export type RetainedInteraction = {
   retainedAt: string;
 };
 
-export type ArchiveRunResult = ArchiveRun & { retained: RetainedInteraction[] };
+/** One page of retained interactions and how many there are in total. */
+export type RetainedPage = { items: RetainedInteraction[]; total: number };
+
+export const RETAINED_PAGE_SIZE = 20;
 
 export type ArchiveOverview = {
   candidateCount: number;
@@ -528,23 +531,30 @@ function mapRetainedInteraction(item: BackendRetainedInteraction): RetainedInter
   };
 }
 
-export async function getArchiveRunResult(runId: string): Promise<ArchiveRunResult> {
-  const response = await http.get<BackendArchiveRun & { retained: BackendRetainedInteraction[] }>(
+export async function getArchiveRunResult(runId: string): Promise<ArchiveRun> {
+  const response = await http.get<BackendArchiveRun>(
     `${OBSERVABILITY_API_PREFIX}/archive-runs/${encodeURIComponent(runId)}`,
     { skipErrorToast: true },
   );
-  return {
-    ...mapArchiveRun(response.data),
-    retained: (response.data.retained ?? []).map(mapRetainedInteraction),
-  };
+  return mapArchiveRun(response.data);
 }
 
-export async function listRetainedInteractions(): Promise<RetainedInteraction[]> {
-  const response = await http.get<BackendRetainedInteraction[]>(
-    `${OBSERVABILITY_API_PREFIX}/trace-archive-retained`,
-    { skipErrorToast: true },
+async function getRetainedPage(path: string, offset: number): Promise<RetainedPage> {
+  const response = await http.get<{ items: BackendRetainedInteraction[]; total: number }>(
+    `${OBSERVABILITY_API_PREFIX}/${path}`,
+    { params: { offset, limit: RETAINED_PAGE_SIZE }, skipErrorToast: true },
   );
-  return response.data.map(mapRetainedInteraction);
+  return { items: response.data.items.map(mapRetainedInteraction), total: response.data.total };
+}
+
+/** Pages every interaction kept online under the current archive limit. */
+export function listRetainedInteractions(offset: number): Promise<RetainedPage> {
+  return getRetainedPage("trace-archive-retained", offset);
+}
+
+/** Pages the interactions one run kept online. */
+export function listRunRetainedInteractions(runId: string, offset: number): Promise<RetainedPage> {
+  return getRetainedPage(`archive-runs/${encodeURIComponent(runId)}/retained`, offset);
 }
 
 type BackendArchiveJob = {

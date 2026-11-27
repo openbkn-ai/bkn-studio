@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Page the oversized Trace interactions kept online, 20 per page, in both the run result and the retained list; state a shared archive limit once above the table; show sizes just over the limit as "just over"; format batch cleanup counts. (bkn-foundry#2948)
+
 - Archive runs in the background: submitting returns at once, Settings shows one line per run state with progress while it runs and refreshes every 3 seconds, and each finished run opens a result with retries and the oversized Trace interactions kept online, also listed from the panel. (bkn-foundry#2947, bkn-foundry#2948)
 
 - Show archive blockers and per-batch progress, distinguish unavailable history from empty history, and refresh task state after unsuccessful archive or cleanup requests. Prevent new same-kind archives while cleanup remains unfinished. (bkn-foundry#2947, bkn-foundry#2948)

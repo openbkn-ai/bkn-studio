@@ -20,7 +20,7 @@ import {
 import axios from "axios";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
@@ -36,6 +36,8 @@ import {
   isArchiveRunActive,
   listArchiveJobs,
   listRetainedInteractions,
+  listRunRetainedInteractions,
+  RETAINED_PAGE_SIZE,
   listLogPolicies,
   listLogSources,
   retryArchiveCleanup,
@@ -43,7 +45,7 @@ import {
   type ArchiveKind,
   type ArchiveOverview,
   type ArchiveRun,
-  type ArchiveRunResult,
+  type RetainedPage,
   type BusinessModule,
   type RetainedInteraction,
   type LogPolicy,
@@ -712,7 +714,10 @@ function ArchiveJobStatus({ job }: { job: ArchiveJob }) {
             progress.run_complete
               ? "bknTrace.settings.archive.runComplete"
               : "bknTrace.settings.archive.runIncomplete",
-            { cleaned: progress.cleaned_in_run, remaining: progress.remaining_at_selection },
+            {
+              cleaned: formatNumber(progress.cleaned_in_run),
+              remaining: formatNumber(progress.remaining_at_selection),
+            },
           )}
         </Typography.Paragraph>
       ) : null}
@@ -949,20 +954,65 @@ function ArchiveRunLine({ run, onShowResult }: { run: ArchiveRun; onShowResult: 
   );
 }
 
-function retainedSize(t: TFunction, item: RetainedInteraction): string {
-  const amount = (value: number) =>
-    item.unit === "bytes"
-      ? formatFileSize(value)
-      : item.unit === "rows"
-        ? t("bknTrace.settings.archive.recordCount", { count: value })
-        : formatNumber(value);
-  return item.atLeast
-    ? t("bknTrace.settings.archive.run.atLeast", { size: amount(item.measured) })
-    : amount(item.measured);
+function retainedAmount(t: TFunction, value: number, unit: string): string {
+  return unit === "bytes"
+    ? formatFileSize(value, { maximumFractionDigits: 2 })
+    : unit === "rows"
+      ? t("bknTrace.settings.archive.recordCount", { count: value })
+      : formatNumber(value);
 }
 
-function RetainedTable({ items }: { items: RetainedInteraction[] }) {
+function retainedSize(t: TFunction, item: RetainedInteraction): string {
+  const size = retainedAmount(t, item.measured, item.unit);
+  if (item.atLeast) return t("bknTrace.settings.archive.run.atLeast", { size });
+  // Rounding can make a size just over the limit read as equal to it.
+  return size === retainedAmount(t, item.budget, item.unit)
+    ? t("bknTrace.settings.archive.run.justOver", { size })
+    : size;
+}
+
+/** Retained interactions, 20 per page; a shared limit is stated once above the table. */
+function RetainedTable({ load }: { load: (offset: number) => Promise<RetainedPage> }) {
   const { t } = useTranslation();
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<RetainedPage>();
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setFailed(false);
+    setLoading(true);
+    load((page - 1) * RETAINED_PAGE_SIZE)
+      .then((value) => {
+        if (active) setData(value);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [attempt, load, page]);
+  const failure = failed ? (
+    <Alert
+      action={
+        <Button size="small" onClick={() => setAttempt((value) => value + 1)}>
+          {t("bknTrace.settings.archive.run.retryLoad")}
+        </Button>
+      }
+      message={t("bknTrace.settings.archive.run.loadFailed")}
+      showIcon
+      type="warning"
+    />
+  ) : null;
+  // Before any page has loaded there is no table to keep.
+  if (!data) return failure ?? <Spin />;
+  const limits = new Set(data.items.map((item) => `${item.budget}:${item.unit}`));
+  const shared = limits.size === 1 ? data.items[0] : undefined;
   const columns: ColumnsType<RetainedInteraction> = [
     {
       title: t("bknTrace.settings.archive.run.columns.interaction"),
@@ -974,17 +1024,18 @@ function RetainedTable({ items }: { items: RetainedInteraction[] }) {
       key: "size",
       render: (_, item) => retainedSize(t, item),
     },
-    {
-      title: t("bknTrace.settings.archive.run.columns.reason"),
-      key: "reason",
-      render: (_, item) =>
-        t("bknTrace.settings.archive.run.overLimit", {
-          limit:
-            item.unit === "bytes"
-              ? formatFileSize(item.budget)
-              : t("bknTrace.settings.archive.recordCount", { count: item.budget }),
-        }),
-    },
+    ...(shared
+      ? []
+      : [
+          {
+            title: t("bknTrace.settings.archive.run.columns.reason"),
+            key: "reason",
+            render: (_: unknown, item: RetainedInteraction) =>
+              t("bknTrace.settings.archive.run.overLimit", {
+                limit: retainedAmount(t, item.budget, item.unit),
+              }),
+          },
+        ]),
     {
       title: t("bknTrace.settings.archive.run.columns.time"),
       dataIndex: "retainedAt",
@@ -993,20 +1044,42 @@ function RetainedTable({ items }: { items: RetainedInteraction[] }) {
     },
   ];
   return (
-    <Table
-      columns={columns}
-      dataSource={items}
-      pagination={false}
-      rowKey="interactionId"
-      size="small"
-    />
+    <>
+      {failure}
+      {shared ? (
+        <Typography.Paragraph type="secondary">
+          {t("bknTrace.settings.archive.run.allOverLimit", {
+            limit: retainedAmount(t, shared.budget, shared.unit),
+          })}
+        </Typography.Paragraph>
+      ) : null}
+      <Table
+        columns={columns}
+        dataSource={data.items}
+        loading={loading}
+        pagination={{
+          current: page,
+          pageSize: RETAINED_PAGE_SIZE,
+          total: data.total,
+          showSizeChanger: false,
+          hideOnSinglePage: true,
+          onChange: setPage,
+        }}
+        rowKey="interactionId"
+        size="small"
+      />
+    </>
   );
 }
 
 function ArchiveRunResultModal({ runId, onClose }: { runId?: string; onClose: () => void }) {
   const { t } = useTranslation();
-  const [result, setResult] = useState<ArchiveRunResult>();
+  const [result, setResult] = useState<ArchiveRun>();
   const [failed, setFailed] = useState(false);
+  const loadRetained = useCallback(
+    (offset: number) => listRunRetainedInteractions(runId ?? "", offset),
+    [runId],
+  );
   useEffect(() => {
     if (!runId) return;
     let active = true;
@@ -1025,11 +1098,12 @@ function ArchiveRunResultModal({ runId, onClose }: { runId?: string; onClose: ()
   }, [runId]);
   return (
     <Modal
+      destroyOnHidden
       footer={null}
       onCancel={onClose}
       open={Boolean(runId)}
       title={t("bknTrace.settings.archive.run.resultTitle")}
-      width={640}
+      width={720}
     >
       {failed ? (
         <Alert message={t("bknTrace.settings.archive.run.loadFailed")} showIcon type="warning" />
@@ -1067,7 +1141,7 @@ function ArchiveRunResultModal({ runId, onClose }: { runId?: string; onClose: ()
               </Descriptions.Item>
             ) : null}
           </Descriptions>
-          {result.retained.length > 0 ? <RetainedTable items={result.retained} /> : null}
+          {result.retainedCount > 0 ? <RetainedTable load={loadRetained} /> : null}
         </>
       )}
     </Modal>
@@ -1076,39 +1150,16 @@ function ArchiveRunResultModal({ runId, onClose }: { runId?: string; onClose: ()
 
 function RetainedInteractionsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<RetainedInteraction[]>();
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    let active = true;
-    setItems(undefined);
-    setFailed(false);
-    listRetainedInteractions()
-      .then((value) => {
-        if (active) setItems(value);
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [open]);
   return (
     <Modal
+      destroyOnHidden
       footer={null}
       onCancel={onClose}
       open={open}
       title={t("bknTrace.settings.archive.run.retainedTitle")}
-      width={640}
+      width={720}
     >
-      {failed ? (
-        <Alert message={t("bknTrace.settings.archive.run.loadFailed")} showIcon type="warning" />
-      ) : !items ? (
-        <Spin />
-      ) : (
-        <RetainedTable items={items} />
-      )}
+      {open ? <RetainedTable load={listRetainedInteractions} /> : null}
     </Modal>
   );
 }
