@@ -189,6 +189,9 @@ export function KnowledgeNetworkWorkspaceScene({
   );
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
+    const actionControlNavItem = extensionWorkspaceNavItems("risk-control").find(
+      (item) => item.id === "action-control",
+    );
     const items: WorkspaceNavItem[] = [
       {
         key: "overview",
@@ -245,7 +248,7 @@ export function KnowledgeNetworkWorkspaceScene({
       },
       {
         key: "action-control",
-        label: t("knowledgeNetwork.riskActionControlNav"),
+        label: t(actionControlNavItem?.labelKey ?? "knowledgeNetwork.riskActionControlNav"),
         icon: <ControlOutlined />,
         paidCapability: CAPABILITIES.ACTION_GOVERNANCE,
         paidCapabilityState: !snapshot
@@ -254,12 +257,8 @@ export function KnowledgeNetworkWorkspaceScene({
             ? "available"
             : "not-licensed",
         paidEdition: "enterprise",
-        path: extensionWorkspaceNavItems("risk-control")
-          .find((item) => item.id === "action-control")
-          ?.path(activeNetworkId),
-        disabled:
-          (!snapshot || actionControlLicensed) &&
-          !extensionWorkspaceNavItems("risk-control").some((item) => item.id === "action-control"),
+        path: actionControlNavItem?.path(activeNetworkId),
+        disabled: (!snapshot || actionControlLicensed) && !actionControlNavItem,
       },
       {
         key: "concept-groups",
