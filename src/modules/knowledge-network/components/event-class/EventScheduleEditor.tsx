@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Input, InputNumber, Select, Space, TimePicker } from "antd";
+import { Col, Input, InputNumber, Row, Select, TimePicker } from "antd";
 import dayjs from "dayjs";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,11 +39,11 @@ export function EventScheduleEditor({
   const zones = useMemo(() => timezoneOptions(), []);
 
   return (
-    <Space direction="vertical" size={8} className={styles.block}>
-      <Space wrap>
+    <Row align="middle" gutter={[8, 8]}>
+      <Col flex="0 1 160px">
         <Select
           aria-label={t("knowledgeNetwork.eventClasses.form.scheduleKind")}
-          className={styles.scheduleKind}
+          style={{ width: "100%" }}
           onChange={(kind: EventScheduleDraft["kind"]) => {
             const cron = cronFromSchedule(schedule);
             onChange(
@@ -64,8 +64,11 @@ export function EventScheduleEditor({
           }))}
           value={schedule.kind}
         />
-        {schedule.kind === "minutes" ? (
+      </Col>
+      {schedule.kind === "minutes" ? (
+        <Col flex="0 1 106px">
           <InputNumber
+            style={{ width: "100%" }}
             suffix={t("knowledgeNetwork.eventClasses.schedule.minutesUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.minutes")}
             max={59}
@@ -76,9 +79,12 @@ export function EventScheduleEditor({
             precision={0}
             value={schedule.every}
           />
-        ) : null}
-        {schedule.kind === "hours" ? (
+        </Col>
+      ) : null}
+      {schedule.kind === "hours" ? (
+        <Col flex="0 1 106px">
           <InputNumber
+            style={{ width: "100%" }}
             suffix={t("knowledgeNetwork.eventClasses.schedule.hoursUnit")}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.hours")}
             max={23}
@@ -87,11 +93,13 @@ export function EventScheduleEditor({
             precision={0}
             value={schedule.every}
           />
-        ) : null}
-        {schedule.kind === "weekly" ? (
+        </Col>
+      ) : null}
+      {schedule.kind === "weekly" ? (
+        <Col flex="0 1 106px">
           <Select
             aria-label={t("knowledgeNetwork.eventClasses.schedule.weekday")}
-            className={styles.weekday}
+            style={{ width: "100%" }}
             onChange={(weekday: number) => onChange({ ...schedule, weekday })}
             options={[1, 2, 3, 4, 5, 6, 0].map((day) => ({
               label: t(`knowledgeNetwork.eventClasses.schedule.weekdays.${day}`),
@@ -99,10 +107,13 @@ export function EventScheduleEditor({
             }))}
             value={schedule.weekday}
           />
-        ) : null}
-        {schedule.kind === "daily" || schedule.kind === "weekly" ? (
+        </Col>
+      ) : null}
+      {schedule.kind === "daily" || schedule.kind === "weekly" ? (
+        <Col flex="0 1 106px">
           <TimePicker
             allowClear={false}
+            style={{ width: "100%" }}
             aria-label={t("knowledgeNetwork.eventClasses.schedule.time")}
             format="HH:mm"
             minuteStep={5}
@@ -112,8 +123,10 @@ export function EventScheduleEditor({
             }}
             value={scheduleTime(schedule.time)}
           />
-        ) : null}
-        {schedule.kind === "cron" ? (
+        </Col>
+      ) : null}
+      {schedule.kind === "cron" ? (
+        <Col flex="0 1 190px">
           <Input
             aria-label={t("knowledgeNetwork.eventClasses.schedule.kinds.cron")}
             className={styles.cron}
@@ -121,16 +134,18 @@ export function EventScheduleEditor({
             placeholder="0 8 * * *"
             value={schedule.cron}
           />
-        ) : null}
-      </Space>
-      <Select
-        aria-label={t("knowledgeNetwork.eventClasses.schedule.timezone")}
-        className={styles.timezone}
-        onChange={onTimezoneChange}
-        options={zones.map((zone) => ({ label: zone, value: zone }))}
-        showSearch
-        value={timezone}
-      />
-    </Space>
+        </Col>
+      ) : null}
+      <Col flex="0 1 220px">
+        <Select
+          aria-label={t("knowledgeNetwork.eventClasses.schedule.timezone")}
+          style={{ width: "100%" }}
+          onChange={onTimezoneChange}
+          options={zones.map((zone) => ({ label: zone, value: zone }))}
+          showSearch
+          value={timezone}
+        />
+      </Col>
+    </Row>
   );
 }

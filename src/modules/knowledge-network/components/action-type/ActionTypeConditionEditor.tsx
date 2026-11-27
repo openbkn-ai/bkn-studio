@@ -177,7 +177,13 @@ function ConditionRow({
       : String(value.value);
 
   return (
-    <div className={styles.conditionRow}>
+    <div
+      className={
+        hideObjectTypeSelect
+          ? `${styles.conditionRow} ${styles.boundConditionRow}`
+          : styles.conditionRow
+      }
+    >
       {!hideObjectTypeSelect ? (
         <div className={styles.objectTypeSelect}>
           <RelationTypeObjectTypeSelect

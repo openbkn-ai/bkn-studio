@@ -19,6 +19,7 @@ import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useCapability, useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
@@ -1267,7 +1268,13 @@ export function ObjectTypeDetailScene() {
   };
 
   const overviewPanel = (
-    <div className={styles.tabPanelOverview}>
+    <div
+      className={
+        eventType
+          ? `${styles.tabPanelOverview} ${styles.eventClassOverview}`
+          : styles.tabPanelOverview
+      }
+    >
       <div className={styles.overviewHero}>
         <section className={styles.overviewIdentity}>
           <div className={styles.summaryHead}>
@@ -1427,7 +1434,6 @@ export function ObjectTypeDetailScene() {
           canQueryData={hasKnowledgeNetworkRecordOperation(detail, "query_data")}
           eventType={eventType}
           networkId={networkId}
-          onEdit={() => setEventForm({ eventType, open: true })}
           onOpenExecutions={(actionTypeId) => {
             void navigate(
               `/knowledge-network/workspace/${networkId}/action-types/${encodeURIComponent(actionTypeId)}/execution?tab=tasks`,
@@ -2396,18 +2402,19 @@ export function ObjectTypeDetailScene() {
                 trigger="button"
               />
             ) : null}
+            {definitionWritable && eventType ? (
+              <AppButton onClick={() => setEventForm({ eventType, open: true })} type="primary">
+                {t("common.edit")}
+              </AppButton>
+            ) : null}
             <KnowledgeNetworkResourceDetailActions
               actions={[
-                ...(definitionWritable
+                ...(definitionWritable && !eventType
                   ? [
                       {
                         key: "edit",
                         label: t("common.edit"),
                         onClick: () => {
-                          if (eventType) {
-                            setEventForm({ eventType, open: true });
-                            return;
-                          }
                           void navigate(
                             `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
                             { state: knowledgeNetworkReturnState(returnPath) },

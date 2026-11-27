@@ -13,8 +13,10 @@ import {
 } from "@ant-design/icons";
 import {
   Alert,
+  Card,
   Col,
   Drawer,
+  Flex,
   Form,
   Input,
   InputNumber,
@@ -30,6 +32,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { buildAppPath } from "@/app/router/app-paths";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -246,36 +249,38 @@ function hasIncompleteRow(condition: ActionTypeCondition | null | undefined): bo
 
 /** A page of the studio, opened beside this one so the drawer keeps what is typed in it. */
 function openInNewTab(path: string) {
-  window.open(
-    `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`,
-    "_blank",
-    "noopener,noreferrer",
-  );
+  window.open(buildAppPath(path), "_blank", "noopener,noreferrer");
 }
 
-/**
- * One card of the form. The rule's clauses, 当 and 则, lead with their keyword as a badge; the
- * basics with a plain title.
- */
 function FormCard({
   children,
   hint,
-  keyword,
   title,
 }: {
   children: ReactNode;
   hint?: string;
-  keyword?: string;
-  title?: string;
+  title: string;
 }) {
   return (
-    <section aria-label={keyword ?? title} className={styles.card}>
-      <div className={styles.cardHead}>
-        {keyword ? <span className={styles.clauseKeyword}>{keyword}</span> : null}
-        {title ? <span className={styles.cardTitle}>{title}</span> : null}
-        {hint ? <Typography.Text type="secondary">{hint}</Typography.Text> : null}
-      </div>
-      {children}
+    <section aria-label={title} className={styles.card}>
+      <Card size="small" styles={{ body: { padding: "16px 18px 2px" } }}>
+        <Flex align="center" gap={4} style={{ marginBottom: 12 }} wrap>
+          <Typography.Title level={3} style={{ fontSize: 15, lineHeight: "22px", margin: 0 }}>
+            {title}
+          </Typography.Title>
+          {hint ? (
+            <Tooltip title={hint} trigger={["hover", "focus"]}>
+              <AppButton
+                aria-label={hint}
+                icon={<QuestionCircleOutlined aria-hidden className={styles.hintIcon} />}
+                size="small"
+                type="text"
+              />
+            </Tooltip>
+          ) : null}
+        </Flex>
+        {children}
+      </Card>
     </section>
   );
 }
@@ -900,13 +905,6 @@ export function EventClassFormDrawer({
     );
   };
 
-  const basisHint =
-    basis === "condition"
-      ? t(`${F}.conditionHint`)
-      : basis === "function"
-        ? t(`${F}.ruleToolHint`)
-        : undefined;
-
   const renderCypherReadOnly = () =>
     savedCypher ? (
       <Space direction="vertical" size={8} className={styles.block}>
@@ -933,56 +931,62 @@ export function EventClassFormDrawer({
     return (
       <>
         <Form.Item label={t(`${F}.ruleTool`)} required={ruleRequired}>
-          <div className={styles.functionRow}>
-            <Form.Item
-              noStyle
-              name="ruleTool"
-              rules={[{ message: t(`${F}.ruleToolRequired`), required: ruleRequired }]}
-            >
-              <Select
-                allowClear={!ruleRequired}
-                aria-label={t(`${F}.ruleTool`)}
-                className={styles.functionSelect}
-                loading={toolsLoading}
-                notFoundContent={toolsLoading ? undefined : t(`${F}.ruleToolEmpty`)}
-                optionFilterProp="label"
-                options={toolOptions}
-                placeholder={t(`${F}.ruleToolPlaceholder`)}
-                showSearch
-              />
-            </Form.Item>
-            <Tooltip title={t(`${F}.reloadFunctions`)}>
-              <AppButton
-                aria-label={t(`${F}.reloadFunctions`)}
-                icon={<ReloadOutlined />}
-                onClick={() => setToolsTick((current) => current + 1)}
-              />
-            </Tooltip>
-            {boxId && toolId ? (
-              <AppButton
-                icon={<EditOutlined />}
-                onClick={() =>
-                  openInNewTab(
-                    `/execution-factory/toolboxes/${encodeURIComponent(boxId)}/tools/${encodeURIComponent(toolId)}/edit`,
-                  )
-                }
+          <Row align="middle" gutter={[8, 8]}>
+            <Col flex="1 1 260px">
+              <Form.Item
+                noStyle
+                name="ruleTool"
+                rules={[{ message: t(`${F}.ruleToolRequired`), required: ruleRequired }]}
               >
-                {t(`${F}.editFunction`)}
-              </AppButton>
-            ) : null}
-            <Tooltip title={t(`${F}.newFunctionHint`)}>
-              <AppButton
-                icon={<PlusOutlined />}
-                onClick={() =>
-                  openInNewTab(
-                    `/knowledge-network/workspace/${encodeURIComponent(networkId)}/experience/cypher`,
-                  )
-                }
-              >
-                {t(`${F}.newFunction`)}
-              </AppButton>
-            </Tooltip>
-          </div>
+                <Select
+                  allowClear={!ruleRequired}
+                  aria-label={t(`${F}.ruleTool`)}
+                  loading={toolsLoading}
+                  notFoundContent={toolsLoading ? undefined : t(`${F}.ruleToolEmpty`)}
+                  optionFilterProp="label"
+                  options={toolOptions}
+                  placeholder={t(`${F}.ruleToolPlaceholder`)}
+                  showSearch
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </Col>
+            <Col>
+              <Space size={8} wrap>
+                <Tooltip title={t(`${F}.reloadFunctions`)}>
+                  <AppButton
+                    aria-label={t(`${F}.reloadFunctions`)}
+                    icon={<ReloadOutlined />}
+                    onClick={() => setToolsTick((current) => current + 1)}
+                  />
+                </Tooltip>
+                {boxId && toolId ? (
+                  <AppButton
+                    icon={<EditOutlined />}
+                    onClick={() =>
+                      openInNewTab(
+                        `/execution-factory/toolboxes/${encodeURIComponent(boxId)}/tools/${encodeURIComponent(toolId)}/edit`,
+                      )
+                    }
+                  >
+                    {t(`${F}.editFunction`)}
+                  </AppButton>
+                ) : null}
+                <Tooltip title={t(`${F}.newFunctionHint`)}>
+                  <AppButton
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      openInNewTab(
+                        `/knowledge-network/workspace/${encodeURIComponent(networkId)}/experience/cypher`,
+                      )
+                    }
+                  >
+                    {t(`${F}.newFunction`)}
+                  </AppButton>
+                </Tooltip>
+              </Space>
+            </Col>
+          </Row>
         </Form.Item>
         {ruleToolKey && selectedTool && selectedTool.parameters.length > 0 ? (
           <Form.Item label={t(`${F}.parameters`)}>
@@ -1012,12 +1016,12 @@ export function EventClassFormDrawer({
   };
 
   const footer = (
-    <div className={styles.footer}>
+    <Flex gap={8} justify="flex-end">
       <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
       <AppButton loading={submitting} onClick={() => void handleSubmit()} type="primary">
         {t("common.save")}
       </AppButton>
-    </div>
+    </Flex>
   );
 
   return (
@@ -1028,9 +1032,14 @@ export function EventClassFormDrawer({
       onClose={onClose}
       open={open}
       title={editing ? t(`${F}.editTitle`) : t(`${F}.createTitle`)}
-      width={800}
+      width="min(800px, 100vw)"
     >
-      <Form<FormValues> colon={false} form={form} layout="vertical" className={styles.form}>
+      <Form<FormValues>
+        colon={false}
+        form={form}
+        layout="vertical"
+        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      >
         {versioned ? <Alert message={t(`${F}.versionedHint`)} showIcon type="info" /> : null}
         {legacyRuleWithoutAction ? (
           <Alert message={t(`${F}.legacyRuleHint`)} showIcon type="warning" />
@@ -1038,7 +1047,7 @@ export function EventClassFormDrawer({
         {metricBasis ? <Alert message={t(`${F}.metricBasisHint`)} showIcon type="info" /> : null}
         <FormCard title={t(`${F}.sectionBasics`)}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col sm={12} xs={24}>
               <Form.Item
                 label={t(`${F}.name`)}
                 name="name"
@@ -1050,7 +1059,7 @@ export function EventClassFormDrawer({
                 <Input maxLength={128} placeholder={t(`${F}.namePlaceholder`)} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col sm={12} xs={24}>
               <Form.Item
                 label={t(`${F}.code`)}
                 name="code"
@@ -1063,7 +1072,7 @@ export function EventClassFormDrawer({
                 <Input disabled={editing} maxLength={64} placeholder="order_overdue" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col sm={12} xs={24}>
               <Form.Item label={t(`${F}.source`)} name="source" tooltip={t(`${F}.sourceHint`)}>
                 <Radio.Group
                   disabled={editing}
@@ -1074,7 +1083,7 @@ export function EventClassFormDrawer({
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col sm={12} xs={24}>
               <Form.Item label={t(`${F}.severity`)} name="severity">
                 <Select
                   allowClear
@@ -1083,7 +1092,7 @@ export function EventClassFormDrawer({
                 />
               </Form.Item>
             </Col>
-            <Col span={source === "report" ? 12 : 24}>
+            <Col sm={source === "report" ? 12 : 24} xs={24}>
               <Form.Item
                 label={t(`${F}.subject`)}
                 name="subject"
@@ -1110,7 +1119,7 @@ export function EventClassFormDrawer({
               </Form.Item>
             </Col>
             {source === "report" ? (
-              <Col span={12}>
+              <Col sm={12} xs={24}>
                 <Form.Item
                   label={t(`${F}.mergeHours`)}
                   name="mergeHours"
@@ -1127,7 +1136,7 @@ export function EventClassFormDrawer({
           </Row>
         </FormCard>
         {source === "rule" ? (
-          <FormCard hint={t(`${F}.whenHint`)} keyword={t(`${F}.when`)}>
+          <FormCard hint={t(`${F}.whenHint`)} title={t(`${F}.sectionRule`)}>
             <Form.Item label={t(`${F}.schedule`)} tooltip={t(`${F}.scheduleHint`)}>
               {keptRate ? (
                 <Alert
@@ -1149,16 +1158,31 @@ export function EventClassFormDrawer({
             </Form.Item>
             <Tabs
               activeKey={basis}
-              items={bases.map((key) => ({ key, label: t(`${F}.basisTabs.${key}`) }))}
+              className={styles.ruleTabs}
+              items={bases.map((key) => {
+                const label = t(`${F}.basisTabs.${key}`);
+                const hint =
+                  key === "condition"
+                    ? t(`${F}.conditionHint`)
+                    : key === "function"
+                      ? t(`${F}.ruleToolHint`)
+                      : undefined;
+                return {
+                  key,
+                  label: hint ? (
+                    <Space size={6}>
+                      {label}
+                      <Tooltip title={hint}>
+                        <QuestionCircleOutlined aria-hidden className={styles.hintIcon} />
+                      </Tooltip>
+                    </Space>
+                  ) : (
+                    label
+                  ),
+                };
+              })}
               onChange={(key) => setBasis(key as RuleBasis)}
               size="small"
-              tabBarExtraContent={
-                basisHint ? (
-                  <Tooltip title={basisHint}>
-                    <QuestionCircleOutlined aria-label={basisHint} className={styles.hintIcon} />
-                  </Tooltip>
-                ) : null
-              }
             />
             {renderRuleEditor()}
             <div className={styles.trial}>
@@ -1172,9 +1196,9 @@ export function EventClassFormDrawer({
             </div>
           </FormCard>
         ) : null}
-        <FormCard keyword={t(`${F}.then`)}>
+        <FormCard title={t(`${F}.sectionHandling`)}>
           <Row gutter={16}>
-            <Col span={handlingActionId ? 14 : 24}>
+            <Col sm={handlingActionId ? 14 : 24} xs={24}>
               <Form.Item
                 label={t(`${F}.handlingAction`)}
                 name="handlingAction"
@@ -1210,7 +1234,7 @@ export function EventClassFormDrawer({
               </Form.Item>
             </Col>
             {handlingActionId ? (
-              <Col span={10}>
+              <Col sm={10} xs={24}>
                 <Form.Item
                   dependencies={["handlingAction"]}
                   label={t(`${F}.handlingMode`)}
@@ -1252,7 +1276,7 @@ export function EventClassFormDrawer({
           >
             <Input.TextArea
               aria-label={t(`${F}.handlingNote`)}
-              autoSize={{ maxRows: 6, minRows: 3 }}
+              autoSize={{ maxRows: 6, minRows: 2 }}
               maxLength={500}
               placeholder={t(`${F}.handlingNotePlaceholder`)}
               showCount

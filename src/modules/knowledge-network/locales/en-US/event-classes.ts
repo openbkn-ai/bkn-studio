@@ -37,7 +37,7 @@ export const eventClassesPart = {
       metricBasisHint:
         "This event class is recognized by a metric anomaly, which cannot be edited here. It is kept while no rule is set; setting a recognition rule here replaces it.",
       sectionBasics: "Basics",
-      when: "When",
+      sectionRule: "Recognition rule",
       whenHint: "Each object the rule hits gets an event.",
       cypherReadOnly:
         "This rule is a Cypher query written directly. It is shown read-only here and kept as it is when you save. To change it, publish it as a function from the data query page and use the function instead.",
@@ -47,11 +47,11 @@ export const eventClassesPart = {
       editFunction: "Edit function",
       reloadFunctions: "Reload functions",
       saveFailed: "Could not save: {{message}}",
-      then: "Then",
+      sectionHandling: "Event handling",
       basisTabs: {
-        condition: "Condition",
+        condition: "Condition rule",
         cypher: "Cypher (read-only)",
-        function: "Use a function (advanced)",
+        function: "Function rule",
       },
       ruleRequired: "Set a recognition rule",
       conditionHint:
@@ -197,7 +197,6 @@ export const eventClassesPart = {
     },
     recognition: {
       title: "Event settings",
-      edit: "Edit",
       checkNow: "Check now",
       noRuleTool:
         "There is no recognition action yet, so the platform does not check this event class. Edit it and set a recognition rule to have it checked on schedule.",
@@ -234,17 +233,16 @@ export const eventClassesPart = {
       subjectAccount: "Runs as",
       nextCheck: "Next check",
       lastCheck: "Last check",
-      lastCheckOk_one: "OK, found {{count}} object",
-      lastCheckOk_other: "OK, found {{count}} objects",
-      lastCheckUnknown: "Could not decide: {{message}}",
       neverChecked: "Not checked yet",
-      noMessage: "No reason given",
     },
     list: {
       searchPlaceholder: "Search by name or code",
       empty: "No event classes yet",
       name: "Name",
       lastCheckFailed: "Unknown",
+      lastCheckHits_one: "Found {{count}} object",
+      lastCheckHits_other: "Found {{count}} objects",
+      lastCheckNoHits: "No matches",
     },
     subject: {
       section: "Events",

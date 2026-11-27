@@ -5,10 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
+import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+import type { KnEventRuleCheck, KnEventType } from "@/modules/knowledge-network/types/event-type";
 
 const mocks = vi.hoisted(() => ({
   check: vi.fn(),
@@ -72,15 +73,7 @@ afterEach(() => {
 });
 
 const checkNow = () => {
-  render(
-    <EventRecognitionCard
-      canModify
-      canQueryData
-      eventType={overdue}
-      networkId="network-1"
-      onEdit={vi.fn()}
-    />,
-  );
+  render(<EventRecognitionCard canModify canQueryData eventType={overdue} networkId="network-1" />);
   fireEvent.click(screen.getByText(`${PREFIX}.checkNow`));
 };
 
@@ -111,11 +104,52 @@ describe("EventRecognitionCard check now", () => {
         canQueryData
         eventType={{ ...overdue, recognition_action_id: undefined, rule_tool: null }}
         networkId="network-1"
-        onEdit={vi.fn()}
       />,
     );
 
     expect(screen.queryByText(`${PREFIX}.checkNow`)).toBeNull();
+  });
+});
+
+describe("EventRecognitionCard last check", () => {
+  const time = Date.UTC(2026, 10, 23, 3, 11, 10);
+  const renderCheck = (check: Omit<KnEventRuleCheck, "event_type" | "time">) => {
+    const onShowEvents = vi.fn();
+    mocks.listChecks.mockResolvedValue([{ ...check, event_type: overdue.code, time }]);
+    render(
+      <EventRecognitionCard
+        canModify
+        canQueryData
+        eventType={overdue}
+        networkId="network-1"
+        onShowEvents={onShowEvents}
+      />,
+    );
+    return onShowEvents;
+  };
+
+  it("shows the hits above the timestamp and opens the data tab from the hits", async () => {
+    const onShowEvents = renderCheck({ status: "ok", hits: 8 });
+    const hits = await screen.findByRole("button", {
+      name: "knowledgeNetwork.eventClasses.list.lastCheckHits:8",
+    });
+    const field = within(hits.closest("dd")!);
+    expect(field.getByText(formatTimestamp(time))).toBeVisible();
+    expect(hits.nextElementSibling).toHaveTextContent(formatTimestamp(time));
+    fireEvent.click(hits);
+    expect(onShowEvents).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: `${PREFIX}.edit` })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [{ status: "ok", hits: 0 }, "lastCheckNoHits"],
+    [{ status: "unknown", message: "Rule timed out" }, "lastCheckFailed"],
+  ] as const)("shows a plain result for %j", async (check, key) => {
+    renderCheck(check);
+    const result = await screen.findByText(`knowledgeNetwork.eventClasses.list.${key}`);
+    expect(result.nextElementSibling).toHaveTextContent(formatTimestamp(time));
+    expect(result).not.toHaveRole("button");
+    if ("message" in check) expect(screen.getByText(check.message)).toBeVisible();
   });
 });
 
@@ -130,7 +164,6 @@ describe("EventRecognitionCard handling", () => {
           handling_action: { action_type_id: "notify_buyer", mode: "auto" },
         }}
         networkId="network-1"
-        onEdit={vi.fn()}
       />,
     );
 
@@ -155,7 +188,6 @@ describe("EventRecognitionCard handling", () => {
           },
         }}
         networkId="network-1"
-        onEdit={vi.fn()}
       />,
     );
 
@@ -178,7 +210,6 @@ describe("EventRecognitionCard execution records", () => {
           handling_action: { action_type_id: "notify_buyer", mode: "auto" },
         }}
         networkId="network-1"
-        onEdit={vi.fn()}
         onOpenExecutions={onOpenExecutions}
       />,
     );
@@ -196,7 +227,6 @@ describe("EventRecognitionCard execution records", () => {
         canQueryData
         eventType={{ ...overdue, recognition_action_id: undefined, rule_tool: null }}
         networkId="network-1"
-        onEdit={vi.fn()}
         onOpenExecutions={vi.fn()}
       />,
     );

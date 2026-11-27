@@ -5,12 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.footer {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
 .block {
   width: 100%;
 }
@@ -49,66 +43,21 @@
   min-width: 220px;
 }
 
-.scheduleKind {
-  min-width: 160px;
-}
-
-.weekday {
-  min-width: 100px;
-}
-
 .cron {
   font-family:
     ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
-  width: 200px;
-}
-
-.timezone {
-  width: 240px;
 }
 
 .trialStale {
   opacity: 0.6;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.card :global(.ant-form-item) {
+  margin-bottom: 14px;
 }
 
-.card {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 16px 20px 4px;
-}
-
-.cardHead {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.cardTitle {
-  color: var(--color-text-primary);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.clauseKeyword {
-  align-items: center;
-  background: var(--color-primary-600);
-  border-radius: 6px;
-  color: var(--color-text-inverse);
-  display: inline-flex;
-  font-size: 15px;
-  font-weight: 600;
-  height: 28px;
-  justify-content: center;
-  min-width: 28px;
-  padding: 0 8px;
+.ruleTabs > :global(.ant-tabs-nav) {
+  margin-bottom: 10px;
 }
 
 .hintIcon {
@@ -117,23 +66,13 @@
 }
 
 .trial {
-  margin: 16px 0 12px;
+  border-top: 1px solid var(--color-divider);
+  margin: 12px 0;
+  padding-top: 12px;
 }
 
-.lastField {
-  margin-bottom: 16px !important;
-}
-
-.functionRow {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.functionSelect {
-  flex: 1 1 260px;
-  min-width: 0;
+.card .lastField {
+  margin-bottom: 18px;
 }
 
 .cypherQuery {
@@ -154,6 +93,7 @@
 
 .handlingInput {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
 }
@@ -164,7 +104,7 @@
 }
 
 .handlingInput .handlingValue {
-  flex: 1;
+  flex: 1 1 150px;
   min-width: 0;
   width: auto;
 }

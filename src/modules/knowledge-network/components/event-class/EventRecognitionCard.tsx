@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Tooltip, Typography } from "antd";
+import { Alert, Tag, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,7 +30,6 @@ type EventRecognitionCardProps = {
   canQueryData: boolean;
   eventType: KnEventType;
   networkId: string;
-  onEdit: () => void;
   /** Opens the execution records of an action type: the recognition action or the handling one. */
   onOpenExecutions?: (actionTypeId: string) => void;
   onOpenSubject?: (objectTypeId: string) => void;
@@ -40,6 +39,7 @@ type EventRecognitionCardProps = {
 };
 
 const PREFIX = "knowledgeNetwork.eventClasses.recognition";
+const LIST_PREFIX = "knowledgeNetwork.eventClasses.list";
 
 function isCheckTime(value: unknown) {
   return (
@@ -64,7 +64,6 @@ export function EventRecognitionCard({
   canQueryData,
   eventType,
   networkId,
-  onEdit,
   onOpenExecutions,
   onOpenSubject,
   onShowEvents,
@@ -138,22 +137,19 @@ export function EventRecognitionCard({
     </div>
   );
   const placeholder = <span className={styles.placeholder}>--</span>;
+  const checkHits = lastCheck?.hits ?? 0;
+  const hitLabel = checkHits
+    ? t(`${LIST_PREFIX}.lastCheckHits`, { count: checkHits })
+    : t(`${LIST_PREFIX}.lastCheckNoHits`);
 
   return (
     <section className={styles.card} aria-label={t(`${PREFIX}.title`)}>
       <div className={styles.header}>
         <h3 className={styles.title}>{t(`${PREFIX}.title`)}</h3>
-        {canModify ? (
-          <div className={styles.actions}>
-            {isRule && eventType.recognition_action_id ? (
-              <AppButton loading={checking} onClick={() => void checkNow()} size="small">
-                {t(`${PREFIX}.checkNow`)}
-              </AppButton>
-            ) : null}
-            <AppButton onClick={onEdit} size="small" type="primary">
-              {t(`${PREFIX}.edit`)}
-            </AppButton>
-          </div>
+        {canModify && isRule && eventType.recognition_action_id ? (
+          <AppButton loading={checking} onClick={() => void checkNow()} size="small">
+            {t(`${PREFIX}.checkNow`)}
+          </AppButton>
         ) : null}
       </div>
       {isRule && !eventType.recognition_action_id ? (
@@ -283,24 +279,27 @@ export function EventRecognitionCard({
           ? field(
               t(`${PREFIX}.lastCheck`),
               lastCheck ? (
-                <span>
-                  {lastCheck.time ? `${formatTimestamp(lastCheck.time)} · ` : ""}
-                  {lastCheck.status === "ok" ? (
-                    onShowEvents && (lastCheck.hits ?? 0) > 0 ? (
-                      <Typography.Link onClick={onShowEvents}>
-                        {t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })}
-                      </Typography.Link>
-                    ) : (
-                      t(`${PREFIX}.lastCheckOk`, { count: lastCheck.hits ?? 0 })
-                    )
+                <div className={styles.lastCheck}>
+                  {lastCheck.status !== "ok" ? (
+                    <Tag color="warning">{t(`${LIST_PREFIX}.lastCheckFailed`)}</Tag>
+                  ) : onShowEvents && checkHits > 0 ? (
+                    <button className={styles.link} onClick={onShowEvents} type="button">
+                      {hitLabel}
+                    </button>
                   ) : (
-                    t(`${PREFIX}.lastCheckUnknown`, {
-                      message: lastCheck.message || t(`${PREFIX}.noMessage`),
-                    })
+                    <span>{hitLabel}</span>
                   )}
-                </span>
+                  {lastCheck.time ? (
+                    <Typography.Text className={styles.lastCheckTime} type="secondary">
+                      {formatTimestamp(lastCheck.time)}
+                    </Typography.Text>
+                  ) : null}
+                  {lastCheck.status !== "ok" && lastCheck.message ? (
+                    <Typography.Text type="secondary">{lastCheck.message}</Typography.Text>
+                  ) : null}
+                </div>
               ) : (
-                t(`${PREFIX}.neverChecked`)
+                <Typography.Text type="secondary">{t(`${PREFIX}.neverChecked`)}</Typography.Text>
               ),
             )
           : null}
