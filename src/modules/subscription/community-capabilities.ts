@@ -35,8 +35,6 @@ export const COMMUNITY_CAPABILITIES: CommunityCapability[] = [
   { category: "modeling", id: "modelingSurfaces", onCard: true },
   { category: "modeling", id: "oneClickExperience", onCard: true },
   { category: "modeling", id: "modelingTypes", onCard: true },
-  // 版本管理里的草稿与运行版本随社区版提供;版本历史、比较与回退在企业档的 version_mgmt。
-  { category: "modeling", id: "draftAndRunning", onCard: true },
   { category: "modeling", id: "queryAndSearch", onCard: true },
   { category: "dataConnect", id: "commonSources", onCard: true },
   { category: "dataConnect", id: "indexing" },

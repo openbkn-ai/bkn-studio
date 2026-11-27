@@ -70,6 +70,7 @@ describe("knowledge network standalone routes", () => {
 
   it.each([
     ["event-classes", CAPABILITIES.KN_EVENTS, undefined],
+    ["versions", CAPABILITIES.KN_DRAFT_VERSIONS, undefined],
     ["functions", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.functions],
     ["apis", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.apis],
     ["mcp", CAPABILITIES.KN_TOOL_MOUNTS, WORKSPACE_MOUNT_SECTIONS.mcp],

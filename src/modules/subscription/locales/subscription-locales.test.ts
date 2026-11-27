@@ -131,10 +131,13 @@ describe("subscription capability copy", () => {
     );
   });
 
-  // 2026-11-19:草稿与运行版本随社区版提供;企业档版本管理列多版本管理、版本历史与按历史版本查询执行、版本比较与回退三条。
-  it("lists draft and running version in Community and history, comparison, rollback in Enterprise", () => {
-    expect(COMMUNITY_CAPABILITIES).toContainEqual(
-      expect.objectContaining({ category: "modeling", id: "draftAndRunning", onCard: true }),
+  it("places drafts and running versions in the paid capability catalog", () => {
+    expect(COMMUNITY_CAPABILITIES.some(({ id }) => id === "draftAndRunning")).toBe(false);
+    expect(subscriptionZhCN.subscription.capabilities.kn_draft_versions.name).toBe(
+      "知识网络草稿与运行版本",
+    );
+    expect(subscriptionEnUS.subscription.capabilities.kn_draft_versions.name).toBe(
+      "Knowledge network drafts and running versions",
     );
     expect(Object.values(subscriptionZhCN.subscription.capabilities.version_mgmt.bullets)).toEqual([
       "多版本管理",
