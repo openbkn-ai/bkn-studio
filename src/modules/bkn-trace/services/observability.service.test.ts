@@ -16,6 +16,92 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 describe("observability service", () => {
+  it("maps the latest background run, its result and retained interactions", async () => {
+    const run = {
+      run_id: "arc_trace_1",
+      archive_kind: "trace",
+      trigger: "archive",
+      status: "completed",
+      eligible_at_start: 10,
+      processed_count: 9,
+      retained_count: 1,
+      batch_count: 2,
+      retry_count: 1,
+      last_failure_code: "temporarily_unavailable",
+      created_at: "2026-11-27T06:00:00Z",
+      started_at: "2026-11-27T06:00:01Z",
+      finished_at: "2026-11-27T06:10:00Z",
+    };
+    const retained = {
+      interaction_id: "large",
+      run_id: "arc_trace_1",
+      stage: "sql_payload",
+      measured: 12582912,
+      budget: 8388608,
+      unit: "bytes",
+      retained_at: "2026-11-27T06:05:00Z",
+    };
+    getMock
+      .mockResolvedValueOnce({
+        data: {
+          archive_kind: "trace",
+          retention_days: 7,
+          cutoff_at: "2026-11-20T00:00:00Z",
+          candidate_count: 0,
+          storage: { status: "ready" },
+          current_run: run,
+          retained_count: 1,
+        },
+      })
+      .mockResolvedValueOnce({ data: { ...run, retained: [retained] } })
+      .mockResolvedValueOnce({ data: [retained] })
+      .mockResolvedValueOnce({
+        data: {
+          archive_kind: "log",
+          retention_days: 30,
+          cutoff_at: "2026-10-28T00:00:00Z",
+          candidate_count: 3,
+          storage: { status: "ready" },
+        },
+      });
+    const {
+      getArchiveOverview,
+      getArchiveRunResult,
+      isArchiveRunActive,
+      listRetainedInteractions,
+    } = await import("./observability.service");
+    const overview = await getArchiveOverview("trace");
+    expect(overview.retainedCount).toBe(1);
+    expect(overview.currentRun).toMatchObject({
+      id: "arc_trace_1",
+      status: "completed",
+      processedCount: 9,
+      retainedCount: 1,
+      lastFailureCode: "temporarily_unavailable",
+      finishedAt: "2026-11-27T06:10:00Z",
+    });
+    expect(isArchiveRunActive(overview.currentRun)).toBe(false);
+    const result = await getArchiveRunResult("arc_trace_1");
+    expect(result.retained).toEqual([
+      {
+        interactionId: "large",
+        runId: "arc_trace_1",
+        stage: "sql_payload",
+        measured: 12582912,
+        atLeast: false,
+        budget: 8388608,
+        unit: "bytes",
+        retainedAt: "2026-11-27T06:05:00Z",
+      },
+    ]);
+    expect((await listRetainedInteractions())[0]?.interactionId).toBe("large");
+    // An older service without runs still yields a usable overview.
+    const legacy = await getArchiveOverview("log");
+    expect(legacy.currentRun).toBeUndefined();
+    expect(legacy.retainedCount).toBe(0);
+    expect(isArchiveRunActive({ ...overview.currentRun!, status: "retry_wait" })).toBe(true);
+  });
+
   it("preserves archive diagnostics consistently for create, history and cleanup retry", async () => {
     const job = {
       archive_job_id: "blocked",
@@ -53,9 +139,14 @@ describe("observability service", () => {
       errorMessage: job.error_message,
       batchProgress: job.batch_progress,
     };
-    expect(await createArchive("trace")).toEqual(expected);
+    await createArchive("trace");
     expect(await listArchiveJobs("trace")).toEqual([expected]);
-    expect(await retryArchiveCleanup("blocked")).toEqual(expected);
+    await retryArchiveCleanup("blocked");
+    expect(postMock).toHaveBeenCalledWith(
+      "/observability/v1/archive-jobs/blocked/retry-cleanup",
+      {},
+      { skipErrorToast: true },
+    );
     getMock.mockResolvedValueOnce({
       data: [{ ...job, batch_progress: undefined, error_message: undefined }],
     });

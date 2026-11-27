@@ -5,7 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Empty, Modal, Spin, Table, Tag, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Descriptions,
+  Empty,
+  Modal,
+  Progress,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import axios from "axios";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
@@ -14,21 +25,27 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { formatFileSize, formatNumber } from "@/framework/i18n/format";
+import { formatDateTime, formatFileSize, formatNumber } from "@/framework/i18n/format";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   BUSINESS_MODULES,
   createArchive,
   downloadArchive,
   getArchiveOverview,
+  getArchiveRunResult,
+  isArchiveRunActive,
   listArchiveJobs,
+  listRetainedInteractions,
   listLogPolicies,
   listLogSources,
   retryArchiveCleanup,
   type ArchiveJob,
   type ArchiveKind,
   type ArchiveOverview,
+  type ArchiveRun,
+  type ArchiveRunResult,
   type BusinessModule,
+  type RetainedInteraction,
   type LogPolicy,
   type LogSourceStatus,
 } from "@/modules/bkn-trace/services/observability.service";
@@ -186,6 +203,22 @@ export function ObservabilitySettingsScene() {
       active = false;
     };
   }, [t]);
+
+  // A background archive keeps running after the page closes; while one is
+  // active, refresh its overview and job list so progress stays current.
+  const activeArchiveKinds = archives
+    .filter((archive) => isArchiveRunActive(archive.currentRun))
+    .map((archive) => archive.kind)
+    .join(",");
+  useEffect(() => {
+    if (!activeArchiveKinds) return;
+    const timer = window.setInterval(() => {
+      for (const kind of activeArchiveKinds.split(",") as ArchiveKind[]) {
+        void refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable);
+      }
+    }, ARCHIVE_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [activeArchiveKinds]);
 
   useEffect(() => {
     if (!pollingOperationId) return;
@@ -549,7 +582,11 @@ export function ObservabilitySettingsScene() {
                         size="small"
                         loading={retryingJob === job.id}
                         disabled={
-                          Boolean(retryingJob) || archiveHistoryUnavailable.includes(job.kind)
+                          Boolean(retryingJob) ||
+                          archiveHistoryUnavailable.includes(job.kind) ||
+                          isArchiveRunActive(
+                            archives.find((archive) => archive.kind === job.kind)?.currentRun,
+                          )
                         }
                         onClick={() => {
                           setRetryingJob(job.id);
@@ -703,6 +740,10 @@ function ArchivePanel({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string>();
+  const [resultRunId, setResultRunId] = useState<string>();
+  const [retainedOpen, setRetainedOpen] = useState(false);
+  const run = archive?.currentRun;
+  const running = isArchiveRunActive(run);
   const label =
     kind === "log"
       ? t("bknTrace.settings.archive.logTitle")
@@ -763,6 +804,16 @@ function ArchivePanel({
             )}
           </Typography.Text>
         )}
+        {archive && archive.retainedCount > 0 ? (
+          <Typography.Paragraph type="secondary">
+            {t("bknTrace.settings.archive.run.retainedSummary", {
+              retained: formatNumber(archive.retainedCount),
+            })}{" "}
+            <Typography.Link onClick={() => setRetainedOpen(true)}>
+              {t("bknTrace.settings.archive.run.viewRetained")}
+            </Typography.Link>
+          </Typography.Paragraph>
+        ) : null}
       </div>
       <Button
         disabled={
@@ -770,6 +821,7 @@ function ArchivePanel({
           historyUnavailable ||
           blockedByCleanup ||
           creating ||
+          running ||
           !archive ||
           archive.candidateCount === 0 ||
           archive.storageStatus !== "ready"
@@ -779,9 +831,10 @@ function ArchivePanel({
       >
         {t("bknTrace.settings.archive.action")}
       </Button>
+      {run ? <ArchiveRunLine run={run} onShowResult={() => setResultRunId(run.id)} /> : null}
       {createError ? (
         <Alert message={createError} showIcon type="error" />
-      ) : blockedByCleanup ? (
+      ) : blockedByCleanup && !running ? (
         <Typography.Text type="warning">
           {t("bknTrace.settings.archive.cleanupAdvice")}
         </Typography.Text>
@@ -802,7 +855,241 @@ function ArchivePanel({
           {t("bknTrace.settings.archive.confirm", { rule })}
         </Typography.Paragraph>
       </Modal>
+      <ArchiveRunResultModal runId={resultRunId} onClose={() => setResultRunId(undefined)} />
+      <RetainedInteractionsModal open={retainedOpen} onClose={() => setRetainedOpen(false)} />
     </div>
+  );
+}
+
+const ARCHIVE_POLL_INTERVAL_MS = 3000;
+const ARCHIVE_MAX_RETRIES = 3;
+
+function archiveReason(t: TFunction, code?: string): string {
+  return t(`bknTrace.settings.archive.run.reasons.${code ?? "temporarily_unavailable"}`, {
+    defaultValue: t("bknTrace.settings.archive.run.reasons.temporarily_unavailable"),
+  });
+}
+
+/** One sentence for the latest run, with a progress bar while it is active. */
+function ArchiveRunLine({ run, onShowResult }: { run: ArchiveRun; onShowResult: () => void }) {
+  const { t } = useTranslation();
+  const total = Math.max(run.eligibleAtStart, run.processedCount);
+  const percent = total > 0 ? Math.min(100, Math.round((run.processedCount / total) * 100)) : 0;
+  let text: string;
+  let type: "secondary" | "warning" | "danger" | undefined;
+  switch (run.status) {
+    case "queued":
+      text = t("bknTrace.settings.archive.run.queued");
+      break;
+    case "running":
+      text = t("bknTrace.settings.archive.run.running", {
+        done: formatNumber(run.processedCount),
+        total: formatNumber(total),
+      });
+      break;
+    case "retry_wait":
+      type = "warning";
+      text = t("bknTrace.settings.archive.run.retryWait", {
+        reason: archiveReason(t, run.lastFailureCode),
+        time: formatDateTime(run.nextAttemptAt),
+        attempt: run.retryCount,
+        max: ARCHIVE_MAX_RETRIES,
+      });
+      break;
+    case "completed":
+      type = run.retainedCount > 0 ? "warning" : "secondary";
+      text =
+        run.retainedCount > 0
+          ? t("bknTrace.settings.archive.run.completedRetained", {
+              archived: formatNumber(run.processedCount),
+              retained: formatNumber(run.retainedCount),
+            })
+          : t("bknTrace.settings.archive.run.completed", {
+              archived: formatNumber(run.processedCount),
+            });
+      break;
+    default:
+      type = "danger";
+      text = t("bknTrace.settings.archive.run.failed", {
+        reason: archiveReason(t, run.lastFailureCode),
+      });
+  }
+  return (
+    <div className={styles.archiveRun} role="status">
+      <Typography.Text {...(type ? { type } : {})}>{text}</Typography.Text>
+      {isArchiveRunActive(run) && total > 0 ? (
+        <Progress percent={percent} showInfo={false} size="small" />
+      ) : null}
+      {isArchiveRunActive(run) ? null : (
+        <Typography.Link onClick={onShowResult}>
+          {t("bknTrace.settings.archive.run.viewResult")}
+        </Typography.Link>
+      )}
+    </div>
+  );
+}
+
+function retainedSize(t: TFunction, item: RetainedInteraction): string {
+  const amount = (value: number) =>
+    item.unit === "bytes"
+      ? formatFileSize(value)
+      : item.unit === "rows"
+        ? t("bknTrace.settings.archive.recordCount", { count: value })
+        : formatNumber(value);
+  return item.atLeast
+    ? t("bknTrace.settings.archive.run.atLeast", { size: amount(item.measured) })
+    : amount(item.measured);
+}
+
+function RetainedTable({ items }: { items: RetainedInteraction[] }) {
+  const { t } = useTranslation();
+  const columns: ColumnsType<RetainedInteraction> = [
+    {
+      title: t("bknTrace.settings.archive.run.columns.interaction"),
+      dataIndex: "interactionId",
+      key: "interactionId",
+    },
+    {
+      title: t("bknTrace.settings.archive.run.columns.size"),
+      key: "size",
+      render: (_, item) => retainedSize(t, item),
+    },
+    {
+      title: t("bknTrace.settings.archive.run.columns.reason"),
+      key: "reason",
+      render: (_, item) =>
+        t("bknTrace.settings.archive.run.overLimit", {
+          limit:
+            item.unit === "bytes"
+              ? formatFileSize(item.budget)
+              : t("bknTrace.settings.archive.recordCount", { count: item.budget }),
+        }),
+    },
+    {
+      title: t("bknTrace.settings.archive.run.columns.time"),
+      dataIndex: "retainedAt",
+      key: "retainedAt",
+      render: (value: string) => formatDateTime(value),
+    },
+  ];
+  return (
+    <Table
+      columns={columns}
+      dataSource={items}
+      pagination={false}
+      rowKey="interactionId"
+      size="small"
+    />
+  );
+}
+
+function ArchiveRunResultModal({ runId, onClose }: { runId?: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [result, setResult] = useState<ArchiveRunResult>();
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!runId) return;
+    let active = true;
+    setResult(undefined);
+    setFailed(false);
+    getArchiveRunResult(runId)
+      .then((value) => {
+        if (active) setResult(value);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [runId]);
+  return (
+    <Modal
+      footer={null}
+      onCancel={onClose}
+      open={Boolean(runId)}
+      title={t("bknTrace.settings.archive.run.resultTitle")}
+      width={640}
+    >
+      {failed ? (
+        <Alert message={t("bknTrace.settings.archive.run.loadFailed")} showIcon type="warning" />
+      ) : !result ? (
+        <Spin />
+      ) : (
+        <>
+          <Descriptions column={2} size="small">
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.status")}>
+              {t(`bknTrace.settings.archive.run.statuses.${result.status}`)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.processed")}>
+              {formatNumber(result.processedCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.startedAt")}>
+              {formatDateTime(result.startedAt ?? result.createdAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.finishedAt")}>
+              {formatDateTime(result.finishedAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.retained")}>
+              {formatNumber(result.retainedCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.retries")}>
+              {result.retryCount > 0
+                ? t("bknTrace.settings.archive.run.retriesValue", {
+                    attempts: result.retryCount,
+                    reason: archiveReason(t, result.lastFailureCode),
+                  })
+                : t("bknTrace.settings.archive.run.none")}
+            </Descriptions.Item>
+            {result.status === "failed" ? (
+              <Descriptions.Item label={t("bknTrace.settings.archive.run.fields.reason")} span={2}>
+                {archiveReason(t, result.lastFailureCode)}
+              </Descriptions.Item>
+            ) : null}
+          </Descriptions>
+          {result.retained.length > 0 ? <RetainedTable items={result.retained} /> : null}
+        </>
+      )}
+    </Modal>
+  );
+}
+
+function RetainedInteractionsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [items, setItems] = useState<RetainedInteraction[]>();
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setItems(undefined);
+    setFailed(false);
+    listRetainedInteractions()
+      .then((value) => {
+        if (active) setItems(value);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
+  return (
+    <Modal
+      footer={null}
+      onCancel={onClose}
+      open={open}
+      title={t("bknTrace.settings.archive.run.retainedTitle")}
+      width={640}
+    >
+      {failed ? (
+        <Alert message={t("bknTrace.settings.archive.run.loadFailed")} showIcon type="warning" />
+      ) : !items ? (
+        <Spin />
+      ) : (
+        <RetainedTable items={items} />
+      )}
+    </Modal>
   );
 }
 
