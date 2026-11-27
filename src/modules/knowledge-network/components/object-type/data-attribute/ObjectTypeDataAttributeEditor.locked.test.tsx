@@ -16,10 +16,11 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+const confirmMock = vi.hoisted(() => vi.fn());
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
-    modal: { confirm: vi.fn() },
+    modal: { confirm: confirmMock },
   }),
 }));
 
@@ -189,8 +190,13 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
       ).toBeInTheDocument();
       const clear = screen.getByText("knowledgeNetwork.objectTypeClearAllProperties").closest("li");
       expect(clear).toHaveAttribute("aria-disabled", "true");
+      confirmMock.mockClear();
       fireEvent.click(clear!);
+      expect(confirmMock).not.toHaveBeenCalled();
       expect(view).not.toHaveBeenCalled();
+      // No row removes a property either.
+      expect(row("Customer").queryByLabelText("delete")).toBeNull();
+      expect(row("Note").queryByLabelText("delete")).toBeNull();
       cleanup();
     }
   });
@@ -204,6 +210,9 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     ).closest("li");
     expect(clear).not.toHaveAttribute("aria-disabled", "true");
     expect(screen.queryByText("knowledgeNetwork.objectTypeClearAllLocked")).toBeNull();
+    confirmMock.mockClear();
+    fireEvent.click(clear!);
+    expect(confirmMock).toHaveBeenCalledTimes(1);
   });
 
   it("says before adding that every field has a property, and offers no add that saving would refuse", async () => {

@@ -447,6 +447,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const validProperties = useMemo(() => normalizeProperties(dataProperties), [dataProperties]);
   const lockedNames = useMemo(() => new Set(lockedProperties ?? []), [lockedProperties]);
+  // A property stays where the host keeps it, or where only the wording may change: neither its
+  // row nor "clear all" removes it.
+  const removeLocked = (name: string) => addLocked || lockedNames.has(name);
   const descriptionFillCandidates = useMemo(
     () => buildDescriptionFillCandidates(dataProperties, viewFields),
     [dataProperties, viewFields],
@@ -1266,11 +1269,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [dataPanelAddMenu, handleDataPanelAddMenuClick],
   );
 
-  // Clearing removes only what may be removed: where only the wording may change, or where every
-  // property is one the host keeps, nothing would go. Said where it would be cleared.
+  // Clearing removes only what may be removed: where every property stays, nothing would go. Said
+  // where it would be cleared.
   const clearLocked =
-    addLocked ||
-    (dataProperties.length > 0 && dataProperties.every((property) => lockedNames.has(property.name)));
+    dataProperties.length > 0 && dataProperties.every((property) => removeLocked(property.name));
   const dataPanelMoreMenu = useMemo<MenuProps["items"]>(
     () => [
       {
@@ -1850,7 +1852,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                     />
                                   </Tooltip>
                                 ) : null}
-                                {lockedNames.has(property.name) ? (
+                                {removeLocked(property.name) ? (
                                   <Tooltip title={t("knowledgeNetwork.objectTypePropertyLocked")}>
                                     <LockOutlined
                                       aria-label={t("knowledgeNetwork.objectTypePropertyLocked")}
