@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Space, Table, Typography } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Alert, Space, Table, Tooltip, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -40,9 +41,14 @@ export function EventRuleTrial({ onTry, state }: EventRuleTrialProps) {
         <AppButton loading={running} onClick={onTry}>
           {t(`${PREFIX}.trial`)}
         </AppButton>
-        <Typography.Text className={styles.parameterHint} type="secondary">
-          {t(`${PREFIX}.trialHint`)}
-        </Typography.Text>
+        <Tooltip title={t(`${PREFIX}.trialHint`)} trigger={["hover", "focus"]}>
+          <AppButton
+            aria-label={t(`${PREFIX}.trialHint`)}
+            icon={<QuestionCircleOutlined aria-hidden className={styles.hintIcon} />}
+            size="small"
+            type="text"
+          />
+        </Tooltip>
       </Space>
       {error ? <Alert message={error} showIcon type="error" /> : null}
       {result ? (

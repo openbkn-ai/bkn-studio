@@ -144,6 +144,30 @@
   grid-column: 1 / -1;
 }
 
+.eventClassOverview .overviewMetaItem,
+.eventClassOverview .dataViewField {
+  align-items: baseline;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(76px, max-content) minmax(0, 1fr);
+}
+
+.eventClassOverview .overviewMetaItem dt,
+.eventClassOverview .dataViewLabel {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.eventClassOverview .overviewMetaItem dt::after,
+.eventClassOverview .dataViewLabel::after {
+  content: "：";
+}
+
+.eventClassOverview .dataViewStatus,
+.eventClassOverview .dataViewCode {
+  justify-self: start;
+}
+
 .overviewStatsSection {
   border-top: 1px solid var(--color-divider);
   display: flex;

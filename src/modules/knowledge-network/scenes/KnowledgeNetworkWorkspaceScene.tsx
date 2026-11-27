@@ -24,6 +24,7 @@ import { Fragment, lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { RouteLoading } from "@/app/router/RouteLoading";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -585,15 +586,18 @@ export function KnowledgeNetworkWorkspaceScene({
     }
 
     if (section === "experience-cypher") {
-      return detail ? (
-        <Suspense fallback={null}>
+      if (!detail) {
+        return detailLoading ? <RouteLoading /> : null;
+      }
+      return (
+        <Suspense fallback={<RouteLoading />}>
           <CypherQueryPage
             key={detail.identifier || detail.id}
             knId={detail.identifier || detail.id}
             networkId={activeNetworkId}
           />
         </Suspense>
-      ) : null;
+      );
     }
 
     return (

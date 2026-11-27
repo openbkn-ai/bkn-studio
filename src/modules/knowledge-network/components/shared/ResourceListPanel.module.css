@@ -538,6 +538,50 @@
   color: var(--color-success-text);
 }
 
+.eventClassPage .eventClassNameLink:global(.ant-btn) {
+  height: auto;
+  max-width: 100%;
+  padding: 2px 0;
+  text-align: start;
+}
+
+.eventClassPage .searchInput:global(.ant-input-affix-wrapper) {
+  border-radius: 0;
+}
+
+.eventClassCellStack {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eventClassSubjectName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventClassPage .eventClassSubjectLink:global(.ant-btn) {
+  max-width: 100%;
+  padding-inline: 0;
+}
+
+.eventClassTime {
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.eventClassCellStack > :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.eventClassCellStack .eventClassCheckTime {
+  font-size: 12px;
+}
+
 .actionTypePage .toolbarRight {
   flex: 1 1 auto;
   flex-wrap: nowrap;

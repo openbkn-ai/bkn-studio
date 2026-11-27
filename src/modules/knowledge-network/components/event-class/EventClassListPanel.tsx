@@ -5,19 +5,30 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Empty, Input, Space, Table, Typography, type TableProps } from "antd";
+import { EllipsisOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  Dropdown,
+  Empty,
+  Input,
+  Table,
+  Tag,
+  Typography,
+  type MenuProps,
+  type TableProps,
+} from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { EventClassFormDrawer } from "@/modules/knowledge-network/components/event-class/EventClassFormDrawer";
 import { readEventClassIntent } from "@/modules/knowledge-network/components/event-class/event-class-navigation";
 import { knowledgeNetworkReturnState } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import { describeCheckSchedule } from "@/modules/knowledge-network/components/event-class/event-schedule";
 import { useEventClassDelete } from "@/modules/knowledge-network/components/event-class/useEventClassDelete";
+import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnEventTypes } from "@/modules/knowledge-network/hooks/useKnEventTypes";
 import {
   useKnVersioned,
@@ -33,6 +44,7 @@ import { formatTimestamp } from "@/modules/knowledge-network/services/shared/run
 import type { KnEventRuleCheck, KnEventType } from "@/modules/knowledge-network/types/event-type";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
+import graphStyles from "@/modules/knowledge-network/components/shared/ResourceGraphExplorer.module.css";
 
 type EventClassListPanelProps = {
   canDelete: boolean;
@@ -69,6 +81,8 @@ export function EventClassListPanel({
   const mayModify = canModify && writable;
   const mayDelete = canDelete && writable;
   const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePersistentPageSize("event-classes");
   const [subjectNames, setSubjectNames] = useState<ReadonlyMap<string, string>>(new Map());
   const [checks, setChecks] = useState<ReadonlyMap<string, KnEventRuleCheck> | null>(null);
   const [checking, setChecking] = useState<string>();
@@ -140,6 +154,7 @@ export function EventClassListPanel({
     const eventType = eventTypes.types.find((item) => item.code === intent.code);
     if (!eventType) return;
     setKeyword(eventType.code);
+    setPage(1);
     if (intent.action === "edit" && mayModify) setForm({ eventType, open: true });
     if (intent.action === "delete" && mayDelete) remove(eventType);
     // Handled once: the state is cleared above.
@@ -153,6 +168,15 @@ export function EventClassListPanel({
       (item) => item.name.toLowerCase().includes(text) || item.code.toLowerCase().includes(text),
     );
   }, [eventTypes.types, keyword]);
+
+  const maxPage = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, maxPage);
+  const firstRow = (currentPage - 1) * pageSize;
+  const rows = visible.slice(firstRow, firstRow + pageSize);
+
+  useEffect(() => {
+    setPage((previous) => Math.min(previous, maxPage));
+  }, [maxPage]);
 
   const placeholder = <Typography.Text type="secondary">--</Typography.Text>;
   const isRule = (item: KnEventType) => item.source === "rule";
@@ -168,59 +192,125 @@ export function EventClassListPanel({
   const lastCheck = (item: KnEventType) => {
     if (!isRule(item) || !checks) return placeholder;
     const check = checks.get(item.code);
-    if (!check) return t(`${PREFIX}.recognition.neverChecked`);
-    const when = check.time ? `${formatTimestamp(check.time)} · ` : "";
-    if (check.status !== "ok") return `${when}${t(`${PREFIX}.list.lastCheckFailed`)}`;
+    if (!check) {
+      return (
+        <Typography.Text type="secondary">
+          {t(`${PREFIX}.recognition.neverChecked`)}
+        </Typography.Text>
+      );
+    }
+    const succeeded = check.status === "ok";
     const hits = check.hits ?? 0;
-    if (!hits) return `${when}${t(`${PREFIX}.recognition.lastCheckOk`, { count: 0 })}`;
     return (
-      <span>
-        {when}
-        <Typography.Link onClick={() => openDetail(item, "data")}>
-          {t(`${PREFIX}.recognition.lastCheckOk`, { count: hits })}
-        </Typography.Link>
-      </span>
+      <div className={styles.eventClassCellStack}>
+        {!succeeded ? (
+          <Tag color="warning">{t(`${PREFIX}.list.lastCheckFailed`)}</Tag>
+        ) : hits > 0 ? (
+          <Typography.Link onClick={() => openDetail(item, "data")}>
+            {t(`${PREFIX}.list.lastCheckHits`, { count: hits })}
+          </Typography.Link>
+        ) : (
+          <Typography.Text>{t(`${PREFIX}.list.lastCheckNoHits`)}</Typography.Text>
+        )}
+        {check.time ? (
+          <Typography.Text
+            className={`${styles.eventClassTime} ${styles.eventClassCheckTime}`}
+            type="secondary"
+          >
+            {formatTimestamp(check.time)}
+          </Typography.Text>
+        ) : null}
+      </div>
     );
   };
 
   const columns: NonNullable<TableProps<KnEventType>["columns"]> = [
     {
       key: "name",
+      fixed: "left",
       title: t(`${PREFIX}.list.name`),
-      width: 240,
+      width: 204,
       render: (_value, item) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Link onClick={() => openDetail(item)} strong>
-            {item.name}
-          </Typography.Link>
-          <Typography.Text code type="secondary">
-            {item.code}
-          </Typography.Text>
-        </Space>
+        <AppButton
+          className={styles.eventClassNameLink}
+          onClick={() => openDetail(item)}
+          title={item.name}
+          type="text"
+        >
+          <span className={styles.objectName}>{item.name}</span>
+        </AppButton>
       ),
+    },
+    {
+      key: "actions",
+      fixed: "left",
+      title: t("common.actions"),
+      width: 72,
+      render: (_value, item) => {
+        const items: MenuProps["items"] = [
+          { key: "view", label: t("common.detail"), onClick: () => openDetail(item) },
+        ];
+        if (mayModify) {
+          items.push({
+            key: "edit",
+            label: t("common.edit"),
+            onClick: () => setForm({ eventType: item, open: true }),
+          });
+        }
+        if (mayModify && recognized(item)) {
+          items.push({
+            key: "check",
+            disabled: checking === item.code,
+            label: t(`${PREFIX}.recognition.checkNow`),
+            onClick: () => void checkNow(item),
+          });
+        }
+        if (mayDelete) {
+          items.push({
+            key: "delete",
+            danger: true,
+            label: t("common.delete"),
+            onClick: () => remove(item),
+          });
+        }
+        return (
+          <Dropdown menu={{ items }} overlayClassName={styles.dropdownMenu} trigger={["click"]}>
+            <AppButton
+              aria-label={t("common.actions")}
+              icon={<EllipsisOutlined style={{ fontSize: 20 }} />}
+              loading={checking === item.code}
+              type="text"
+            />
+          </Dropdown>
+        );
+      },
     },
     {
       key: "source",
       title: t(`${PREFIX}.recognition.source`),
-      width: 110,
+      width: 90,
       render: (_value, item) => t(`${PREFIX}.source.${item.source}`),
     },
     {
       key: "subject",
       title: t(`${PREFIX}.recognition.subject`),
-      width: 160,
+      width: 130,
       render: (_value, item) =>
         item.subject ? (
           <AppButton
+            className={styles.eventClassSubjectLink}
             onClick={() =>
               void navigate(
                 `/knowledge-network/workspace/${networkId}/object-types/${item.subject}/detail`,
               )
             }
             size="small"
+            title={subjectNames.get(item.subject) ?? item.subject}
             type="link"
           >
-            {subjectNames.get(item.subject) ?? item.subject}
+            <span className={styles.eventClassSubjectName}>
+              {subjectNames.get(item.subject) ?? item.subject}
+            </span>
           </AppButton>
         ) : (
           placeholder
@@ -229,7 +319,7 @@ export function EventClassListPanel({
     {
       key: "basis",
       title: t(`${PREFIX}.recognition.basis`),
-      width: 120,
+      width: 90,
       render: (_value, item) =>
         recognized(item) && item.recognition_basis
           ? t(`${PREFIX}.recognition.bases.${item.recognition_basis}`)
@@ -238,93 +328,74 @@ export function EventClassListPanel({
     {
       key: "schedule",
       title: t(`${PREFIX}.recognition.schedule`),
-      width: 180,
+      width: 226,
       render: (_value, item) =>
-        recognized(item) && item.check_schedule
-          ? describeCheckSchedule(item.check_schedule, t)
-          : placeholder,
+        recognized(item) && item.check_schedule ? (
+          <Typography.Text className={styles.eventClassTime} ellipsis={{ tooltip: true }}>
+            {describeCheckSchedule(item.check_schedule, t)}
+          </Typography.Text>
+        ) : (
+          placeholder
+        ),
     },
     {
       key: "nextCheck",
       title: t(`${PREFIX}.recognition.nextCheck`),
-      width: 170,
+      width: 160,
       render: (_value, item) =>
-        recognized(item) && item.next_check_at ? formatTimestamp(item.next_check_at) : placeholder,
+        recognized(item) && item.next_check_at ? (
+          <span className={styles.eventClassTime}>{formatTimestamp(item.next_check_at)}</span>
+        ) : (
+          placeholder
+        ),
     },
     {
       key: "lastCheck",
       title: t(`${PREFIX}.recognition.lastCheck`),
-      width: 220,
+      width: 190,
       render: (_value, item) => lastCheck(item),
-    },
-    {
-      key: "actions",
-      title: t("common.actions"),
-      width: 200,
-      fixed: "right",
-      render: (_value, item) => (
-        <Space size={0} wrap>
-          {mayModify ? (
-            <AppButton
-              onClick={() => setForm({ eventType: item, open: true })}
-              size="small"
-              type="link"
-            >
-              {t("common.edit")}
-            </AppButton>
-          ) : null}
-          {mayModify && recognized(item) ? (
-            <AppButton
-              loading={checking === item.code}
-              onClick={() => void checkNow(item)}
-              size="small"
-              type="link"
-            >
-              {t(`${PREFIX}.recognition.checkNow`)}
-            </AppButton>
-          ) : null}
-          {mayDelete ? (
-            <AppButton danger onClick={() => remove(item)} size="small" type="link">
-              {t("common.delete")}
-            </AppButton>
-          ) : null}
-        </Space>
-      ),
     },
   ];
 
   return (
     <>
-      <section className={styles.page}>
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarLeft}>
-            {mayModify && eventTypes.available ? (
-              <AppButton
-                className={styles.toolbarButton}
-                icon={<PlusOutlined />}
-                onClick={() => setForm({ open: true })}
-                type="primary"
-              >
-                {t(`${PREFIX}.create`)}
-              </AppButton>
-            ) : null}
-          </div>
-          <div className={styles.toolbarRight}>
-            <Input
-              allowClear
-              aria-label={t(`${PREFIX}.list.searchPlaceholder`)}
-              className={styles.searchInput}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder={t(`${PREFIX}.list.searchPlaceholder`)}
-              prefix={<SearchOutlined className={styles.searchIcon} />}
-              value={keyword}
-            />
+      <section
+        className={`${styles.page} ${styles.objectTypePage} ${styles.eventClassPage} ${graphStyles.panelPage}`}
+      >
+        <div className={`${styles.toolbar} ${graphStyles.pageToolbar}`}>
+          <div className={graphStyles.operationRow}>
+            <div className={styles.toolbarLeft}>
+              {mayModify && eventTypes.available ? (
+                <AppButton
+                  className={styles.toolbarButton}
+                  icon={<PlusOutlined aria-hidden />}
+                  onClick={() => setForm({ open: true })}
+                  type="primary"
+                >
+                  {t("common.create")}
+                </AppButton>
+              ) : null}
+            </div>
+            <div className={styles.toolbarRight}>
+              <Input
+                allowClear
+                aria-label={t(`${PREFIX}.list.searchPlaceholder`)}
+                className={styles.searchInput}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setPage(1);
+                }}
+                placeholder={t(`${PREFIX}.list.searchPlaceholder`)}
+                prefix={<SearchOutlined className={styles.searchIcon} />}
+                value={keyword}
+              />
+            </div>
           </div>
         </div>
         <div className={styles.tableCard}>
           <Table<KnEventType>
             columns={columns}
-            dataSource={visible}
+            dataSource={rows}
             loading={eventTypes.loading}
             locale={{
               emptyText: (
@@ -340,9 +411,29 @@ export function EventClassListPanel({
             }}
             pagination={false}
             rowKey="code"
-            scroll={{ x: 1400 }}
+            scroll={{ x: 1162 }}
+            size="middle"
           />
         </div>
+        {visible.length > 0 ? (
+          <div className={styles.paginationBar}>
+            <TablePaginationBar
+              current={currentPage}
+              onChange={(nextPage, nextPageSize) => {
+                if (nextPageSize === pageSize) {
+                  setPage(nextPage);
+                } else {
+                  setPageSize(nextPageSize);
+                  setPage(1);
+                }
+              }}
+              pageSize={pageSize}
+              showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
+              total={visible.length}
+            />
+          </div>
+        ) : null}
       </section>
       <EventClassFormDrawer
         eventClassIds={eventClassIds}

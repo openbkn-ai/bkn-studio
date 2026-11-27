@@ -236,7 +236,7 @@ const fillNewClass = (name: string, code: string) => {
 };
 
 describe("EventClassFormDrawer", () => {
-  it("opens a new class on the condition tab, with 当 before 则 and the schedule in 当", async () => {
+  it("opens on conditions and groups the schedule under the recognition rule", async () => {
     renderDrawer(undefined, "order");
 
     expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent(
@@ -247,10 +247,33 @@ describe("EventClassFormDrawer", () => {
       `${PREFIX}.basisTabs.condition`,
       `${PREFIX}.basisTabs.function`,
     ]);
-    const labels = screen
-      .getAllByText(new RegExp(`^${PREFIX}\\.(schedule|when|then)$`))
-      .map((node) => node.textContent);
-    expect(labels).toEqual([`${PREFIX}.when`, `${PREFIX}.schedule`, `${PREFIX}.then`]);
+    for (const [basis, hint] of [
+      ["condition", "conditionHint"],
+      ["function", "ruleToolHint"],
+    ] as const) {
+      const icon = tab(basis).querySelector(".anticon-question-circle");
+      expect(icon).toBeVisible();
+      fireEvent.mouseEnter(icon!);
+      expect(await screen.findByRole("tooltip", { name: `${PREFIX}.${hint}` })).toBeVisible();
+      fireEvent.mouseLeave(icon!);
+    }
+    expect(screen.getAllByRole("heading", { level: 3 }).map((node) => node.textContent)).toEqual([
+      `${PREFIX}.sectionBasics`,
+      `${PREFIX}.sectionRule`,
+      `${PREFIX}.sectionHandling`,
+    ]);
+    const rule = within(screen.getByRole("region", { name: `${PREFIX}.sectionRule` }));
+    expect(rule.getByRole("combobox", { name: `${PREFIX}.scheduleKind` })).toBeInTheDocument();
+    expect(
+      rule.getByRole("combobox", { name: "knowledgeNetwork.eventClasses.schedule.timezone" }),
+    ).toBeInTheDocument();
+    for (const hint of [`${PREFIX}.whenHint`, `${PREFIX}.trialHint`]) {
+      expect(rule.queryByText(hint)).not.toBeInTheDocument();
+      const help = rule.getByRole("button", { name: hint });
+      fireEvent.focus(help);
+      expect(await screen.findByText(hint)).toBeVisible();
+      fireEvent.blur(help);
+    }
   });
 
   it("keeps the rule tool, its arguments and the schedule when an edit changes nothing else", async () => {
@@ -389,13 +412,14 @@ describe("EventClassFormDrawer", () => {
 
   it("opens the function pages beside the drawer, and reads the functions again", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.stubGlobal("__BKN_STUDIO_RUNTIME__", { router: { basename: "/custom-studio" } });
     try {
       renderDrawer(overdue);
       await vi.waitFor(() => expect(mocks.listRuleTools).toHaveBeenCalledTimes(1));
 
       fireEvent.click(screen.getByRole("button", { name: new RegExp(`${PREFIX}\\.newFunction$`) }));
       expect(open).toHaveBeenLastCalledWith(
-        expect.stringMatching(/knowledge-network\/workspace\/network-1\/experience\/cypher$/),
+        "/custom-studio/knowledge-network/workspace/network-1/experience/cypher",
         "_blank",
         "noopener,noreferrer",
       );
@@ -403,7 +427,7 @@ describe("EventClassFormDrawer", () => {
         await screen.findByRole("button", { name: new RegExp(`${PREFIX}\\.editFunction$`) }),
       );
       expect(open).toHaveBeenLastCalledWith(
-        expect.stringMatching(/execution-factory\/toolboxes\/box-1\/tools\/tool-1\/edit$/),
+        "/custom-studio/execution-factory/toolboxes/box-1/tools/tool-1/edit",
         "_blank",
         "noopener,noreferrer",
       );
@@ -411,6 +435,7 @@ describe("EventClassFormDrawer", () => {
       fireEvent.click(screen.getByRole("button", { name: `${PREFIX}.reloadFunctions` }));
       await vi.waitFor(() => expect(mocks.listRuleTools).toHaveBeenCalledTimes(2));
     } finally {
+      vi.unstubAllGlobals();
       open.mockRestore();
     }
   });
@@ -518,7 +543,7 @@ describe("EventClassFormDrawer", () => {
     fillNewClass(" Quality complaint ", "quality_complaint");
     fireEvent.click(screen.getByLabelText("knowledgeNetwork.eventClasses.source.report"));
     expect(await screen.findByText(`${PREFIX}.mergeHours`)).toBeVisible();
-    expect(screen.queryByText(`${PREFIX}.when`)).toBeNull();
+    expect(screen.queryByRole("region", { name: `${PREFIX}.sectionRule` })).toBeNull();
 
     save();
 

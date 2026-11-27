@@ -33,7 +33,7 @@ export const eventClassesPart = {
       metricBasisHint:
         "这个事件类按指标异常识别，这里不能编辑。不设置识别规则时保留它；在这里设置识别规则会替换它。",
       sectionBasics: "基本信息",
-      when: "当",
+      sectionRule: "识别规则",
       whenHint: "命中规则的每个对象记一条事件",
       cypherReadOnly:
         "这条规则是直接写的 Cypher 查询，这里只读显示，保存时原样保留。要修改，请在数据查询里把它发布成函数，再改用「使用函数」。",
@@ -42,11 +42,11 @@ export const eventClassesPart = {
       editFunction: "编辑函数",
       reloadFunctions: "刷新函数列表",
       saveFailed: "保存失败：{{message}}",
-      then: "则",
+      sectionHandling: "事件处置",
       basisTabs: {
-        condition: "条件",
+        condition: "条件规则",
         cypher: "Cypher（只读）",
-        function: "使用函数（高级）",
+        function: "函数规则",
       },
       ruleRequired: "请设置识别规则",
       conditionHint:
@@ -179,7 +179,6 @@ export const eventClassesPart = {
     },
     recognition: {
       title: "事件配置",
-      edit: "编辑",
       checkNow: "立即检查",
       noRuleTool: "还没有识别行动类，平台不会检查这个事件类。编辑并设置识别规则后由平台按时检查。",
       noAction: "这个事件类没有可检查的识别行动类。",
@@ -215,17 +214,16 @@ export const eventClassesPart = {
       subjectAccount: "执行身份",
       nextCheck: "下次检查",
       lastCheck: "最近一次检查",
-      lastCheckOk_one: "正常，命中 {{count}} 个对象",
-      lastCheckOk_other: "正常，命中 {{count}} 个对象",
-      lastCheckUnknown: "无法判断：{{message}}",
       neverChecked: "尚未检查",
-      noMessage: "没有说明",
     },
     list: {
       searchPlaceholder: "搜索名称或编码",
       empty: "还没有事件类",
       name: "名称",
       lastCheckFailed: "无法判断",
+      lastCheckHits_one: "命中 {{count}} 个对象",
+      lastCheckHits_other: "命中 {{count}} 个对象",
+      lastCheckNoHits: "未命中",
     },
     subject: {
       section: "事件",

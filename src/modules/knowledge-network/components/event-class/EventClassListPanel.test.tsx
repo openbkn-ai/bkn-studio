@@ -6,6 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KnEventType } from "@/modules/knowledge-network/types/event-type";
@@ -116,6 +117,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
+  localStorage.removeItem("bkn-knowledge-network-list-page-size:event-classes");
   mocks.listEventTypes.mockResolvedValue([overdue, complaint]);
   mocks.listObjectTypes.mockResolvedValue([{ id: "order", name: "Order" }]);
   mocks.listChecks.mockResolvedValue([
@@ -135,29 +137,126 @@ afterEach(() => {
 
 const renderPanel = (props: { canModify?: boolean } = {}) =>
   render(
-    <EventClassListPanel canDelete canModify={props.canModify ?? true} networkId="network-1" />,
+    <MemoryRouter>
+      <EventClassListPanel canDelete canModify={props.canModify ?? true} networkId="network-1" />
+    </MemoryRouter>,
   );
+
+const pageFixtures = (count: number) =>
+  Array.from({ length: count }, (_, index) => ({
+    ...complaint,
+    code: `event_${index + 1}`,
+    name: `Event ${index + 1}`,
+    object_type_id: `event_${index + 1}`,
+  }));
 
 const rowOf = async (name: string) => (await screen.findByText(name)).closest("tr") as HTMLElement;
 
+async function openActions(name: string) {
+  fireEvent.click(within(await rowOf(name)).getByRole("button", { name: "common.actions" }));
+  return within(await screen.findByRole("menu"));
+}
+
 describe("EventClassListPanel", () => {
+  it("paginates the loaded classes and returns to the first page when searching", async () => {
+    mocks.listEventTypes.mockResolvedValue(pageFixtures(25));
+    renderPanel();
+
+    expect(await screen.findByText("Event 1")).toBeVisible();
+    expect(screen.queryByText("Event 11")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("2"));
+    expect(screen.getByText("Event 11")).toBeVisible();
+    expect(screen.queryByText("Event 1")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("textbox", { name: `${PREFIX}.list.searchPlaceholder` }), {
+      target: { value: "event_" },
+    });
+    expect(screen.getByText("Event 1")).toBeVisible();
+    expect(screen.queryByText("Event 11")).not.toBeInTheDocument();
+    expect(mocks.listEventTypes).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows changing the page size and remembers the selection", async () => {
+    mocks.listEventTypes.mockResolvedValue(pageFixtures(25));
+    renderPanel();
+
+    await screen.findByText("Event 1");
+    fireEvent.click(screen.getByTitle("2"));
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText("20 / page"));
+
+    expect(screen.getByText("Event 1")).toBeVisible();
+    expect(screen.getByText("Event 20")).toBeVisible();
+    expect(screen.queryByText("Event 21")).not.toBeInTheDocument();
+    expect(localStorage.getItem("bkn-knowledge-network-list-page-size:event-classes")).toBe("20");
+  });
+
+  it("returns to the last available page when deleting its last row", async () => {
+    mocks.listEventTypes
+      .mockResolvedValueOnce(pageFixtures(11))
+      .mockResolvedValueOnce(pageFixtures(10));
+    renderPanel();
+
+    await screen.findByText("Event 1");
+    fireEvent.click(screen.getByTitle("2"));
+    fireEvent.click(
+      (await openActions("Event 11")).getByRole("menuitem", { name: "common.delete" }),
+    );
+    const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await confirmation.onOk();
+
+    expect(await screen.findByText("Event 10")).toBeVisible();
+    expect(screen.queryByText("Event 11")).not.toBeInTheDocument();
+  });
+
   it("lists each class with its source, subject, basis, check time and checks", async () => {
     renderPanel();
 
     const row = await rowOf("Overdue order");
-    expect(within(row).getByText("order_overdue")).toBeVisible();
+    expect(within(row).queryByText("order_overdue")).not.toBeInTheDocument();
+    const name = within(row).getByRole("button", { name: "Overdue order" });
+    expect(name).toHaveAttribute("title", "Overdue order");
+    expect(name.querySelector("svg")).toBeNull();
     expect(within(row).getByText(`${PREFIX}.source.rule`)).toBeVisible();
     expect(within(row).getByRole("button", { name: "Order" })).toBeVisible();
     expect(within(row).getByText(`${PREFIX}.recognition.bases.condition`)).toBeVisible();
     expect(
       within(row).getByText(`${PREFIX}.schedule.describe.daily (Asia/Shanghai)`),
     ).toBeVisible();
-    expect(within(row).getByText(new RegExp(`${PREFIX}.recognition.lastCheckOk`))).toBeVisible();
+    const result = within(row).getByText(`${PREFIX}.list.lastCheckHits`);
+    expect(result).toBeVisible();
+    expect(result.parentElement?.firstElementChild).toBe(result);
+    expect(result.nextElementSibling).toHaveTextContent(/\d{4}-\d{2}-\d{2}/);
 
     // A reported class is not checked: nothing to show for its rule.
     const reported = await rowOf("Complaint");
     expect(within(reported).getByText(`${PREFIX}.source.report`)).toBeVisible();
-    expect(within(reported).queryByText(`${PREFIX}.recognition.checkNow`)).toBeNull();
+    const actions = await openActions("Complaint");
+    expect(actions.getByRole("menuitem", { name: "common.detail" })).toBeVisible();
+    expect(actions.queryByRole("menuitem", { name: `${PREFIX}.recognition.checkNow` })).toBeNull();
+  });
+
+  it("distinguishes failed, unmatched, and not-yet-run checks", async () => {
+    mocks.listEventTypes.mockResolvedValue([
+      overdue,
+      { ...overdue, code: "new_check", name: "New rule" },
+      { ...overdue, code: "no_hits", name: "No hits rule" },
+    ]);
+    mocks.listChecks.mockResolvedValue([
+      { event_type: "order_overdue", status: "unknown", time: 1_700_000_000_000 },
+      { event_type: "no_hits", status: "ok", hits: 0, time: 1_700_000_000_000 },
+    ]);
+    renderPanel();
+
+    expect(
+      within(await rowOf("Overdue order")).getByText(`${PREFIX}.list.lastCheckFailed`),
+    ).toBeVisible();
+    expect(
+      within(await rowOf("New rule")).getByText(`${PREFIX}.recognition.neverChecked`),
+    ).toBeVisible();
+    const noHits = within(await rowOf("No hits rule")).getByText(`${PREFIX}.list.lastCheckNoHits`);
+    expect(noHits).toBeVisible();
+    expect(noHits.closest("a")).toBeNull();
   });
 
   it("opens the subject's object type", async () => {
@@ -180,7 +279,7 @@ describe("EventClassListPanel", () => {
       { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") as unknown } },
     );
 
-    fireEvent.click(within(row).getByText(new RegExp(`${PREFIX}.recognition.lastCheckOk`)));
+    fireEvent.click(within(row).getByText(`${PREFIX}.list.lastCheckHits`));
     expect(mocks.navigate).toHaveBeenLastCalledWith(
       "/knowledge-network/workspace/network-1/object-types/order_overdue/detail?tab=data",
       { state: { knowledgeNetworkReturnTo: expect.stringContaining("/") as unknown } },
@@ -191,7 +290,7 @@ describe("EventClassListPanel", () => {
     renderPanel();
 
     fireEvent.click(
-      within(await rowOf("Overdue order")).getByRole("button", {
+      (await openActions("Overdue order")).getByRole("menuitem", {
         name: `${PREFIX}.recognition.checkNow`,
       }),
     );
@@ -206,7 +305,7 @@ describe("EventClassListPanel", () => {
     renderPanel();
 
     fireEvent.click(
-      within(await rowOf("Overdue order")).getByRole("button", {
+      (await openActions("Overdue order")).getByRole("menuitem", {
         name: `${PREFIX}.recognition.checkNow`,
       }),
     );
@@ -220,11 +319,11 @@ describe("EventClassListPanel", () => {
   it("creates and edits classes in its form", async () => {
     renderPanel();
 
-    fireEvent.click(await screen.findByRole("button", { name: /eventClasses\.create/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "common.create" }));
     expect(screen.getByTestId("event-class-form")).toHaveTextContent("new");
 
     fireEvent.click(
-      within(await rowOf("Overdue order")).getByRole("button", { name: "common.edit" }),
+      (await openActions("Overdue order")).getByRole("menuitem", { name: "common.edit" }),
     );
     expect(screen.getByTestId("event-class-form")).toHaveTextContent("order_overdue");
   });
@@ -233,7 +332,7 @@ describe("EventClassListPanel", () => {
     renderPanel();
 
     fireEvent.click(
-      within(await rowOf("Overdue order")).getByRole("button", { name: "common.delete" }),
+      (await openActions("Overdue order")).getByRole("menuitem", { name: "common.delete" }),
     );
     const confirmation = mocks.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
     await confirmation.onOk();
@@ -246,13 +345,12 @@ describe("EventClassListPanel", () => {
     mocks.versioned = true;
     renderPanel();
 
-    const row = await rowOf("Overdue order");
-    expect(within(row).queryByRole("button", { name: "common.edit" })).toBeNull();
-    expect(within(row).queryByRole("button", { name: "common.delete" })).toBeNull();
-    expect(
-      within(row).queryByRole("button", { name: `${PREFIX}.recognition.checkNow` }),
-    ).toBeNull();
-    expect(screen.queryByRole("button", { name: /eventClasses\.create/ })).toBeNull();
+    const actions = await openActions("Overdue order");
+    expect(actions.getByRole("menuitem", { name: "common.detail" })).toBeVisible();
+    expect(actions.queryByRole("menuitem", { name: "common.edit" })).toBeNull();
+    expect(actions.queryByRole("menuitem", { name: "common.delete" })).toBeNull();
+    expect(actions.queryByRole("menuitem", { name: `${PREFIX}.recognition.checkNow` })).toBeNull();
+    expect(screen.queryByRole("button", { name: "common.create" })).toBeNull();
   });
 
   it("opens the edit another page asked for, once", async () => {

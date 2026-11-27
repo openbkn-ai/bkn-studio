@@ -149,3 +149,36 @@
     min-width: 0;
   }
 }
+
+/* With the object type fixed by the host, the four remaining controls fit much earlier. */
+.boundConditionRow {
+  flex-wrap: wrap;
+}
+
+.boundConditionRow > .fieldSelect {
+  flex: 1 1 155px;
+  min-width: 0;
+  width: auto;
+}
+
+.boundConditionRow > .operationSelect {
+  flex: 0 1 116px;
+  min-width: 0;
+}
+
+.boundConditionRow > .valueEditor {
+  flex: 2 1 235px;
+  min-width: 0;
+}
+
+@container (max-width: 570px) {
+  .boundConditionRow > .fieldSelect {
+    flex-basis: 100%;
+  }
+}
+
+@container (max-width: 460px) {
+  .boundConditionRow > .valueEditor {
+    flex-basis: 100%;
+  }
+}
