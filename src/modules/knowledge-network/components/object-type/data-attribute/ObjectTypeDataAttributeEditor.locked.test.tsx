@@ -108,6 +108,7 @@ const fields = [
 
 function render(locks: {
   addLocked?: boolean;
+  fieldRequired?: boolean;
   lockedProperties?: string[];
   primaryKeyLocked?: boolean;
 }) {
@@ -179,7 +180,7 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
   });
 
   it("says before adding that every field has a property, and offers no add that saving would refuse", async () => {
-    render({});
+    render({ fieldRequired: true });
     await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
     fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeAddDataProperty"));
     expect(
@@ -187,5 +188,18 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     ).toBeInTheDocument();
     const add = screen.getByText("knowledgeNetwork.objectTypeManualCreateProperty").closest("li");
     expect(add).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("still offers a property reading no field where one may, with no field left to sync", async () => {
+    render({});
+    await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
+    fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeAddDataProperty"));
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeAllFieldsMapped"),
+    ).toBeInTheDocument();
+    const add = screen.getByText("knowledgeNetwork.objectTypeManualCreateProperty").closest("li");
+    expect(add).not.toHaveAttribute("aria-disabled", "true");
+    const sync = screen.getByText("knowledgeNetwork.objectTypeSyncResourceFields").closest("li");
+    expect(sync).toHaveAttribute("aria-disabled", "true");
   });
 });

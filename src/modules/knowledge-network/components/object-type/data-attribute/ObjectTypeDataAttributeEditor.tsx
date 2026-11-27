@@ -130,6 +130,12 @@ type ObjectTypeDataAttributeEditorProps = {
    * no way to add one. Absent, properties are added as usual.
    */
   addLocked?: boolean;
+  /**
+   * Every property must read a field of the resource, as a host refuses on saving one that reads
+   * none: with every field read already, no property is offered to add. Absent, a property may
+   * read no field and is always offered.
+   */
+  fieldRequired?: boolean;
   onChange: (value: {
     dataProperties: ObjectTypeDataProperty[];
     dataSource?: ObjectTypeDataSource;
@@ -402,6 +408,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     resourceFixed = false,
     lockedProperties,
     addLocked = false,
+    fieldRequired = false,
     primaryKeyLocked = false,
   },
   ref,
@@ -1206,8 +1213,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     [handleViewPanelMenuClick, viewPanelMenu],
   );
 
-  // A new property reads a field of the resource: with every field read already, none can be
-  // added, said where it would be added rather than when saving.
+  // With every field of the resource read already, no field is left to sync; where a property
+  // must read a field, none can be added either. Said where it would be added, not on saving.
   const allFieldsMapped =
     Boolean(selectedViewId) &&
     viewFields.length > 0 &&
@@ -1219,7 +1226,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const dataPanelAddMenu = useMemo<MenuProps["items"]>(
     () => [
       {
-        disabled: allFieldsMapped,
+        disabled: fieldRequired && allFieldsMapped,
         key: "add",
         label: t("knowledgeNetwork.objectTypeManualCreateProperty"),
       },
@@ -1238,7 +1245,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           ]
         : []),
     ],
-    [allFieldsMapped, selectedViewId, t],
+    [allFieldsMapped, fieldRequired, selectedViewId, t],
   );
 
   const handleDataPanelAddMenuClick = useCallback(({ key }: { key: string }) => {
