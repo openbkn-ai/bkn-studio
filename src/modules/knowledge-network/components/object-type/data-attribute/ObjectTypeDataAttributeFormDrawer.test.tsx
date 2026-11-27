@@ -212,7 +212,14 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
   });
 
   it("offers no primary key switch when the primary key stays as given", async () => {
-    render(<ObjectTypeDataAttributeFormDrawer onClose={vi.fn()} onSubmit={vi.fn()} open primaryKeyLocked />);
+    render(
+      <ObjectTypeDataAttributeFormDrawer
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        open
+        primaryKeyLocked
+      />,
+    );
     expect(await screen.findByText("knowledgeNetwork.objectTypePropertyName")).not.toBeNull();
     expect(screen.queryByText("knowledgeNetwork.objectTypePrimaryKey")).toBeNull();
   });
@@ -221,9 +228,9 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
     render(<ObjectTypeDataAttributeFormDrawer onClose={vi.fn()} onSubmit={vi.fn()} open />);
     const name = await screen.findByLabelText("knowledgeNetwork.objectTypePropertyName");
     fireEvent.change(name, { target: { value: "supplier_level" } });
-    const displayName = screen.getByLabelText(
+    const displayName = screen.getByLabelText<HTMLInputElement>(
       "knowledgeNetwork.objectTypePropertyDisplayName",
-    ) as HTMLInputElement;
+    );
     expect(displayName).toHaveValue("supplier_level");
     fireEvent.focus(displayName);
     // Selected whole: what the person types replaces it rather than joining it.

@@ -1065,7 +1065,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const handlePickAttributes = (fieldNames: string[]) => {
     // A field a property already reads, by its name or its mapping, is not added twice.
     const existingNames = new Set(dataProperties.map((item) => item.name));
-    const mappedFields = new Set(dataProperties.map((item) => item.mappedField?.name).filter(Boolean));
+    const mappedFields = new Set(
+      dataProperties.map((item) => item.mappedField?.name).filter(Boolean),
+    );
     const pickedFields = viewFields.filter((item) => fieldNames.includes(item.name));
     const nextProperties = [...dataProperties];
     let added = 0;
@@ -1227,7 +1229,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         label: t("knowledgeNetwork.objectTypeSyncResourceFields"),
       },
       ...(allFieldsMapped
-        ? [{ disabled: true, key: "allMapped", label: t("knowledgeNetwork.objectTypeAllFieldsMapped") }]
+        ? [
+            {
+              disabled: true,
+              key: "allMapped",
+              label: t("knowledgeNetwork.objectTypeAllFieldsMapped"),
+            },
+          ]
         : []),
     ],
     [allFieldsMapped, selectedViewId, t],

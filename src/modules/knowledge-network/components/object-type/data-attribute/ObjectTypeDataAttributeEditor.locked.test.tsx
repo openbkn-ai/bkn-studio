@@ -106,7 +106,11 @@ const fields = [
   { displayName: "Note", name: "note", type: "string" },
 ];
 
-function render(locks: { addLocked?: boolean; lockedProperties?: string[]; primaryKeyLocked?: boolean }) {
+function render(locks: {
+  addLocked?: boolean;
+  lockedProperties?: string[];
+  primaryKeyLocked?: boolean;
+}) {
   const onChange = vi.fn();
   renderWithoutAntdStyles(
     <ObjectTypeDataAttributeEditor
@@ -178,7 +182,9 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
     render({});
     await waitFor(() => expect(screen.getAllByText("Customer").length).toBeGreaterThan(1));
     fireEvent.click(screen.getByLabelText("knowledgeNetwork.objectTypeAddDataProperty"));
-    expect(await screen.findByText("knowledgeNetwork.objectTypeAllFieldsMapped")).toBeInTheDocument();
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeAllFieldsMapped"),
+    ).toBeInTheDocument();
     const add = screen.getByText("knowledgeNetwork.objectTypeManualCreateProperty").closest("li");
     expect(add).toHaveAttribute("aria-disabled", "true");
   });
