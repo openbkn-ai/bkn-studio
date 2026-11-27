@@ -2388,6 +2388,8 @@ describe("observability workspace scenes", () => {
     );
     expect(await screen.findByText("bknTrace.settings.archive.actionUnconfirmed")).not.toBeNull();
     expect(await screen.findByText("bknTrace.settings.archive.runIncomplete")).not.toBeNull();
+    // The dialog closes on failure, so a second submit must go through the gated panel button.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByText("bknTrace.settings.archive.kinds.log")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
   });

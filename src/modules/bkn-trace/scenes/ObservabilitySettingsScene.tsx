@@ -719,7 +719,6 @@ function ArchivePanel({
     setCreating(true);
     try {
       await createArchive(kind);
-      setConfirmOpen(false);
     } catch (error) {
       const code = axios.isAxiosError<{ error?: { code?: string } }>(error)
         ? error.response?.data?.error?.code
@@ -736,8 +735,11 @@ function ArchivePanel({
                 : "actionUnconfirmed";
       setCreateError(t(`bknTrace.settings.archive.${key}`));
     } finally {
+      // Close on every outcome: the refreshed panel gates the next archive and
+      // the job list behind the dialog shows what actually happened.
       await onSettled(kind);
       setCreating(false);
+      setConfirmOpen(false);
     }
   };
   return (
@@ -777,7 +779,9 @@ function ArchivePanel({
       >
         {t("bknTrace.settings.archive.action")}
       </Button>
-      {blockedByCleanup ? (
+      {createError ? (
+        <Alert message={createError} showIcon type="error" />
+      ) : blockedByCleanup ? (
         <Typography.Text type="warning">
           {t("bknTrace.settings.archive.cleanupAdvice")}
         </Typography.Text>
@@ -797,7 +801,6 @@ function ArchivePanel({
         <Typography.Paragraph>
           {t("bknTrace.settings.archive.confirm", { rule })}
         </Typography.Paragraph>
-        {createError ? <Alert message={createError} showIcon type="error" /> : null}
       </Modal>
     </div>
   );
