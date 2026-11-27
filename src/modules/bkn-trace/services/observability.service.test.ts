@@ -9,12 +9,59 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
 
 const getMock = vi.hoisted(() => vi.fn());
+const postMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock },
+  http: { get: getMock, post: postMock },
 }));
 
 describe("observability service", () => {
+  it("preserves archive diagnostics consistently for create, history and cleanup retry", async () => {
+    const job = {
+      archive_job_id: "blocked",
+      archive_kind: "trace",
+      candidate_count: 0,
+      range: { from: null, to: "2026-11-01" },
+      status: "failed",
+      error_message: "safe diagnostic",
+      batch_progress: {
+        run_id: "run",
+        batch_number: 2,
+        cleaned_in_run: 1,
+        remaining_at_selection: 2,
+        run_complete: false,
+        blocked: {
+          interaction_id: "large",
+          stage: "technical_response",
+          actual: 16777217,
+          limit: 16777216,
+          unit: "bytes",
+          at_least: true,
+        },
+      },
+    };
+    postMock.mockResolvedValue({ data: job });
+    getMock.mockResolvedValueOnce({ data: [job] });
+    const { createArchive, listArchiveJobs, retryArchiveCleanup } =
+      await import("./observability.service");
+    const expected = {
+      id: "blocked",
+      kind: "trace",
+      candidateCount: 0,
+      range: job.range,
+      status: "failed",
+      errorMessage: job.error_message,
+      batchProgress: job.batch_progress,
+    };
+    expect(await createArchive("trace")).toEqual(expected);
+    expect(await listArchiveJobs("trace")).toEqual([expected]);
+    expect(await retryArchiveCleanup("blocked")).toEqual(expected);
+    getMock.mockResolvedValueOnce({
+      data: [{ ...job, batch_progress: undefined, error_message: undefined }],
+    });
+    expect((await listArchiveJobs("trace"))[0]?.batchProgress).toBeUndefined();
+  });
+
   it("distinguishes an unconfigured audit consumer from a temporary source failure", async () => {
     const { isAuditConsumerNotConfigured } = await import("./observability.service");
     const response = {

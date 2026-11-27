@@ -6,12 +6,15 @@
  */
 
 import { Alert, Button, Empty, Modal, Spin, Table, Tag, Typography } from "antd";
+import axios from "axios";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatFileSize, formatNumber } from "@/framework/i18n/format";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   BUSINESS_MODULES,
@@ -63,6 +66,9 @@ export function ObservabilitySettingsScene() {
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
   const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
+  const [archiveHistoryUnavailable, setArchiveHistoryUnavailable] = useState<ArchiveKind[]>([]);
+  const [refreshingArchives, setRefreshingArchives] = useState(false);
+  const [retryingJob, setRetryingJob] = useState<string>();
   const [archiveManage, setArchiveManage] = useState(false);
   const [capturePolicy, setCapturePolicy] = useState<CapturePolicyConfiguration>();
   const [capturePolicyOperation, setCapturePolicyOperation] = useState<CapturePolicyOperation>();
@@ -130,6 +136,10 @@ export function ObservabilitySettingsScene() {
           result.status === "fulfilled" && result.value ? [result.value] : [],
         );
         setArchives(archiveData);
+        setArchiveHistoryUnavailable([
+          ...(logJobsResult.status === "rejected" ? ["log" as const] : []),
+          ...(traceJobsResult.status === "rejected" ? ["trace" as const] : []),
+        ]);
         setArchiveJobs([
           ...(logJobsResult.status === "fulfilled" ? logJobsResult.value : []),
           ...(traceJobsResult.status === "fulfilled" ? traceJobsResult.value : []),
@@ -433,29 +443,70 @@ export function ObservabilitySettingsScene() {
           <ArchivePanel
             archive={archives.find((archive) => archive.kind === "log")}
             canManage={archiveManage}
+            blockedByCleanup={archiveJobs.some(
+              (job) => job.kind === "log" && job.status === "cleanup_incomplete",
+            )}
+            historyUnavailable={archiveHistoryUnavailable.includes("log")}
             kind="log"
-            onCreated={(kind) => refreshArchive(kind, setArchives, setArchiveJobs)}
+            onSettled={(kind) =>
+              refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable)
+            }
           />
           <ArchivePanel
             archive={archives.find((archive) => archive.kind === "trace")}
             canManage={archiveManage}
+            blockedByCleanup={archiveJobs.some(
+              (job) => job.kind === "trace" && job.status === "cleanup_incomplete",
+            )}
+            historyUnavailable={archiveHistoryUnavailable.includes("trace")}
             kind="trace"
-            onCreated={(kind) => refreshArchive(kind, setArchives, setArchiveJobs)}
+            onSettled={(kind) =>
+              refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable)
+            }
           />
         </div>
       </SettingsSection>
 
       <SettingsSection title={t("bknTrace.settings.recentArchives")}>
+        {archiveManage ? (
+          <Button
+            loading={refreshingArchives}
+            onClick={() => {
+              setRefreshingArchives(true);
+              void Promise.allSettled(
+                (["log", "trace"] as const).map((kind) =>
+                  refreshArchive(kind, setArchives, setArchiveJobs, setArchiveHistoryUnavailable),
+                ),
+              ).finally(() => setRefreshingArchives(false));
+            }}
+          >
+            {t("bknTrace.settings.archive.refresh")}
+          </Button>
+        ) : null}
+        {archiveHistoryUnavailable.map((kind) => (
+          <Alert
+            key={kind}
+            type="warning"
+            showIcon
+            message={t("bknTrace.settings.archive.historyUnavailable", {
+              kind: t(`bknTrace.settings.archive.kinds.${kind}`),
+            })}
+          />
+        ))}
         {archiveJobs.length ? (
           <Table
             pagination={false}
             rowKey="id"
-            dataSource={archiveJobs}
+            dataSource={[...archiveJobs].sort(
+              (left, right) =>
+                Number(archiveNeedsAttention(right)) - Number(archiveNeedsAttention(left)),
+            )}
             columns={[
               {
                 title: t("bknTrace.settings.archive.jobKind"),
                 dataIndex: "kind",
                 key: "kind",
+                width: 96,
                 render: (kind: ArchiveKind) => t(`bknTrace.settings.archive.kinds.${kind}`),
               },
               {
@@ -467,17 +518,18 @@ export function ObservabilitySettingsScene() {
                 title: t("bknTrace.settings.archive.jobCount"),
                 dataIndex: "candidateCount",
                 key: "candidateCount",
+                width: 100,
               },
               {
                 title: t("bknTrace.settings.archive.jobStatus"),
                 dataIndex: "status",
                 key: "status",
-                render: (status: ArchiveJob["status"]) =>
-                  t(`bknTrace.settings.archive.statuses.${status}`),
+                render: (_: ArchiveJob["status"], job) => <ArchiveJobStatus job={job} />,
               },
               {
                 title: t("bknTrace.settings.archive.jobAction"),
                 key: "action",
+                width: 140,
                 render: (_, job) => (
                   <>
                     {job.status === "completed" || job.status === "cleanup_incomplete" ? (
@@ -492,15 +544,28 @@ export function ObservabilitySettingsScene() {
                         {t("bknTrace.settings.archive.download")}
                       </Button>
                     ) : null}
-                    {job.status === "cleanup_incomplete" ? (
+                    {job.status === "cleanup_incomplete" && !job.batchProgress?.blocked ? (
                       <Button
                         size="small"
+                        loading={retryingJob === job.id}
+                        disabled={
+                          Boolean(retryingJob) || archiveHistoryUnavailable.includes(job.kind)
+                        }
                         onClick={() => {
+                          setRetryingJob(job.id);
                           void retryArchiveCleanup(job.id)
-                            .then(() => refreshArchive(job.kind, setArchives, setArchiveJobs))
                             .catch(() =>
-                              message.error(t("bknTrace.settings.archive.actionFailed")),
-                            );
+                              message.error(t("bknTrace.settings.archive.actionUnconfirmed")),
+                            )
+                            .finally(async () => {
+                              await refreshArchive(
+                                job.kind,
+                                setArchives,
+                                setArchiveJobs,
+                                setArchiveHistoryUnavailable,
+                              );
+                              setRetryingJob(undefined);
+                            });
                         }}
                       >
                         {t("bknTrace.settings.archive.retryCleanup")}
@@ -511,12 +576,12 @@ export function ObservabilitySettingsScene() {
               },
             ]}
           />
-        ) : (
+        ) : archiveHistoryUnavailable.length === 0 ? (
           <Empty
             description={t("bknTrace.settings.archive.noHistory")}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
-        )}
+        ) : null}
       </SettingsSection>
     </div>
   );
@@ -540,23 +605,99 @@ async function refreshArchive(
     value: ArchiveOverview[] | ((previous: ArchiveOverview[]) => ArchiveOverview[]),
   ) => void,
   setJobs: (value: ArchiveJob[] | ((previous: ArchiveJob[]) => ArchiveJob[])) => void,
+  setUnavailable: (value: ArchiveKind[] | ((previous: ArchiveKind[]) => ArchiveKind[])) => void,
 ) {
-  const latest = await getArchiveOverview(kind);
-  setArchives((previous) => [...previous.filter((item) => item.kind !== kind), latest]);
-  const jobs = await listArchiveJobs(kind);
-  setJobs((previous) => [...previous.filter((job) => job.kind !== kind), ...jobs]);
+  const [overview, jobs] = await Promise.allSettled([
+    getArchiveOverview(kind),
+    listArchiveJobs(kind),
+  ]);
+  setArchives((previous) => [
+    ...previous.filter((item) => item.kind !== kind),
+    ...(overview.status === "fulfilled" ? [overview.value] : []),
+  ]);
+  setUnavailable((previous) => [
+    ...previous.filter((item) => item !== kind),
+    ...(jobs.status === "rejected" ? [kind] : []),
+  ]);
+  if (jobs.status === "fulfilled") {
+    setJobs((previous) => [...previous.filter((job) => job.kind !== kind), ...jobs.value]);
+  }
+}
+
+function archiveNeedsAttention(job: ArchiveJob): boolean {
+  return job.status === "cleanup_incomplete" || Boolean(job.batchProgress?.blocked);
+}
+
+function formatArchiveAmount(value: number, unit: string, t: TFunction): string {
+  if (unit === "bytes") return formatFileSize(value);
+  if (unit === "rows") return t("bknTrace.settings.archive.recordCount", { count: value });
+  return formatNumber(value);
+}
+
+function ArchiveJobStatus({ job }: { job: ArchiveJob }) {
+  const { t } = useTranslation();
+  const progress = job.batchProgress;
+  const blocked = progress?.blocked;
+  return (
+    <div>
+      <Typography.Text>
+        {t(
+          blocked
+            ? "bknTrace.settings.archive.blocked"
+            : `bknTrace.settings.archive.statuses.${job.status}`,
+        )}
+      </Typography.Text>
+      {progress ? (
+        <Typography.Paragraph type="secondary">
+          {t(
+            progress.run_complete
+              ? "bknTrace.settings.archive.runComplete"
+              : "bknTrace.settings.archive.runIncomplete",
+            { cleaned: progress.cleaned_in_run, remaining: progress.remaining_at_selection },
+          )}
+        </Typography.Paragraph>
+      ) : null}
+      {blocked ? (
+        <>
+          <Typography.Paragraph>
+            {t(
+              blocked.at_least
+                ? "bknTrace.settings.archive.blockedDetailsAtLeast"
+                : "bknTrace.settings.archive.blockedDetails",
+              {
+                interaction: blocked.interaction_id,
+                actual: formatArchiveAmount(blocked.actual, blocked.unit, t),
+                limit: formatArchiveAmount(blocked.limit, blocked.unit, t),
+              },
+            )}
+          </Typography.Paragraph>
+          <Typography.Text type="secondary">
+            {t("bknTrace.settings.archive.blockedAdvice")}
+          </Typography.Text>
+        </>
+      ) : job.status === "cleanup_incomplete" ? (
+        <Typography.Paragraph type="secondary">
+          {t("bknTrace.settings.archive.cleanupAdvice")}
+        </Typography.Paragraph>
+      ) : null}
+    </div>
+  );
 }
 
 function ArchivePanel({
   archive,
+  blockedByCleanup,
   canManage,
+  historyUnavailable,
   kind,
-  onCreated,
+  onSettled,
 }: {
   archive?: ArchiveOverview;
+  blockedByCleanup: boolean;
   canManage: boolean;
+  historyUnavailable: boolean;
   kind: ArchiveKind;
-  onCreated: (kind: ArchiveKind) => Promise<void>;
+  onSettled: (kind: ArchiveKind) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -578,12 +719,27 @@ function ArchivePanel({
     setCreating(true);
     try {
       await createArchive(kind);
-      await onCreated(kind);
-      setConfirmOpen(false);
-    } catch {
-      setCreateError(t("bknTrace.errors.queryFailed"));
+    } catch (error) {
+      const code = axios.isAxiosError<{ error?: { code?: string } }>(error)
+        ? error.response?.data?.error?.code
+        : undefined;
+      const key =
+        code === "archive_cleanup_required"
+          ? "cleanupAdvice"
+          : code === "archive_busy"
+            ? "busy"
+            : code === "archive_incomplete_candidates"
+              ? "inspectHistory"
+              : code === "archive_capacity_exceeded" || code === "archive_configuration_invalid"
+                ? "capacityAdvice"
+                : "actionUnconfirmed";
+      setCreateError(t(`bknTrace.settings.archive.${key}`));
     } finally {
+      // Close on every outcome: the refreshed panel gates the next archive and
+      // the job list behind the dialog shows what actually happened.
+      await onSettled(kind);
       setCreating(false);
+      setConfirmOpen(false);
     }
   };
   return (
@@ -611,6 +767,9 @@ function ArchivePanel({
       <Button
         disabled={
           !canManage ||
+          historyUnavailable ||
+          blockedByCleanup ||
+          creating ||
           !archive ||
           archive.candidateCount === 0 ||
           archive.storageStatus !== "ready"
@@ -620,8 +779,18 @@ function ArchivePanel({
       >
         {t("bknTrace.settings.archive.action")}
       </Button>
+      {createError ? (
+        <Alert message={createError} showIcon type="error" />
+      ) : blockedByCleanup ? (
+        <Typography.Text type="warning">
+          {t("bknTrace.settings.archive.cleanupAdvice")}
+        </Typography.Text>
+      ) : null}
       <Modal
         cancelText={t("common.cancel")}
+        closable={!creating}
+        maskClosable={!creating}
+        cancelButtonProps={{ disabled: creating }}
         confirmLoading={creating}
         okText={t("bknTrace.settings.archive.action")}
         onCancel={() => setConfirmOpen(false)}
@@ -632,7 +801,6 @@ function ArchivePanel({
         <Typography.Paragraph>
           {t("bknTrace.settings.archive.confirm", { rule })}
         </Typography.Paragraph>
-        {createError ? <Alert message={createError} showIcon type="error" /> : null}
       </Modal>
     </div>
   );

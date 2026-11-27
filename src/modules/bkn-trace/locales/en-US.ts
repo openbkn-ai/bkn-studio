@@ -1153,6 +1153,31 @@ export const bknTraceEnUS = {
     },
     settings: {
       archive: {
+        recordCount_one: "{{count}} record",
+        recordCount_other: "{{count}} records",
+
+        refresh: "Refresh archive status",
+        historyUnavailable:
+          "{{kind}} archive jobs could not be loaded. Their status is unknown. Refresh before proceeding.",
+        actionUnconfirmed:
+          "The archive result could not be confirmed. Check the refreshed job status before retrying.",
+        blocked: "Needs attention",
+        blockedDetails: "Interaction {{interaction}} is too large: {{actual}}, limit {{limit}}.",
+        blockedDetailsAtLeast:
+          "Interaction {{interaction}} is too large: over the {{limit}} limit.",
+        blockedAdvice:
+          "Retrying won't help. Ask an administrator to handle it; this interaction and later records are kept.",
+        cleanupAdvice:
+          "An archive still needs cleanup. Continue cleanup from the job list; the archive will be verified again first.",
+        runComplete: "At this batch: run complete; {{cleaned}} records cleaned in total.",
+        runIncomplete:
+          "At this batch: run incomplete; {{cleaned}} records cleaned in total; {{remaining}} remained at batch selection.",
+        busy: "An archive of this kind is running. Refresh its status before proceeding.",
+        inspectHistory:
+          "The archive did not complete. Check the job list for blocked details and completed batches.",
+        capacityAdvice:
+          "Archive capacity or configuration requirements were not met. Source data is retained. Ask an administrator to check the limits and configuration.",
+
         action: "Archive now",
         actionFailed: "The archive operation failed. Try again later.",
         candidates: "{{count}} candidates, cutoff {{cutoff}}",
@@ -1170,7 +1195,7 @@ export const bknTraceEnUS = {
         jobCount: "Records",
         jobKind: "Archive kind",
         jobRange: "Archived range",
-        jobStatus: "Status",
+        jobStatus: "Batch status",
         kinds: { log: "Logs", trace: "Trace" },
         logRule: "Archive platform-managed operation logs older than 30 days.",
         logTitle: "Log archive",

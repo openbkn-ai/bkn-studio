@@ -9,6 +9,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import dayjs from "dayjs";
 import { AxiosError, AxiosHeaders } from "axios";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { formatFileSize } from "@/framework/i18n/format";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ObservabilityLogsScene } from "@/modules/bkn-trace/scenes/ObservabilityLogsScene";
@@ -21,6 +22,7 @@ import {
   listLogPolicies,
   listLogs,
   listLogSources,
+  retryArchiveCleanup,
   type PublisherCollectionStatus,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
@@ -99,6 +101,7 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
   return {
     ...original,
     createArchive: vi.fn(),
+    retryArchiveCleanup: vi.fn(),
     getArchiveOverview: vi.fn(),
     getLogDetail: vi.fn(),
     listArchiveJobs: vi.fn(),
@@ -151,6 +154,7 @@ describe("observability workspace scenes", () => {
     vi.clearAllMocks();
     mockCurrentUser.isSuperAdmin = true;
     vi.mocked(createArchive).mockReset();
+    vi.mocked(retryArchiveCleanup).mockReset();
     vi.mocked(getArchiveOverview).mockReset();
     vi.mocked(listArchiveJobs).mockReset();
     vi.mocked(getArchiveOverview).mockImplementation((kind) =>
@@ -2253,5 +2257,224 @@ describe("observability workspace scenes", () => {
     renderWithoutAntdStyles(<ObservabilityLogsScene />);
 
     expect(await screen.findByText("bknTrace.logs.emptyAssociated")).not.toBeNull();
+  });
+  it("归档历史读取失败不显示无记录，刷新后恢复可操作状态", async () => {
+    vi.mocked(getArchiveOverview).mockImplementation((kind) =>
+      Promise.resolve({
+        candidateCount: 1,
+        cutoffAt: "2026-11-01",
+        kind,
+        retentionDays: 7,
+        storageStatus: "ready",
+      }),
+    );
+    vi.mocked(listArchiveJobs).mockRejectedValue(new Error("unavailable"));
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(await screen.findAllByText("bknTrace.settings.archive.historyUnavailable")).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText("bknTrace.settings.archive.noHistory")).toBeNull();
+    for (const button of screen.getAllByRole("button", {
+      name: "bknTrace.settings.archive.action",
+    }))
+      expect(button).toBeDisabled();
+    vi.mocked(listArchiveJobs).mockResolvedValue([]);
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.settings.archive.refresh" }));
+    await waitFor(() =>
+      expect(screen.queryByText("bknTrace.settings.archive.historyUnavailable")).toBeNull(),
+    );
+    expect(screen.getByText("bknTrace.settings.archive.noHistory")).not.toBeNull();
+    for (const button of screen.getAllByRole("button", {
+      name: "bknTrace.settings.archive.action",
+    }))
+      expect(button).not.toBeDisabled();
+  });
+
+  it("大交互显示受阻详情和大小下界，不提供继续清理", async () => {
+    currentTranslate = (key, options) =>
+      key === "bknTrace.settings.archive.blockedDetailsAtLeast"
+        ? `${String(options?.interaction)} > ${String(options?.limit)}`
+        : translate(key, options);
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(
+        kind === "trace"
+          ? [
+              {
+                id: "blocked",
+                kind,
+                range: { to: "2026-11-01" },
+                candidateCount: 0,
+                status: "failed",
+                batchProgress: {
+                  run_id: "run",
+                  batch_number: 2,
+                  cleaned_in_run: 1,
+                  remaining_at_selection: 2,
+                  run_complete: false,
+                  blocked: {
+                    interaction_id: "large",
+                    stage: "technical_response",
+                    actual: 16777217,
+                    limit: 16777216,
+                    unit: "bytes",
+                    at_least: true,
+                  },
+                },
+              },
+            ]
+          : [],
+      ),
+    );
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    expect(await screen.findByText(`large > ${formatFileSize(16777216)}`)).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.blockedAdvice")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.runIncomplete")).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "bknTrace.settings.archive.retryCleanup" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "bknTrace.settings.archive.download" })).toBeNull();
+  });
+
+  it("归档请求失败后仍刷新已完成前缀和受阻任务，保留另一种历史", async () => {
+    vi.mocked(getArchiveOverview).mockImplementation((kind) =>
+      Promise.resolve({
+        candidateCount: 3,
+        cutoffAt: "2026-11-01",
+        kind,
+        retentionDays: 7,
+        storageStatus: "ready",
+      }),
+    );
+    const logJob = {
+      id: "log-kept",
+      kind: "log" as const,
+      range: { to: "2026-10-01" },
+      candidateCount: 1,
+      status: "completed" as const,
+    };
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(kind === "log" ? [logJob] : []),
+    );
+    vi.mocked(createArchive).mockImplementation(() => {
+      vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+        Promise.resolve(
+          kind === "log"
+            ? [logJob]
+            : [
+                {
+                  id: "prefix",
+                  kind,
+                  range: { to: "2026-11-01" },
+                  candidateCount: 1,
+                  status: "completed",
+                  batchProgress: {
+                    run_id: "run",
+                    batch_number: 1,
+                    cleaned_in_run: 1,
+                    remaining_at_selection: 2,
+                    run_complete: false,
+                  },
+                },
+              ],
+        ),
+      );
+      return Promise.reject(new Error("connection interrupted"));
+    });
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    await screen.findByText("bknTrace.settings.archive.kinds.log");
+    fireEvent.click(screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" })[1]);
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" })).at(-1)!,
+    );
+    expect(await screen.findByText("bknTrace.settings.archive.actionUnconfirmed")).not.toBeNull();
+    expect(await screen.findByText("bknTrace.settings.archive.runIncomplete")).not.toBeNull();
+    // The dialog closes on failure, so a second submit must go through the gated panel button.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("bknTrace.settings.archive.kinds.log")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
+  });
+
+  it("未完成清理阻止同类新归档，清理请求失败后仍刷新状态", async () => {
+    vi.mocked(getArchiveOverview).mockImplementation((kind) =>
+      Promise.resolve({
+        candidateCount: 1,
+        cutoffAt: "2026-11-01",
+        kind,
+        retentionDays: 7,
+        storageStatus: "ready",
+      }),
+    );
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(
+        kind === "log"
+          ? [
+              {
+                id: "old-pending",
+                kind,
+                range: { to: "2026-09-01" },
+                candidateCount: 1,
+                status: "cleanup_incomplete",
+              },
+            ]
+          : [],
+      ),
+    );
+    vi.mocked(retryArchiveCleanup).mockRejectedValue(new Error("timeout"));
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    const retry = await screen.findByRole("button", {
+      name: "bknTrace.settings.archive.retryCleanup",
+    });
+    const actions = screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" });
+    expect(actions[0]).toBeDisabled();
+    expect(actions[1]).not.toBeDisabled();
+    fireEvent.click(retry);
+    await waitFor(() =>
+      expect(vi.mocked(listArchiveJobs).mock.calls.filter(([kind]) => kind === "log")).toHaveLength(
+        2,
+      ),
+    );
+    expect(retryArchiveCleanup).toHaveBeenCalledWith("old-pending");
+    expect(mockMessage.error).toHaveBeenCalledWith("bknTrace.settings.archive.actionUnconfirmed");
+  });
+  it("任务历史刷新失败时保留记录并停用旧记录上的清理操作", async () => {
+    vi.mocked(listArchiveJobs).mockImplementation((kind) =>
+      Promise.resolve(
+        kind === "log"
+          ? [
+              {
+                id: "pending",
+                kind,
+                range: { to: "2026-11-01" },
+                candidateCount: 1,
+                status: "cleanup_incomplete",
+              },
+            ]
+          : [
+              {
+                id: "complete",
+                kind,
+                range: { to: "2026-11-01" },
+                candidateCount: 1,
+                status: "completed",
+              },
+            ],
+      ),
+    );
+    renderWithoutAntdStyles(<ObservabilitySettingsScene />);
+    const cleanupButton = await screen.findByRole("button", {
+      name: "bknTrace.settings.archive.retryCleanup",
+    });
+    expect(cleanupButton).not.toBeDisabled();
+    const history = screen
+      .getByRole("columnheader", { name: "bknTrace.settings.archive.jobStatus" })
+      .closest("table");
+    expect(history?.querySelector("tbody tr")?.textContent).toContain(
+      "bknTrace.settings.archive.statuses.cleanup_incomplete",
+    );
+    vi.mocked(listArchiveJobs).mockRejectedValue(new Error("history unavailable"));
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.settings.archive.refresh" }));
+    await waitFor(() => expect(cleanupButton).toBeDisabled());
+    expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.settings.archive.noHistory")).toBeNull();
   });
 });

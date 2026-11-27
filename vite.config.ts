@@ -143,7 +143,7 @@ export default defineConfig(({ mode }) => {
           ? {
               // Run a new trace backend beside the installed gateway while all
               // other APIs and the OAuth flow continue to use that gateway.
-              "/api/agent-observability": {
+              "^/api/(?:agent-observability|observability)(?:/|$)": {
                 changeOrigin: true,
                 secure: false,
                 timeout: 120_000,
