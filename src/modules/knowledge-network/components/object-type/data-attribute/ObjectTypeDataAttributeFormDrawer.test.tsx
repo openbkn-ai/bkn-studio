@@ -211,6 +211,33 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
     expect(screen.getByText("knowledgeNetwork.objectTypePropertyName")).not.toBeNull();
   });
 
+  it("offers no primary key switch when the primary key stays as given", async () => {
+    render(
+      <ObjectTypeDataAttributeFormDrawer
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        open
+        primaryKeyLocked
+      />,
+    );
+    expect(await screen.findByText("knowledgeNetwork.objectTypePropertyName")).not.toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.objectTypePrimaryKey")).toBeNull();
+  });
+
+  it("replaces the name's copy in the display name as soon as the person types there", async () => {
+    render(<ObjectTypeDataAttributeFormDrawer onClose={vi.fn()} onSubmit={vi.fn()} open />);
+    const name = await screen.findByLabelText("knowledgeNetwork.objectTypePropertyName");
+    fireEvent.change(name, { target: { value: "supplier_level" } });
+    const displayName = screen.getByLabelText<HTMLInputElement>(
+      "knowledgeNetwork.objectTypePropertyDisplayName",
+    );
+    expect(displayName).toHaveValue("supplier_level");
+    fireEvent.focus(displayName);
+    // Selected whole: what the person types replaces it rather than joining it.
+    expect(displayName.selectionStart).toBe(0);
+    expect(displayName.selectionEnd).toBe("supplier_level".length);
+  });
+
   it("rejects a data-property display name over 128 Unicode code points", async () => {
     vi.useFakeTimers();
     try {

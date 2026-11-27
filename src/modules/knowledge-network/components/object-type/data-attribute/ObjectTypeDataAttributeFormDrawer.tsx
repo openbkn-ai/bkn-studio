@@ -522,6 +522,12 @@ export function ObjectTypeDataAttributeFormDrawer({
                 onChange={() => {
                   isDisplayNameManuallyEdited.current = true;
                 }}
+                // Still the copy of the name: selected on entering it, so typing replaces it.
+                onFocus={(event) => {
+                  if (!isDisplayNameManuallyEdited.current) {
+                    event.target.select();
+                  }
+                }}
                 placeholder={t("knowledgeNetwork.pleaseInput")}
                 showCount
               />
@@ -628,18 +634,18 @@ export function ObjectTypeDataAttributeFormDrawer({
         ) : null}
         {!isMaskRuleMode ? (
           <div className={styles.switchGroup}>
-            <div className={styles.switchRow}>
-              {renderSwitchLabel(
-                t("knowledgeNetwork.objectTypePrimaryKey"),
-                "knowledgeNetwork.objectTypePrimaryKeyTip",
-              )}
-              <Form.Item name="primaryKey" noStyle valuePropName="checked">
-                <Switch
-                  disabled={primaryKeyLocked || !canBePrimaryKey(propertyType)}
-                  size="small"
-                />
-              </Form.Item>
-            </div>
+            {/* A primary key that stays as given offers no switch to change it. */}
+            {primaryKeyLocked ? null : (
+              <div className={styles.switchRow}>
+                {renderSwitchLabel(
+                  t("knowledgeNetwork.objectTypePrimaryKey"),
+                  "knowledgeNetwork.objectTypePrimaryKeyTip",
+                )}
+                <Form.Item name="primaryKey" noStyle valuePropName="checked">
+                  <Switch disabled={!canBePrimaryKey(propertyType)} size="small" />
+                </Form.Item>
+              </div>
+            )}
             <div className={styles.switchRow}>
               {renderSwitchLabel(
                 t("knowledgeNetwork.objectTypeDisplayKeyShort"),
