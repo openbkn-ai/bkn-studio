@@ -9,6 +9,8 @@ import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
+import { setRequestEntitlementSnapshot } from "@/framework/entitlement/entitlement-context";
+import type { Entitlement } from "@/framework/entitlement/types";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
@@ -16,6 +18,7 @@ import {
   KnVersionReadOnlyError,
   KnVersionUnknownError,
   forgetKnVersionContext,
+  isKnVersioned,
   getKnVersionView,
   knVersionQuery,
   resolveKnReadParams,
@@ -26,6 +29,16 @@ type Reply = {
   data?: unknown;
   headers?: Record<string, string>;
   status?: number;
+};
+
+const professional: Entitlement = {
+  capabilities: [],
+  edition: "professional",
+  extensions: [],
+  features: [],
+  licensed: true,
+  limits: {},
+  state: "valid",
 };
 
 const NETWORK = "/bkn-backend/v1/knowledge-networks/kn-1";
@@ -47,6 +60,7 @@ describe("kn version context", () => {
   const originalAdapter = http.defaults.adapter;
 
   beforeEach(() => {
+    setRequestEntitlementSnapshot(professional);
     seen.length = 0;
     routes = {};
     window.sessionStorage.clear();
@@ -73,6 +87,7 @@ describe("kn version context", () => {
   });
 
   afterEach(() => {
+    setRequestEntitlementSnapshot(null);
     http.defaults.adapter = originalAdapter;
     vi.restoreAllMocks();
   });
@@ -109,6 +124,47 @@ describe("kn version context", () => {
     const [read] = request("get", `${NETWORK}/object-types`);
     expect(read.params).toBeUndefined();
     expect(await resolveKnReadParams("kn-1")).toEqual({ kn_version: "running" });
+  });
+
+  it.each(["draft", "2"])(
+    "reads running and rejects writes with a saved %s view after a downgrade",
+    async (savedView) => {
+      window.sessionStorage.setItem("bkn-studio.kn-version-view.kn-1", savedView);
+      routes[`GET ${NETWORK}`] = { data: versionedNetwork(["modify"]) };
+      await http.get(`${NETWORK}/object-types`);
+      expect(request("get", `${NETWORK}/object-types`)[0].params).toEqual({
+        kn_version: savedView,
+      });
+
+      setRequestEntitlementSnapshot({ ...professional, edition: "community", licensed: false });
+      await http.get(`${NETWORK}/object-types`);
+      expect(request("get", `${NETWORK}/object-types`)[1].params).toBeUndefined();
+      expect(await resolveKnReadParams("kn-1")).toEqual({ kn_version: "running" });
+      expect(getKnVersionView("kn-1")).toBe("running");
+      await expect(http.post(`${NETWORK}/object-types`, {})).rejects.toBeInstanceOf(
+        KnVersionReadOnlyError,
+      );
+      await expect(http.put(`${NETWORK}/object-types/ot-1`, {})).rejects.toBeInstanceOf(
+        KnVersionReadOnlyError,
+      );
+      expect(request("post", `${NETWORK}/object-types`)).toHaveLength(0);
+      expect(request("put", `${NETWORK}/object-types/ot-1`)).toHaveLength(0);
+    },
+  );
+
+  it("recognizes a read-only published network when the backend omits version management", async () => {
+    setRequestEntitlementSnapshot({ ...professional, edition: "community", licensed: false });
+    routes[`GET ${NETWORK}`] = {
+      data: { id: "kn-1", operations: ["modify"] },
+      headers: { "x-kn-running-version": "3" },
+    };
+
+    expect(await resolveKnReadParams("kn-1")).toEqual({ kn_version: "running" });
+    expect(isKnVersioned("kn-1")).toBe(true);
+    await expect(http.post(`${NETWORK}/object-types`, {})).rejects.toBeInstanceOf(
+      KnVersionReadOnlyError,
+    );
+    expect(request("post", `${NETWORK}/object-types`)).toHaveLength(0);
   });
 
   it("sends the ETag of the definition it read as If-Match on save", async () => {
