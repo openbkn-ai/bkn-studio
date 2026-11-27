@@ -1853,9 +1853,21 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
                                   </Tooltip>
                                 ) : null}
                                 {removeLocked(property.name) ? (
-                                  <Tooltip title={t("knowledgeNetwork.objectTypePropertyLocked")}>
+                                  // A property the host keeps says what stays; one kept only as
+                                  // wording alone may change says it cannot be removed.
+                                  <Tooltip
+                                    title={t(
+                                      lockedNames.has(property.name)
+                                        ? "knowledgeNetwork.objectTypePropertyLocked"
+                                        : "knowledgeNetwork.objectTypePropertyKept",
+                                    )}
+                                  >
                                     <LockOutlined
-                                      aria-label={t("knowledgeNetwork.objectTypePropertyLocked")}
+                                      aria-label={t(
+                                        lockedNames.has(property.name)
+                                          ? "knowledgeNetwork.objectTypePropertyLocked"
+                                          : "knowledgeNetwork.objectTypePropertyKept",
+                                      )}
                                       className={styles.rowActionIcon}
                                     />
                                   </Tooltip>

@@ -197,6 +197,12 @@ describe("ObjectTypeDataAttributeEditor with locked properties", () => {
       // No row removes a property either.
       expect(row("Customer").queryByLabelText("delete")).toBeNull();
       expect(row("Note").queryByLabelText("delete")).toBeNull();
+      // A row kept only because wording alone may change says only that it cannot be removed.
+      if (locks.addLocked) {
+        expect(
+          row("Note").getByLabelText("knowledgeNetwork.objectTypePropertyKept"),
+        ).toBeInTheDocument();
+      }
       cleanup();
     }
   });
