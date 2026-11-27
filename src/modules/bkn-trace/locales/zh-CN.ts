@@ -1089,6 +1089,25 @@ export const bknTraceZhCN = {
     },
     settings: {
       archive: {
+        recordCount_one: "{{count}} 条记录",
+        recordCount_other: "{{count}} 条记录",
+
+        refresh: "刷新归档状态",
+        historyUnavailable: "{{kind}}归档任务读取失败，当前无法确认任务状态。请刷新后再操作。",
+        actionUnconfirmed: "未能确认归档结果，请先查看刷新后的任务状态，再决定是否重试。",
+        blocked: "需要处理",
+        blockedDetails: "交互 {{interaction}} 内容过大：{{actual}}，上限 {{limit}}。",
+        blockedDetailsAtLeast: "交互 {{interaction}} 内容过大：超过上限 {{limit}}。",
+        blockedAdvice: "重试无法解决，请联系管理员处理；该交互及后续记录仍保留。",
+        cleanupAdvice:
+          "存在清理未完成的任务，请在任务列表中继续清理。系统会重新校验归档后接续清理。",
+        runComplete: "本批记录：本轮已完成，累计清理 {{cleaned}} 条。",
+        runIncomplete:
+          "本批记录：本轮尚未完成，累计清理 {{cleaned}} 条；选批时剩余 {{remaining}} 条。",
+        busy: "同类归档正在执行，请刷新任务状态后再操作。",
+        inspectHistory: "归档未完成，请查看任务列表中的受阻详情及已完成批次。",
+        capacityAdvice: "归档容量或配置不满足要求，源数据保留。请联系管理员检查容量限制和配置。",
+
         action: "立即归档",
         actionFailed: "归档操作失败，请稍后重试。",
         candidates: "候选 {{count}} 条，截止 {{cutoff}}",
@@ -1104,7 +1123,7 @@ export const bknTraceZhCN = {
         jobCount: "归档条数",
         jobKind: "归档类别",
         jobRange: "实际归档范围",
-        jobStatus: "状态",
+        jobStatus: "批次状态",
         kinds: { log: "日志", trace: "Trace" },
         logRule: "固定归档超过 30 天的平台托管操作日志。",
         logTitle: "日志归档",

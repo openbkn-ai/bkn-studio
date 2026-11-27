@@ -195,7 +195,28 @@ export type ArchiveOverview = {
   storageStatus: "ready" | "unavailable";
 };
 
+export type ArchiveBlockage = {
+  interaction_id: string;
+  stage: string;
+  actual: number;
+  limit: number;
+  unit: string;
+  at_least?: boolean;
+};
+
+export type ArchiveBatchProgress = {
+  run_id: string;
+  batch_number: number;
+  cleaned_in_run: number;
+  remaining_at_selection: number;
+  run_complete: boolean;
+  stage?: string;
+  blocked?: ArchiveBlockage;
+};
+
 export type ArchiveJob = {
+  batchProgress?: ArchiveBatchProgress;
+  errorMessage?: string;
   candidateCount: number;
   id: string;
   kind: ArchiveKind;
@@ -403,42 +424,44 @@ export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOver
   };
 }
 
-export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
-  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
-  const response = await http.post<{
-    archive_job_id: string;
-    archive_kind: ArchiveKind;
-    candidate_count: number;
-    range: { from?: string; to: string };
-    status: ArchiveJob["status"];
-  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { skipErrorToast: true });
-  return {
-    candidateCount: response.data.candidate_count,
-    id: response.data.archive_job_id,
-    kind: response.data.archive_kind,
-    range: response.data.range,
-    status: response.data.status,
-  };
-}
+type BackendArchiveJob = {
+  archive_job_id: string;
+  archive_kind: ArchiveKind;
+  candidate_count: number;
+  range: ArchiveJob["range"];
+  status: ArchiveJob["status"];
+  batch_progress?: ArchiveBatchProgress;
+  error_message?: string;
+};
 
-export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> {
-  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
-  const response = await http.get<
-    Array<{
-      archive_job_id: string;
-      archive_kind: ArchiveKind;
-      candidate_count: number;
-      range: { from?: string; to: string };
-      status: ArchiveJob["status"];
-    }>
-  >(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
-  return response.data.map((job) => ({
+function mapArchiveJob(job: BackendArchiveJob): ArchiveJob {
+  return {
     candidateCount: job.candidate_count,
     id: job.archive_job_id,
     kind: job.archive_kind,
     range: job.range,
     status: job.status,
-  }));
+    ...(job.batch_progress ? { batchProgress: job.batch_progress } : {}),
+    ...(job.error_message ? { errorMessage: job.error_message } : {}),
+  };
+}
+
+export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
+  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
+  const response = await http.post<BackendArchiveJob>(
+    `${OBSERVABILITY_API_PREFIX}/${resource}`,
+    {},
+    { skipErrorToast: true },
+  );
+  return mapArchiveJob(response.data);
+}
+
+export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> {
+  const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
+  const response = await http.get<BackendArchiveJob[]>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {
+    skipErrorToast: true,
+  });
+  return response.data.map(mapArchiveJob);
 }
 
 export type ArchiveDownload = { content: Blob; fileName?: string };
@@ -454,20 +477,12 @@ export async function downloadArchive(id: string): Promise<ArchiveDownload> {
 }
 
 export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
-  const response = await http.post<{
-    archive_job_id: string;
-    archive_kind: ArchiveKind;
-    candidate_count: number;
-    range: { from?: string; to: string };
-    status: ArchiveJob["status"];
-  }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`, {}, { skipErrorToast: true });
-  return {
-    candidateCount: response.data.candidate_count,
-    id: response.data.archive_job_id,
-    kind: response.data.archive_kind,
-    range: response.data.range,
-    status: response.data.status,
-  };
+  const response = await http.post<BackendArchiveJob>(
+    `${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`,
+    {},
+    { skipErrorToast: true },
+  );
+  return mapArchiveJob(response.data);
 }
 
 function mapLogRecord(record: BackendLogRecord): LogRecord {
