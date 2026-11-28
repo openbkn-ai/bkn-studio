@@ -138,6 +138,8 @@ export function useObjectTypeGraphExplorer({
                       offset: 0,
                     })
                   : await listKnowledgeNetworkActionTypePage(networkId, {
+                      // Recognition actions belong to their event classes, not to this list.
+                      excludeOperationKind: "event",
                       limit: 1,
                       objectTypeId: item.id,
                       offset: 0,

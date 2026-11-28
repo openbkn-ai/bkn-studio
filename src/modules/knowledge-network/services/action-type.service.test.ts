@@ -127,6 +127,22 @@ describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
     expect(page.entries.map((item) => item.id)).toEqual(["tool-page-2"]);
   });
 
+  it("sends the excluded operation kind to the server", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const service = await import("./action-type.service");
+    await service.listKnowledgeNetworkActionTypePage("kn-1", {
+      excludeOperationKind: "event",
+      limit: 10,
+      offset: 0,
+    });
+    expect(getMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        params: expect.objectContaining({ exclude_operation_kind: "event" }) as unknown,
+      }),
+    );
+  });
+
   it("sends relationship operation filters before pagination", async () => {
     getMock.mockResolvedValue({
       data: {

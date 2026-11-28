@@ -157,6 +157,8 @@ export type KnowledgeNetworkActionTypePageQuery = {
   objectTypeId?: string;
   offset: number;
   operationKind?: ActionTypeOperationKind;
+  /** Leaves out the action types of this operation kind. */
+  excludeOperationKind?: ActionTypeOperationKind;
   relationOperation?: "create" | "delete";
   sort?: "name" | "update_time";
 };
@@ -212,6 +214,8 @@ export async function listKnowledgeNetworkActionTypePage(
         (!query.actionKind || item.actionKind === query.actionKind) &&
         (!query.objectTypeId || item.objectTypeId === query.objectTypeId) &&
         (!query.operationKind || getActionTypeOperationKind(item) === query.operationKind) &&
+        (!query.excludeOperationKind ||
+          getActionTypeOperationKind(item) !== query.excludeOperationKind) &&
         (!query.independentOnly || !item.objectTypeId) &&
         (!query.relationOperation ||
           (item.operationConfig?.type === "relation" &&
@@ -251,6 +255,7 @@ export async function listKnowledgeNetworkActionTypePage(
         name_pattern: query.namePattern?.trim() || undefined,
         object_type_id: query.objectTypeId || undefined,
         operation_kind: query.operationKind,
+        exclude_operation_kind: query.excludeOperationKind,
         relation_operation: query.relationOperation,
         offset: requiresLocalFilter ? 0 : query.offset,
         sort: query.sort ?? "update_time",
@@ -266,6 +271,8 @@ export async function listKnowledgeNetworkActionTypePage(
   const scoped = entries.filter(
     (entry) =>
       (!query.operationKind || getActionTypeOperationKind(entry) === query.operationKind) &&
+      (!query.excludeOperationKind ||
+        getActionTypeOperationKind(entry) !== query.excludeOperationKind) &&
       (!query.independentOnly || !entry.objectTypeId) &&
       (!query.relationOperation ||
         (entry.operationConfig?.type === "relation" &&

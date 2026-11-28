@@ -125,14 +125,29 @@ export function validateActionRelationBindings(
   return null;
 }
 
-export function readActionTypeOperationKind(value: unknown): ActionTypeOperationKind | undefined {
+/** The operation kinds an action type can be created with here. */
+export function readActionTypeOperationKind(
+  value: unknown,
+): Exclude<ActionTypeOperationKind, "event"> | undefined {
   return value === "object" || value === "relation" || value === "tool" ? value : undefined;
 }
 
-/** Legacy records have no operation metadata; object-free actions are tool invocations. */
+/** The operation kinds the action type list filters by: those it can create, and recognition. */
+export function readActionTypeListOperation(value: unknown): ActionTypeOperationKind | undefined {
+  return value === "event" ? value : readActionTypeOperationKind(value);
+}
+
+/**
+ * Legacy records have no operation metadata; object-free actions are tool invocations. A
+ * recognition action records the events of its event class.
+ */
 export function getActionTypeOperationKind(
-  record: Pick<KnowledgeNetworkActionTypeRecord, "objectTypeId" | "operationConfig">,
+  record: Pick<
+    KnowledgeNetworkActionTypeRecord,
+    "eventClassId" | "objectTypeId" | "operationConfig"
+  >,
 ): ActionTypeOperationKind {
+  if (record.eventClassId) return "event";
   return record.operationConfig?.type ?? (record.objectTypeId ? "object" : "tool");
 }
 
@@ -141,6 +156,7 @@ export function actionTypeOperationLabelKey(kind: ActionTypeOperationKind): stri
     object: "knowledgeNetwork.actionOperationObject",
     relation: "knowledgeNetwork.actionOperationRelation",
     tool: "knowledgeNetwork.actionOperationTool",
+    event: "knowledgeNetwork.actionOperationEvent",
   }[kind];
 }
 

@@ -626,6 +626,32 @@ describe("ActionTypeFormScene navigation context", () => {
     expect(screen.getByTestId("action-condition-editor")).toHaveTextContent("status:critical");
   });
 
+  it("sends the edit of a recognition action to its event class", async () => {
+    mocks.routeParams.current = {
+      actionTypeId: "order_overdue_recognition",
+      networkId: "network-1",
+    };
+    mocks.getActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#1677ff",
+      eventClassId: "order_overdue",
+      executionConfig: {},
+      id: "order_overdue_recognition",
+      name: "Overdue order recognition",
+      objectTypeId: "order",
+      tags: [],
+    });
+
+    renderWithoutAntdStyles(<ActionTypeFormScene mode="edit" />);
+
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/event-classes",
+        { replace: true, state: { eventClassIntent: { action: "edit", code: "order_overdue" } } },
+      ),
+    );
+  });
+
   it("connects each instance operation to its applicable rules and tool guidance", async () => {
     mocks.locationState.current = { actionTypeInitialObjectTypeId: "orders" };
 

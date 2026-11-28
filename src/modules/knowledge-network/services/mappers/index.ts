@@ -41,7 +41,7 @@ import type {
   BackendSmallModel,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import { mapActionOperationConfig } from "../../utils/action-type-operation";
-import { mapActionTypeActionSourceFromBackend } from "./action-type.mapper";
+import { mapActionTypeActionSourceFromBackend, recognisedEventClass } from "./action-type.mapper";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
 import {
   definitionDeclarationPatch,
@@ -572,6 +572,7 @@ export function mapActionKind(
 
 export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTypeRecord {
   const declarations = mapDefinitionDeclarations(item);
+  const eventClassId = recognisedEventClass(item.operation_config);
   return {
     ...(item.action_source
       ? { actionSource: mapActionTypeActionSourceFromBackend(item.action_source) }
@@ -580,6 +581,7 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
       ? { operationConfig: mapActionOperationConfig(item.operation_config) }
       : {}),
     ...(declarations ? { declarations } : {}),
+    ...(eventClassId ? { eventClassId } : {}),
     id: item.id,
     name: item.name,
     operations: item.operations,

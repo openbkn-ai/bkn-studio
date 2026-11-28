@@ -7,7 +7,8 @@
 
 import type { DefinitionDeclarationEdit, DefinitionDeclarations } from "./declarations";
 
-export type ActionTypeOperationKind = "object" | "relation" | "tool";
+/** "event" is the recognition action of an event class, which the event class page edits. */
+export type ActionTypeOperationKind = "object" | "relation" | "tool" | "event";
 
 export type ActionTypeOperationConfig =
   | { type: "object" | "tool" }

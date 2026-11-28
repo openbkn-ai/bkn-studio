@@ -427,6 +427,36 @@ describe("ActionTypeListPanel menu access", () => {
     );
   });
 
+  it("leaves the recognition actions of event classes out, unless their filter is chosen", async () => {
+    listActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
+
+    renderPanel("/?view=list");
+
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          excludeOperationKind: "event",
+          operationKind: undefined,
+        }) as unknown,
+      ),
+    );
+
+    cleanup();
+    listActionTypePage.mockClear();
+    renderPanel("/?view=list&operation=event");
+
+    await waitFor(() =>
+      expect(listActionTypePage).toHaveBeenCalledWith(
+        "network-1",
+        expect.objectContaining({
+          excludeOperationKind: undefined,
+          operationKind: "event",
+        }) as unknown,
+      ),
+    );
+  });
+
   it("keeps the graph scoped to object-associated action types", async () => {
     listObjectTypePage.mockResolvedValue({
       entries: [{ id: "orders", name: "Orders", color: "#1677ff" }],

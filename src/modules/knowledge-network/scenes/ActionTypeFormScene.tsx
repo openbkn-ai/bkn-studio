@@ -62,6 +62,10 @@ import {
   actionTypeCreatedState,
   readActionTypeContext,
 } from "@/modules/knowledge-network/lib/action-type-context";
+import {
+  eventClassesPath,
+  type EventClassNavigationState,
+} from "@/modules/knowledge-network/components/event-class/event-class-navigation";
 import { knowledgeNetworkReturnPath } from "@/modules/knowledge-network/lib/knowledge-network-navigation";
 import {
   RESOURCE_IDENTIFIER_PATTERN,
@@ -205,7 +209,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           !readActionTypeContext(location.state)?.prefill?.objectTypeId
         ? "tool"
         : "object");
-  const [operationKind, setOperationKind] = useState<ActionTypeOperationKind>(requestedOperation);
+  const [operationKind, setOperationKind] =
+    useState<Exclude<ActionTypeOperationKind, "event">>(requestedOperation);
   const isObjectOperation = operationKind === "object";
   const isObjectBoundOperation = operationKind !== "tool";
   const [basicForm] = Form.useForm<BasicFormValues>();
@@ -537,6 +542,14 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           if (!detail) {
             throw new Error(t("common.notFound"));
           }
+          // A recognition action is its event class's rule: the event class page edits it.
+          if (detail.eventClassId) {
+            const state: EventClassNavigationState = {
+              eventClassIntent: { action: "edit", code: detail.eventClassId },
+            };
+            void navigate(eventClassesPath(networkId), { replace: true, state });
+            return;
+          }
 
           const nextBasic: BasicFormValues = {
             actionKind:
@@ -596,7 +609,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
           ];
 
           setExecutionValue(detail.executionConfig);
-          setOperationKind(getActionTypeOperationKind(detail));
+          const detailKind = getActionTypeOperationKind(detail);
+          if (detailKind !== "event") setOperationKind(detailKind);
           activeActionKind.current = nextBasic.actionKind;
           operationDrafts.current = {};
           setHasSavedCondition(
@@ -623,7 +637,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     };
 
     void loadData();
-  }, [actionTypeId, basicForm, mode, networkId, prefillObjectTypeId, t]);
+  }, [actionTypeId, basicForm, mode, navigate, networkId, prefillObjectTypeId, t]);
 
   const steps = useMemo(() => [{ title: t("knowledgeNetwork.actionTypeConfigStep") }], [t]);
 

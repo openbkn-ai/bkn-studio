@@ -253,6 +253,7 @@ export const actiontypePart = {
   actionOperationObjectEntry: "对象类操作",
   actionOperationRelation: "对象关系操作",
   actionOperationTool: "工具调用",
+  actionOperationEvent: "记录事件",
   actionOperationObjectDescription:
     "选择对象类，配置实例的新建、修改、删除，或对象间关系的建立与解除。",
   actionOperationRelationDescription: "选择关系类，配置建立或解除关系，并映射关系两端的对象标识。",
