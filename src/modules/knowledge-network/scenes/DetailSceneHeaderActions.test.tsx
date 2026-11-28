@@ -337,6 +337,46 @@ describe("knowledge network detail scene headers", () => {
     );
   });
 
+  it("edits a recognition action through its event class, and offers no delete of it", async () => {
+    mocks.routeParams.current = {
+      actionTypeId: "order_overdue_recognition",
+      networkId: "network-1",
+    };
+    mocks.getKnowledgeNetworkActionTypeDetail.mockResolvedValue({
+      actionKind: "create",
+      color: "#126ee3",
+      description: "",
+      eventClassId: "order_overdue",
+      executionConfig: {
+        actionSource: { type: "manual" },
+        parameters: [],
+        sourceName: "Manual",
+        sourceType: "manual",
+      },
+      id: "order_overdue_recognition",
+      name: "Overdue order recognition",
+      objectTypeId: "order",
+      objectTypeName: "Order",
+      operations: ["view_detail", "modify", "execute", "delete"],
+      tags: [],
+      updateTime: "2026-11-25 10:00:00",
+      updaterName: "admin",
+    });
+
+    render(<ActionTypeDetailScene />);
+
+    fireEvent.click(await screen.findByText("common.edit"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/event-classes",
+      {
+        state: { eventClassIntent: { action: "edit", code: "order_overdue" } },
+      },
+    );
+    expect(screen.queryByText("common.delete")).toBeNull();
+    // Its executions stay where they are.
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionEntry")).not.toBeNull();
+  });
+
   it("shows action type operations granted by the detail record", async () => {
     const graphReturnTo =
       "/knowledge-network/workspace/network-1/action-types?objectTypeId=object-1&graphResourceKind=action&graphResourceId=action-1";

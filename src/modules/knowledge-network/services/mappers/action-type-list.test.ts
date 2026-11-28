@@ -14,6 +14,7 @@ import {
   mapConceptGroupDetail,
   mapRecentObject,
 } from "@/modules/knowledge-network/services/mappers";
+import { getActionTypeOperationKind } from "@/modules/knowledge-network/utils/action-type-operation";
 
 describe("action type list mapper", () => {
   it("maps backend lowercase action types to frontend action kinds", () => {
@@ -70,6 +71,28 @@ describe("action type list mapper", () => {
     expect(recognition.eventClassId).toBe("order_overdue");
     expect(recognition.operationConfig).toBeUndefined();
     expect(other.eventClassId).toBeUndefined();
+  });
+
+  it("lists a recognition action as recording events, under its event class", () => {
+    const recognition = mapActionType({
+      action_type: "add",
+      id: "order_overdue_recognition",
+      name: "Overdue order recognition",
+      object_type_id: "order",
+      operation_config: { event_class: "order_overdue", type: "event" },
+    } as unknown as Parameters<typeof mapActionType>[0]);
+    const other = mapActionType({
+      action_type: "modify",
+      id: "action-1",
+      name: "Edit order",
+      object_type_id: "order",
+      operation_config: { type: "object" },
+    });
+
+    expect(recognition.eventClassId).toBe("order_overdue");
+    expect(recognition.operationConfig).toBeUndefined();
+    expect(getActionTypeOperationKind(recognition)).toBe("event");
+    expect(getActionTypeOperationKind(other)).toBe("object");
   });
 
   it("maps concept group action type entries with lowercase backend enums", () => {

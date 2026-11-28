@@ -272,6 +272,7 @@ export const actiontypePart = {
   actionOperationObjectEntry: "Object type operations",
   actionOperationRelation: "Object relationship operation",
   actionOperationTool: "Tool invocation",
+  actionOperationEvent: "Record events",
   actionOperationObjectDescription:
     "Select an object type to create, update, or delete instances, or create and remove relationships.",
   actionOperationRelationDescription:

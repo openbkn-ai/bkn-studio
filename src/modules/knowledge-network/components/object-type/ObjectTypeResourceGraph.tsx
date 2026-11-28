@@ -829,6 +829,8 @@ export function ObjectTypeResourceGraph({
       ) {
         const result = await listKnowledgeNetworkActionTypePage(networkId, {
           direction: "asc",
+          // Recognition actions belong to their event classes, not to this graph.
+          excludeOperationKind: "event",
           limit: RESOURCE_REQUEST_SIZE,
           objectTypeId: objectType.id,
           offset: window.entries.length,

@@ -62,7 +62,7 @@ import {
   actionTypeOperationLabelKey,
   actionTypeSpecificOperationLabelKey,
   getActionTypeOperationKind,
-  readActionTypeOperationKind,
+  readActionTypeListOperation,
 } from "@/modules/knowledge-network/utils/action-type-operation";
 import type {
   ActionTypeActionSource,
@@ -151,7 +151,7 @@ export function ActionTypeListPanel({
     () => readActionKind(searchParams.get("actionKind")),
   );
   const [operationFilter, setOperationFilter] = useState<ActionTypeOperationKind | "all">(
-    () => readActionTypeOperationKind(searchParams.get("operation")) ?? "all",
+    () => readActionTypeListOperation(searchParams.get("operation")) ?? "all",
   );
   const [relationOperationFilter, setRelationOperationFilter] = useState<
     "all" | "create" | "delete"
@@ -267,6 +267,9 @@ export function ActionTypeListPanel({
       namePattern: debouncedKeyword,
       objectTypeId: objectTypeFilter === "all" ? undefined : objectTypeFilter,
       operationKind: operationFilter === "all" ? undefined : operationFilter,
+      // The recognition actions of event classes are edited on the event class page; they are
+      // listed only under their own filter.
+      excludeOperationKind: operationFilter === "all" ? "event" : undefined,
       relationOperation:
         operationFilter === "relation" && relationOperationFilter !== "all"
           ? relationOperationFilter
@@ -361,7 +364,7 @@ export function ActionTypeListPanel({
     const nextActionKind = readActionKind(searchParams.get("actionKind"));
     const nextRelationOperation = searchParams.get("relationOperation");
     const nextObjectType = searchParams.get("objectType") ?? "all";
-    setOperationFilter(readActionTypeOperationKind(searchParams.get("operation")) ?? "all");
+    setOperationFilter(readActionTypeListOperation(searchParams.get("operation")) ?? "all");
     setRelationOperationFilter(
       nextRelationOperation === "create" || nextRelationOperation === "delete"
         ? nextRelationOperation
@@ -921,7 +924,7 @@ export function ActionTypeListPanel({
                       }}
                       options={[
                         { label: t("common.all"), value: "all" },
-                        ...(["object", "relation", "tool"] as const).map((kind) => ({
+                        ...(["object", "relation", "tool", "event"] as const).map((kind) => ({
                           label: t(actionTypeOperationLabelKey(kind)),
                           value: kind,
                         })),

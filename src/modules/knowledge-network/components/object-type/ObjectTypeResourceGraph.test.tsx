@@ -497,6 +497,18 @@ describe("ObjectTypeResourceGraph", () => {
     expect(screen.getByText("当前对象类暂无关联行动")).toHaveAttribute("role", "status");
   });
 
+  it("leaves the recognition actions of event classes out of the graph", async () => {
+    mocks.listActions.mockResolvedValue({ entries: [], totalCount: 0 });
+    renderGraph();
+
+    await waitFor(() =>
+      expect(mocks.listActions).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ excludeOperationKind: "event" }) as unknown,
+      ),
+    );
+  });
+
   it("shows a retryable error without presenting failed requests as empty data", async () => {
     mocks.listRelations.mockRejectedValue(new Error("关系类服务不可用"));
     mocks.listMetrics.mockRejectedValue(new Error("指标服务不可用"));
@@ -615,6 +627,7 @@ describe("ObjectTypeResourceGraph", () => {
     );
     expect(mocks.listActions).toHaveBeenCalledWith("network-1", {
       direction: "asc",
+      excludeOperationKind: "event",
       limit: 30,
       objectTypeId: "order",
       offset: 0,

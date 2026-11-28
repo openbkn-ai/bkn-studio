@@ -35,6 +35,10 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { DeprecatedBanner } from "@/modules/knowledge-network/components/definition-declarations/DeprecatedBanner";
+import {
+  eventClassesPath,
+  type EventClassNavigationState,
+} from "@/modules/knowledge-network/components/event-class/event-class-navigation";
 import { useDefinitionDeleteRefusal } from "@/modules/knowledge-network/components/definition-declarations/definition-delete-refusal";
 import styles from "./ActionTypeDetailScene.module.css";
 
@@ -152,6 +156,14 @@ export function ActionTypeDetailScene() {
                 key: "edit",
                 label: t("common.edit"),
                 onClick: () => {
+                  // A recognition action is its event class's rule: the event class page edits it.
+                  if (detail.eventClassId) {
+                    const state: EventClassNavigationState = {
+                      eventClassIntent: { action: "edit", code: detail.eventClassId },
+                    };
+                    void navigate(eventClassesPath(networkId), { state });
+                    return;
+                  }
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
                     { state: knowledgeNetworkReturnState(returnPath) },
@@ -177,13 +189,18 @@ export function ActionTypeDetailScene() {
                 onClick: () => setAuthorizeOpen(true),
                 operation: "authorize",
               },
-              {
-                danger: true,
-                key: "delete",
-                label: t("common.delete"),
-                onClick: confirmDelete,
-                operation: "delete",
-              },
+              // A recognition action goes with its event class, not on its own.
+              ...(detail.eventClassId
+                ? []
+                : [
+                    {
+                      danger: true,
+                      key: "delete",
+                      label: t("common.delete"),
+                      onClick: confirmDelete,
+                      operation: "delete" as const,
+                    },
+                  ]),
             ]}
             record={detail}
           />
