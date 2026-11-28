@@ -6,12 +6,13 @@
  */
 
 import "@ant-design/v5-patch-for-react-19";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render as renderInTree, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 vi.mock("@/framework/monaco/MonacoEditor", () => ({
   MonacoEditor: ({ fallback }: { fallback: import("react").ReactNode }) => fallback,
 }));
 
-import { Modal } from "antd";
+import { App } from "antd";
 import { beforeAll, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import { evalLocales } from "./locales";
@@ -26,6 +27,12 @@ vi.mock("./m0-run.service", () => ({
   previewEvalRuleMatches: vi.fn(),
   saveEvalTemplateConfig: vi.fn(),
 }));
+// Inside <App> the panel's feedback (messages, confirm dialogs) renders in the
+// tested tree, as in the studio, so cleanup unmounts it with the panel. The
+// static fallback renders in its own root, whose close timers can commit after
+// the test environment is torn down.
+const render = (ui: ReactElement) => renderInTree(ui, { wrapper: App });
+
 beforeAll(async () => {
   await i18n.init({ lng: "zh-CN", resources: evalLocales });
 });
@@ -402,9 +409,6 @@ it("deletes a custom rule without a second save step", async () => {
       rules: nextRules,
     }),
   );
-  const confirmSpy = vi
-    .spyOn(Modal, "confirm")
-    .mockReturnValue({} as ReturnType<typeof Modal.confirm>);
   render(<EvalTemplatePanel networkId="kn-1" config={current} canManage onChanged={vi.fn()} />);
   await screen.findByRole("button", { name: /新\s*建/ });
   const row = screen.getByText("自定义对象检查").closest("tr") as HTMLElement;
@@ -414,11 +418,12 @@ it("deletes a custom rule without a second save step", async () => {
     }),
   );
   fireEvent.click(screen.getByRole("menuitem", { name: "删除" }));
-  expect(confirmSpy).toHaveBeenCalledOnce();
-  await confirmSpy.mock.calls[0][0].onOk?.();
+  const confirm = await screen.findByRole("dialog", { name: "删除“自定义对象检查”？" });
+  expect(saveEvalTemplateConfig).not.toHaveBeenCalled();
+  fireEvent.click(within(confirm).getByRole("button", { name: /确\s*定|OK/ }));
   await waitFor(() => expect(saveEvalTemplateConfig).toHaveBeenCalledOnce());
   expect(vi.mocked(saveEvalTemplateConfig).mock.calls[0][2]).toEqual(rules);
-  confirmSpy.mockRestore();
+  expect(await screen.findByText("规则已删除")).toBeTruthy();
 });
 
 it("does not show a target case quota for current object instance rules", () => {
