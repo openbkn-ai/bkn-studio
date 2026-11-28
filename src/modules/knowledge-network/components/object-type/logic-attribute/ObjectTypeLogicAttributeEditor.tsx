@@ -49,15 +49,22 @@ type ObjectTypeLogicAttributeEditorProps = {
   onChange: (logicProperties: ObjectTypeLogicProperty[]) => void;
 };
 
-function getLogicTypeLabel(_type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
+function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  return type === "tool"
+    ? t("knowledgeNetwork.objectTypeLogicAttributeTypeTool")
+    : t("knowledgeNetwork.objectTypeLogicAttributeTypeCypher");
+}
+
+/** The first line of a statement, as the table shows it. */
+function statementPreview(statement?: string) {
+  return (statement ?? "").replace(/\s+/g, " ").trim();
 }
 
 export const ObjectTypeLogicAttributeEditor = forwardRef<
   ObjectTypeLogicAttributeEditorHandle,
   ObjectTypeLogicAttributeEditorProps
 >(function ObjectTypeLogicAttributeEditor(
-  { basicValue, dataProperties, externalError, logicProperties, onChange },
+  { basicValue, dataProperties, externalError, logicProperties, networkId, objectTypeId, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -240,8 +247,14 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         return (
           <div className={styles.bindResourceCell}>
             <div className={styles.dataResource}>
-              <span className={styles.resourceIconOperator}>T</span>
-              <span className={styles.resourceName}>{record.dataSource.name || ""}</span>
+              <span className={styles.resourceIconOperator}>
+                {record.dataSource.type === "cypher" ? "C" : "T"}
+              </span>
+              <span className={styles.resourceName}>
+                {record.dataSource.type === "cypher"
+                  ? statementPreview(record.dataSource.statement)
+                  : record.dataSource.name || ""}
+              </span>
             </div>
           </div>
         );
@@ -374,6 +387,8 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
         ]}
         attrInfo={attrInfo}
         logicFields={localLogicProperties}
+        networkId={networkId}
+        objectTypeId={objectTypeId}
         onClose={() => setDrawerOpen(false)}
         onOk={handleOk}
         open={drawerOpen}

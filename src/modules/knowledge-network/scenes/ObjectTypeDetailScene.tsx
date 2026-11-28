@@ -108,8 +108,10 @@ function normalizedSearchText(value: unknown) {
   return "";
 }
 
-function getLogicTypeLabel(_type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
-  return t("knowledgeNetwork.objectTypeLogicAttributeTypeTool");
+function getLogicTypeLabel(type: ObjectTypeLogicProperty["type"], t: (key: string) => string) {
+  return type === "tool"
+    ? t("knowledgeNetwork.objectTypeLogicAttributeTypeTool")
+    : t("knowledgeNetwork.objectTypeLogicAttributeTypeCypher");
 }
 
 type ObjectTypeDetailTabKey = "overview" | "properties" | "data" | "related";

@@ -159,6 +159,10 @@
   color: var(--color-text-primary);
   font-size: 14px;
   line-height: 1;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .emptyTip {

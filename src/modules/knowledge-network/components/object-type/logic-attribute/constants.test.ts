@@ -8,257 +8,60 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  LOGIC_ATTRIBUTE_TYPE_OPTIONS,
-  LOGIC_RESULT_PATH_PLACEHOLDER,
-  bindCypherParametersToProperties,
-  buildToolLogicParameterSettings,
-  isToolLogicBindingComplete,
-  normalizeFunctionParameterSources,
-  removeParameterById,
-  readLogicAttributeToolBinding,
+  buildDefaultLogicStatement,
+  localStatementProblem,
+  syncLogicParameters,
 } from "./constants";
 
-describe("LOGIC_ATTRIBUTE_TYPE_OPTIONS", () => {
-  it("only exposes independently supported logical-property sources", () => {
-    expect(LOGIC_ATTRIBUTE_TYPE_OPTIONS).toEqual([
-      { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
-    ]);
-  });
-});
+let counter = 0;
+const createId = () => `id-${++counter}`;
 
-describe("LOGIC_RESULT_PATH_PLACEHOLDER", () => {
-  it("matches the execution factory function response envelope", () => {
-    expect(LOGIC_RESULT_PATH_PLACEHOLDER).toBe("$.result");
-  });
-});
-
-describe("buildToolLogicParameterSettings", () => {
-  it("forces function inputs to Body even when a legacy mapping used another source", () => {
-    const result = buildToolLogicParameterSettings(
-      [],
-      [
-        {
-          id: "saved-query",
-          name: "product",
-          source: "Query",
-          type: "string",
-          value: "product_code",
-          valueFrom: "property",
-        },
-      ],
-      () => "generated-id",
-    );
-
-    expect(result[0]?.source).toBe("Body");
+describe("buildDefaultLogicStatement", () => {
+  it("starts from the instance by its primary key", () => {
+    const statement = buildDefaultLogicStatement({ objectTypeId: "person", primaryKeys: ["pid"] });
+    expect(statement).toContain("MATCH (n:person)");
+    expect(statement).toContain("n.pid = $id");
   });
 
-  it("merges saved tool parameter mappings into the input schema", () => {
-    let index = 0;
-
-    const result = buildToolLogicParameterSettings(
-      [
-        {
-          children: [
-            {
-              key: "body.city",
-              name: "city",
-              required: true,
-              source: "Body",
-              type: "string",
-            },
-          ],
-          key: "body",
-          name: "body",
-          source: "Body",
-          type: "object",
-        },
-      ],
-      [
-        {
-          id: "saved-city",
-          name: "body.city",
-          required: false,
-          source: "Body",
-          type: "string",
-          value: "customer_city",
-          valueFrom: "property",
-        },
-      ],
-      () => `generated-${++index}`,
-    );
-
-    expect(result).toEqual([
-      {
-        children: [
-          {
-            children: undefined,
-            description: undefined,
-            id: "saved-city",
-            name: "body.city",
-            required: true,
-            source: "Body",
-            type: "string",
-            value: "customer_city",
-            valueFrom: "property",
-          },
-        ],
-        description: undefined,
-        id: "generated-1",
-        name: "body",
-        required: false,
-        source: "Body",
-        type: "object",
-        value: undefined,
-        valueFrom: "input",
-      },
-    ]);
-  });
-
-  it("keeps saved parameters when the tool schema cannot be resolved", () => {
-    const result = buildToolLogicParameterSettings(
-      [],
-      [
-        {
-          id: "",
-          name: "query",
-          source: "Body",
-          type: "string",
-          value: "openbkn",
-          valueFrom: "const",
-        },
-      ],
-      () => "generated-id",
-    );
-
-    expect(result).toEqual([
-      {
-        id: "generated-id",
-        name: "query",
-        source: "Body",
-        type: "string",
-        value: "openbkn",
-        valueFrom: "const",
-      },
-    ]);
-  });
-});
-
-describe("normalizeFunctionParameterSources", () => {
-  it("normalizes nested parameters before a function binding is saved", () => {
-    expect(
-      normalizeFunctionParameterSources([
-        {
-          children: [
-            {
-              id: "child",
-              name: "payload.product",
-              source: "Header",
-              type: "string",
-              valueFrom: "input",
-            },
-          ],
-          id: "parent",
-          name: "payload",
-          source: "Path",
-          type: "object",
-          valueFrom: "input",
-        },
-      ]),
-    ).toMatchObject([
-      {
-        children: [{ source: "Body" }],
-        source: "Body",
-      },
-    ]);
-  });
-});
-
-describe("removeParameterById", () => {
-  type TestNode = { children?: TestNode[]; id: string; name: string };
-
-  it("removes a top-level parameter by id", () => {
-    expect(
-      removeParameterById<TestNode>(
-        [
-          { id: "a", name: "count" },
-          { id: "b", name: "param" },
-        ],
-        "a",
-      ),
-    ).toEqual([{ id: "b", name: "param" }]);
-  });
-
-  it("removes a nested parameter by id", () => {
-    expect(
-      removeParameterById<TestNode>(
-        [
-          {
-            children: [
-              { id: "child", name: "body.city" },
-              { id: "keep", name: "body.name" },
-            ],
-            id: "body",
-            name: "body",
-          },
-        ],
-        "child",
-      ),
-    ).toEqual([
-      {
-        children: [{ id: "keep", name: "body.name" }],
-        id: "body",
-        name: "body",
-      },
-    ]);
-  });
-});
-
-describe("readLogicAttributeToolBinding", () => {
-  it("treats antd default getFieldsValue() shape (no boxId/toolId) as incomplete", () => {
-    // Reproduces #261: tool name may be visible while registered-only values omit binding ids.
-    const registeredOnly = {
-      displayName: "Risk Score",
-      name: "risk_score",
-      type: "tool",
-    };
-
-    expect(isToolLogicBindingComplete(readLogicAttributeToolBinding(registeredOnly))).toBe(false);
-  });
-
-  it("accepts complete tool binding when boxId and toolId are present", () => {
-    const allValues = {
-      boxId: "box-1",
-      displayName: "Risk Score",
-      name: "risk_score",
-      resourceName: "Demo Tool",
-      toolId: "tool-1",
-      type: "tool",
-    };
-
-    expect(readLogicAttributeToolBinding(allValues)).toEqual({
-      boxId: "box-1",
-      resourceName: "Demo Tool",
-      toolId: "tool-1",
+  it("takes one parameter per key of a composite primary key", () => {
+    const statement = buildDefaultLogicStatement({
+      objectTypeId: "order",
+      primaryKeys: ["a", "b"],
     });
-    expect(isToolLogicBindingComplete(readLogicAttributeToolBinding(allValues))).toBe(true);
+    expect(statement).toContain("n.a = $a AND n.b = $b");
   });
 });
 
-describe("bindCypherParametersToProperties", () => {
-  it("binds unbound parameters named like a property to that property and leaves the rest", () => {
-    const settings = [
-      { id: "1", name: "supplier_code", valueFrom: "input" as const },
-      { id: "2", name: "min_qty", valueFrom: "input" as const },
-      { id: "3", name: "region", valueFrom: "const" as const, value: "east" },
-      { id: "4", name: "plant", valueFrom: "input" as const, value: "P1" },
+describe("syncLogicParameters", () => {
+  it("binds $id to the primary key by default and leaves the rest as input", () => {
+    expect(
+      syncLogicParameters({
+        createId,
+        current: [],
+        primaryKeys: ["pid"],
+        statement: "MATCH (n:person) WHERE n.pid = $id AND n.age > $min RETURN n.x",
+      }),
+    ).toMatchObject([
+      { name: "id", value: "pid", valueFrom: "property" },
+      { name: "min", valueFrom: "input" },
+    ]);
+  });
+
+  it("keeps what the user set and drops parameters no longer used", () => {
+    const current = [
+      { id: "p1", name: "min", value: "3", valueFrom: "const" as const },
+      { id: "p2", name: "gone", valueFrom: "input" as const },
     ];
     expect(
-      bindCypherParametersToProperties(settings, new Set(["supplier_code", "region", "plant"])),
-    ).toEqual([
-      { id: "1", name: "supplier_code", valueFrom: "property", value: "supplier_code" },
-      { id: "2", name: "min_qty", valueFrom: "input" },
-      { id: "3", name: "region", valueFrom: "const", value: "east" },
-      { id: "4", name: "plant", valueFrom: "input", value: "P1" },
-    ]);
+      syncLogicParameters({ createId, current, primaryKeys: [], statement: "RETURN $min" }),
+    ).toEqual([current[0]]);
+  });
+});
+
+describe("localStatementProblem", () => {
+  it("refuses an empty statement and positional parameters", () => {
+    expect(localStatementProblem("  ")).toBe("objectTypeLogicStatementRequired");
+    expect(localStatementProblem("RETURN $0")).toBe("objectTypeLogicStatementPositional");
+    expect(localStatementProblem("RETURN $id")).toBeNull();
   });
 });

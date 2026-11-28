@@ -42,3 +42,24 @@
   color: var(--color-text-secondary);
   font-size: 12px;
 }
+
+.notice {
+  margin-bottom: 16px;
+}
+
+.trial {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.trialResult {
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.trialResult code {
+  margin-left: 8px;
+}

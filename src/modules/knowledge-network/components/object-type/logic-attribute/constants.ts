@@ -5,20 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { scanCypherParameters } from "@/modules/knowledge-network/cypher/cypher-parameters";
+import { cypherName } from "@/modules/knowledge-network/cypher/cypher-samples";
 import type {
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
 } from "@/modules/knowledge-network/types/knowledge-network";
-
-import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
-
-export const LOGIC_ATTRIBUTE_TYPE_OPTIONS = [
-  { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
-] as const;
-
-export const LOGIC_RESULT_PATH_PLACEHOLDER = "$.result";
-/** A Cypher function returning a single value answers `{value}`. */
-export const CYPHER_VALUE_RESULT_PATH = "$.value";
 
 export const VALUE_FROM_OPTIONS: Array<{
   labelKey: string;
@@ -29,52 +21,10 @@ export const VALUE_FROM_OPTIONS: Array<{
   { labelKey: "objectTypeLogicValueFromConst", value: "const" },
 ];
 
-/**
- * Execution Factory functions expose one JSON request body.  Header, query and
- * path are OpenAPI transport concepts and must not be configurable for a
- * function logical property.
- */
-export const FUNCTION_PARAMETER_SOURCE = "Body";
-
-export const FIELD_TYPE_INPUT = {
-  boolean: ["boolean"],
-  number: ["integer", "double", "number"],
-};
-
 export const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 export function isEmptyExceptZero(value: unknown) {
   return value === undefined || value === null || value === "";
-}
-
-export function asOptionalString(value: unknown) {
-  return typeof value === "string" ? value : undefined;
-}
-
-export type LogicAttributeToolBinding = {
-  boxId?: string;
-  resourceName?: string;
-  toolId?: string;
-};
-
-/**
- * Read tool binding from Ant Design form values.
- * Callers must pass values that include unregistered store fields
- * (`getFieldsValue(true)` or registered hidden `Form.Item`s). Default
- * `getFieldsValue()` omits `boxId`/`toolId` and looks like a silent no-op submit.
- */
-export function readLogicAttributeToolBinding(
-  formValues: Record<string, unknown>,
-): LogicAttributeToolBinding {
-  return {
-    boxId: asOptionalString(formValues.boxId),
-    resourceName: asOptionalString(formValues.resourceName),
-    toolId: asOptionalString(formValues.toolId),
-  };
-}
-
-export function isToolLogicBindingComplete(binding: LogicAttributeToolBinding) {
-  return Boolean(binding.boxId && binding.toolId);
 }
 
 export function deduplicateByName<T extends { name: string }>(items: T[]) {
@@ -85,97 +35,52 @@ export function deduplicateByName<T extends { name: string }>(items: T[]) {
   return Array.from(map.values());
 }
 
-export function removeParameterById<T extends { children?: T[]; id: string }>(
-  items: T[],
-  id: string,
-): T[] {
-  return items
-    .filter((item) => item.id !== id)
-    .map((item) =>
-      item.children?.length ? { ...item, children: removeParameterById(item.children, id) } : item,
-    );
-}
-
-export function extractLeafParams<T extends { children?: T[] }>(items: T[]): T[] {
-  const leafParams: T[] = [];
-
-  const traverse = (nodes: T[]) => {
-    nodes.forEach((node) => {
-      if (node.children?.length) {
-        traverse(node.children);
-      } else {
-        leafParams.push(node);
-      }
-    });
-  };
-
-  traverse(items);
-  return leafParams;
-}
-
-/** Normalize saved and outgoing function parameters to the only supported transport. */
-export function normalizeFunctionParameterSources(
-  parameters: ObjectTypeLogicParameter[],
-): ObjectTypeLogicParameter[] {
-  return parameters.map((parameter) => ({
-    ...parameter,
-    children: parameter.children?.length
-      ? normalizeFunctionParameterSources(parameter.children)
-      : undefined,
-    source: FUNCTION_PARAMETER_SOURCE,
-  }));
+/**
+ * The statement a new logic property starts from: the current instance, found by its primary
+ * key, and one value of it. A composite key takes one `$<key>` parameter per key.
+ */
+export function buildDefaultLogicStatement(input: {
+  objectTypeId: string;
+  primaryKeys: readonly string[];
+}): string {
+  const label = cypherName(input.objectTypeId || "ObjectType");
+  const keys = input.primaryKeys;
+  const condition =
+    keys.length <= 1
+      ? `n.${cypherName(keys[0] ?? "id")} = $id`
+      : keys.map((key) => `n.${cypherName(key)} = $${key}`).join(" AND ");
+  return `MATCH (n:${label})\nWHERE ${condition}\nRETURN n.<property> AS value`;
 }
 
 /**
- * A Cypher function's parameters are usually named after the properties the statement compares
- * (`$supplier_code`), so each unbound one named like a property of the object type takes that
- * property's value. The rest are left for the user.
+ * The parameters a statement uses, each kept as the user set it when there is one. A new one named
+ * like a primary key (or `id` for a single key) is bound to the key property; the rest start as
+ * input.
  */
-export function bindCypherParametersToProperties(
-  settings: ObjectTypeLogicParameter[],
-  propertyNames: ReadonlySet<string>,
-): ObjectTypeLogicParameter[] {
-  return settings.map((item) => {
-    if (item.children?.length) {
-      return { ...item, children: bindCypherParametersToProperties(item.children, propertyNames) };
-    }
-    const unbound = (item.valueFrom ?? "input") === "input" && isEmptyExceptZero(item.value);
-    return unbound && propertyNames.has(item.name)
-      ? { ...item, valueFrom: "property", value: item.name }
-      : item;
+export function syncLogicParameters(input: {
+  createId: () => string;
+  current: ObjectTypeLogicParameter[];
+  primaryKeys: readonly string[];
+  statement: string;
+}): ObjectTypeLogicParameter[] {
+  const byName = new Map(input.current.map((item) => [item.name, item]));
+  const keyFor = (name: string) => {
+    if (input.primaryKeys.length === 1 && name === "id") return input.primaryKeys[0];
+    return input.primaryKeys.includes(name) ? name : undefined;
+  };
+  return scanCypherParameters(input.statement).names.map((name): ObjectTypeLogicParameter => {
+    const saved = byName.get(name);
+    if (saved) return saved;
+    const key = keyFor(name);
+    return key
+      ? { id: input.createId(), name, type: "string", value: key, valueFrom: "property" }
+      : { id: input.createId(), name, type: "string", valueFrom: "input" };
   });
 }
 
-export function buildToolLogicParameterSettings(
-  schema: ActionTypeToolInputParam[],
-  saved: ObjectTypeLogicParameter[] = [],
-  createId: () => string,
-): ObjectTypeLogicParameter[] {
-  if (schema.length === 0) {
-    return normalizeFunctionParameterSources(saved).map((item) => ({
-      ...item,
-      id: item.id || createId(),
-      valueFrom: item.valueFrom ?? "input",
-    }));
-  }
-
-  const savedByName = new Map(saved.map((item) => [item.name, item]));
-
-  const buildNode = (node: ActionTypeToolInputParam): ObjectTypeLogicParameter => {
-    const matched = savedByName.get(node.key);
-
-    return {
-      children: node.children?.length ? node.children.map(buildNode) : undefined,
-      description: node.description,
-      id: matched?.id || createId(),
-      name: node.key,
-      required: node.required ?? matched?.required ?? false,
-      source: FUNCTION_PARAMETER_SOURCE,
-      type: node.type,
-      value: matched?.value,
-      valueFrom: matched?.valueFrom ?? "input",
-    };
-  };
-
-  return schema.map(buildNode);
+/** What is wrong with a statement before it is sent to the backend, as a message key, or null. */
+export function localStatementProblem(statement: string): string | null {
+  if (!statement.trim()) return "objectTypeLogicStatementRequired";
+  if (scanCypherParameters(statement).positional) return "objectTypeLogicStatementPositional";
+  return null;
 }
