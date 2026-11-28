@@ -891,6 +891,15 @@ blockquote {
   white-space: nowrap;
 }
 
+/* 英文名在徽标旁按词折成两行(「Project management」不再被省略成「Project manage…」);中文仍单行省略。 */
+:lang(en)
+  .console-sidenav-link:has(.console-sidenav-tier, .console-sidenav-badges)
+  .console-sidenav-label {
+  display: -webkit-box;
+  overflow-wrap: normal;
+  white-space: normal;
+}
+
 /* 装了没买的入口:标出解锁它要哪一档。只出现在企业镜像上——社区镜像里这些项被整个
    过滤掉了,那里换证书也解不开。 */
 /* 页签标题带档位徽标。 */
