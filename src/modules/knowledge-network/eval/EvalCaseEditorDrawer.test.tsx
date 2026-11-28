@@ -2050,3 +2050,30 @@ it("keeps scoring and expectation provenance explanations in field tooltips", as
     "依据应独立于本次实际输出；不要直接把试运行结果当作正确答案。",
   );
 });
+
+it.each([
+  { fieldDetails: { field: "definition" }, fieldError: true },
+  { fieldDetails: "incomplete definition", fieldError: false },
+])(
+  "renders core error details from a rejected save ($fieldError)",
+  async ({ fieldDetails, fieldError }) => {
+    const description = "The evaluation title needs more detail.";
+    vi.mocked(createEvalCase).mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          error_code: "EVAL_CASE_INCOMPLETE",
+          description,
+          error_details: fieldDetails,
+        },
+      },
+    });
+    await prepareObjectContext();
+    saveWithoutEnabling();
+    await waitFor(() => expect(createEvalCase).toHaveBeenCalledOnce());
+    await waitFor(() => {
+      expect(screen.getAllByText(description)).toHaveLength(fieldError ? 2 : 1);
+    });
+  },
+);
