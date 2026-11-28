@@ -99,6 +99,25 @@ describe("object type tool logic property mapper", () => {
     });
   });
 
+  it("round-trips the statement of a cypher logic property", () => {
+    const backend = {
+      data_source: { statement: "MATCH (n:person) WHERE n.id = $id RETURN n.age", type: "cypher" },
+      display_name: "Age",
+      name: "age",
+      parameters: [{ id: "p1", name: "id", value: "id", value_from: "property" }],
+      type: "cypher",
+    };
+    const mapped = mapLogicProperty(backend);
+    expect(mapped.dataSource).toMatchObject({
+      statement: "MATCH (n:person) WHERE n.id = $id RETURN n.age",
+      type: "cypher",
+    });
+    expect(toBackendLogicProperty(mapped)).toMatchObject({
+      data_source: { statement: backend.data_source.statement, type: "cypher" },
+      type: "cypher",
+    });
+  });
+
   it("preserves toolbox identifiers and result path in create payloads", () => {
     expect(
       toBackendLogicProperty({

@@ -147,7 +147,8 @@ export type ObjectTypeDataProperty = {
   type: string;
 };
 
-export type ObjectTypeLogicAttributeType = "tool";
+/** `tool` is retired: existing ones are shown read-only, new ones are `cypher`. */
+export type ObjectTypeLogicAttributeType = "cypher" | "tool";
 
 export type ObjectTypeLogicParameterValueFrom = "property" | "input" | "const";
 
@@ -170,6 +171,8 @@ export type ObjectTypeLogicDataSource = {
   id?: string;
   name?: string;
   resultPath?: string;
+  /** The read-only Cypher statement of a `cypher` source. */
+  statement?: string;
   toolId?: string;
   type: ObjectTypeLogicAttributeType;
 };

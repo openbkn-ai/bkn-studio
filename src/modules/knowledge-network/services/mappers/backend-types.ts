@@ -110,6 +110,7 @@ export type BackendLogicProperty = {
     id?: string;
     name?: string;
     result_path?: string;
+    statement?: string;
     tool_id?: string;
     type: string;
   } | null;

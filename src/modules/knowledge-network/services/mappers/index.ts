@@ -229,6 +229,7 @@ export function mapLogicProperty(item: BackendLogicProperty): ObjectTypeLogicPro
           id: item.data_source.id,
           name: item.data_source.name,
           resultPath: item.data_source.result_path,
+          statement: item.data_source.statement,
           toolId: item.data_source.tool_id,
           type: item.data_source.type as ObjectTypeLogicAttributeType,
         }
@@ -332,6 +333,7 @@ export function toBackendLogicProperty(property: ObjectTypeLogicProperty): Backe
           id: property.dataSource.id,
           name: property.dataSource.name,
           result_path: property.dataSource.resultPath,
+          statement: property.dataSource.statement,
           tool_id: property.dataSource.toolId,
           type: property.dataSource.type,
         }

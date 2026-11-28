@@ -5,40 +5,36 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Col, Drawer, Form, Input, Row, Select, Table, type TableColumnProps } from "antd";
+import { Alert, Col, Drawer, Form, Input, Row, Select, Table, type TableColumnProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { ActionTypeToolSelectModal } from "@/modules/knowledge-network/components/action-type/ActionTypeToolSelectModal";
+import { CypherEditor } from "@/modules/knowledge-network/components/cypher/CypherEditor";
+import type { CypherCompletionSchema } from "@/modules/knowledge-network/cypher/cypher-completion";
+import { errorMarkFrom, type CypherErrorMark } from "@/modules/knowledge-network/cypher/error-mark";
 import {
   isPropertyDisplayNameWithinLimit,
   PROPERTY_DISPLAY_NAME_COUNT,
   PROPERTY_DISPLAY_NAME_MAX_LENGTH,
 } from "@/modules/knowledge-network/lib/resource-constraints";
 import {
-  resolveActionTypeToolInputSchema,
-  resolveFunctionKind,
-  type ActionTypeCatalogSelection,
-} from "@/modules/knowledge-network/services/action-type-tool.service";
+  coerceSampleValue,
+  logicValueFrom,
+} from "@/modules/knowledge-network/lib/logic-statement-trial";
+import { runCypherQuery } from "@/modules/knowledge-network/cypher/cypher-query.service";
+import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/network.service";
 import {
-  CYPHER_VALUE_RESULT_PATH,
   IDENTIFIER_PATTERN,
-  bindCypherParametersToProperties,
-  LOGIC_RESULT_PATH_PLACEHOLDER,
   VALUE_FROM_OPTIONS,
-  asOptionalString,
-  buildToolLogicParameterSettings,
-  extractLeafParams,
+  buildDefaultLogicStatement,
   isEmptyExceptZero,
-  isToolLogicBindingComplete,
-  normalizeFunctionParameterSources,
-  readLogicAttributeToolBinding,
+  localStatementProblem,
+  syncLogicParameters,
 } from "./constants";
 import type {
   ObjectTypeDataProperty,
-  ObjectTypeLogicAttributeType,
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
@@ -54,6 +50,8 @@ type ObjectTypeLogicAttributeEditDrawerProps = {
   allData: ObjectTypeDataProperty[];
   attrInfo: ObjectTypeLogicProperty;
   logicFields: ObjectTypeLogicProperty[];
+  networkId?: string;
+  objectTypeId?: string;
   onClose: () => void;
   onOk: (data: ObjectTypeLogicProperty) => void;
   open: boolean;
@@ -61,39 +59,62 @@ type ObjectTypeLogicAttributeEditDrawerProps = {
 };
 
 type LogicAttributeFormValues = {
-  boxId?: string;
   comment?: string;
   displayName?: string;
   name?: string;
-  resultPath?: string;
-  resourceName?: string;
-  toolId?: string;
-  type?: ObjectTypeLogicAttributeType;
 };
+
+type TrialState =
+  | { status: "idle" }
+  | { status: "running" }
+  | { status: "done"; value: unknown }
+  | { message: string; status: "error" };
 
 function createParameterId() {
   return `param-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function formatTrialValue(value: unknown) {
+  if (value === null || value === undefined) return "null";
+  return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 export function ObjectTypeLogicAttributeEditDrawer({
   allData,
   attrInfo,
   logicFields,
+  networkId = "",
+  objectTypeId = "",
   onClose,
   onOk,
   open,
   title,
 }: ObjectTypeLogicAttributeEditDrawerProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<LogicAttributeFormValues>();
   const [settingList, setSettingList] = useState<SettingItem[]>([]);
-  const [toolSelectorOpen, setToolSelectorOpen] = useState(false);
-  const type = Form.useWatch("type", form);
+  const [statement, setStatement] = useState("");
+  const [statementError, setStatementError] = useState<string | null>(null);
+  const [errorMark, setErrorMark] = useState<CypherErrorMark | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [knId, setKnId] = useState("");
+  const [samples, setSamples] = useState<Record<string, string>>({});
+  const [trial, setTrial] = useState<TrialState>({ status: "idle" });
   const isDisplayNameManuallyEdited = useRef(false);
   const isAddMode = !attrInfo?.name;
-  const getStringFieldValue = (name: keyof LogicAttributeFormValues) =>
-    asOptionalString(form.getFieldValue(name));
+  // A saved `tool` source is retired: it is shown, not edited.
+  const isRetiredTool = attrInfo?.dataSource?.type === "tool";
+
+  const dataProperties = useMemo(
+    () => allData.filter((item) => !logicFields.some((logic) => logic.name === item.name)),
+    [allData, logicFields],
+  );
+  const primaryKeys = useMemo(
+    () => dataProperties.filter((item) => item.primaryKey).map((item) => item.name),
+    [dataProperties],
+  );
+  const canRun = Boolean(objectTypeId && networkId);
 
   const valueFromOptions = useMemo(
     () =>
@@ -104,186 +125,194 @@ export function ObjectTypeLogicAttributeEditDrawer({
     [t],
   );
 
-  const objectTypePropertyOptions = useMemo(
+  const objectTypePropertyNameSet = useMemo(
+    () => new Set(dataProperties.map((item) => item.name)),
+    [dataProperties],
+  );
+
+  const propertyOptions = useMemo(
     () =>
-      allData.map((item) => ({
-        comment: item.comment,
-        displayName: item.displayName || item.name,
+      dataProperties.map((item) => ({
         label: item.displayName || item.name,
-        name: item.name,
-        type: item.type,
         value: item.name,
       })),
-    [allData],
+    [dataProperties],
   );
 
-  const objectTypePropertyNameSet = useMemo(
-    () => new Set(allData.map((item) => item.name)),
-    [allData],
+  const completionSchema = useMemo<CypherCompletionSchema>(
+    () => ({
+      objectTypes: objectTypeId ? [{ id: objectTypeId, name: objectTypeId }] : [],
+      properties: objectTypeId
+        ? {
+            [objectTypeId]: dataProperties.map((item) => ({
+              displayName: item.displayName,
+              name: item.name,
+            })),
+          }
+        : {},
+      relationTypes: [],
+    }),
+    [dataProperties, objectTypeId],
   );
-
-  const propertyOptions = useMemo(() => {
-    const propertyNames = logicFields.map((item) => item.name);
-    return objectTypePropertyOptions.map((item) => ({
-      disabled: propertyNames.includes(item.name) || (!isAddMode && item.name === attrInfo.name),
-      label: item.label,
-      type: item.type,
-      value: item.value,
-    }));
-  }, [attrInfo.name, isAddMode, logicFields, objectTypePropertyOptions]);
 
   useEffect(() => {
     if (!open) {
       form.resetFields();
       setSettingList([]);
+      setStatement("");
+      setStatementError(null);
+      setErrorMark(null);
+      setSamples({});
+      setTrial({ status: "idle" });
       return;
     }
-
-    let cancelled = false;
     isDisplayNameManuallyEdited.current = false;
 
-    if (attrInfo?.dataSource?.type === "tool") {
+    if (attrInfo?.dataSource?.type === "cypher") {
       form.setFieldsValue({
-        boxId: attrInfo.dataSource.boxId,
         comment: attrInfo.comment,
         displayName: attrInfo.displayName,
         name: attrInfo.name,
-        resultPath: attrInfo.dataSource.resultPath,
-        resourceName: attrInfo.dataSource.name,
-        toolId: attrInfo.dataSource.toolId,
-        type: attrInfo.dataSource.type,
       });
-      setSettingList([]);
-
-      if (attrInfo.dataSource.boxId && attrInfo.dataSource.toolId) {
-        const source = {
-          boxId: attrInfo.dataSource.boxId,
-          toolId: attrInfo.dataSource.toolId,
-          toolName: attrInfo.dataSource.name ?? "",
-          type: "tool" as const,
-        };
-        void resolveActionTypeToolInputSchema(source).then((inputParams) => {
-          if (cancelled) {
-            return;
-          }
-          setSettingList(
-            buildToolLogicParameterSettings(
-              inputParams,
-              attrInfo.parameters ?? [],
-              createParameterId,
-            ),
-          );
-        });
-      } else {
-        setSettingList(attrInfo.parameters ?? []);
-      }
+      setStatement(attrInfo.dataSource.statement ?? "");
+      setSettingList(attrInfo.parameters ?? []);
     } else if (attrInfo?.name) {
+      // A retired `tool` source: shown as it was saved.
       form.setFieldsValue({
         comment: attrInfo.comment,
         displayName: attrInfo.displayName,
         name: attrInfo.name,
-        // Function is the only logical-property kind.  Older incomplete records
-        // still need a type so the user can select a function and save again.
-        type: "tool",
       });
+      setSettingList(attrInfo.parameters ?? []);
     } else {
       form.resetFields();
-      form.setFieldValue("type", "tool");
+      const initial = buildDefaultLogicStatement({ objectTypeId, primaryKeys });
+      setStatement(initial);
+      setSettingList(
+        syncLogicParameters({
+          createId: createParameterId,
+          current: [],
+          primaryKeys,
+          statement: initial,
+        }),
+      );
     }
+    // The statement and bindings start once per opening; later changes come from the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attrInfo, form, open]);
 
+  useEffect(() => {
+    if (!open || !networkId || isRetiredTool) return;
+    let cancelled = false;
+    void getKnowledgeNetwork(networkId, { skipErrorToast: true })
+      .then((network) => {
+        if (!cancelled && network) setKnId(network.identifier || network.id);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [attrInfo, form, open]);
+  }, [isRetiredTool, networkId, open]);
 
-  const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
-    const processNode = (item: SettingItem): SettingItem => {
-      if (item.id === id) {
-        return { ...item, ...updateValue, error: {} };
-      }
-      if (item.children?.length) {
-        return {
-          ...item,
-          children: item.children.map(processNode),
-        };
-      }
-      return item;
-    };
-    setSettingList((prev) => prev.map(processNode));
+  const handleStatementChange = (value: string) => {
+    setStatement(value);
+    setStatementError(null);
+    setErrorMark(null);
+    setTrial({ status: "idle" });
+    setSettingList((current) =>
+      syncLogicParameters({
+        createId: createParameterId,
+        current,
+        primaryKeys,
+        statement: value,
+      }),
+    );
   };
 
-  const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
-    if (selection.kind !== "tool") {
-      return;
-    }
-
-    const source = {
-      boxId: selection.boxId,
-      toolId: selection.tool.toolId,
-      toolName: selection.tool.toolName,
-      type: "tool" as const,
-    };
-    const [inputParams, kind] = await Promise.all([
-      resolveActionTypeToolInputSchema(source),
-      resolveFunctionKind(selection.boxId, selection.tool.toolId),
-    ]);
-    const settings = buildToolLogicParameterSettings(inputParams, [], createParameterId);
-    const isCypher = kind.scriptType === "cypher";
-    setSettingList(
-      isCypher ? bindCypherParametersToProperties(settings, objectTypePropertyNameSet) : settings,
+  const updateSettingData = (id: string, updateValue: Partial<SettingItem>) => {
+    setSettingList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updateValue, error: {} } : item)),
     );
-    form.setFieldsValue({
-      boxId: selection.boxId,
-      resourceName: selection.tool.toolName,
-      toolId: selection.tool.toolId,
-      // A single-value Cypher function answers `{value}`; a path the user already wrote stays.
-      ...(isCypher && kind.resultShape !== "table" && !getStringFieldValue("resultPath")
-        ? { resultPath: CYPHER_VALUE_RESULT_PATH }
-        : {}),
-    });
-    setToolSelectorOpen(false);
   };
 
   const validateParams = () => {
     let hasError = false;
-    if (settingList.length === 0) {
-      hasError = true;
-    }
+    const next = settingList.map((item) => {
+      const valueError =
+        item.valueFrom === "property"
+          ? typeof item.value !== "string" || !item.value
+            ? t("knowledgeNetwork.objectTypeLogicValueRequired")
+            : !objectTypePropertyNameSet.has(item.value)
+              ? t("knowledgeNetwork.objectTypeLogicAttributeMatchedPropertyMissing")
+              : ""
+          : item.valueFrom === "const" && isEmptyExceptZero(item.value)
+            ? t("knowledgeNetwork.objectTypeLogicValueRequired")
+            : "";
+      if (valueError) hasError = true;
+      return { ...item, error: { value: valueError } };
+    });
+    setSettingList(next);
+    return hasError;
+  };
 
-    const validateNode = (node: SettingItem): SettingItem => {
-      const nextNode = node.children?.length
-        ? { ...node, children: node.children.map(validateNode) }
-        : node;
+  const sampleFor = (item: SettingItem): unknown => {
+    const propertyType =
+      item.valueFrom === "property"
+        ? dataProperties.find((property) => property.name === item.value)?.type
+        : item.type;
+    const raw = item.valueFrom === "const" ? String(item.value ?? "") : (samples[item.name] ?? "");
+    return coerceSampleValue(raw, propertyType);
+  };
 
-      if (!nextNode.children?.length) {
-        const nameError = !nextNode.name ? t("knowledgeNetwork.objectTypeLogicValueRequired") : "";
-        const valueError =
-          nextNode.valueFrom === "property"
-            ? typeof nextNode.value !== "string" || !nextNode.value
-              ? t("knowledgeNetwork.objectTypeLogicValueRequired")
-              : !objectTypePropertyNameSet.has(nextNode.value)
-                ? t("knowledgeNetwork.objectTypeLogicAttributeMatchedPropertyMissing")
-                : ""
-            : nextNode.valueFrom !== "input" && isEmptyExceptZero(nextNode.value)
-              ? t("knowledgeNetwork.objectTypeLogicValueRequired")
-              : "";
-        if (nameError || valueError) {
-          hasError = true;
-        }
+  const tokenProvider = useMemo(
+    () => ({
+      getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
+      refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
+    }),
+    [runtimeConfig],
+  );
+
+  /** Plans the statement (`explain`) or runs it with the sample values; null when it passes. */
+  const runStatement = async (explain: boolean): Promise<TrialState | null> => {
+    const local = localStatementProblem(statement);
+    if (local) return { message: t(`knowledgeNetwork.${local}`), status: "error" };
+    if (!canRun || !knId) return null;
+    const parameters = Object.fromEntries(settingList.map((item) => [item.name, sampleFor(item)]));
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    try {
+      const run = await runCypherQuery({
+        auth: tokenProvider,
+        env: { base, knId, token: tokenProvider.getToken() },
+        explain,
+        parameters,
+        query: statement,
+      });
+      if (!run.ok) {
+        setErrorMark(errorMarkFrom(run.error.message, statement));
+        return { message: run.error.message, status: "error" };
+      }
+      if (explain) return null;
+      const outcome = logicValueFrom(run.result);
+      if (!outcome.ok) {
         return {
-          ...nextNode,
-          error: {
-            name: nameError,
-            value: valueError,
-          },
+          message: t(
+            outcome.reason === "columns"
+              ? "knowledgeNetwork.objectTypeLogicStatementOneColumn"
+              : "knowledgeNetwork.objectTypeLogicStatementOneRow",
+          ),
+          status: "error",
         };
       }
+      return { status: "done", value: outcome.value };
+    } catch (error) {
+      return { message: error instanceof Error ? error.message : String(error), status: "error" };
+    }
+  };
 
-      return nextNode;
-    };
-
-    setSettingList((prev) => prev.map(validateNode));
-    return hasError;
+  const handleTrial = async () => {
+    setErrorMark(null);
+    setTrial({ status: "running" });
+    setTrial((await runStatement(false)) ?? { status: "idle" });
   };
 
   const handleSubmit = async () => {
@@ -292,91 +321,65 @@ export function ObjectTypeLogicAttributeEditDrawer({
     } catch {
       return;
     }
-    if (!type) {
+    const local = localStatementProblem(statement);
+    if (local) {
+      setStatementError(t(`knowledgeNetwork.${local}`));
       return;
     }
-    // Ant Design 5: getFieldsValue() only returns registered fields by default.
-    // boxId/toolId/resourceName are kept via hidden Form.Items; true still covers
-    // any store values set before registration during the same tick.
-    const formValues = form.getFieldsValue(true) as LogicAttributeFormValues;
-    const toolBinding = readLogicAttributeToolBinding({
-      boxId: formValues.boxId,
-      resourceName: formValues.resourceName,
-      toolId: formValues.toolId,
-    });
-    if (type === "tool" && !isToolLogicBindingComplete(toolBinding)) {
-      void message.error(t("knowledgeNetwork.objectTypeLogicToolSelect"));
-      return;
-    }
-    if (type === "tool" && settingList.length > 0 && validateParams()) {
+    if (settingList.length > 0 && validateParams()) {
       void message.error(t("knowledgeNetwork.objectTypeLogicAttributeFillParameters"));
       return;
     }
+    if (canRun && knId) {
+      setChecking(true);
+      const problem = await runStatement(true);
+      setChecking(false);
+      if (problem?.status === "error") {
+        setStatementError(problem.message);
+        return;
+      }
+    }
 
-    const parameters = normalizeFunctionParameterSources(
-      extractLeafParams(settingList).map((item) => {
-        const { error, children, ...parameter } = item;
-        void error;
-        void children;
-        return parameter;
-      }),
-    );
-
+    const formValues = form.getFieldsValue(true) as LogicAttributeFormValues;
     onOk({
       comment: formValues.comment,
-      dataSource: {
-        boxId: toolBinding.boxId,
-        id: undefined,
-        name: toolBinding.resourceName ?? "",
-        resultPath: formValues.resultPath,
-        toolId: toolBinding.toolId,
-        type,
-      },
+      dataSource: { statement, type: "cypher" },
       displayName: formValues.displayName ?? "",
       name: formValues.name ?? "",
-      parameters,
-      type,
+      parameters: settingList.map((item) => {
+        const { error, children, source, ...parameter } = item;
+        void error;
+        void children;
+        void source;
+        return parameter;
+      }),
+      type: "cypher",
     });
   };
 
-  const toolParameterColumns: TableColumnProps<SettingItem>[] = [
+  const parameterColumns: TableColumnProps<SettingItem>[] = [
     {
       dataIndex: "name",
-      ellipsis: true,
       key: "name",
-      render: (value: string, record: SettingItem) => (
-        <div>
-          <div title={value}>{value}</div>
-          <div className={styles.description} title={record.description}>
-            {record.description}
-          </div>
-        </div>
-      ),
+      render: (value: string) => <code>{`$${value}`}</code>,
       title: t("common.name"),
-      width: 240,
-    },
-    {
-      dataIndex: "type",
-      key: "type",
-      render: (value: string) => value,
-      title: t("knowledgeNetwork.objectTypePropertyType"),
-      width: 100,
+      width: 180,
     },
     {
       dataIndex: "valueFrom",
       key: "valueFrom",
-      render: (_, record) =>
-        record.children?.length ? null : (
-          <Select
-            onChange={(valueFrom: ObjectTypeLogicParameterValueFrom) => {
-              updateSettingData(record.id, { value: undefined, valueFrom });
-            }}
-            options={valueFromOptions}
-            placeholder={t("knowledgeNetwork.pleaseSelect")}
-            style={{ width: "100%" }}
-            value={record.valueFrom}
-          />
-        ),
+      render: (_, record) => (
+        <Select
+          aria-label={t("knowledgeNetwork.objectTypeLogicValueFrom")}
+          onChange={(valueFrom: ObjectTypeLogicParameterValueFrom) => {
+            updateSettingData(record.id, { value: undefined, valueFrom });
+          }}
+          options={valueFromOptions}
+          placeholder={t("knowledgeNetwork.pleaseSelect")}
+          style={{ width: "100%" }}
+          value={record.valueFrom}
+        />
+      ),
       title: t("knowledgeNetwork.objectTypeLogicValueFrom"),
       width: 156,
     },
@@ -384,17 +387,13 @@ export function ObjectTypeLogicAttributeEditDrawer({
       dataIndex: "value",
       key: "value",
       render: (_, record) => {
-        if (record.children?.length) {
-          return null;
-        }
-
         if (record.valueFrom === "input") {
           return <Input disabled style={{ width: "100%" }} />;
         }
-
         if (record.valueFrom === "const") {
           return (
             <Input
+              aria-label={t("knowledgeNetwork.objectTypeLogicValue")}
               onChange={(event) => updateSettingData(record.id, { value: event.target.value })}
               placeholder={t("knowledgeNetwork.pleaseInput")}
               status={record.error?.value ? "error" : undefined}
@@ -403,9 +402,9 @@ export function ObjectTypeLogicAttributeEditDrawer({
             />
           );
         }
-
         return (
           <Select
+            aria-label={t("knowledgeNetwork.objectTypeLogicValue")}
             filterOption={(input, option) =>
               String(option?.label ?? "")
                 .toLowerCase()
@@ -422,7 +421,39 @@ export function ObjectTypeLogicAttributeEditDrawer({
         );
       },
       title: t("knowledgeNetwork.objectTypeLogicValue"),
-      width: 278,
+      width: 260,
+    },
+    {
+      key: "sample",
+      render: (_, record) =>
+        record.valueFrom === "const" ? null : (
+          <Input
+            aria-label={t("knowledgeNetwork.objectTypeLogicTrialSample")}
+            disabled={!canRun}
+            onChange={(event) =>
+              setSamples((current) => ({ ...current, [record.name]: event.target.value }))
+            }
+            placeholder={t("knowledgeNetwork.objectTypeLogicTrialSamplePlaceholder")}
+            value={samples[record.name] ?? ""}
+          />
+        ),
+      title: t("knowledgeNetwork.objectTypeLogicTrialSample"),
+    },
+  ];
+
+  const retiredColumns: TableColumnProps<SettingItem>[] = [
+    { dataIndex: "name", key: "name", title: t("common.name") },
+    {
+      dataIndex: "valueFrom",
+      key: "valueFrom",
+      title: t("knowledgeNetwork.objectTypeLogicValueFrom"),
+    },
+    {
+      dataIndex: "value",
+      key: "value",
+      render: (value?: string | number | boolean) =>
+        isEmptyExceptZero(value) ? "--" : String(value),
+      title: t("knowledgeNetwork.objectTypeLogicValue"),
     },
   ];
 
@@ -432,10 +463,14 @@ export function ObjectTypeLogicAttributeEditDrawer({
       destroyOnHidden
       footer={
         <div className={styles.footer}>
-          <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
-          <AppButton onClick={() => void handleSubmit()} type="primary">
-            {t("common.ok")}
+          <AppButton onClick={onClose}>
+            {isRetiredTool ? t("common.close") : t("common.cancel")}
           </AppButton>
+          {isRetiredTool ? null : (
+            <AppButton loading={checking} onClick={() => void handleSubmit()} type="primary">
+              {t("common.ok")}
+            </AppButton>
+          )}
         </div>
       }
       maskClosable={false}
@@ -444,22 +479,17 @@ export function ObjectTypeLogicAttributeEditDrawer({
       title={title}
       width={1000}
     >
-      <Form form={form} layout="vertical">
-        {/* Register tool binding fields so getFieldsValue() includes them (antd 5). */}
-        <Form.Item hidden name="boxId">
-          <Input />
-        </Form.Item>
-        <Form.Item hidden name="toolId">
-          <Input />
-        </Form.Item>
-        <Form.Item hidden name="resourceName">
-          <Input />
-        </Form.Item>
-        <Form.Item hidden name="type">
-          <Input />
-        </Form.Item>
+      {isRetiredTool ? (
+        <Alert
+          className={styles.notice}
+          message={t("knowledgeNetwork.objectTypeLogicToolRetired")}
+          showIcon
+          type="warning"
+        />
+      ) : null}
+      <Form disabled={isRetiredTool} form={form} layout="vertical">
         <Row gutter={16}>
-          <Col span={6}>
+          <Col span={8}>
             <Form.Item
               label={t("knowledgeNetwork.objectTypePropertyName")}
               name="name"
@@ -482,7 +512,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
               />
             </Form.Item>
           </Col>
-          <Col span={6}>
+          <Col span={8}>
             <Form.Item
               label={t("knowledgeNetwork.objectTypePropertyDisplayName")}
               name="displayName"
@@ -513,37 +543,19 @@ export function ObjectTypeLogicAttributeEditDrawer({
               />
             </Form.Item>
           </Col>
-          <Col span={6}>
+          <Col span={8}>
             <Form.Item label={t("knowledgeNetwork.objectTypePropertyType")}>
-              <Input disabled value={t("executionFactory.functionToolboxTab")} />
+              <Input
+                disabled
+                value={t(
+                  isRetiredTool
+                    ? "knowledgeNetwork.objectTypeLogicAttributeTypeTool"
+                    : "knowledgeNetwork.objectTypeLogicAttributeTypeCypher",
+                )}
+              />
             </Form.Item>
           </Col>
-          <Col span={6}>
-            {type === "tool" ? (
-              <Form.Item label={t("knowledgeNetwork.objectTypeLogicAttributeResource")} required>
-                <Input
-                  onClick={() => setToolSelectorOpen(true)}
-                  placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}
-                  readOnly
-                  value={getStringFieldValue("resourceName")}
-                />
-              </Form.Item>
-            ) : null}
-          </Col>
         </Row>
-        {type === "tool" ? (
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                extra={t("knowledgeNetwork.objectTypeLogicResultPathHint")}
-                label={t("knowledgeNetwork.objectTypeLogicResultPath")}
-                name="resultPath"
-              >
-                <Input placeholder={LOGIC_RESULT_PATH_PLACEHOLDER} />
-              </Form.Item>
-            </Col>
-          </Row>
-        ) : null}
         <Row gutter={16}>
           <Col span={24}>
             <Form.Item label={t("common.description")} name="comment">
@@ -558,42 +570,90 @@ export function ObjectTypeLogicAttributeEditDrawer({
         </Row>
       </Form>
 
-      {type === "tool" ? (
+      {isRetiredTool ? (
         <>
           <div className={styles.settingTitle}>
+            {t("knowledgeNetwork.objectTypeLogicAttributeResource")}
+          </div>
+          <p className={styles.settingHint}>
+            {[
+              attrInfo.dataSource?.name,
+              attrInfo.dataSource?.toolId,
+              attrInfo.dataSource?.resultPath,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "--"}
+          </p>
+          <Table
+            columns={retiredColumns}
+            dataSource={settingList}
+            pagination={false}
+            rowKey="id"
+            size="small"
+          />
+        </>
+      ) : (
+        <>
+          <div className={styles.settingTitle}>
+            {t("knowledgeNetwork.objectTypeLogicStatement")}
+          </div>
+          <p className={styles.settingHint}>{t("knowledgeNetwork.objectTypeLogicStatementHint")}</p>
+          <CypherEditor
+            ariaLabel={t("knowledgeNetwork.objectTypeLogicStatement")}
+            errorMark={errorMark}
+            maxHeight={320}
+            minHeight={140}
+            onChange={handleStatementChange}
+            onHistory={() => undefined}
+            onRun={() => void handleTrial()}
+            schema={completionSchema}
+            value={statement}
+          />
+          {statementError ? (
+            <div className={styles.fieldError} role="alert">
+              {statementError}
+            </div>
+          ) : null}
+
+          <div className={styles.settingTitle} style={{ marginTop: 16 }}>
             {t("knowledgeNetwork.objectTypeLogicAttributeSetting")}
           </div>
+          <Table
+            columns={parameterColumns}
+            dataSource={settingList}
+            locale={{ emptyText: t("knowledgeNetwork.objectTypeLogicNoParameters") }}
+            pagination={false}
+            rowKey="id"
+            size="small"
+          />
+
+          <div className={styles.trial}>
+            <AppButton
+              disabled={!canRun || !knId}
+              loading={trial.status === "running"}
+              onClick={() => void handleTrial()}
+            >
+              {t("knowledgeNetwork.objectTypeLogicTrialRun")}
+            </AppButton>
+            {!canRun ? (
+              <span className={styles.settingHint}>
+                {t("knowledgeNetwork.objectTypeLogicTrialUnavailable")}
+              </span>
+            ) : null}
+            {trial.status === "done" ? (
+              <span className={styles.trialResult}>
+                {t("knowledgeNetwork.objectTypeLogicTrialResult")}
+                <code data-testid="logic-trial-value">{formatTrialValue(trial.value)}</code>
+              </span>
+            ) : null}
+            {trial.status === "error" ? (
+              <div className={styles.fieldError} role="alert">
+                {trial.message}
+              </div>
+            ) : null}
+          </div>
         </>
-      ) : null}
-
-      {type === "tool" ? (
-        <Table
-          columns={toolParameterColumns}
-          dataSource={settingList}
-          expandable={{ defaultExpandAllRows: true }}
-          pagination={false}
-          rowKey="id"
-        />
-      ) : null}
-
-      <ActionTypeToolSelectModal
-        allowedKinds={["tool"]}
-        onCancel={() => setToolSelectorOpen(false)}
-        onConfirm={(_source, selection) => void handleToolSelect(selection)}
-        open={toolSelectorOpen}
-        toolboxTabLabel={t("executionFactory.functionToolboxTab")}
-        toolboxMetadataType="function"
-        value={
-          type === "tool" && getStringFieldValue("toolId")
-            ? {
-                boxId: getStringFieldValue("boxId"),
-                toolId: getStringFieldValue("toolId") ?? "",
-                toolName: getStringFieldValue("resourceName"),
-                type: "tool",
-              }
-            : undefined
-        }
-      />
+      )}
     </Drawer>
   );
 }
