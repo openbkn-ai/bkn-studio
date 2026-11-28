@@ -187,23 +187,22 @@ const expectedPathExists = (expected: Record<string, unknown>, path: string): bo
   }
   return true;
 };
+type EvalCaseHTTPError = {
+  error_code?: string;
+  description?: string;
+  error_details?: { field?: string } | string;
+};
 const errorMessage = (error: unknown) => {
   if (axios.isAxiosError(error) && error.response?.status === 409)
     return caseUiText("thisCaseWasChangedBySomeoneElseClose");
   if (axios.isAxiosError(error) && error.response?.status === 403)
     return caseUiText("yourAccountDoesNotHavePermissionToManage");
-  if (
-    axios.isAxiosError<{
-      code?: string;
-      message?: string;
-    }>(error) &&
-    error.response?.status === 400
-  ) {
+  if (axios.isAxiosError<EvalCaseHTTPError>(error) && error.response?.status === 400) {
     if (
-      error.response.data.code === "EVAL_CASE_INCOMPLETE" &&
-      typeof error.response.data.message === "string"
+      error.response.data.error_code === "EVAL_CASE_INCOMPLETE" &&
+      typeof error.response.data.description === "string"
     )
-      return error.response.data.message;
+      return error.response.data.description;
     return caseUiText("theCaseConfigurationOrEvaluationTargetHasChanged");
   }
   if (axios.isAxiosError(error) && error.response?.status === 424)
@@ -1224,12 +1223,8 @@ export function EvalCaseEditorDrawer({
     } catch (cause) {
       setError(errorMessage(cause));
       if (
-        axios.isAxiosError<{
-          code?: string;
-          field?: string;
-          message?: string;
-        }>(cause) &&
-        cause.response?.data.code === "EVAL_CASE_INCOMPLETE"
+        axios.isAxiosError<EvalCaseHTTPError>(cause) &&
+        cause.response?.data.error_code === "EVAL_CASE_INCOMPLETE"
       ) {
         const data = cause.response.data;
         const fields: Record<string, keyof CaseForm> = {
@@ -1241,9 +1236,11 @@ export function EvalCaseEditorDrawer({
           assertions: criteriaMode ? "criteria" : "answer",
           definition: "title",
         };
-        const field = fields[data.field ?? ""];
-        if (field && typeof data.message === "string")
-          form.setFields([{ name: field, errors: [data.message] }]);
+        const details = data.error_details;
+        const field =
+          typeof details === "object" && details ? fields[details.field ?? ""] : undefined;
+        if (field && typeof data.description === "string")
+          form.setFields([{ name: field, errors: [data.description] }]);
       }
     } finally {
       setBusy(false);
