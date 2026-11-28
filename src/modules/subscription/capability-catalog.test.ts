@@ -91,6 +91,7 @@ describe("capability catalog", () => {
       "bkn_project",
       "connector_certified",
       "graph_explorer",
+      "knowledge_base",
       "object_metrics",
       "perm_fine_grained",
       "perm_object_level",

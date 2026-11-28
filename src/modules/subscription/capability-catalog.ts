@@ -186,14 +186,13 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     // 它是「项目管理支持知识库」。
     //
     // bkn-safe-ee 的 knowledgebase.Setup 经 authzresource.RequireEdition 登记(socket 顺带
-    // MarkAssembled),端点其实报得出;这里仍标 false,沿用进目录之前的判定(按证书档位):
-    // 社区构建保留了知识库的专业版入口,专业证配社区镜像时不该被标成待购买。
-    // 要改成按端点实况判,连同侧栏徽标(SideNav.test「knowledge base sidebar labels」)一起改。
+    // MarkAssembled),端点报得出。与项目管理同一种判定:社区构建的入口遮罩与侧栏徽标在
+    // 专业证配社区镜像时说「镜像不含」,而不是放行或标成待购买。
     category: "modeling",
     key: CAPABILITIES.KNOWLEDGE_BASE,
-    reportedByEndpoint: false,
+    reportedByEndpoint: true,
     minEdition: "professional",
-    // 进目录之前扩展路由走能力守卫(未授权给 KnowledgeBaseLicensePage),保持不变。
+    // 企业镜像里扩展路由仍走能力守卫(未授权给 KnowledgeBaseLicensePage),保持不变。
     gateEdition: null,
     sinceVersion: "0.2.2",
   },

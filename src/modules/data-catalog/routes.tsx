@@ -9,8 +9,9 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
-import { KnowledgeBaseLicensePage } from "@/framework/entitlement/KnowledgeBaseLicensePage";
+import { ProjectListPreview } from "@/app/router/ProjectListPreview";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { isExtensionInstalled } from "@/framework/extension/registry";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
@@ -142,7 +143,12 @@ export const dataCatalogRouteContribution: AppRouteContribution = {
   routes: dataCatalogRoutes,
 };
 
-/** Resolve after extension registration so the real page is never shadowed. */
+/**
+ * The knowledge base ships in the enterprise image. Without it every knowledge-base path, the list
+ * and a deep link alike, shows the preview under the same upgrade card as project management
+ * (bkn-project-license-routes). Resolve after extension registration so the real page is never
+ * shadowed.
+ */
 export function knowledgeBaseLicenseRoutes(): RouteObject[] {
   return isExtensionInstalled(CAPABILITIES.KNOWLEDGE_BASE)
     ? []
@@ -150,7 +156,11 @@ export function knowledgeBaseLicenseRoutes(): RouteObject[] {
         {
           path: "knowledge-base/*",
           handle: { console: { menuKey: "knowledge-base", titleKey: "shell.items.knowledgeBase" } },
-          element: <KnowledgeBaseLicensePage />,
+          element: (
+            <RequireEdition capability={CAPABILITIES.KNOWLEDGE_BASE} minEdition="professional">
+              <ProjectListPreview titleKey="shell.items.knowledgeBase" />
+            </RequireEdition>
+          ),
         },
       ];
 }

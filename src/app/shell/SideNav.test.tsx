@@ -65,16 +65,24 @@ vi.mock("react-i18next", () => ({
 }));
 afterEach(cleanup);
 describe("knowledge base sidebar labels", () => {
+  // The same rule as project management: the label goes only once the licence covers it and the
+  // deployment reports the knowledge base, so a Professional licence on community images keeps it.
+  const cases = [
+    { edition: "community", served: false, badge: true },
+    { edition: "professional", served: false, badge: true },
+    { edition: "professional", served: true, badge: false },
+    { edition: "enterprise", served: true, badge: false },
+  ] as const;
   for (const chinese of [false, true])
-    for (const edition of ["community", "professional", "enterprise"] as const) {
-      it(`${chinese ? "Chinese" : "English"} ${edition} shows no Beta, and Pro only when a licence is needed`, () => {
+    for (const { edition, served, badge } of cases) {
+      it(`${chinese ? "Chinese" : "English"} ${edition}${served ? " with" : " without"} the knowledge base service shows no Beta${badge ? ", and Pro" : " and no Pro"}`, () => {
         badgeState.chinese = chinese;
         badgeState.snapshot = {
           edition,
           licensed: edition !== "community",
           state: edition === "community" ? "unlicensed" : "valid",
-          capabilities: [],
-          extensions: [],
+          capabilities: served ? [CAPABILITIES.KNOWLEDGE_BASE] : [],
+          extensions: served ? [CAPABILITIES.KNOWLEDGE_BASE] : [],
           limits: {},
         };
         render(<SideNav collapsed={false} onToggleCollapsed={() => {}} />);
@@ -82,9 +90,7 @@ describe("knowledge base sidebar labels", () => {
           name: chinese ? /^知识库/ : /^Knowledge base/,
         });
         expect(within(button).queryByText("Beta")).toBeNull();
-        expect(Boolean(within(button).queryByText(chinese ? "专业版" : "Pro"))).toBe(
-          edition === "community",
-        );
+        expect(Boolean(within(button).queryByText(chinese ? "专业版" : "Pro"))).toBe(badge);
       });
     }
 });
